@@ -1,0 +1,720 @@
+// src/main.jsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import App from "./App";
+import "./index.css";
+import AuthProvider from "./contexts/AuthProvider.jsx";
+import ShopProvider from "./contexts/ShopProvider.jsx";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+    <React.StrictMode>
+        <BrowserRouter>
+            <AuthProvider>
+                 <ShopProvider>
+                     <App />
+                 </ShopProvider>
+            </AuthProvider>
+        </BrowserRouter>
+    </React.StrictMode>
+);
+
+// src/App.jsx
+import { Routes, Route, Navigate } from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import DashboardLayout from "./layouts/DashboardLayout";
+import ProductListPage from "./pages/products/ProductListPage";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import GuestOnlyRoute from "./routes/GuestOnlyRoute";
+import RoleBasedRoute from "./routes/RoleBasedRoute";
+import AdminPage from "./pages/admin/AdminPage"; // 👈 tạo sau nếu chưa có
+
+function App() {
+    return (
+        <Routes>
+            {/* 🟡 Guest-only pages (nếu đã login thì redirect) */}
+            <Route
+                path="/login"
+                element={
+                    <GuestOnlyRoute>
+                        <LoginPage />
+                    </GuestOnlyRoute>
+                }
+            />
+            <Route
+                path="/register"
+                element={
+                    <GuestOnlyRoute>
+                        <RegisterPage />
+                    </GuestOnlyRoute>
+                }
+            />
+
+            {/* 🟡 Không cần login */}
+            <Route path="/verify" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+            {/* 🔐 ADMIN area */}
+            <Route
+                path="/admin"
+                element={
+                    <ProtectedRoute>
+                        <RoleBasedRoute allowedRoles={["ROLE_ADMIN"]}>
+                            <AdminPage />
+                        </RoleBasedRoute>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* 🔐 User area (shop roles: OWNER, STAFF, CASHIER) */}
+            <Route
+                path="/"
+                element={
+                    <ProtectedRoute>
+                        <RoleBasedRoute allowedRoles={["ROLE_USER"]}>
+                            <DashboardLayout />
+                        </RoleBasedRoute>
+                    </ProtectedRoute>
+                }
+            >
+                <Route index element={<Navigate to="products" />} />
+                <Route path="products" element={<ProductListPage />} />
+                {/* Add more nested routes here */}
+            </Route>
+        </Routes>
+    );
+}
+
+export default App;
+
+// src/App.jsx
+import { Routes, Route, Navigate } from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import DashboardLayout from "./layouts/DashboardLayout";
+import ProductListPage from "./pages/products/ProductListPage";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import GuestOnlyRoute from "./routes/GuestOnlyRoute";
+import RoleBasedRoute from "./routes/RoleBasedRoute";
+import AdminPage from "./pages/admin/AdminPage"; // 👈 tạo sau nếu chưa có
+
+function App() {
+    return (
+        <Routes>
+            {/* 🟡 Guest-only pages (nếu đã login thì redirect) */}
+            <Route
+                path="/login"
+                element={
+                    <GuestOnlyRoute>
+                        <LoginPage />
+                    </GuestOnlyRoute>
+                }
+            />
+            <Route
+                path="/register"
+                element={
+                    <GuestOnlyRoute>
+                        <RegisterPage />
+                    </GuestOnlyRoute>
+                }
+            />
+
+            {/* 🟡 Không cần login */}
+            <Route path="/verify" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+            {/* 🔐 ADMIN area */}
+            <Route
+                path="/admin"
+                element={
+                    <ProtectedRoute>
+                        <RoleBasedRoute allowedRoles={["ROLE_ADMIN"]}>
+                            <AdminPage />
+                        </RoleBasedRoute>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* 🔐 User area (shop roles: OWNER, STAFF, CASHIER) */}
+            <Route
+                path="/"
+                element={
+                    <ProtectedRoute>
+                        <RoleBasedRoute allowedRoles={["OWNER", "STAFF", "CASHIER"]}>
+                            <DashboardLayout />
+                        </RoleBasedRoute>
+                    </ProtectedRoute>
+                }
+            >
+                <Route index element={<Navigate to="products" />} />
+                <Route path="products" element={<ProductListPage />} />
+                {/* Add more nested routes here */}
+            </Route>
+        </Routes>
+    );
+}
+
+export default App;
+
+// src/routes/ProtectedRoute.jsx
+import { Navigate } from "react-router-dom";
+
+const ProtectedRoute = ({ children }) => {
+    const token = localStorage.getItem("accessToken");
+    return token ? children : <Navigate to="/login" />;
+};
+
+export default ProtectedRoute;
+
+// src/routes/GuestOnlyRoute.jsx
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth.js";
+
+const GuestOnlyRoute = ({ children }) => {
+    const { user } = useAuth();
+
+    if (user) {
+        return <Navigate to="/" replace />;
+    }
+
+    return children;
+};
+
+export default GuestOnlyRoute;
+
+// src/pages/VerifyEmailPage.jsx
+import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import axiosInstance from "../api/axiosInstance";
+
+const VerifyEmailPage = () => {
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const [status, setStatus] = useState("Đang xác minh...");
+
+    useEffect(() => {
+        const token = searchParams.get("token");
+        if (!token) {
+            setStatus("Không tìm thấy token xác minh.");
+            return;
+        }
+
+        axiosInstance
+            .get(`/auth/verify?token=${token}`)
+            .then(() => {
+                setStatus("Xác minh thành công! Chuyển hướng đến đăng nhập...");
+                setTimeout(() => navigate("/login"), 3000);
+            })
+            .catch((err) => {
+                const msg = err?.response?.data?.message || "Xác minh thất bại.";
+                setStatus(msg);
+            });
+    }, [searchParams, navigate]);
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+            <div className="bg-white p-8 rounded-lg shadow w-full max-w-md text-center">
+                <h2 className="text-xl font-semibold mb-4">Xác minh email</h2>
+                <p className="text-gray-700">{status}</p>
+            </div>
+        </div>
+    );
+};
+
+export default VerifyEmailPage;
+
+// src/pages/RegisterPage.jsx
+import { useState } from "react";
+import axiosInstance from "../api/axiosInstance";
+import { Link } from "react-router-dom";
+
+const RegisterPage = () => {
+    const [form, setForm] = useState({
+        email: "",
+        password: "",
+        confirmPassword: ""
+    });
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const handleChange = (e) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError("");
+        if (form.password !== form.confirmPassword) {
+            setError("Mật khẩu không khớp.");
+            return;
+        }
+        try {
+            await axiosInstance.post("/auth/register", {
+                email: form.email,
+                password: form.password
+            });
+            setSuccess("Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản.");
+        } catch (err) {
+            setError(err.response?.data?.message || "Đăng ký thất bại.");
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+            <form className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md" onSubmit={handleSubmit}>
+                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Tạo tài khoản mới</h2>
+                {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+                {success && <p className="text-green-600 text-sm mb-3">{success}</p>}
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="Email"
+                    className="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                />
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Mật khẩu"
+                    className="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                />
+                <input
+                    type="password"
+                    name="confirmPassword"
+                    placeholder="Xác nhận mật khẩu"
+                    className="w-full mb-5 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    required
+                />
+                <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium"
+                >
+                    Đăng ký
+                </button>
+                <p className="text-sm text-center text-gray-600 mt-4">
+                    Đã có tài khoản? <Link to="/login" className="text-blue-600 hover:underline">Đăng nhập</Link>
+                </p>
+            </form>
+        </div>
+    );
+};
+
+export default RegisterPage;
+
+// src/pages/LoginPage.jsx
+import { useState } from "react";
+import axiosInstance from "../api/axiosInstance";
+import { useNavigate, Link } from "react-router-dom";
+
+const LoginPage = () => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const navigate = useNavigate();
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await axiosInstance.post("/auth/login", { email, password });
+            if (res.data.code === "SUCCESS") {
+                localStorage.setItem("accessToken", res.data.data.accessToken);
+                localStorage.setItem("refreshToken", res.data.data.refreshToken);
+                navigate("/");
+            } else {
+                setError(res.data.message || "Đăng nhập thất bại.");
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || "Đăng nhập thất bại.");
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+            <form className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md" onSubmit={handleLogin}>
+                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Đăng nhập</h2>
+                {error && <p className="text-red-500 text-sm mb-3 text-center">{error}</p>}
+                <input
+                    type="email"
+                    placeholder="Email"
+                    className="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
+                <input
+                    type="password"
+                    placeholder="Mật khẩu"
+                    className="w-full mb-5 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                />
+                <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium"
+                >
+                    Đăng nhập
+                </button>
+                <div className="text-sm text-center text-gray-600 mt-4 space-y-2">
+                    <p>
+                        Chưa có tài khoản? <Link to="/register" className="text-blue-600 hover:underline">Đăng ký</Link>
+                    </p>
+                    <p>
+                        <Link to="#" className="text-blue-600 hover:underline">Quên mật khẩu?</Link>
+                    </p>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+export default LoginPage;
+
+// src/pages/ForgotPasswordPage.jsx
+import { useState } from "react";
+import axiosInstance from "../api/axiosInstance";
+
+const ForgotPasswordPage = () => {
+    const [email, setEmail] = useState("");
+    const [status, setStatus] = useState("");
+    const [error, setError] = useState("");
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setStatus("");
+        setError("");
+        try {
+            const res = await axiosInstance.post(`/auth/forgot-password?email=${email}`);
+            if (res.data.success) {
+                setStatus("Đã gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra email của bạn.");
+            } else {
+                setError(res.data.message || "Yêu cầu thất bại.");
+            }
+        } catch (err) {
+            setError("Có lỗi xảy ra. Vui lòng thử lại sau.");
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+            <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow w-full max-w-md">
+                <h2 className="text-xl font-semibold text-center mb-6">Quên mật khẩu</h2>
+                {status && <p className="text-green-600 text-sm mb-4 text-center">{status}</p>}
+                {error && <p className="text-red-600 text-sm mb-4 text-center">{error}</p>}
+                <input
+                    type="email"
+                    className="w-full mb-4 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Nhập email của bạn"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
+                <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
+                >
+                    Gửi yêu cầu
+                </button>
+            </form>
+        </div>
+    );
+};
+
+export default ForgotPasswordPage;
+
+
+// src/pages/admin/AdminPage.jsx
+import React from "react";
+
+const AdminPage = () => {
+    return (
+        <div>
+            <h1>Admin Dashboard</h1>
+            <p>Welcome to the Admin Page. Manage your application here.</p>
+            {/* Add admin-specific components or features here */}
+        </div>
+    );
+};
+
+export default AdminPage;
+
+// src/layouts/DashboardLayout.jsx
+import { Outlet, Link } from "react-router-dom";
+
+const DashboardLayout = () => {
+    return (
+        <div className="flex h-screen">
+            <aside className="w-64 bg-gray-800 text-white p-4">
+                <h2 className="text-xl font-bold mb-4">Sales Manager</h2>
+                <nav>
+                    <ul className="space-y-2">
+                        <li><Link to="/products">Sản phẩm</Link></li>
+                        {/* Add more links */}
+                    </ul>
+                </nav>
+            </aside>
+            <main className="flex-1 p-6 bg-gray-100 overflow-auto">
+                <Outlet />
+            </main>
+        </div>
+    );
+};
+export default DashboardLayout;
+
+// src/hooks/useShop.js
+import { useContext } from "react";
+import { ShopContext } from "../contexts/ShopContext.js";
+
+export const useShop = () => {
+    const context = useContext(ShopContext);
+    if (!context) {
+        throw new Error("useShop must be used within a ShopProvider");
+    }
+    return context;
+};
+
+
+// src/hooks/useAuth.js
+import { useContext } from "react";
+import { AuthContext } from "../contexts/AuthContext.js";
+
+export const useAuth = () => useContext(AuthContext);
+
+
+// src/contexts/ShopProvider.jsx
+import { useState, useEffect } from "react";
+import axiosInstance from "../api/axiosInstance";
+import { ShopContext } from "./ShopContext";
+
+const ShopProvider = ({ children }) => {
+    const [shops, setShops] = useState([]);
+    const [selectedShopId, setSelectedShopIdState] = useState(null);
+
+    const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
+    const selectedRole = selectedShop?.role || null;
+
+    const setSelectedShopId = (id) => {
+        setSelectedShopIdState(id);
+        localStorage.setItem("selectedShopId", id); // Ghi vào localStorage
+    };
+
+    const fetchShops = async () => {
+        try {
+            const res = await axiosInstance.get("/shop/my");
+            const shopList = res.data.data;
+            setShops(shopList);
+
+            const savedShopId = localStorage.getItem("selectedShopId");
+            const validSavedShop = shopList.find(s => s.id === savedShopId);
+
+            if (validSavedShop) {
+                setSelectedShopId(savedShopId);
+            } else if (shopList.length > 0) {
+                setSelectedShopId(shopList[0].id);
+            }
+        } catch (err) {
+            console.error("Lỗi khi tải danh sách cửa hàng", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchShops();
+    }, []);
+
+    return (
+        <ShopContext.Provider
+            value={{
+                shops,
+                selectedShopId,
+                setSelectedShopId,
+                selectedShop,
+                selectedRole,
+            }}
+        >
+            {children}
+        </ShopContext.Provider>
+    );
+};
+
+export default ShopProvider;
+
+
+// src/contexts/ShopContext.js
+import { createContext } from "react";
+
+export const ShopContext = createContext(null);
+
+
+// src/contexts/AuthProvider.jsx
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+import axiosInstance from "../api/axiosInstance";
+import { AuthContext } from "./AuthContext";
+
+const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const navigate = useNavigate();
+
+    const loadUser = () => {
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                setUser({
+                    id: decoded.userId,
+                    email: decoded.email,
+                    role: decoded.role,
+                });
+            } catch {
+                logout();
+            }
+        }
+    };
+
+    const logout = () => {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        setUser(null);
+        navigate("/login");
+    };
+
+    const refreshToken = async () => {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) return logout();
+
+        try {
+            const res = await axiosInstance.post("/auth/refresh-token", { refreshToken });
+            localStorage.setItem("accessToken", res.data.data.accessToken);
+            loadUser();
+        } catch {
+            logout();
+        }
+    };
+
+    useEffect(() => {
+        loadUser();
+    }, []);
+
+    return (
+        <AuthContext.Provider value={{
+            user, logout, refreshToken
+        }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+export default AuthProvider;
+
+// src/contexts/AuthContext.js
+import { createContext } from "react";
+export const AuthContext = createContext(null);
+
+// src/components/shop/ShopSelectDropdown.jsx
+import { useShop } from "../../hooks/useShop";
+import "./ShopSelectDropdown.scss";
+
+const ShopSelectDropdown = () => {
+    const { shops, selectedShopId, setSelectedShopId } = useShop();
+
+    if (shops.length === 0) {
+        return <div className="shop-select__empty">Bạn chưa có cửa hàng nào</div>;
+    }
+
+    return (
+        <div className="shop-select__wrapper">
+            <label htmlFor="shop-select" className="shop-select__label">Cửa hàng</label>
+            <select
+                id="shop-select"
+                value={selectedShopId || ""}
+                onChange={(e) => setSelectedShopId(e.target.value)}
+                className="shop-select__dropdown"
+            >
+                {shops.map(shop => (
+                    <option key={shop.id} value={shop.id}>
+                        {shop.name} ({shop.role})
+                    </option>
+                ))}
+            </select>
+        </div>
+    );
+};
+
+export default ShopSelectDropdown;
+
+
+// src/components/shop/ShopSelectDropdown/index.js
+export { default } from "./ShopSelectDropdown";
+
+// src/api/axiosInstance.js
+import axios from "axios";
+
+const axiosInstance = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    headers: {
+        "Content-Type": "application/json",
+    },
+});
+
+// ➤ Gắn accessToken vào mỗi request
+axiosInstance.interceptors.request.use((config) => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+// ➤ Tự động refresh token nếu accessToken hết hạn
+axiosInstance.interceptors.response.use(
+    (res) => res,
+    async (error) => {
+        const originalRequest = error.config;
+
+        // Nếu lỗi là 401 và chưa retry lần nào
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+
+            try {
+                const refreshToken = localStorage.getItem("refreshToken");
+                if (!refreshToken) throw new Error("No refresh token");
+
+                // Gọi refresh-token endpoint
+                const res = await axios.post(
+                    `${import.meta.env.VITE_API_BASE_URL}/auth/refresh-token`,
+                    { refreshToken },
+                    { headers: { "Content-Type": "application/json" } }
+                );
+
+                const newAccessToken = res.data.data.accessToken;
+                localStorage.setItem("accessToken", newAccessToken);
+
+                // Gắn lại accessToken mới và gọi lại request cũ
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                return axiosInstance(originalRequest);
+            } catch (err) {
+                // ❌ Refresh token thất bại → logout
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("refreshToken");
+                window.location.href = "/login";
+                return Promise.reject(err);
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+export default axiosInstance;
