@@ -20,142 +20,57 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 );
 
 // src/App.jsx
-import { Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import DashboardLayout from "./layouts/DashboardLayout";
-import ProductListPage from "./pages/products/ProductListPage";
+import { Routes, Route } from "react-router-dom";
+import { Suspense } from "react";
+import { routeConfig } from "./routes/routeConfig.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import GuestOnlyRoute from "./routes/GuestOnlyRoute";
 import RoleBasedRoute from "./routes/RoleBasedRoute";
-import AdminPage from "./pages/admin/AdminPage"; // 👈 tạo sau nếu chưa có
+import RouteWithTitle from "./routes/RouteWithTitle";
 
-function App() {
-    return (
-        <Routes>
-            {/* 🟡 Guest-only pages (nếu đã login thì redirect) */}
-            <Route
-                path="/login"
-                element={
-                    <GuestOnlyRoute>
-                        <LoginPage />
-                    </GuestOnlyRoute>
-                }
-            />
-            <Route
-                path="/register"
-                element={
-                    <GuestOnlyRoute>
-                        <RegisterPage />
-                    </GuestOnlyRoute>
-                }
-            />
+function renderRoute(route) {
+    let element = <RouteWithTitle element={route.element} title={route.title} />;
 
-            {/* 🟡 Không cần login */}
-            <Route path="/verify" element={<VerifyEmailPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    if (route.guestOnly) {
+        element = <GuestOnlyRoute>{element}</GuestOnlyRoute>;
+    }
 
-            {/* 🔐 ADMIN area */}
-            <Route
-                path="/admin"
-                element={
-                    <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={["ROLE_ADMIN"]}>
-                            <AdminPage />
-                        </RoleBasedRoute>
-                    </ProtectedRoute>
-                }
-            />
+    if (route.protected) {
+        element = (
+            <ProtectedRoute>
+                {route.roles ? (
+                    <RoleBasedRoute allowedRoles={route.roles}>
+                        {element}
+                    </RoleBasedRoute>
+                ) : (
+                    element
+                )}
+            </ProtectedRoute>
+        );
+    }
 
-            {/* 🔐 User area (shop roles: OWNER, STAFF, CASHIER) */}
-            <Route
-                path="/"
-                element={
-                    <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={["ROLE_USER"]}>
-                            <DashboardLayout />
-                        </RoleBasedRoute>
-                    </ProtectedRoute>
-                }
-            >
-                <Route index element={<Navigate to="products" />} />
-                <Route path="products" element={<ProductListPage />} />
-                {/* Add more nested routes here */}
+    if (route.children) {
+        return (
+            <Route key={route.path} path={route.path} element={element}>
+                {route.children.map((child, i) =>
+                    renderRoute({
+                        ...child,
+                        path: child.path,
+                        key: `${route.path}-${child.path || i}`,
+                    })
+                )}
             </Route>
-        </Routes>
-    );
+        );
+    }
+
+    return <Route key={route.path} path={route.path} element={element} />;
 }
 
-export default App;
-
-// src/App.jsx
-import { Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import DashboardLayout from "./layouts/DashboardLayout";
-import ProductListPage from "./pages/products/ProductListPage";
-import ProtectedRoute from "./routes/ProtectedRoute";
-import GuestOnlyRoute from "./routes/GuestOnlyRoute";
-import RoleBasedRoute from "./routes/RoleBasedRoute";
-import AdminPage from "./pages/admin/AdminPage"; // 👈 tạo sau nếu chưa có
-
 function App() {
     return (
-        <Routes>
-            {/* 🟡 Guest-only pages (nếu đã login thì redirect) */}
-            <Route
-                path="/login"
-                element={
-                    <GuestOnlyRoute>
-                        <LoginPage />
-                    </GuestOnlyRoute>
-                }
-            />
-            <Route
-                path="/register"
-                element={
-                    <GuestOnlyRoute>
-                        <RegisterPage />
-                    </GuestOnlyRoute>
-                }
-            />
-
-            {/* 🟡 Không cần login */}
-            <Route path="/verify" element={<VerifyEmailPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-
-            {/* 🔐 ADMIN area */}
-            <Route
-                path="/admin"
-                element={
-                    <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={["ROLE_ADMIN"]}>
-                            <AdminPage />
-                        </RoleBasedRoute>
-                    </ProtectedRoute>
-                }
-            />
-
-            {/* 🔐 User area (shop roles: OWNER, STAFF, CASHIER) */}
-            <Route
-                path="/"
-                element={
-                    <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={["OWNER", "STAFF", "CASHIER"]}>
-                            <DashboardLayout />
-                        </RoleBasedRoute>
-                    </ProtectedRoute>
-                }
-            >
-                <Route index element={<Navigate to="products" />} />
-                <Route path="products" element={<ProductListPage />} />
-                {/* Add more nested routes here */}
-            </Route>
-        </Routes>
+        <Suspense fallback={<div className="p-10 text-center">Đang tải trang...</div>}>
+            <Routes>{routeConfig.map(renderRoute)}</Routes>
+        </Suspense>
     );
 }
 
@@ -174,12 +89,32 @@ export default ProtectedRoute;
 // src/routes/GuestOnlyRoute.jsx
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
+import { useShop } from "../hooks/useShop.js";
 
 const GuestOnlyRoute = ({ children }) => {
     const { user } = useAuth();
+    const { shops, selectedShopId } = useShop();
 
     if (user) {
-        return <Navigate to="/" replace />;
+        console.log("User is logged in:", user);
+        // Nếu là admin → vào trang admin
+        if (user.role.includes("ROLE_ADMIN")) {
+            return <Navigate to="/admin" replace />;
+        }
+
+        // Nếu là user → xử lý theo shop
+        if (user.role.includes("ROLE_USER")) {
+            if (!shops || shops.length === 0) {
+                return <Navigate to="/create-shop" replace />;
+            } else if (!selectedShopId) {
+                return <Navigate to="/select-shop" replace />;
+            } else {
+                return <Navigate to="/overview" replace />;
+            }
+        }
+
+        // Trường hợp có user nhưng không role hợp lệ
+        return <Navigate to="/unauthorized" replace />;
     }
 
     return children;
@@ -316,21 +251,32 @@ export default RegisterPage;
 import { useState } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { useNavigate, Link } from "react-router-dom";
+import {jwtDecode} from "jwt-decode";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
 
     const handleLogin = async (e) => {
+        setLoading(true);
         e.preventDefault();
         try {
             const res = await axiosInstance.post("/auth/login", { email, password });
             if (res.data.code === "SUCCESS") {
-                localStorage.setItem("accessToken", res.data.data.accessToken);
+                debugger
+                const accessToken = res.data.data.accessToken;
+                const decoded = jwtDecode(accessToken);
+                const role = decoded.role;
+
+                localStorage.setItem("accessToken", accessToken);
                 localStorage.setItem("refreshToken", res.data.data.refreshToken);
-                navigate("/");
+
+                if (role.includes("ROLE_ADMIN")) navigate("/admin");
+                else navigate("/select-shop");
+                setLoading(false);
             } else {
                 setError(res.data.message || "Đăng nhập thất bại.");
             }
@@ -364,7 +310,7 @@ const LoginPage = () => {
                     type="submit"
                     className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium"
                 >
-                    Đăng nhập
+                    {loading ? "Đang xử lý..." : "Đăng nhập"}
                 </button>
                 <div className="text-sm text-center text-gray-600 mt-4 space-y-2">
                     <p>
@@ -451,25 +397,42 @@ export default AdminPage;
 
 // src/layouts/DashboardLayout.jsx
 import { Outlet, Link } from "react-router-dom";
+import Breadcrumbs from "../components/Breadcrumbs";
+import {useShop} from "../hooks/useShop.js";
 
 const DashboardLayout = () => {
+    const { isOwner } = useShop();
     return (
         <div className="flex h-screen">
             <aside className="w-64 bg-gray-800 text-white p-4">
                 <h2 className="text-xl font-bold mb-4">Sales Manager</h2>
                 <nav>
                     <ul className="space-y-2">
+                        <li><Link to="/overview">Tổng quan</Link></li>
                         <li><Link to="/products">Sản phẩm</Link></li>
-                        {/* Add more links */}
+                        {/* ⚙️ Chỉ hiển thị nếu là OWNER */}
+                        {isOwner && (
+                            <li className="pt-4 border-t border-gray-600">
+                                <Link
+                                    to="/shop-settings"
+                                    className="text-sm text-gray-300 hover:text-white"
+                                >
+                                    ⚙️ Cài đặt cửa hàng
+                                </Link>
+                            </li>
+                        )}
                     </ul>
                 </nav>
             </aside>
+
             <main className="flex-1 p-6 bg-gray-100 overflow-auto">
-                <Outlet />
+                <Breadcrumbs/>
+                <Outlet/>
             </main>
         </div>
     );
 };
+
 export default DashboardLayout;
 
 // src/hooks/useShop.js
@@ -498,11 +461,15 @@ import axiosInstance from "../api/axiosInstance";
 import { ShopContext } from "./ShopContext";
 
 const ShopProvider = ({ children }) => {
+    const [isLoading, setIsLoading] = useState(true);
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
 
     const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
     const selectedRole = selectedShop?.role || null;
+    const isOwner = selectedRole === "OWNER";
+    const isStaff = selectedRole === "STAFF";
+    const isCashier = selectedRole === "CASHIER";
 
     const setSelectedShopId = (id) => {
         setSelectedShopIdState(id);
@@ -523,8 +490,12 @@ const ShopProvider = ({ children }) => {
             } else if (shopList.length > 0) {
                 setSelectedShopId(shopList[0].id);
             }
+
+            console.log("Đã tải danh sách cửa hàng:", shopList);
         } catch (err) {
             console.error("Lỗi khi tải danh sách cửa hàng", err);
+        } finally {
+            setIsLoading(false); // ✅ Đánh dấu đã xong
         }
     };
 
@@ -540,15 +511,23 @@ const ShopProvider = ({ children }) => {
                 setSelectedShopId,
                 selectedShop,
                 selectedRole,
+                isOwner,
+                isStaff,
+                isCashier
             }}
         >
-            {children}
+            {isLoading ? (
+                <div className="min-h-screen flex items-center justify-center">
+                    <p>Đang tải cửa hàng...</p>
+                </div>
+            ) : (
+                children
+            )}
         </ShopContext.Provider>
     );
 };
 
 export default ShopProvider;
-
 
 // src/contexts/ShopContext.js
 import { createContext } from "react";
@@ -668,7 +647,6 @@ const axiosInstance = axios.create({
     },
 });
 
-// ➤ Gắn accessToken vào mỗi request
 axiosInstance.interceptors.request.use((config) => {
     const token = localStorage.getItem("accessToken");
     if (token) {
@@ -677,7 +655,6 @@ axiosInstance.interceptors.request.use((config) => {
     return config;
 });
 
-// ➤ Tự động refresh token nếu accessToken hết hạn
 axiosInstance.interceptors.response.use(
     (res) => res,
     async (error) => {
@@ -716,5 +693,683 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
 export default axiosInstance;
+
+// src/routes/RoleBasedRoute.jsx
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { checkPermission } from "../utils/permission";
+import {useShop} from "../hooks/useShop.js";
+
+const RoleBasedRoute = ({ allowedRoles = [], shopScoped = false, children }) => {
+    const { user } = useAuth();
+    const { selectedRole } = useShop();
+    if (!user) return <Navigate to="/login" replace />;
+    const roleToCheck = shopScoped ? selectedRole : user?.role;
+    if (!checkPermission(roleToCheck, allowedRoles)) {
+        return <Navigate to="/unauthorized" />;
+    }
+    return children;
+};
+
+export default RoleBasedRoute;
+
+// src/components/Breadcrumbs.jsx
+import { Link } from "react-router-dom";
+import { useBreadcrumbs } from "../hooks/useBreadcrumbs";
+
+const Breadcrumbs = () => {
+    const breadcrumbs = useBreadcrumbs();
+
+    if (breadcrumbs.length <= 1) return null; // Ẩn nếu chỉ có 1 cấp
+
+    return (
+        <nav className="text-sm text-gray-600 mb-4">
+            {breadcrumbs.map((bc, i) => (
+                <span key={bc.path}>
+          {i > 0 && <span className="mx-1">/</span>}
+                    <Link to={bc.path} className="hover:underline text-blue-600">
+            {bc.title}
+          </Link>
+        </span>
+            ))}
+        </nav>
+    );
+};
+
+export default Breadcrumbs;
+
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axiosInstance from "../../api/axiosInstance";
+import { useShop } from "../../hooks/useShop";
+import imageCompression from "browser-image-compression";
+
+const SHOP_TYPES = [
+    { value: "RESTAURANT", label: "Nhà hàng", trackInventory: false },
+    { value: "CAFE", label: "Quán cafe", trackInventory: false },
+    { value: "BAR", label: "Quán bar", trackInventory: false },
+    { value: "GROCERY", label: "Tạp hóa", trackInventory: true },
+    { value: "CONVENIENCE", label: "Cửa hàng tiện lợi", trackInventory: true },
+    { value: "PHARMACY", label: "Hiệu thuốc", trackInventory: true },
+    { value: "RETAIL", label: "Cửa hàng bán lẻ", trackInventory: true },
+    { value: "OTHER", label: "Khác", trackInventory: false },
+];
+
+const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
+const MAX_FILE_SIZE_MB = 5;
+
+const CreateShopPage = () => {
+    const [form, setForm] = useState({
+        name: "",
+        type: "RESTAURANT",
+        address: "",
+        phone: "",
+    });
+    const [fileInputKey, setFileInputKey] = useState(Date.now());
+    const [imagePreview, setImagePreview] = useState(null);
+    const [file, setFile] = useState(null);
+    const [errors, setErrors] = useState({});
+    const [submitError, setSubmitError] = useState("");
+    const navigate = useNavigate();
+    const { fetchShops } = useShop();
+
+    const handleFileChange = async (e) => {
+        const selectedFile = e.target.files[0];
+        if (!selectedFile) return;
+
+        const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
+        const MAX_FILE_SIZE_MB = 5;
+
+        if (!ALLOWED_TYPES.includes(selectedFile.type)) {
+            setSubmitError("Chỉ hỗ trợ định dạng ảnh JPG và PNG.");
+            setFile(null);
+            setImagePreview(null);
+            return;
+        }
+
+        if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+            setSubmitError(`Ảnh vượt quá ${MAX_FILE_SIZE_MB}MB. Đang tiến hành nén ảnh...`);
+            try {
+                const compressedFile = await imageCompression(selectedFile, {
+                    maxSizeMB: 1,
+                    maxWidthOrHeight: 1024,
+                    useWebWorker: true,
+                });
+
+                setFile(compressedFile);
+                setImagePreview(URL.createObjectURL(compressedFile));
+                setSubmitError(""); // clear error
+            } catch (err) {
+                console.error("Lỗi khi nén ảnh:", err);
+                setSubmitError("Nén ảnh thất bại. Vui lòng chọn ảnh nhỏ hơn.");
+                setFile(null);
+                setImagePreview(null);
+            }
+
+            return;
+        }
+
+        setFile(selectedFile);
+        setImagePreview(URL.createObjectURL(selectedFile));
+        setSubmitError("");
+    };
+
+    const handleChange = (e) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+        setErrors({ ...errors, [e.target.name]: null });
+    };
+
+    const validate = () => {
+        const newErrors = {};
+        if (!form.name.trim()) newErrors.name = "Tên cửa hàng không được để trống.";
+        if (form.address.trim().length < 10)
+            newErrors.address = "Địa chỉ phải có ít nhất 10 ký tự.";
+        const phoneRegex = /^0(3|5|7|8|9)\d{8}$/;
+        if (!phoneRegex.test(form.phone))
+            newErrors.phone = "Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09)";
+        return newErrors;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const validationErrors = validate();
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append(
+                "shop",
+                new Blob([JSON.stringify(form)], { type: "application/json" })
+            );
+
+            if (file) {
+                formData.append("file", file);
+            }
+
+            const res = await axiosInstance.post("/shop", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (res.data.code === "SUCCESS") {
+                await fetchShops(); // cập nhật lại danh sách cửa hàng
+                navigate("/overview"); // hoặc đến trang chọn shop
+            } else {
+                setSubmitError(res.data.message || "Tạo cửa hàng thất bại.");
+            }
+        } catch (err) {
+            console.error("Lỗi khi tạo cửa hàng:", err);
+            setSubmitError(
+                err.response?.data?.message || "Đã xảy ra lỗi khi gửi dữ liệu."
+            );
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+            <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow w-full max-w-md space-y-4" noValidate>
+                <h2 className="text-xl font-bold text-center mb-2">Tạo cửa hàng mới</h2>
+
+                {submitError && <p className="text-red-600 text-sm text-center">{submitError}</p>}
+
+                <div>
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="Tên cửa hàng"
+                        value={form.name}
+                        onChange={handleChange}
+                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                </div>
+
+                <div>
+                    <select
+                        name="type"
+                        value={form.type}
+                        onChange={handleChange}
+                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                        {SHOP_TYPES.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                    <p className="text-sm text-gray-500 mt-1">
+                        {SHOP_TYPES.find((s) => s.value === form.type)?.trackInventory
+                            ? "✔️ Loại cửa hàng này sẽ bật quản lý tồn kho."
+                            : "⚠️ Loại cửa hàng này không yêu cầu kiểm kho theo mặc định."}
+                    </p>
+                </div>
+
+                <div>
+                    <input
+                        type="text"
+                        name="address"
+                        placeholder="Địa chỉ"
+                        value={form.address}
+                        onChange={handleChange}
+                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+                </div>
+
+                <div>
+                    <input
+                        type="text"
+                        name="phone"
+                        placeholder="Số điện thoại"
+                        value={form.phone}
+                        onChange={handleChange}
+                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+                </div>
+
+                <div>
+                    {imagePreview ? (
+                        <div className="mt-2 flex items-center gap-4">
+                            <img
+                                src={imagePreview}
+                                alt="Logo preview"
+                                className="w-32 h-32 object-contain border rounded"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFile(null);
+                                    setImagePreview(null);
+                                    setFileInputKey(Date.now());
+                                }}
+                                className="text-red-600 underline text-sm"
+                            >
+                                Xoá ảnh
+                            </button>
+                        </div>
+                    ) : (
+                        <input
+                            key={fileInputKey}
+                            type="file"
+                            accept=".jpg,.jpeg,.png"
+                            onChange={handleFileChange}
+                            className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                    )}
+                </div>
+                {submitError && (
+                    <p className="text-red-600 text-sm text-center">{submitError}</p>
+                )}
+                <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700"
+                >
+                    Tạo cửa hàng
+                </button>
+            </form>
+        </div>
+    );
+};
+
+export default CreateShopPage;
+
+// src/pages/NotFoundPage.jsx
+const NotFoundPage = () => {
+    return (
+        <div className="h-screen flex flex-col items-center justify-center bg-gray-100 px-4 text-center">
+            <h1 className="text-5xl font-bold text-gray-800 mb-4">404</h1>
+            <p className="text-xl text-gray-600 mb-6">Trang bạn yêu cầu không tồn tại.</p>
+            <a
+                href="/"
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+            >
+                Quay về trang chủ
+            </a>
+        </div>
+    );
+};
+
+export default NotFoundPage;
+
+// src/pages/OverviewPage.jsx
+import { useShop } from "../hooks/useShop";
+
+const OverviewPage = () => {
+    const { selectedShop, selectedRole, isOwner, isStaff, isCashier } = useShop();
+
+    if (!selectedShop) return <p>Đang tải cửa hàng...</p>;
+
+    return (
+        <div className="p-6">
+            <h1 className="text-2xl font-bold mb-4">Tổng quan cửa hàng</h1>
+            <p><strong>Cửa hàng:</strong> {selectedShop.name}</p>
+            <p><strong>Vai trò:</strong> {selectedRole}</p>
+
+            {isOwner && <p className="mt-4 text-green-700">Bạn là chủ cửa hàng. Bạn có toàn quyền.</p>}
+            {isStaff && <p className="mt-4 text-blue-700">Bạn là nhân viên. Có quyền quản lý sản phẩm, đơn hàng.</p>}
+            {isCashier && <p className="mt-4 text-purple-700">Bạn là thu ngân. Có thể tạo đơn hàng và thanh toán.</p>}
+
+            {/* Bạn có thể thêm component theo role tại đây */}
+        </div>
+    );
+};
+
+export default OverviewPage;
+
+// src/utils/permission.js
+export const checkPermission = (role, allowedRoles) => {
+    if (!role) return false;
+    return allowedRoles.includes(role);
+};
+
+// src/routes/routeConfig.jsx
+import { lazy } from "react";
+import { Navigate } from "react-router-dom";
+
+const LoginPage = lazy(() => import("../pages/LoginPage"));
+const RegisterPage = lazy(() => import("../pages/RegisterPage"));
+const VerifyEmailPage = lazy(() => import("../pages/VerifyEmailPage"));
+const ForgotPasswordPage = lazy(() => import("../pages/ForgotPasswordPage"));
+const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
+const ShopSelectPage = lazy(() => import("../pages/shop/ShopSelectPage"));
+const CreateShopPage = lazy(() => import("../pages/shop/CreateShopPage"));
+const OverviewPage = lazy(() => import("../pages/OverviewPage"));
+const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
+const DashboardLayout = lazy(() => import("../layouts/DashboardLayout"));
+const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
+const ShopSettingsPage = lazy(() => import("../pages/shop/ShopSettingsPage"));
+
+export const routeConfig = [
+    { path: "/login", element: <LoginPage />, guestOnly: true, title: "Đăng nhập" },
+    { path: "/register", element: <RegisterPage />, guestOnly: true, title: "Đăng ký tài khoản" },
+    { path: "/verify", element: <VerifyEmailPage />, title: "Xác thực email" },
+    { path: "/forgot-password", element: <ForgotPasswordPage />, title: "Quên mật khẩu" },
+
+    { path: "/admin", element: <AdminPage />, protected: true, roles: ["ROLE_ADMIN"], title: "Trang quản trị" },
+    { path: "/select-shop", element: <ShopSelectPage />, protected: true, roles: ["ROLE_USER"], title: "Chọn cửa hàng" },
+    { path: "/create-shop", element: <CreateShopPage />, protected: true, roles: ["ROLE_USER"], title: "Tạo cửa hàng" },
+    {
+        path: "/shop-settings",
+        element: <ShopSettingsPage />,
+        protected: true,
+        roles: ["ROLE_USER"],
+        title: "Cài đặt cửa hàng",
+    },
+    {
+        path: "/",
+        protected: true,
+        roles: ["ROLE_USER"],
+        element: <DashboardLayout />,
+        children: [
+            { index: true, element: <Navigate to="overview" /> },
+            { path: "overview", element: <OverviewPage />, title: "Tổng quan" },
+            { path: "products", element: <ProductListPage />, title: "Sản phẩm" },
+        ],
+    },
+    { path: "*", element: <NotFoundPage />, title: "Không tìm thấy trang" },
+];
+
+// src/routes/RouteWithTitle.jsx
+import { useEffect } from "react";
+
+const RouteWithTitle = ({ element, title }) => {
+    useEffect(() => {
+        if (title) {
+            document.title = `${title} | Sales System`;
+        }
+    }, [title]);
+
+    return element;
+};
+
+export default RouteWithTitle;
+
+// src/pages/shop/ShopSelectPage.jsx
+import { useShop } from "../../hooks/useShop";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+
+const ShopSelectPage = () => {
+    const { shops, setSelectedShopId } = useShop();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (shops.length === 0) {
+            navigate("/create-shop");
+        } else if (shops.length === 1) {
+            setSelectedShopId(shops[0].id);
+            navigate("/overview");
+        }
+    }, [shops, setSelectedShopId, navigate]);
+
+    const handleSelect = (id) => {
+        setSelectedShopId(id);
+        navigate("/overview");
+    };
+
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
+            <div className="bg-white p-8 rounded-lg shadow w-full max-w-md">
+                <h2 className="text-xl font-semibold mb-4 text-center">Chọn cửa hàng</h2>
+                {shops.length === 0 ? (
+                    <p className="text-gray-600 text-center">Bạn chưa tham gia cửa hàng nào.</p>
+                ) : (
+                    <ul className="space-y-4">
+                        {shops.map(shop => (
+                            <li
+                                key={shop.id}
+                                className="border rounded p-4 hover:bg-gray-50 cursor-pointer"
+                                onClick={() => handleSelect(shop.id)}
+                            >
+                                <p className="font-medium">{shop.name}</p>
+                                <p className="text-sm text-gray-500">Vai trò: {shop.role}</p>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default ShopSelectPage;
+
+// src/pages/shop/ShopSettingsPage.jsx
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axiosInstance from "../../api/axiosInstance.js";
+import { SHOP_TYPES } from "../../constants/shopTypes.js";
+import { useShop } from "../../hooks/useShop.js";
+
+const ShopSettingsPage = () => {
+    const { isOwner, fetchShops } = useShop();
+    const navigate = useNavigate();
+    const fileInputRef = useRef(null);
+
+    const [shop, setShop] = useState(null);
+    const [logoFile, setLogoFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+
+    const [loading, setLoading] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (!isOwner) navigate("/overview", { replace: true });
+    }, [isOwner, navigate]);
+
+    useEffect(() => {
+        axiosInstance.get("/shop/me").then((res) => {
+            const data = res.data.data;
+            setShop(data);
+            setPreviewUrl(data.logoUrl || null);
+        });
+    }, []);
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        setLogoFile(file);
+        setPreviewUrl(URL.createObjectURL(file));
+    };
+
+    const handleImageRemove = () => {
+        setLogoFile(null);
+        setPreviewUrl(null);
+    };
+
+    const handleChange = (field, value) => {
+        setShop((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append("shop", new Blob([JSON.stringify(shop)], { type: "application/json" }));
+            if (logoFile) formData.append("file", logoFile);
+
+            await axiosInstance.put("/shop/me", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+        } catch (err) {
+            console.error("Lỗi khi cập nhật shop:", err);
+            setError("Không thể cập nhật cửa hàng.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirmDelete) return setConfirmDelete(true);
+        setDeleting(true);
+        try {
+            await axiosInstance.delete("/shop");
+            localStorage.removeItem("selectedShopId");
+            await fetchShops();
+            navigate("/select-shop");
+        } catch (err) {
+            console.error("Lỗi khi xoá cửa hàng:", err);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    if (!shop) return <div>Đang tải...</div>;
+
+    return (
+        <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
+            <h1 className="text-xl font-bold">Quản lý cửa hàng</h1>
+
+            {error && <p className="text-red-600">{error}</p>}
+
+            {/* 🖼 Logo */}
+            <div>
+                <label className="block font-medium mb-1">Logo cửa hàng</label>
+                {previewUrl ? (
+                    <div className="mb-2">
+                        <img src={previewUrl} alt="preview" className="w-32 h-32 object-cover rounded border" />
+                        <button
+                            type="button"
+                            onClick={handleImageRemove}
+                            className="text-red-500 text-sm mt-1 underline"
+                        >
+                            Xoá ảnh
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        type="button"
+                        className="text-blue-600 underline text-sm"
+                        onClick={() => fileInputRef.current.click()}
+                    >
+                        Chọn ảnh
+                    </button>
+                )}
+                <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    hidden
+                    onChange={handleImageChange}
+                />
+            </div>
+
+            {/* Tên cửa hàng */}
+            <div>
+                <label className="block font-medium">Tên cửa hàng</label>
+                <input
+                    value={shop.name}
+                    onChange={(e) => handleChange("name", e.target.value)}
+                    className="w-full border px-3 py-2 rounded"
+                />
+            </div>
+
+            {/* Loại hình */}
+            <div>
+                <label className="block font-medium">Loại hình</label>
+                <select
+                    value={shop.type}
+                    onChange={(e) => handleChange("type", e.target.value)}
+                    className="w-full border px-3 py-2 rounded"
+                >
+                    {SHOP_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>
+                            {t.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Số điện thoại */}
+            <div>
+                <label className="block font-medium">Số điện thoại</label>
+                <input
+                    value={shop.phone}
+                    onChange={(e) => handleChange("phone", e.target.value)}
+                    className="w-full border px-3 py-2 rounded"
+                />
+            </div>
+
+            {/* Địa chỉ */}
+            <div>
+                <label className="block font-medium">Địa chỉ</label>
+                <input
+                    value={shop.address}
+                    onChange={(e) => handleChange("address", e.target.value)}
+                    className="w-full border px-3 py-2 rounded"
+                />
+            </div>
+
+            <div className="pt-4">
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                    {loading ? "Đang lưu..." : "Cập nhật"}
+                </button>
+            </div>
+
+            {/* ❌ XÓA SHOP */}
+            <div className="pt-6 text-sm text-red-600 border-t mt-6">
+                <p className="mb-2">⚠️ Xóa cửa hàng là hành động không thể hoàn tác.</p>
+                <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                    {confirmDelete ? (deleting ? "Đang xoá..." : "Xác nhận xoá") : "Xoá cửa hàng"}
+                </button>
+            </div>
+        </form>
+    );
+};
+
+export default ShopSettingsPage;
+
+// src/constants/shopTypes.js
+export const SHOP_TYPES = [
+    { value: "RESTAURANT", label: "Nhà hàng" },
+    { value: "CAFE", label: "Quán cà phê" },
+    { value: "BAR", label: "Quán bar" },
+    { value: "GROCERY", label: "Tạp hoá" },
+    { value: "CONVENIENCE", label: "Cửa hàng tiện lợi" },
+    { value: "PHARMACY", label: "Nhà thuốc" },
+    { value: "RETAIL", label: "Bán lẻ" },
+    { value: "OTHER", label: "Khác" },
+];
+
+// src/hooks/useBreadcrumbs.js
+import { useLocation, matchRoutes } from "react-router-dom";
+import { routeConfig } from "../routes/routeConfig.jsx";
+
+export const useBreadcrumbs = () => {
+    const location = useLocation();
+
+    // matchRoutes sẽ tìm tất cả route phù hợp với URL hiện tại
+    const matches = matchRoutes(routeConfig, location.pathname);
+
+    if (!matches) return [];
+
+    // Trả ra mảng breadcrumb { title, path }
+    return matches
+        .map(({ route, pathname }) => {
+            const title = route.title || null;
+            if (!title) return null;
+            return { title, path: pathname };
+        })
+        .filter(Boolean); // loại bỏ null
+};
+
+

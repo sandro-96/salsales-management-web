@@ -4,11 +4,15 @@ import axiosInstance from "../api/axiosInstance";
 import { ShopContext } from "./ShopContext";
 
 const ShopProvider = ({ children }) => {
+    const [isLoading, setIsLoading] = useState(true);
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
 
     const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
     const selectedRole = selectedShop?.role || null;
+    const isOwner = selectedRole === "OWNER";
+    const isStaff = selectedRole === "STAFF";
+    const isCashier = selectedRole === "CASHIER";
 
     const setSelectedShopId = (id) => {
         setSelectedShopIdState(id);
@@ -29,8 +33,12 @@ const ShopProvider = ({ children }) => {
             } else if (shopList.length > 0) {
                 setSelectedShopId(shopList[0].id);
             }
+
+            console.log("Đã tải danh sách cửa hàng:", shopList);
         } catch (err) {
             console.error("Lỗi khi tải danh sách cửa hàng", err);
+        } finally {
+            setIsLoading(false); // ✅ Đánh dấu đã xong
         }
     };
 
@@ -46,9 +54,18 @@ const ShopProvider = ({ children }) => {
                 setSelectedShopId,
                 selectedShop,
                 selectedRole,
+                isOwner,
+                isStaff,
+                isCashier
             }}
         >
-            {children}
+            {isLoading ? (
+                <div className="min-h-screen flex items-center justify-center">
+                    <p>Đang tải cửa hàng...</p>
+                </div>
+            ) : (
+                children
+            )}
         </ShopContext.Provider>
     );
 };

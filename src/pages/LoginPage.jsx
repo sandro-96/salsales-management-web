@@ -2,21 +2,32 @@
 import { useState } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { useNavigate, Link } from "react-router-dom";
+import {jwtDecode} from "jwt-decode";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
 
     const handleLogin = async (e) => {
+        setLoading(true);
         e.preventDefault();
         try {
             const res = await axiosInstance.post("/auth/login", { email, password });
             if (res.data.code === "SUCCESS") {
-                localStorage.setItem("accessToken", res.data.data.accessToken);
+                debugger
+                const accessToken = res.data.data.accessToken;
+                const decoded = jwtDecode(accessToken);
+                const role = decoded.role;
+
+                localStorage.setItem("accessToken", accessToken);
                 localStorage.setItem("refreshToken", res.data.data.refreshToken);
-                navigate("/");
+
+                if (role.includes("ROLE_ADMIN")) navigate("/admin");
+                else navigate("/select-shop");
+                setLoading(false);
             } else {
                 setError(res.data.message || "Đăng nhập thất bại.");
             }
@@ -50,7 +61,7 @@ const LoginPage = () => {
                     type="submit"
                     className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium"
                 >
-                    Đăng nhập
+                    {loading ? "Đang xử lý..." : "Đăng nhập"}
                 </button>
                 <div className="text-sm text-center text-gray-600 mt-4 space-y-2">
                     <p>
