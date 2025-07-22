@@ -21,7 +21,7 @@ const ShopProvider = ({ children }) => {
 
     const fetchShops = async () => {
         try {
-            const res = await axiosInstance.get("/shop/my");
+            const res = await axiosInstance.get("/shop/my?page=0&size=1000");
             const shopList = res.data.data;
             setShops(shopList);
 

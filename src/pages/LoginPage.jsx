@@ -16,8 +16,7 @@ const LoginPage = () => {
         e.preventDefault();
         try {
             const res = await axiosInstance.post("/auth/login", { email, password });
-            if (res.data.code === "SUCCESS") {
-                debugger
+            if (res.data.success) {
                 const accessToken = res.data.data.accessToken;
                 const decoded = jwtDecode(accessToken);
                 const role = decoded.role;

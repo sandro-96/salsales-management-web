@@ -265,8 +265,7 @@ const LoginPage = () => {
         e.preventDefault();
         try {
             const res = await axiosInstance.post("/auth/login", { email, password });
-            if (res.data.code === "SUCCESS") {
-                debugger
+            if (res.data.success) {
                 const accessToken = res.data.data.accessToken;
                 const decoded = jwtDecode(accessToken);
                 const role = decoded.role;
@@ -478,7 +477,7 @@ const ShopProvider = ({ children }) => {
 
     const fetchShops = async () => {
         try {
-            const res = await axiosInstance.get("/shop/my");
+            const res = await axiosInstance.get("/shop/my?page=0&size=1000");
             const shopList = res.data.data;
             setShops(shopList);
 
