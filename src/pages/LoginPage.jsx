@@ -1,14 +1,13 @@
 // src/pages/LoginPage.jsx
 import { useState } from "react";
 import axiosInstance from "../api/axiosInstance";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async (e) => {
@@ -24,14 +23,15 @@ const LoginPage = () => {
                 localStorage.setItem("accessToken", accessToken);
                 localStorage.setItem("refreshToken", res.data.data.refreshToken);
 
-                if (role.includes("ROLE_ADMIN")) navigate("/admin");
-                else navigate("/select-shop");
-                setLoading(false);
+                if (role.includes("ROLE_ADMIN")) <Navigate to="/admin" />
+                else <Navigate to="/select-shop" />
             } else {
                 setError(res.data.message || "Đăng nhập thất bại.");
             }
         } catch (err) {
             setError(err.response?.data?.message || "Đăng nhập thất bại.");
+        } finally {
+            setLoading(false); // luôn được gọi
         }
     };
 
@@ -58,6 +58,7 @@ const LoginPage = () => {
                 />
                 <button
                     type="submit"
+                    disabled={loading}
                     className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium"
                 >
                     {loading ? "Đang xử lý..." : "Đăng nhập"}

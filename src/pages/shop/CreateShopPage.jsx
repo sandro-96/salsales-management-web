@@ -1,22 +1,11 @@
+// src/pages/shop/CreateShopPage.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
 import imageCompression from "browser-image-compression";
-
-const SHOP_TYPES = [
-    { value: "RESTAURANT", label: "Nhà hàng", trackInventory: false },
-    { value: "CAFE", label: "Quán cafe", trackInventory: false },
-    { value: "BAR", label: "Quán bar", trackInventory: false },
-    { value: "GROCERY", label: "Tạp hóa", trackInventory: true },
-    { value: "CONVENIENCE", label: "Cửa hàng tiện lợi", trackInventory: true },
-    { value: "PHARMACY", label: "Hiệu thuốc", trackInventory: true },
-    { value: "RETAIL", label: "Cửa hàng bán lẻ", trackInventory: true },
-    { value: "OTHER", label: "Khác", trackInventory: false },
-];
-
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
-const MAX_FILE_SIZE_MB = 5;
+import { COUNTRIES } from "../../constants/countries";
+import { SHOP_TYPES } from "../../constants/shopTypes";
 
 const CreateShopPage = () => {
     const [form, setForm] = useState({
@@ -24,13 +13,13 @@ const CreateShopPage = () => {
         type: "RESTAURANT",
         address: "",
         phone: "",
+        countryCode: "VN"
     });
     const [fileInputKey, setFileInputKey] = useState(Date.now());
     const [imagePreview, setImagePreview] = useState(null);
     const [file, setFile] = useState(null);
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState("");
-    const navigate = useNavigate();
     const { fetchShops } = useShop();
 
     const handleFileChange = async (e) => {
@@ -81,14 +70,15 @@ const CreateShopPage = () => {
 
     const validate = () => {
         const newErrors = {};
+        const country = COUNTRIES.find(c => c.code === form.countryCode);
+
         if (!form.name.trim()) newErrors.name = "Tên cửa hàng không được để trống.";
-        if (form.address.trim().length < 10)
-            newErrors.address = "Địa chỉ phải có ít nhất 10 ký tự.";
-        const phoneRegex = /^0(3|5|7|8|9)\d{8}$/;
-        if (!phoneRegex.test(form.phone))
-            newErrors.phone = "Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09)";
+        if (form.address.trim().length < 10) newErrors.address = "Địa chỉ phải có ít nhất 10 ký tự.";
+        if (!country.phonePattern.test(form.phone)) newErrors.phone = `Số điện thoại không hợp lệ cho ${country.name}`;
+
         return newErrors;
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -116,7 +106,7 @@ const CreateShopPage = () => {
 
             if (res.data.code === "SUCCESS") {
                 await fetchShops(); // cập nhật lại danh sách cửa hàng
-                navigate("/overview"); // hoặc đến trang chọn shop
+                <Navigate to="/overview" replace={true} />;
             } else {
                 setSubmitError(res.data.message || "Tạo cửa hàng thất bại.");
             }
@@ -166,6 +156,21 @@ const CreateShopPage = () => {
                             : "⚠️ Loại cửa hàng này không yêu cầu kiểm kho theo mặc định."}
                     </p>
                 </div>
+                <div>
+                    <label className="block mb-1 text-sm text-gray-600">Quốc gia</label>
+                    <select
+                        name="countryCode"
+                        value={form.countryCode}
+                        onChange={handleChange}
+                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                        {COUNTRIES.map((country) => (
+                            <option key={country.code} value={country.code}>
+                                {country.name} ({country.dialCode})
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
                 <div>
                     <input
@@ -180,14 +185,20 @@ const CreateShopPage = () => {
                 </div>
 
                 <div>
-                    <input
-                        type="text"
-                        name="phone"
-                        placeholder="Số điện thoại"
-                        value={form.phone}
-                        onChange={handleChange}
-                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label className="block mb-1 text-sm text-gray-600">Số điện thoại</label>
+                    <div className="flex">
+                        <span className="px-4 py-3 bg-gray-200 border border-r-0 rounded-l text-gray-700">
+                            {COUNTRIES.find(c => c.code === form.countryCode)?.dialCode}
+                        </span>
+                        <input
+                            type="text"
+                            name="phone"
+                            placeholder="Số điện thoại"
+                            value={form.phone}
+                            onChange={handleChange}
+                            className="flex-1 p-3 border rounded-r focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
                     {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                 </div>
 

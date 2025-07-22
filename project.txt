@@ -250,14 +250,13 @@ export default RegisterPage;
 // src/pages/LoginPage.jsx
 import { useState } from "react";
 import axiosInstance from "../api/axiosInstance";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async (e) => {
@@ -273,14 +272,15 @@ const LoginPage = () => {
                 localStorage.setItem("accessToken", accessToken);
                 localStorage.setItem("refreshToken", res.data.data.refreshToken);
 
-                if (role.includes("ROLE_ADMIN")) navigate("/admin");
-                else navigate("/select-shop");
-                setLoading(false);
+                if (role.includes("ROLE_ADMIN")) <Navigate to="/admin" />
+                else <Navigate to="/select-shop" />
             } else {
                 setError(res.data.message || "Đăng nhập thất bại.");
             }
         } catch (err) {
             setError(err.response?.data?.message || "Đăng nhập thất bại.");
+        } finally {
+            setLoading(false); // luôn được gọi
         }
     };
 
@@ -307,6 +307,7 @@ const LoginPage = () => {
                 />
                 <button
                     type="submit"
+                    disabled={loading}
                     className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium"
                 >
                     {loading ? "Đang xử lý..." : "Đăng nhập"}
@@ -458,8 +459,10 @@ export const useAuth = () => useContext(AuthContext);
 import { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { ShopContext } from "./ShopContext";
+import { useAuth } from "../hooks/useAuth.js";
 
 const ShopProvider = ({ children }) => {
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
@@ -499,6 +502,10 @@ const ShopProvider = ({ children }) => {
     };
 
     useEffect(() => {
+        if (!user) {
+            setIsLoading(false); // Nếu không có user, không cần tải cửa hàng
+            return;
+        }
         fetchShops();
     }, []);
 
@@ -738,25 +745,14 @@ const Breadcrumbs = () => {
 
 export default Breadcrumbs;
 
+// src/pages/shop/CreateShopPage.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
 import imageCompression from "browser-image-compression";
-
-const SHOP_TYPES = [
-    { value: "RESTAURANT", label: "Nhà hàng", trackInventory: false },
-    { value: "CAFE", label: "Quán cafe", trackInventory: false },
-    { value: "BAR", label: "Quán bar", trackInventory: false },
-    { value: "GROCERY", label: "Tạp hóa", trackInventory: true },
-    { value: "CONVENIENCE", label: "Cửa hàng tiện lợi", trackInventory: true },
-    { value: "PHARMACY", label: "Hiệu thuốc", trackInventory: true },
-    { value: "RETAIL", label: "Cửa hàng bán lẻ", trackInventory: true },
-    { value: "OTHER", label: "Khác", trackInventory: false },
-];
-
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
-const MAX_FILE_SIZE_MB = 5;
+import { COUNTRIES } from "../../constants/countries";
+import { SHOP_TYPES } from "../../constants/shopTypes";
 
 const CreateShopPage = () => {
     const [form, setForm] = useState({
@@ -764,13 +760,13 @@ const CreateShopPage = () => {
         type: "RESTAURANT",
         address: "",
         phone: "",
+        countryCode: "VN"
     });
     const [fileInputKey, setFileInputKey] = useState(Date.now());
     const [imagePreview, setImagePreview] = useState(null);
     const [file, setFile] = useState(null);
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState("");
-    const navigate = useNavigate();
     const { fetchShops } = useShop();
 
     const handleFileChange = async (e) => {
@@ -821,14 +817,15 @@ const CreateShopPage = () => {
 
     const validate = () => {
         const newErrors = {};
+        const country = COUNTRIES.find(c => c.code === form.countryCode);
+
         if (!form.name.trim()) newErrors.name = "Tên cửa hàng không được để trống.";
-        if (form.address.trim().length < 10)
-            newErrors.address = "Địa chỉ phải có ít nhất 10 ký tự.";
-        const phoneRegex = /^0(3|5|7|8|9)\d{8}$/;
-        if (!phoneRegex.test(form.phone))
-            newErrors.phone = "Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09)";
+        if (form.address.trim().length < 10) newErrors.address = "Địa chỉ phải có ít nhất 10 ký tự.";
+        if (!country.phonePattern.test(form.phone)) newErrors.phone = `Số điện thoại không hợp lệ cho ${country.name}`;
+
         return newErrors;
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -856,7 +853,7 @@ const CreateShopPage = () => {
 
             if (res.data.code === "SUCCESS") {
                 await fetchShops(); // cập nhật lại danh sách cửa hàng
-                navigate("/overview"); // hoặc đến trang chọn shop
+                <Navigate to="/overview" replace={true} />;
             } else {
                 setSubmitError(res.data.message || "Tạo cửa hàng thất bại.");
             }
@@ -906,6 +903,21 @@ const CreateShopPage = () => {
                             : "⚠️ Loại cửa hàng này không yêu cầu kiểm kho theo mặc định."}
                     </p>
                 </div>
+                <div>
+                    <label className="block mb-1 text-sm text-gray-600">Quốc gia</label>
+                    <select
+                        name="countryCode"
+                        value={form.countryCode}
+                        onChange={handleChange}
+                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                        {COUNTRIES.map((country) => (
+                            <option key={country.code} value={country.code}>
+                                {country.name} ({country.dialCode})
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
                 <div>
                     <input
@@ -920,14 +932,20 @@ const CreateShopPage = () => {
                 </div>
 
                 <div>
-                    <input
-                        type="text"
-                        name="phone"
-                        placeholder="Số điện thoại"
-                        value={form.phone}
-                        onChange={handleChange}
-                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label className="block mb-1 text-sm text-gray-600">Số điện thoại</label>
+                    <div className="flex">
+                        <span className="px-4 py-3 bg-gray-200 border border-r-0 rounded-l text-gray-700">
+                            {COUNTRIES.find(c => c.code === form.countryCode)?.dialCode}
+                        </span>
+                        <input
+                            type="text"
+                            name="phone"
+                            placeholder="Số điện thoại"
+                            value={form.phone}
+                            onChange={handleChange}
+                            className="flex-1 p-3 border rounded-r focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
                     {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                 </div>
 
@@ -1339,15 +1357,23 @@ export default ShopSettingsPage;
 
 // src/constants/shopTypes.js
 export const SHOP_TYPES = [
-    { value: "RESTAURANT", label: "Nhà hàng" },
-    { value: "CAFE", label: "Quán cà phê" },
-    { value: "BAR", label: "Quán bar" },
-    { value: "GROCERY", label: "Tạp hoá" },
-    { value: "CONVENIENCE", label: "Cửa hàng tiện lợi" },
-    { value: "PHARMACY", label: "Nhà thuốc" },
-    { value: "RETAIL", label: "Bán lẻ" },
-    { value: "OTHER", label: "Khác" },
+    { value: "RESTAURANT", label: "Nhà hàng", trackInventory: false },
+    { value: "CAFE", label: "Quán cafe", trackInventory: false },
+    { value: "BAR", label: "Quán bar", trackInventory: false },
+    { value: "GROCERY", label: "Tạp hóa", trackInventory: true },
+    { value: "CONVENIENCE", label: "Cửa hàng tiện lợi", trackInventory: true },
+    { value: "PHARMACY", label: "Hiệu thuốc", trackInventory: true },
+    { value: "RETAIL", label: "Cửa hàng bán lẻ", trackInventory: true },
+    { value: "OTHER", label: "Khác", trackInventory: false }
 ];
+
+// src/constants/countries.js
+export const COUNTRIES = [
+    { code: "VN", name: "Việt Nam", dialCode: "+84", phonePattern: /^0(3|5|7|8|9)\d{8}$/ },
+    { code: "US", name: "Hoa Kỳ", dialCode: "+1", phonePattern: /^\d{10}$/ },
+    { code: "JP", name: "Nhật Bản", dialCode: "+81", phonePattern: /^\d{10}$/ },
+    { code: "KR", name: "Hàn Quốc", dialCode: "+82", phonePattern: /^\d{9,10}$/ }
+]
 
 // src/hooks/useBreadcrumbs.js
 import { useLocation, matchRoutes } from "react-router-dom";

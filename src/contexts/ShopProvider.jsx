@@ -2,8 +2,10 @@
 import { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { ShopContext } from "./ShopContext";
+import { useAuth } from "../hooks/useAuth.js";
 
 const ShopProvider = ({ children }) => {
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
@@ -43,6 +45,10 @@ const ShopProvider = ({ children }) => {
     };
 
     useEffect(() => {
+        if (!user) {
+            setIsLoading(false); // Nếu không có user, không cần tải cửa hàng
+            return;
+        }
         fetchShops();
     }, []);
 

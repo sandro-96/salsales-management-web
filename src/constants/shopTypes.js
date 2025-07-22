@@ -1,11 +1,11 @@
 // src/constants/shopTypes.js
 export const SHOP_TYPES = [
-    { value: "RESTAURANT", label: "Nhà hàng" },
-    { value: "CAFE", label: "Quán cà phê" },
-    { value: "BAR", label: "Quán bar" },
-    { value: "GROCERY", label: "Tạp hoá" },
-    { value: "CONVENIENCE", label: "Cửa hàng tiện lợi" },
-    { value: "PHARMACY", label: "Nhà thuốc" },
-    { value: "RETAIL", label: "Bán lẻ" },
-    { value: "OTHER", label: "Khác" },
+    { value: "RESTAURANT", label: "Nhà hàng", trackInventory: false },
+    { value: "CAFE", label: "Quán cafe", trackInventory: false },
+    { value: "BAR", label: "Quán bar", trackInventory: false },
+    { value: "GROCERY", label: "Tạp hóa", trackInventory: true },
+    { value: "CONVENIENCE", label: "Cửa hàng tiện lợi", trackInventory: true },
+    { value: "PHARMACY", label: "Hiệu thuốc", trackInventory: true },
+    { value: "RETAIL", label: "Cửa hàng bán lẻ", trackInventory: true },
+    { value: "OTHER", label: "Khác", trackInventory: false }
 ];
