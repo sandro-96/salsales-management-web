@@ -6,13 +6,16 @@ import App from "./App";
 import "./index.css";
 import AuthProvider from "./contexts/AuthProvider.jsx";
 import ShopProvider from "./contexts/ShopProvider.jsx";
+import WebSocketProvider from "./contexts/WebSocketProvider.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
         <BrowserRouter>
             <AuthProvider>
                  <ShopProvider>
-                     <App />
+                     <WebSocketProvider>
+                         <App />
+                     </WebSocketProvider>
                  </ShopProvider>
             </AuthProvider>
         </BrowserRouter>

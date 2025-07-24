@@ -1,7 +1,9 @@
 // src/pages/RegisterPage.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { Link } from "react-router-dom";
+import { useWebSocket } from "../hooks/useWebSocket";
+import { WebSocketMessageTypes } from "../constants/websocket";
 
 const RegisterPage = () => {
     const [form, setForm] = useState({
@@ -11,6 +13,8 @@ const RegisterPage = () => {
     });
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const { subscribe, connected } = useWebSocket();
+
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
@@ -18,6 +22,7 @@ const RegisterPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+        setSuccess("");
         if (form.password !== form.confirmPassword) {
             setError("Mật khẩu không khớp.");
             return;
@@ -32,6 +37,23 @@ const RegisterPage = () => {
             setError(err.response?.data?.message || "Đăng ký thất bại.");
         }
     };
+
+    // 🔔 Lắng nghe WebSocket message xác minh tài khoản
+    useEffect(() => {
+        console.log("🔔 Đăng ký lắng nghe xác minh tài khoản qua WebSocket");
+        if (!connected || !form.email) return;
+
+        const unsubscribe = subscribe(`/topic/verify/${form.email}`, (message) => {
+            if (message?.type === WebSocketMessageTypes.EMAIL_VERIFIED) {
+                console.log("🔔 Nhận:", message);
+                setSuccess("Tài khoản đã được xác minh!");
+            }
+        });
+
+        return () => {
+            if (typeof unsubscribe === "function") unsubscribe();
+        };
+    }, [connected, form.email]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
