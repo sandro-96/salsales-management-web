@@ -9,9 +9,7 @@ const ForgotPasswordPage = lazy(() => import("../pages/ForgotPasswordPage"));
 const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
 const ShopSelectPage = lazy(() => import("../pages/shop/ShopSelectPage"));
 const CreateShopPage = lazy(() => import("../pages/shop/CreateShopPage"));
-const OverviewPage = lazy(() => import("../pages/OverviewPage"));
-const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
-const DashboardLayout = lazy(() => import("../layouts/DashboardLayout"));
+const DynamicDashboardLayout = lazy(() => import("../layouts/DynamicDashboardLayout"));
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const ShopSettingsPage = lazy(() => import("../pages/shop/ShopSettingsPage"));
 
@@ -35,12 +33,12 @@ export const routeConfig = [
         path: "/",
         protected: true,
         roles: ["ROLE_USER"],
-        element: <DashboardLayout />,
+        element: <DynamicDashboardLayout />,
         children: [
-            { index: true, element: <Navigate to="overview" /> },
             { path: "overview", element: <OverviewPage />, title: "Tổng quan" },
             { path: "products", element: <ProductListPage />, title: "Sản phẩm" },
-        ],
+            { path: "staffs", element: <StaffListPage />, title: "Nhân sự" },
+        ]
     },
     { path: "*", element: <NotFoundPage />, title: "Không tìm thấy trang" },
 ];
