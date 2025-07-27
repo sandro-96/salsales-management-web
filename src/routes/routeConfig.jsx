@@ -7,11 +7,14 @@ const RegisterPage = lazy(() => import("../pages/RegisterPage"));
 const VerifyEmailPage = lazy(() => import("../pages/VerifyEmailPage"));
 const ForgotPasswordPage = lazy(() => import("../pages/ForgotPasswordPage"));
 const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
-const ShopSelectPage = lazy(() => import("../pages/shop/ShopSelectPage"));
-const CreateShopPage = lazy(() => import("../pages/shop/CreateShopPage"));
+const ShopSelectPage = lazy(() => import("../pages/shops/ShopSelectPage"));
+const CreateShopPage = lazy(() => import("../pages/shops/CreateShopPage"));
 const DynamicDashboardLayout = lazy(() => import("../layouts/DynamicDashboardLayout"));
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
-const ShopSettingsPage = lazy(() => import("../pages/shop/ShopSettingsPage"));
+const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));
+const OverviewPage = lazy(() => import("../pages/OverviewPage"));
+const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
+const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
 
 export const routeConfig = [
     { path: "/login", element: <LoginPage />, guestOnly: true, title: "Đăng nhập" },
