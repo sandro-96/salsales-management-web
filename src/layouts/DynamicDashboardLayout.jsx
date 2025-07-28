@@ -4,7 +4,7 @@ import { getDashboardComponent } from "../utils/getDashboardComponent";
 
 const DynamicDashboardLayout = () => {
     const { selectedShop, device = "web" } = useShop();
-    const LayoutComponent = getDashboardComponent(selectedShop?.type?.industry, selectedShop?.role, device);
+    const LayoutComponent = getDashboardComponent(selectedShop?.industry, selectedShop?.role, device);
     return <LayoutComponent />;
 };
 

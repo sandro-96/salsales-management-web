@@ -1,20 +1,19 @@
 // src/pages/shop/ShopSelectPage.jsx
 import { useShop } from "../../hooks/useShop";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 
 const ShopSelectPage = () => {
-    const { shops, setSelectedShopId } = useShop();
     const navigate = useNavigate();
+    const { shops, setSelectedShopId } = useShop();
 
-    useEffect(() => {
-        if (shops.length === 0) {
-            navigate("/create-shop");
-        } else if (shops.length === 1) {
-            setSelectedShopId(shops[0].id);
-            navigate("/overview");
-        }
-    }, [shops, setSelectedShopId, navigate]);
+    if (shops.length === 0) {
+        return <Navigate to="/create-shop" replace />;
+    }
+
+    if (shops.length === 1) {
+        setSelectedShopId(shops[0].id);
+        return <Navigate to="/overview" replace />;
+    }
 
     const handleSelect = (id) => {
         setSelectedShopId(id);

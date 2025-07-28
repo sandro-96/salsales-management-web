@@ -9,7 +9,6 @@ const ShopProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
-
     const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
     const selectedRole = selectedShop?.role || null;
     const isOwner = selectedRole === "OWNER";
@@ -24,7 +23,7 @@ const ShopProvider = ({ children }) => {
     const fetchShops = async () => {
         try {
             const res = await axiosInstance.get("/shop/my?page=0&size=1000");
-            const shopList = res.data.data;
+            const shopList = res.data.data.content;
             setShops(shopList);
 
             const savedShopId = localStorage.getItem("selectedShopId");
@@ -50,7 +49,7 @@ const ShopProvider = ({ children }) => {
             return;
         }
         fetchShops();
-    }, []);
+    }, [user]);
 
     return (
         <ShopContext.Provider

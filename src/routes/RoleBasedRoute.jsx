@@ -7,7 +7,10 @@ import {useShop} from "../hooks/useShop.js";
 const RoleBasedRoute = ({ allowedRoles = [], shopScoped = false, children }) => {
     const { user } = useAuth();
     const { selectedRole } = useShop();
-    if (!user) return <Navigate to="/login" replace />;
+    if (!user) {
+        console.log("RoleBasedRoute: No user found, redirecting to login.");
+        return <Navigate to="/login" replace />;
+    }
     const roleToCheck = shopScoped ? selectedRole : user?.role;
     if (!checkPermission(roleToCheck, allowedRoles)) {
         return <Navigate to="/unauthorized" />;

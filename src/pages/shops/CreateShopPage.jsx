@@ -1,6 +1,6 @@
 // src/pages/shop/CreateShopPage.jsx
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
 import imageCompression from "browser-image-compression";
@@ -21,6 +21,7 @@ const CreateShopPage = () => {
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState("");
     const { fetchShops } = useShop();
+    const navigate = useNavigate();
 
     const handleFileChange = async (e) => {
         const selectedFile = e.target.files[0];
@@ -106,7 +107,7 @@ const CreateShopPage = () => {
 
             if (res.data.code === "SUCCESS") {
                 await fetchShops(); // cập nhật lại danh sách cửa hàng
-                <Navigate to="/overview" replace={true} />;
+                navigate("/", { replace: true });
             } else {
                 setSubmitError(res.data.message || "Tạo cửa hàng thất bại.");
             }
