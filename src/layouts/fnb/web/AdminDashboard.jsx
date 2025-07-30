@@ -1,8 +1,10 @@
 // File: src/layouts/fnb/web/AdminDashboard.jsx
 import { Outlet, NavLink } from "react-router-dom";
 import { FaHome, FaUtensils, FaUsers } from "react-icons/fa";
+import {useAuth} from "../../../hooks/useAuth.js";
 
 const FnbAdminWeb = () => {
+  const { logout } = useAuth();
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Sidebar */}
@@ -32,6 +34,18 @@ const FnbAdminWeb = () => {
             }
           >
             <FaUsers className="inline mr-2" /> Nhân sự
+          </NavLink>
+          <NavLink
+              to="#"
+              onClick={(e) => {
+                e.preventDefault(); // Prevent navigation
+                logout(); // Call the logout function
+              }}
+              className={({ isActive }) =>
+                  isActive ? "font-semibold text-yellow-300" : "text-white"
+              }
+          >
+            <span className="inline mr-2">🚪</span> Đăng xuất
           </NavLink>
         </nav>
       </aside>

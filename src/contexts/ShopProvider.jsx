@@ -39,6 +39,7 @@ const ShopProvider = ({ children }) => {
         } catch (err) {
             console.error("Lỗi khi tải danh sách cửa hàng", err);
         } finally {
+            console.log("Đã hoàn thành việc tải cửa hàng");
             setIsLoading(false); // ✅ Đánh dấu đã xong
         }
     };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
@@ -9,18 +9,25 @@ const StaffListPage = () => {
     const [staffs, setStaffs] = useState([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
-    const [branchId, setBranchId] = useState(""); // State để lưu branchId
+    const [branchId, setBranchId] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
-    const fetchStaffs = async () => {
-        if (!selectedShop) return;
+    const fetchStaffs = useCallback(async () => {
+        if (!selectedShop) {
+            console.log("Không có selectedShop, bỏ qua fetchStaffs");
+            return;
+        }
+
         try {
             setIsLoading(true);
             setError("");
+
             const params = new URLSearchParams({ page, size: 10 });
-            if (branchId) params.append("branchId", branchId); // Thêm branchId nếu có
+            if (branchId) params.append("branchId", branchId);
+
+            console.log(`Gửi request: /shops/${selectedShop.id}/users?${params.toString()}`);
             const response = await axiosInstance.get(`/shops/${selectedShop.id}/users?${params.toString()}`);
             setStaffs(response.data.data.content);
             setTotalPages(response.data.data.totalPages);
@@ -30,21 +37,22 @@ const StaffListPage = () => {
                 err.response?.status === 403
                     ? "Bạn không có quyền truy cập danh sách nhân viên."
                     : err.response?.status === 404
-                    ? "Cửa hàng hoặc chi nhánh không tồn tại."
-                    : "Không thể tải danh sách nhân viên."
+                        ? "Cửa hàng hoặc chi nhánh không tồn tại."
+                        : "Không thể tải danh sách nhân viên."
             );
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [selectedShop, page, branchId]);
 
     useEffect(() => {
         if (!selectedShop) {
             navigate("/shops");
             return;
         }
+
         fetchStaffs();
-    }, []);
+    }, [selectedShop, page, branchId, fetchStaffs, navigate]);
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
@@ -66,14 +74,21 @@ const StaffListPage = () => {
                             placeholder="Nhập ID chi nhánh (tùy chọn)"
                         />
                     </div>
-                    <button onClick={() => navigate("/staff/create")}>Thêm nhân viên</button>
+                    <button
+                        onClick={() => navigate("/staff/create")}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                    >
+                        Thêm nhân viên
+                    </button>
                 </div>
                 {isLoading ? (
                     <p className="text-center text-gray-600">Đang tải...</p>
                 ) : error ? (
                     <p className="text-center text-red-600">{error}</p>
                 ) : staffs.length === 0 ? (
-                    <p className="text-center text-gray-600">Không có nhân viên nào trong {branchId ? "chi nhánh này" : "cửa hàng"}.</p>
+                    <p className="text-center text-gray-600">
+                        Không có nhân viên nào trong {branchId ? "chi nhánh này" : "cửa hàng"}.
+                    </p>
                 ) : (
                     <StaffList staffs={staffs} />
                 )}
