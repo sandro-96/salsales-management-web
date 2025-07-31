@@ -8,8 +8,9 @@ const BranchManagementPage = () => {
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [selectedBranch, setSelectedBranch] = useState(null); // State để lưu chi nhánh đang chỉnh sửa
+    const [selectedBranch, setSelectedBranch] = useState(null); // State để lưu chi nhánh đang chỉnh sửa hoặc tạo
     const [isModalOpen, setIsModalOpen] = useState(false); // State để quản lý modal
+    const [isCreateMode, setIsCreateMode] = useState(false); // State để xác định modal dùng để tạo hay sửa
 
     // Lấy danh sách chi nhánh
     useEffect(() => {
@@ -29,9 +30,7 @@ const BranchManagementPage = () => {
     }, [shopId]);
 
     // Tạo chi nhánh mới
-    const handleCreateBranch = async (e) => {
-        e.preventDefault();
-        const request = { name: 'Chi nhánh mới', address: 'Địa chỉ mặc định', phone: '' };
+    const handleCreateBranch = async (request) => {
         try {
             const response = await axiosInstance.post(`/branches`, request, {
                 params: { shopId },
@@ -39,6 +38,7 @@ const BranchManagementPage = () => {
             });
             setBranches([...branches, response.data.data]);
             setError(null);
+            setIsModalOpen(false); // Đóng modal sau khi tạo
         } catch (err) {
             setError(err.response?.data?.message || 'Không thể tạo chi nhánh');
         }
@@ -96,7 +96,11 @@ const BranchManagementPage = () => {
             <h2 className="text-2xl font-semibold mb-4">Quản lý Chi nhánh</h2>
             <div className="mb-4">
                 <button
-                    onClick={handleCreateBranch}
+                    onClick={() => {
+                        setSelectedBranch({ name: '', address: '', phone: '' }); // Khởi tạo giá trị mặc định
+                        setIsCreateMode(true);
+                        setIsModalOpen(true);
+                    }}
                     className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                 >
                     Thêm Chi nhánh mới
@@ -106,7 +110,6 @@ const BranchManagementPage = () => {
                 <table className="w-full">
                     <thead>
                     <tr className="bg-gray-200">
-                        <th className="p-2 text-left">ID</th>
                         <th className="p-2 text-left">Tên Chi nhánh</th>
                         <th className="p-2 text-left">Địa chỉ</th>
                         <th className="p-2 text-left">Số điện thoại</th>
@@ -116,7 +119,6 @@ const BranchManagementPage = () => {
                     <tbody>
                     {branches.map(branch => (
                         <tr key={branch.id} className="border-b">
-                            <td className="p-2">{branch.id}</td>
                             <td className="p-2">{branch.name}</td>
                             <td className="p-2">{branch.address}</td>
                             <td className="p-2">{branch.phone || 'Chưa có'}</td>
@@ -124,6 +126,7 @@ const BranchManagementPage = () => {
                                 <button
                                     onClick={() => {
                                         setSelectedBranch(branch);
+                                        setIsCreateMode(false);
                                         setIsModalOpen(true);
                                     }}
                                     className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 mr-2"
@@ -144,11 +147,13 @@ const BranchManagementPage = () => {
                 </table>
             </div>
 
-            {/* Modal để chỉnh sửa chi nhánh */}
+            {/* Modal để chỉnh sửa hoặc tạo chi nhánh */}
             {isModalOpen && selectedBranch && (
                 <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
-                        <h3 className="text-xl font-semibold mb-4">Cập nhật Chi nhánh</h3>
+                        <h3 className="text-xl font-semibold mb-4">
+                            {isCreateMode ? 'Thêm Chi nhánh mới' : 'Cập nhật Chi nhánh'}
+                        </h3>
                         <div className="mb-4">
                             <label className="block mb-2">Tên Chi nhánh</label>
                             <input
@@ -156,6 +161,7 @@ const BranchManagementPage = () => {
                                 value={selectedBranch.name}
                                 onChange={(e) => setSelectedBranch({ ...selectedBranch, name: e.target.value })}
                                 className="w-full p-2 border rounded"
+                                required
                             />
                         </div>
                         <div className="mb-4">
@@ -164,7 +170,7 @@ const BranchManagementPage = () => {
                                 type="text"
                                 value={selectedBranch.address}
                                 onChange={(e) => setSelectedBranch({ ...selectedBranch, address: e.target.value })}
-                                className="w-full p-2 border rounded"
+                                className="w-full p-2 border rounded disabled:bg-gray-200 disabled:text-gray-500"
                             />
                         </div>
                         <div className="mb-4">
@@ -179,11 +185,16 @@ const BranchManagementPage = () => {
                         <div className="flex justify-end">
                             <button
                                 onClick={() => {
-                                    handleUpdateBranch(selectedBranch.id, selectedBranch);
+                                    if (isCreateMode) {
+                                        handleCreateBranch(selectedBranch);
+                                    } else {
+                                        handleUpdateBranch(selectedBranch.id, selectedBranch);
+                                    }
                                 }}
                                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2"
+                                disabled={!selectedBranch.name.trim()} // Vô hiệu hóa nếu tên trống
                             >
-                                Lưu
+                                {isCreateMode ? 'Tạo' : 'Lưu'}
                             </button>
                             <button
                                 onClick={() => setIsModalOpen(false)}

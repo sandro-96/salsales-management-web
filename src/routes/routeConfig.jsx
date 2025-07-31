@@ -1,5 +1,6 @@
 // src/routes/routeConfig.jsx
 import { lazy } from "react";
+import { Navigate } from "react-router-dom";
 import BranchManagementPage from "../pages/branchs/BranchManagementPage.jsx";
 const LoginPage = lazy(() => import("../pages/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/RegisterPage"));
@@ -37,6 +38,7 @@ export const routeConfig = [
         roles: ["ROLE_USER"],
         element: <DynamicDashboardLayout />,
         children: [
+            { index: true, element: <Navigate to="overview" replace /> },
             { path: "overview", element: <OverviewPage />, title: "Tổng quan" },
             { path: "products", element: <ProductListPage />, title: "Sản phẩm" },
             { path: "staffs", element: <StaffListPage />, title: "Nhân sự" },

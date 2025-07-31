@@ -28,6 +28,7 @@ const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        localStorage.removeItem("selectedShopId");
         setUser(null);
         navigate("/login");
     };
