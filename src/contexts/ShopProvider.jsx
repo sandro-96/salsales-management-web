@@ -9,6 +9,7 @@ const ShopProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
+    const [enums, setEnums] = useState(null);
     const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
     const selectedRole = selectedShop?.role || null;
     const isOwner = selectedRole === "OWNER";
@@ -18,6 +19,16 @@ const ShopProvider = ({ children }) => {
     const setSelectedShopId = (id) => {
         setSelectedShopIdState(id);
         localStorage.setItem("selectedShopId", id); // Ghi vào localStorage
+    };
+
+    const fetchEnums = async () => {
+        try {
+            const res = await axiosInstance.get("/enums/shop/all");
+            setEnums(res.data.data); // { businessModels: [], shopTypes: [] }
+            console.log("Fetched enums:", res.data);
+        } catch (err) {
+            console.error("Lỗi khi tải enums:", err);
+        }
     };
 
     const fetchShops = async () => {
@@ -46,9 +57,10 @@ const ShopProvider = ({ children }) => {
 
     useEffect(() => {
         if (!user) {
-            setIsLoading(false); // Nếu không có user, không cần tải cửa hàng
+            setIsLoading(false);
             return;
         }
+        fetchEnums();
         fetchShops();
     }, [user]);
 
@@ -62,7 +74,8 @@ const ShopProvider = ({ children }) => {
                 selectedRole,
                 isOwner,
                 isStaff,
-                isCashier
+                isCashier,
+                enums
             }}
         >
             {isLoading ? (

@@ -15,9 +15,11 @@ const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));
 const OverviewPage = lazy(() => import("../pages/OverviewPage"));
 const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
 const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
+const AlertDemo = lazy(() => import("../pages/AlertDemo.jsx"));
 
 export const routeConfig = [
     { path: "/login", element: <LoginPage />, guestOnly: true, title: "Đăng nhập" },
+    { path: "/alert-demo", element: <AlertDemo />, protected: true, roles: ["ROLE_USER"], title: "Demo Alert" },
     { path: "/register", element: <RegisterPage />, guestOnly: true, title: "Đăng ký tài khoản" },
     { path: "/verify", element: <VerifyEmailPage />, title: "Xác thực email" },
     { path: "/forgot-password", element: <ForgotPasswordPage />, title: "Quên mật khẩu" },

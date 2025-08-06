@@ -3,6 +3,7 @@ import { useShop } from "../hooks/useShop";
 import { getDashboardComponent } from "../utils/getDashboardComponent";
 
 const DynamicDashboardLayout = () => {
+    debugger
     const { selectedShop, device = "web" } = useShop();
     const LayoutComponent = getDashboardComponent(selectedShop?.industry, selectedShop?.role, device);
     return <LayoutComponent />;

@@ -1,11 +1,12 @@
 // src/pages/shop/CreateShopPage.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
+import { useAlert } from "../../hooks/useAlert";
 import imageCompression from "browser-image-compression";
 import { COUNTRIES } from "../../constants/countries";
-import { SHOP_TYPES } from "../../constants/shopTypes";
+import { ALERT_TYPES } from "../../constants/alertTypes";
 
 const CreateShopPage = () => {
     const [form, setForm] = useState({
@@ -13,14 +14,18 @@ const CreateShopPage = () => {
         type: "RESTAURANT",
         address: "",
         phone: "",
-        countryCode: "VN"
+        countryCode: "VN",
+        businessModel: "DINE_IN"
     });
     const [fileInputKey, setFileInputKey] = useState(Date.now());
     const [imagePreview, setImagePreview] = useState(null);
     const [file, setFile] = useState(null);
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState("");
-    const { fetchShops } = useShop();
+    const { fetchShops, enums } = useShop();
+    const { showAlert } = useAlert();
+    const shopTypes = enums?.shopTypes || [];
+    const businessModels = enums?.businessModels || [];
     const navigate = useNavigate();
 
     const handleFileChange = async (e) => {
@@ -65,8 +70,28 @@ const CreateShopPage = () => {
     };
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-        setErrors({ ...errors, [e.target.name]: null });
+        const { name, value } = e.target;
+
+        if (name === "type") {
+            const selectedType = shopTypes.find((s) => s.value === value);
+            const defaultBM = selectedType?.defaultBusinessModel || "DINE_IN";
+
+            setForm((prev) => ({
+                ...prev,
+                type: value,
+                businessModel: defaultBM,
+            }));
+        } else {
+            setForm((prev) => ({
+                ...prev,
+                [name]: value,
+            }));
+        }
+
+        setErrors((prev) => ({
+            ...prev,
+            [name]: null,
+        }));
     };
 
     const validate = () => {
@@ -106,8 +131,20 @@ const CreateShopPage = () => {
             });
 
             if (res.data.code === "SUCCESS") {
-                await fetchShops(); // cập nhật lại danh sách cửa hàng
-                navigate("/", { replace: true });
+                await fetchShops();
+                showAlert({
+                    type: "success",
+                    title: "Tạo cửa hàng thành công",
+                    children: "Bạn sẽ được chuyển hướng sau vài giây",
+                    actions: [
+                        <button key="ok"
+                            className="text-blue-600 hover:underline"
+                            onClick={() => navigate("/", { replace: true })}
+                        >
+                            OK
+                        </button>
+                    ],
+                });
             } else {
                 setSubmitError(res.data.message || "Tạo cửa hàng thất bại.");
             }
@@ -123,9 +160,6 @@ const CreateShopPage = () => {
         <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
             <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow w-full max-w-md space-y-4" noValidate>
                 <h2 className="text-xl font-bold text-center mb-2">Tạo cửa hàng mới</h2>
-
-                {submitError && <p className="text-red-600 text-sm text-center">{submitError}</p>}
-
                 <div>
                     <input
                         type="text"
@@ -145,18 +179,36 @@ const CreateShopPage = () => {
                         onChange={handleChange}
                         className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
                     >
-                        {SHOP_TYPES.map((opt) => (
+                        {shopTypes.map((opt) => (
                             <option key={opt.value} value={opt.value}>
                                 {opt.label}
                             </option>
                         ))}
                     </select>
                     <p className="text-sm text-gray-500 mt-1">
-                        {SHOP_TYPES.find((s) => s.value === form.type)?.trackInventory
+                        {shopTypes.find((s) => s.value === form.type)?.trackInventory
                             ? "✔️ Loại cửa hàng này sẽ bật quản lý tồn kho."
                             : "⚠️ Loại cửa hàng này không yêu cầu kiểm kho theo mặc định."}
                     </p>
                 </div>
+                <div>
+                    <select
+                        name="businessModel"
+                        value={form.businessModel}
+                        onChange={handleChange}
+                        className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                        {businessModels.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Mặc định theo loại cửa hàng: <strong>{shopTypes.find((s) => s.value === form.type)?.defaultBusinessModel}</strong>
+                    </p>
+                </div>
+
                 <div>
                     <label className="block mb-1 text-sm text-gray-600">Quốc gia</label>
                     <select
@@ -209,7 +261,7 @@ const CreateShopPage = () => {
                             <img
                                 src={imagePreview}
                                 alt="Logo preview"
-                                className="w-32 h-32 object-contain border rounded"
+                                className="w-32 h-32 object-cover rounded"
                             />
                             <button
                                 type="button"
