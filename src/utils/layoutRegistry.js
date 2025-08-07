@@ -25,7 +25,7 @@ import { serviceWebNav, servicePosNav } from "../layouts/service/navItems";
 export const layoutRegistry = {
     FNB: {
         web: {
-            OWNER: { layout: FnbWebLayout, props: { title: "FNB Admin", navItems: fnbWebNav.admin } },
+            OWNER: { layout: FnbWebLayout, props: { title: "FNB Admin", navItems: fnbWebNav.manager } },
             MANAGER: { layout: FnbWebLayout, props: { title: "FNB Manager", navItems: fnbWebNav.manager } },
             ADMIN: { layout: FnbWebLayout, props: { title: "FNB Admin", navItems: fnbWebNav.admin } },
             STAFF: { layout: FnbWebLayout, props: { title: "FNB Staff", navItems: fnbWebNav.staff } },

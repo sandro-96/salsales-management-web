@@ -9,19 +9,11 @@ export const otherWebNav = {
         { to: "/tasks", icon: FaTasks, label: "Công việc" },
         { to: "/users", icon: FaUsers, label: "Người dùng" }
     ],
-    manager: (logout) => [
+    manager: [
         { to: "/dashboard", icon: FaHome, label: "Dashboard" },
         { to: "/tasks", icon: FaTasks, label: "Công việc" },
         { to: "/users", icon: FaUsers, label: "Người dùng" },
-        { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        {
-            label: "Đăng xuất",
-            icon: () => "🚪",
-            onClick: (e) => {
-                e.preventDefault();
-                logout();
-            }
-        }
+        { to: "/reports", icon: FaChartBar, label: "Báo cáo" }
     ],
     staff: [
         { to: "/tasks", icon: FaTasks, label: "Công việc" }

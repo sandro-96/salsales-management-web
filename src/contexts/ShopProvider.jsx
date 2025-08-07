@@ -9,6 +9,7 @@ const ShopProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
+    const [isShopContextReady, setIsShopContextReady] = useState(false);
     const [enums, setEnums] = useState(null);
     const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
     const selectedRole = selectedShop?.role || null;
@@ -25,7 +26,7 @@ const ShopProvider = ({ children }) => {
     const fetchEnums = async () => {
         try {
             const res = await axiosInstance.get("/enums/shop/all");
-            setEnums(res.data.data); // { businessModels: [], shopTypes: [] }
+            setEnums(res.data.data);
             console.log("Fetched enums:", res.data);
         } catch (err) {
             console.error("Lỗi khi tải enums:", err);
@@ -50,19 +51,27 @@ const ShopProvider = ({ children }) => {
             console.log("Đã tải danh sách cửa hàng:", shopList);
         } catch (err) {
             console.error("Lỗi khi tải danh sách cửa hàng", err);
-        } finally {
-            console.log("Đã hoàn thành việc tải cửa hàng");
-            setIsLoading(false); // ✅ Đánh dấu đã xong
         }
     };
+
 
     useEffect(() => {
         if (!user) {
             setIsLoading(false);
             return;
         }
-        fetchEnums();
-        fetchShops();
+
+        const loadData = async () => {
+            setIsLoading(true);
+            try {
+                await Promise.all([fetchShops(), fetchEnums()]);
+            } finally {
+                setIsLoading(false);
+                setIsShopContextReady(true);
+            }
+        };
+
+        loadData();
     }, [user]);
 
     return (
@@ -78,7 +87,8 @@ const ShopProvider = ({ children }) => {
                 isCashier,
                 enums,
                 selectedIndustry,
-                fetchShops
+                fetchShops,
+                isShopContextReady
             }}
         >
             {isLoading ? (

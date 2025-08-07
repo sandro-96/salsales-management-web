@@ -13,7 +13,7 @@ export const fnbWebNav = {
         { to: "/branches", icon: FaStore, label: "Chi nhánh" },
         { to: "/inventory", icon: FaUtensils, label: "Kho" }
     ],
-    manager: (logout) => [
+    manager: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/products", icon: FaUtensils, label: "Món ăn / Thực đơn" },
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },
@@ -22,15 +22,7 @@ export const fnbWebNav = {
         { to: "/branches", icon: FaStore, label: "Chi nhánh" },
         { to: "/inventory", icon: FaUtensils, label: "Kho" },
         { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        { to: "/staffs", icon: FaUsers, label: "Nhân sự" },
-        {
-            label: "Đăng xuất",
-            icon: () => "🚪", // hoặc null nếu bạn xử lý icon đặc biệt
-            onClick: (e) => {
-                e.preventDefault();
-                logout();
-            }
-        }
+        { to: "/staffs", icon: FaUsers, label: "Nhân sự" }
     ],
     staff: [
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },

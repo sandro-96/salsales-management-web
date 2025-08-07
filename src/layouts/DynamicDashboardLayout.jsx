@@ -6,12 +6,12 @@ import { useShop } from "../hooks/useShop";
 import { getFirstValidNavItem } from "../utils/getFirstValidNavItem";
 
 const DynamicDashboardLayout = ({ children }) => {
-    const { selectedShop, device = "web" } = useShop();
+    const { device = "web", selectedIndustry, selectedRole } = useShop();
     const navigate = useNavigate();
     const location = useLocation();
 
-    const industry = selectedShop?.industry;
-    const role = selectedShop?.role;
+    const industry = selectedIndustry;
+    const role = selectedRole;
     const config = layoutRegistry?.[industry]?.[device]?.[role];
 
     const Layout = config?.layout || DefaultDashboard;

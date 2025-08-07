@@ -17,6 +17,10 @@ const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
 const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
 const AlertDemo = lazy(() => import("../pages/AlertDemo"));
 const OrderListPage = lazy(() => import("../pages/orders/OrderListPage"));
+const CustomerListPage = lazy(() => import("../pages/customers/CustomerListPage"));
+const InventoryListPage = lazy(() => import("../pages/inventory/InventoryListPage"));
+const ReportListPage = lazy(() => import("../pages/reports/ReportListPage"));
+const TableListPage = lazy(() => import("../pages/tables/TableListPage"));
 
 export const routeConfig = [
     { path: "/login", element: <LoginPage />, guestOnly: true, title: "Đăng nhập" },
@@ -41,12 +45,15 @@ export const routeConfig = [
         roles: ["ROLE_USER"],
         element: <DynamicDashboardLayout />,
         children: [
-            { index: true, element: <Navigate to="overview" replace /> },
             { path: "overview", element: <OverviewPage />, title: "Tổng quan" },
             { path: "products", element: <ProductListPage />, title: "Sản phẩm" },
             { path: "staffs", element: <StaffListPage />, title: "Nhân sự" },
             { path: "branches", element: <BranchManagementPage />, title: "Quản lý Chi nhánh" },
-            { path: "orders", element: <OrderListPage />, title: "Đơn hàng" }
+            { path: "orders", element: <OrderListPage />, title: "Đơn hàng" },
+            { path: "customers", element: <CustomerListPage />, title: "Khách hàng" },
+            { path: "inventory", element: <InventoryListPage />, title: "Kho hàng" },
+            { path: "reports", element: <ReportListPage />, title: "Báo cáo" },
+            { path: "tables", element: <TableListPage />, title: "Bàn" }
         ]
     },
     { path: "*", element: <NotFoundPage />, title: "Không tìm thấy trang" },

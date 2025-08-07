@@ -10,21 +10,13 @@ export const healthcareWebNav = {
         { to: "/doctors", icon: FaUserMd, label: "Bác sĩ" },
         { to: "/patients", icon: FaUserFriends, label: "Bệnh nhân" }
     ],
-    manager: (logout) => [
+    manager: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/appointments", icon: FaCalendarCheck, label: "Lịch hẹn" },
         { to: "/doctors", icon: FaUserMd, label: "Bác sĩ" },
         { to: "/patients", icon: FaUserFriends, label: "Bệnh nhân" },
         { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        { to: "/staffs", icon: FaUsers, label: "Nhân sự" },
-        {
-            label: "Đăng xuất",
-            icon: () => "🚪",
-            onClick: (e) => {
-                e.preventDefault();
-                logout();
-            }
-        }
+        { to: "/staffs", icon: FaUsers, label: "Nhân sự" }
     ],
     staff: [
         { to: "/appointments", icon: FaCalendarCheck, label: "Lịch hẹn" },

@@ -12,7 +12,7 @@ export const pharmacyWebNav = {
         { to: "/branches", icon: FaStore, label: "Chi nhánh" },
         { to: "/inventory", icon: FaCapsules, label: "Kho thuốc" }
     ],
-    manager: (logout) => [
+    manager: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/products", icon: FaCapsules, label: "Thuốc & Sản phẩm" },
         { to: "/orders", icon: FaShoppingCart, label: "Đơn thuốc" },
@@ -20,15 +20,7 @@ export const pharmacyWebNav = {
         { to: "/branches", icon: FaStore, label: "Chi nhánh" },
         { to: "/inventory", icon: FaCapsules, label: "Kho thuốc" },
         { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        { to: "/staffs", icon: FaUsers, label: "Nhân sự" },
-        {
-            label: "Đăng xuất",
-            icon: () => "🚪",
-            onClick: (e) => {
-                e.preventDefault();
-                logout();
-            }
-        }
+        { to: "/staffs", icon: FaUsers, label: "Nhân sự" }
     ],
     staff: [
         { to: "/orders", icon: FaShoppingCart, label: "Đơn thuốc" },

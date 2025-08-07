@@ -1,4 +1,4 @@
-import React from "react";
+// src/pages/orders/OrderListPage.jsx
 import {useShop} from "../../hooks/useShop.js";
 import {SHOP_INDUSTRY} from "../../constants/ShopIndustry.js";
 

@@ -11,22 +11,14 @@ export const educationWebNav = {
         { to: "/students", icon: FaUserGraduate, label: "Học viên" },
         { to: "/schedule", icon: FaCalendar, label: "Lịch học" }
     ],
-    manager: (logout) => [
+    manager: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/courses", icon: FaBook, label: "Khóa học" },
         { to: "/teachers", icon: FaChalkboardTeacher, label: "Giảng viên" },
         { to: "/students", icon: FaUserGraduate, label: "Học viên" },
         { to: "/schedule", icon: FaCalendar, label: "Lịch học" },
         { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        { to: "/staffs", icon: FaUsers, label: "Nhân sự" },
-        {
-            label: "Đăng xuất",
-            icon: () => "🚪", // Hoặc null nếu không cần hiển thị
-            onClick: (e) => {
-                e.preventDefault();
-                logout();
-            }
-        }
+        { to: "/staffs", icon: FaUsers, label: "Nhân sự" }
     ],
     staff: [
         { to: "/courses", icon: FaBook, label: "Khóa học" },

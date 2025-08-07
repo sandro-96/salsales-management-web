@@ -13,7 +13,7 @@ export const retailWebNav = {
         { to: "/branches", icon: FaStore, label: "Chi nhánh" },
         { to: "/inventory", icon: FaBoxOpen, label: "Tồn kho" },
     ],
-    manager: (logout) => [
+    manager: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },
         { to: "/products", icon: FaBoxOpen, label: "Sản phẩm" },
@@ -21,15 +21,7 @@ export const retailWebNav = {
         { to: "/branches", icon: FaStore, label: "Chi nhánh" },
         { to: "/inventory", icon: FaBoxOpen, label: "Tồn kho" },
         { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        { to: "/staffs", icon: FaUsers, label: "Nhân sự" },
-        {
-            label: "Đăng xuất",
-            icon: () => "🚪",
-            onClick: (e) => {
-                e.preventDefault();
-                logout();
-            }
-        }
+        { to: "/staffs", icon: FaUsers, label: "Nhân sự" }
     ],
     staff: [
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },

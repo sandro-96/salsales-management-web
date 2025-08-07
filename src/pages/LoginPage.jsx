@@ -41,7 +41,7 @@ const LoginPage = () => {
         } catch (err) {
             setError(err.response?.data?.message || "Đăng nhập thất bại.");
         } finally {
-            setLoading(false); // luôn được gọi
+            setLoading(false);
         }
     };
 

@@ -4,8 +4,12 @@ import { useNavigate, Navigate } from "react-router-dom";
 
 const ShopSelectPage = () => {
     const navigate = useNavigate();
-    const { shops, setSelectedShopId } = useShop();
+    const { shops, setSelectedShopId, isShopContextReady } = useShop();
 
+    if (!isShopContextReady) {
+        return <p>Loading...</p>; // hoặc null
+    }
+    
     if (shops.length === 0) {
         return <Navigate to="/create-shop" replace />;
     }

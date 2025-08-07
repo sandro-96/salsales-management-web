@@ -12,21 +12,13 @@ export const serviceWebNav = {
         { to: "/staffs", icon: FaUsers, label: "Nhân sự" },
         { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
     ],
-    manager: (logout) => [
+    manager: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/appointments", icon: FaCalendarAlt, label: "Lịch hẹn" },
         { to: "/services", icon: FaClipboardList, label: "Dịch vụ" },
         { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
         { to: "/staffs", icon: FaUsers, label: "Nhân sự" },
-        { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        {
-            label: "Đăng xuất",
-            icon: () => "🚪",
-            onClick: (e) => {
-                e.preventDefault();
-                logout();
-            }
-        }
+        { to: "/reports", icon: FaChartBar, label: "Báo cáo" }
     ],
     staff: [
         { to: "/appointments", icon: FaCalendarAlt, label: "Lịch hẹn" },

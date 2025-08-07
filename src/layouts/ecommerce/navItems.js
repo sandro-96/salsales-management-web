@@ -11,21 +11,13 @@ export const ecommerceWebNav = {
         { to: "/customers", icon: FaUsers, label: "Khách hàng" },
         { to: "/inventory", icon: FaStore, label: "Kho hàng" }
     ],
-    manager: (logout) => [
+    manager: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },
         { to: "/products", icon: FaBoxOpen, label: "Sản phẩm" },
         { to: "/customers", icon: FaUsers, label: "Khách hàng" },
         { to: "/inventory", icon: FaStore, label: "Kho hàng" },
-        { to: "/reports", icon: FaChartLine, label: "Báo cáo" },
-        {
-            label: "Đăng xuất",
-            icon: () => "🚪",
-            onClick: (e) => {
-                e.preventDefault();
-                logout();
-            }
-        }
+        { to: "/reports", icon: FaChartLine, label: "Báo cáo" }
     ],
     staff: [
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },
