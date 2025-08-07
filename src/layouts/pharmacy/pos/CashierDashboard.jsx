@@ -1,4 +1,4 @@
-// create a new file src/layouts/pharmacy/pos/CashierDashboard.jsx
+// create a new file src/layouts/pharmacy/pos/AdminDashboard.jsx
 import { Outlet, NavLink } from "react-router-dom";
 import { FaHome, FaPrescriptionBottleAlt, FaUsers } from "react-icons/fa";
 const PharmacyCashierDashboard = () => {

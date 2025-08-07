@@ -1,6 +1,5 @@
 // src/pages/shop/CreateShopPage.jsx
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
 import { useAlert } from "../../hooks/useAlert";
@@ -26,7 +25,6 @@ const CreateShopPage = () => {
     const { showAlert } = useAlert();
     const shopTypes = enums?.shopTypes || [];
     const businessModels = enums?.businessModels || [];
-    const navigate = useNavigate();
 
     const handleFileChange = async (e) => {
         const selectedFile = e.target.files[0];
@@ -133,16 +131,25 @@ const CreateShopPage = () => {
             if (res.data.code === "SUCCESS") {
                 await fetchShops();
                 showAlert({
-                    type: "success",
+                    type: ALERT_TYPES.SUCCESS,
                     title: "Tạo cửa hàng thành công",
-                    children: "Bạn sẽ được chuyển hướng sau vài giây",
+                    variant: "modal",
+                    children: (
+                        <div>
+                            <p>Bạn sẽ được chuyển hướng sau vài giây.</p>
+                            <p className="mt-2">
+                                🎉 Đã tạo chi nhánh mặc định cho cửa hàng<br />
+                                📍 Địa chỉ: {res.data.data.address}<br />
+                                📞 SĐT: {res.data.data.phone}
+                            </p>
+                        </div>
+                    ),
                     actions: [
-                        <button key="ok"
-                            className="text-blue-600 hover:underline"
-                            onClick={() => navigate("/", { replace: true })}
-                        >
-                            OK
-                        </button>
+                        {
+                            label: "Đi đến cửa hàng",
+                            className: "bg-blue-500 text-white hover:bg-blue-600",
+                            to: "/overview",
+                        }
                     ],
                 });
             } else {

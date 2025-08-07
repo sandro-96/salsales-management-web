@@ -1,12 +1,19 @@
 // src/layouts/DynamicDashboardLayout.jsx
+import { layoutRegistry } from "../utils/layoutRegistry";
+import DefaultDashboard from "../layouts/DefaultDashboard";
 import { useShop } from "../hooks/useShop";
-import { getDashboardComponent } from "../utils/getDashboardComponent";
 
-const DynamicDashboardLayout = () => {
-    debugger
+const DynamicDashboardLayout = ({ children }) => {
     const { selectedShop, device = "web" } = useShop();
-    const LayoutComponent = getDashboardComponent(selectedShop?.industry, selectedShop?.role, device);
-    return <LayoutComponent />;
+
+    const industry = selectedShop?.industry;
+    const role = selectedShop?.role;
+    const config = layoutRegistry?.[industry]?.[device]?.[role];
+
+    const Layout = config?.layout || DefaultDashboard;
+    const layoutProps = config?.props || {};
+
+    return <Layout {...layoutProps}>{children}</Layout>;
 };
 
 export default DynamicDashboardLayout;

@@ -13,6 +13,7 @@ const AlertProvider = ({ children }) => {
             description,
             type = "info",
             duration = 3000,
+            children = null,
             actions = [],
             variant = "toast",
             icon = null,
@@ -21,7 +22,7 @@ const AlertProvider = ({ children }) => {
             // Hủy timeout cũ (nếu có) để tránh alert bị ghi đè chồng nhau
             clearTimeout(timeoutRef.current);
 
-            setAlert({ title, description, type, actions, variant, icon, position });
+            setAlert({ title, description, type, actions, children, variant, icon, position });
 
             if (variant === "toast" && duration !== 0) {
                 timeoutRef.current = setTimeout(() => {
