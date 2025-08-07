@@ -1,5 +1,5 @@
 // src/pages/shop/CreateShopPage.jsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
 import { useAlert } from "../../hooks/useAlert";
