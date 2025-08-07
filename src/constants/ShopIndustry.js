@@ -1,6 +1,6 @@
 // File: src/constants/ShopIndustry.js
 
-export const ShopIndustry = {
+export const SHOP_INDUSTRY = {
     FNB: "FNB", // Nhà hàng, Cafe, Bar
     RETAIL: "RETAIL", // Tạp hóa, Cửa hàng tiện lợi, bán lẻ
     HEALTHCARE: "HEALTHCARE", // Hiệu thuốc

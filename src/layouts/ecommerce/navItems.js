@@ -1,27 +1,23 @@
-// src/layouts/retail/navItems.js
+// src/layouts/ecommerce/navItems.js
 import {
-    FaHome, FaShoppingCart, FaBoxOpen,
-    FaUserFriends, FaStore, FaUsers,
-    FaChartBar, FaCog
+    FaHome, FaBoxOpen, FaUsers, FaShoppingCart,
+    FaChartLine, FaStore, FaCog
 } from "react-icons/fa";
 
-export const retailWebNav = {
+export const ecommerceWebNav = {
     admin: [
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },
         { to: "/products", icon: FaBoxOpen, label: "Sản phẩm" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
-        { to: "/branches", icon: FaStore, label: "Chi nhánh" },
-        { to: "/inventory", icon: FaBoxOpen, label: "Tồn kho" },
+        { to: "/customers", icon: FaUsers, label: "Khách hàng" },
+        { to: "/inventory", icon: FaStore, label: "Kho hàng" }
     ],
     manager: (logout) => [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },
         { to: "/products", icon: FaBoxOpen, label: "Sản phẩm" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
-        { to: "/branches", icon: FaStore, label: "Chi nhánh" },
-        { to: "/inventory", icon: FaBoxOpen, label: "Tồn kho" },
-        { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        { to: "/staffs", icon: FaUsers, label: "Nhân sự" },
+        { to: "/customers", icon: FaUsers, label: "Khách hàng" },
+        { to: "/inventory", icon: FaStore, label: "Kho hàng" },
+        { to: "/reports", icon: FaChartLine, label: "Báo cáo" },
         {
             label: "Đăng xuất",
             icon: () => "🚪",
@@ -34,19 +30,19 @@ export const retailWebNav = {
     staff: [
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },
         { to: "/products", icon: FaBoxOpen, label: "Sản phẩm" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
+        { to: "/customers", icon: FaUsers, label: "Khách hàng" }
     ]
 };
 
-export const retailPosNav = {
+export const ecommercePosNav = {
     admin: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/orders", icon: FaShoppingCart, label: "Đơn hàng" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
+        { to: "/products", icon: FaBoxOpen, label: "Sản phẩm" }
     ],
     staff: [
         { to: "/overview", icon: FaHome, label: "Tổng quan" },
         { to: "/products", icon: FaBoxOpen, label: "Sản phẩm" },
-        { to: "/settings", icon: FaCog, label: "Cài đặt" },
+        { to: "/settings", icon: FaCog, label: "Cài đặt" }
     ]
 };

@@ -20,7 +20,9 @@ const FnbWebLayout = ({ title, navItems }) => {
                                 }`
                             }
                         >
-                            <span className="mr-2">{icon}</span>
+                            <span className="mr-2">
+                                {typeof icon === "function" ? icon() : icon}
+                            </span>
                             {label}
                         </NavLink>
                     ))}

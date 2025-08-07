@@ -12,6 +12,7 @@ const ShopProvider = ({ children }) => {
     const [enums, setEnums] = useState(null);
     const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
     const selectedRole = selectedShop?.role || null;
+    const selectedIndustry = selectedShop?.industry || null;
     const isOwner = selectedRole === "OWNER";
     const isStaff = selectedRole === "STAFF";
     const isCashier = selectedRole === "CASHIER";
@@ -75,7 +76,9 @@ const ShopProvider = ({ children }) => {
                 isOwner,
                 isStaff,
                 isCashier,
-                enums
+                enums,
+                selectedIndustry,
+                fetchShops
             }}
         >
             {isLoading ? (

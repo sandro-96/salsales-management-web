@@ -1,10 +1,11 @@
-// src/layouts/retail/RetailWebLayout.jsx
+// src/layouts/education/WebLayout.jsx
 import { Outlet, NavLink } from "react-router-dom";
 
-const RetailWebLayout = ({ title, navItems }) => {
+const EducationWebLayout = ({ title, navItems }) => {
     return (
         <div className="min-h-screen flex flex-col md:flex-row">
-            <aside className="w-full md:w-64 bg-green-700 text-white p-4">
+            {/* Sidebar */}
+            <aside className="w-full md:w-64 bg-indigo-800 text-white p-4">
                 <h1 className="text-2xl font-bold mb-6">{title}</h1>
                 <nav className="flex flex-col gap-2">
                     {navItems.map(({ to, icon, label, onClick }) => (
@@ -15,8 +16,8 @@ const RetailWebLayout = ({ title, navItems }) => {
                             className={({ isActive }) =>
                                 `flex items-center px-4 py-2 rounded-md transition-colors duration-200 ${
                                     isActive
-                                        ? "bg-yellow-300 text-green-800 font-semibold"
-                                        : "text-white hover:bg-green-600"
+                                        ? "bg-indigo-300 text-indigo-900 font-semibold"
+                                        : "text-white hover:bg-indigo-700"
                                 }`
                             }
                         >
@@ -29,6 +30,7 @@ const RetailWebLayout = ({ title, navItems }) => {
                 </nav>
             </aside>
 
+            {/* Main content */}
             <main className="flex-1 bg-gray-100 p-6">
                 <Outlet />
             </main>
@@ -36,4 +38,4 @@ const RetailWebLayout = ({ title, navItems }) => {
     );
 };
 
-export default RetailWebLayout;
+export default EducationWebLayout;

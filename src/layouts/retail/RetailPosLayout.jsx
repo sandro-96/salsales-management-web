@@ -1,31 +1,36 @@
 // src/layouts/retail/RetailPosLayout.jsx
-import { Outlet } from "react-router-dom";
-import { useShop } from "../../hooks/useShop";
+import { Outlet, NavLink } from "react-router-dom";
 
-const RetailPosLayout = ({ title }) => {
-    const { selectedShop } = useShop();
-
+const RetailPosLayout = ({ title, navItems }) => {
     return (
-        <div className="min-h-screen flex flex-col bg-white">
-            {/* Header */}
-            <header className="bg-blue-800 text-white p-4 flex justify-between items-center shadow-md">
-                <h1 className="text-xl font-bold">{title}</h1>
-                <div>{selectedShop?.name}</div>
-            </header>
+        <div className="min-h-screen flex flex-col md:flex-row">
+            <aside className="w-full md:w-64 bg-green-700 text-white p-4">
+                <h1 className="text-2xl font-bold mb-6">{title}</h1>
+                <nav className="flex flex-col gap-2">
+                    {navItems.map(({ to, icon, label, onClick }) => (
+                        <NavLink
+                            key={to || label}
+                            to={to || "#"}
+                            onClick={onClick}
+                            className={({ isActive }) =>
+                                `flex items-center px-4 py-2 rounded-md transition-colors duration-200 ${
+                                    isActive
+                                        ? "bg-yellow-300 text-green-800 font-semibold"
+                                        : "text-white hover:bg-green-600"
+                                }`
+                            }
+                        >
+                            <span className="mr-2">
+                                {typeof icon === "function" ? icon() : icon}
+                            </span>
+                            {label}
+                        </NavLink>
+                    ))}
+                </nav>
+            </aside>
 
-            {/* Main POS screen */}
-            <main className="flex-1 flex overflow-hidden">
-                {/* Left: Product list */}
-                <section className="w-2/3 border-r p-4 overflow-y-auto">
-                    <h2 className="text-lg font-semibold mb-2">Sản phẩm</h2>
-                    {/* TODO: Product grid or category nav */}
-                </section>
-
-                {/* Right: Cart and actions */}
-                <section className="w-1/3 p-4 bg-gray-100 overflow-y-auto">
-                    <h2 className="text-lg font-semibold mb-2">Giỏ hàng</h2>
-                    {/* TODO: Cart items and payment actions */}
-                </section>
+            <main className="flex-1 bg-gray-100 p-6">
+                <Outlet />
             </main>
         </div>
     );

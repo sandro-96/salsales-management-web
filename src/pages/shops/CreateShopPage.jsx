@@ -127,8 +127,7 @@ const CreateShopPage = () => {
             const res = await axiosInstance.post("/shop", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-
-            if (res.data.code === "SUCCESS") {
+            if (res.data.success) {
                 await fetchShops();
                 showAlert({
                     type: ALERT_TYPES.SUCCESS,

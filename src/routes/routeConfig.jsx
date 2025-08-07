@@ -15,7 +15,8 @@ const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));
 const OverviewPage = lazy(() => import("../pages/OverviewPage"));
 const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
 const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
-const AlertDemo = lazy(() => import("../pages/AlertDemo.jsx"));
+const AlertDemo = lazy(() => import("../pages/AlertDemo"));
+const OrderListPage = lazy(() => import("../pages/orders/OrderListPage"));
 
 export const routeConfig = [
     { path: "/login", element: <LoginPage />, guestOnly: true, title: "Đăng nhập" },
@@ -45,6 +46,7 @@ export const routeConfig = [
             { path: "products", element: <ProductListPage />, title: "Sản phẩm" },
             { path: "staffs", element: <StaffListPage />, title: "Nhân sự" },
             { path: "branches", element: <BranchManagementPage />, title: "Quản lý Chi nhánh" },
+            { path: "orders", element: <OrderListPage />, title: "Đơn hàng" }
         ]
     },
     { path: "*", element: <NotFoundPage />, title: "Không tìm thấy trang" },
