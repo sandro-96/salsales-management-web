@@ -33,13 +33,6 @@ export const routeConfig = [
     { path: "/select-shop", element: <ShopSelectPage />, protected: true, roles: ["ROLE_USER"], title: "Chọn cửa hàng" },
     { path: "/create-shop", element: <CreateShopPage />, protected: true, roles: ["ROLE_USER"], title: "Tạo cửa hàng" },
     {
-        path: "/shop-settings",
-        element: <ShopSettingsPage />,
-        protected: true,
-        roles: ["ROLE_USER"],
-        title: "Cài đặt cửa hàng",
-    },
-    {
         path: "/",
         protected: true,
         roles: ["ROLE_USER"],
@@ -53,7 +46,9 @@ export const routeConfig = [
             { path: "customers", element: <CustomerListPage />, title: "Khách hàng" },
             { path: "inventory", element: <InventoryListPage />, title: "Kho hàng" },
             { path: "reports", element: <ReportListPage />, title: "Báo cáo" },
-            { path: "tables", element: <TableListPage />, title: "Bàn" }
+            { path: "tables", element: <TableListPage />, title: "Bàn" },
+            { path: "/shop-settings", element: <ShopSettingsPage />, title: "Cài đặt cửa hàng" },
+            { path: "/accounts", element: <ShopSettingsPage />, title: "Cài đặt cửa hàng" },
         ]
     },
     { path: "*", element: <NotFoundPage />, title: "Không tìm thấy trang" },

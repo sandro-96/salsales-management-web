@@ -1,196 +1,192 @@
-// src/pages/shop/ShopSettingsPage.jsx
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../api/axiosInstance.js";
-import { SHOP_TYPES } from "../../constants/shopTypes.js";
+import { useState } from "react";
 import { useShop } from "../../hooks/useShop.js";
 
+const pastelMint = "#A8DADC";
+
 const ShopSettingsPage = () => {
-    const { isOwner, fetchShops } = useShop();
-    const navigate = useNavigate();
-    const fileInputRef = useRef(null);
+    const { selectedShop } = useShop();
 
-    const [shop, setShop] = useState(null);
-    const [logoFile, setLogoFile] = useState(null);
-    const [previewUrl, setPreviewUrl] = useState(null);
+    const [form, setForm] = useState({
+        name: selectedShop?.name || "",
+        type: selectedShop?.type || "",
+        countryCode: selectedShop?.countryCode || "",
+        phone: selectedShop?.phone || "",
+        address: selectedShop?.address || "",
+        active: selectedShop?.active || false,
+        // Không cho chỉnh sửa industry và trackInventory nữa
+        logo: null,
+    });
 
-    const [loading, setLoading] = useState(false);
-    const [deleting, setDeleting] = useState(false);
-    const [confirmDelete, setConfirmDelete] = useState(false);
-    const [error, setError] = useState(null);
+    const [previewLogo, setPreviewLogo] = useState(
+        selectedShop?.logoUrl
+            ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
+            : null
+    );
 
-    useEffect(() => {
-        if (!isOwner) navigate("/overview", { replace: true });
-    }, [isOwner, navigate]);
+    const handleChange = (e) => {
+        const { name, value, type, files } = e.target;
 
-    useEffect(() => {
-        axiosInstance.get("/shop/me").then((res) => {
-            const data = res.data.data;
-            setShop(data);
-            setPreviewUrl(data.logoUrl || null);
-        });
-    }, []);
-
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        setLogoFile(file);
-        setPreviewUrl(URL.createObjectURL(file));
+        if (type === "file") {
+            const file = files[0];
+            setForm({ ...form, logo: file });
+            setPreviewLogo(URL.createObjectURL(file));
+        } else {
+            setForm({ ...form, [name]: value });
+        }
     };
 
-    const handleImageRemove = () => {
-        setLogoFile(null);
-        setPreviewUrl(null);
+    const toggleActive = () => {
+        setForm((prev) => ({ ...prev, active: !prev.active }));
     };
 
-    const handleChange = (field, value) => {
-        setShop((prev) => ({ ...prev, [field]: value }));
-    };
-
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
-        setError(null);
 
-        try {
-            const formData = new FormData();
-            formData.append("shop", new Blob([JSON.stringify(shop)], { type: "application/json" }));
-            if (logoFile) formData.append("file", logoFile);
+        const formData = new FormData();
+        Object.entries(form).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                formData.append(key, value);
+            }
+        });
 
-            await axiosInstance.put("/shop/me", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-        } catch (err) {
-            console.error("Lỗi khi cập nhật shop:", err);
-            setError("Không thể cập nhật cửa hàng.");
-        } finally {
-            setLoading(false);
-        }
+        // TODO: Gửi API cập nhật shop
+        console.log("Submit data:", form);
     };
-
-    const handleDelete = async () => {
-        if (!confirmDelete) return setConfirmDelete(true);
-        setDeleting(true);
-        try {
-            await axiosInstance.delete("/shop");
-            localStorage.removeItem("selectedShopId");
-            await fetchShops();
-            navigate("/select-shop");
-        } catch (err) {
-            console.error("Lỗi khi xoá cửa hàng:", err);
-        } finally {
-            setDeleting(false);
-        }
-    };
-
-    if (!shop) return <div>Đang tải...</div>;
 
     return (
-        <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
-            <h1 className="text-xl font-bold">Quản lý cửa hàng</h1>
+        <form
+            onSubmit={handleSubmit}
+            className="bg-white p-6 rounded-lg shadow-md space-y-6 max-w-2xl"
+        >
+            <h2 className="text-xl font-bold mb-4">Cài đặt cửa hàng</h2>
 
-            {error && <p className="text-red-600">{error}</p>}
-
-            {/* 🖼 Logo */}
+            {/* Logo */}
             <div>
                 <label className="block font-medium mb-1">Logo cửa hàng</label>
-                {previewUrl ? (
-                    <div className="mb-2">
-                        <img src={previewUrl} alt="preview" className="w-32 h-32 object-cover rounded border" />
-                        <button
-                            type="button"
-                            onClick={handleImageRemove}
-                            className="text-red-500 text-sm mt-1 underline"
-                        >
-                            Xoá ảnh
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                        type="button"
-                        className="text-blue-600 underline text-sm"
-                        onClick={() => fileInputRef.current.click()}
-                    >
-                        Chọn ảnh
-                    </button>
+                {previewLogo && (
+                    <img
+                        src={previewLogo}
+                        alt="Shop Logo"
+                        className="w-20 h-20 object-cover rounded-full mb-2 border"
+                        style={{ borderColor: pastelMint }}
+                    />
                 )}
                 <input
                     type="file"
                     accept="image/*"
-                    ref={fileInputRef}
-                    hidden
-                    onChange={handleImageChange}
+                    name="logo"
+                    onChange={handleChange}
                 />
             </div>
 
-            {/* Tên cửa hàng */}
+            {/* Name */}
             <div>
-                <label className="block font-medium">Tên cửa hàng</label>
+                <label className="block font-medium mb-1">Tên cửa hàng</label>
                 <input
-                    value={shop.name}
-                    onChange={(e) => handleChange("name", e.target.value)}
-                    className="w-full border px-3 py-2 rounded"
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    className="border rounded p-2 w-full"
                 />
             </div>
 
-            {/* Loại hình */}
+            {/* Type */}
             <div>
-                <label className="block font-medium">Loại hình</label>
-                <select
-                    value={shop.type}
-                    onChange={(e) => handleChange("type", e.target.value)}
-                    className="w-full border px-3 py-2 rounded"
-                >
-                    {SHOP_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>
-                            {t.label}
-                        </option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Số điện thoại */}
-            <div>
-                <label className="block font-medium">Số điện thoại</label>
+                <label className="block font-medium mb-1">Loại hình</label>
                 <input
-                    value={shop.phone}
-                    onChange={(e) => handleChange("phone", e.target.value)}
-                    className="w-full border px-3 py-2 rounded"
+                    type="text"
+                    name="type"
+                    value={form.type}
+                    onChange={handleChange}
+                    className="border rounded p-2 w-full"
                 />
             </div>
 
-            {/* Địa chỉ */}
+            {/* Country Code */}
             <div>
-                <label className="block font-medium">Địa chỉ</label>
+                <label className="block font-medium mb-1">Mã quốc gia</label>
                 <input
-                    value={shop.address}
-                    onChange={(e) => handleChange("address", e.target.value)}
-                    className="w-full border px-3 py-2 rounded"
+                    type="text"
+                    name="countryCode"
+                    value={form.countryCode}
+                    onChange={handleChange}
+                    className="border rounded p-2 w-full"
                 />
             </div>
 
-            <div className="pt-4">
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                    {loading ? "Đang lưu..." : "Cập nhật"}
-                </button>
+            {/* Phone */}
+            <div>
+                <label className="block font-medium mb-1">Số điện thoại</label>
+                <input
+                    type="text"
+                    name="phone"
+                    value={form.phone}
+                    onChange={handleChange}
+                    className="border rounded p-2 w-full"
+                />
             </div>
 
-            {/* ❌ XÓA SHOP */}
-            <div className="pt-6 text-sm text-red-600 border-t mt-6">
-                <p className="mb-2">⚠️ Xóa cửa hàng là hành động không thể hoàn tác.</p>
+            {/* Address */}
+            <div>
+                <label className="block font-medium mb-1">Địa chỉ</label>
+                <input
+                    type="text"
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                    className="border rounded p-2 w-full"
+                />
+            </div>
+
+            {/* Industry & Track Inventory - chỉ hiển thị */}
+            <div className="space-y-2">
+                <div>
+                    <label className="block font-medium text-gray-700">Ngành nghề</label>
+                    <p className="p-2 bg-gray-100 rounded">{selectedShop?.industry || "N/A"}</p>
+                </div>
+                <div>
+                    <label className="block font-medium text-gray-700">Theo dõi tồn kho</label>
+                    <p className="p-2 bg-gray-100 rounded">
+                        {selectedShop?.trackInventory ? "Có" : "Không"}
+                    </p>
+                </div>
+            </div>
+
+            {/* Nút toggle Kích hoạt cửa hàng chi tiết hơn */}
+            <div className="relative">
+                <label className="block font-medium mb-2">Kích hoạt cửa hàng</label>
                 <button
                     type="button"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                    onClick={toggleActive}
+                    aria-pressed={form.active}
+                    className={`inline-flex items-center px-4 py-2 rounded-full font-semibold transition-colors duration-300
+            ${
+                        form.active
+                            ? "bg-green-600 text-white hover:bg-green-700"
+                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                    }
+            z-10
+          `}
+                    style={{ position: 'relative', zIndex: 10 }}
                 >
-                    {confirmDelete ? (deleting ? "Đang xoá..." : "Xác nhận xoá") : "Xoá cửa hàng"}
+          <span
+              className={`inline-block w-5 h-5 mr-2 rounded-full bg-white shadow-md transform transition-transform duration-300 ${
+                  form.active ? "translate-x-6" : ""
+              }`}
+          />
+                    {form.active ? "Đang kích hoạt" : "Chưa kích hoạt"}
                 </button>
             </div>
+
+            {/* Submit */}
+            <button
+                type="submit"
+                className="px-6 py-2 rounded text-white"
+                style={{ backgroundColor: pastelMint }}
+            >
+                Lưu thay đổi
+            </button>
         </form>
     );
 };

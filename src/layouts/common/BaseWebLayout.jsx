@@ -77,19 +77,48 @@ const BaseWebLayout = ({ title, navItems }) => {
                     style={{ borderTop: `1px solid ${pastelMint}` }}
                 >
                     <NavLink
-                        to="/settings"
-                        className="flex items-center px-4 py-2 rounded-md hover:bg-white/10 transition-colors"
-                        style={{ color: textLight }}
+                        to="/shop-settings"
+                        className={({ isActive }) =>
+                            `flex items-center px-4 py-2 rounded-md transition-colors duration-200 ${
+                                isActive ? "font-semibold" : "hover:bg-white/10"
+                            }`
+                        }
+                        style={({ isActive }) =>
+                            isActive
+                                ? { backgroundColor: pastelSand, color: textDark }
+                                : { color: textLight }
+                        }
                     >
-                        <FaCog className="mr-2" style={{ color: pastelMint }} /> Cài đặt cửa hàng
+                        {({ isActive }) => (
+                            <>
+                                <FaCog
+                                    className="mr-2"
+                                    style={{ color: isActive ? textDark : pastelMint }}
+                                />
+                                Cài đặt cửa hàng
+                            </>
+                        )}
                     </NavLink>
 
                     <NavLink
-                        to="/account"
-                        className="flex items-center px-4 py-2 rounded-md hover:bg-white/10 transition-colors"
-                        style={{ color: textLight }}
+                        to="/accounts"
+                        className={({ isActive }) =>
+                            `flex items-center px-4 py-2 rounded-md transition-colors duration-200 ${
+                                isActive ? "font-semibold" : "hover:bg-white/10"
+                            }`
+                        }
+                        style={({ isActive }) =>
+                            isActive
+                                ? { backgroundColor: pastelSand, color: textDark }
+                                : { color: textLight }
+                        }
                     >
-                        <FaUserCircle className="mr-2" style={{ color: pastelMint }} /> {user?.name || "Tài khoản"}
+                        {({ isActive }) => (
+                            <>
+                                <FaUserCircle className="mr-2" style={{ color: isActive ? textDark : pastelMint }} />
+                                {user?.name || "Tài khoản"}
+                            </>
+                        )}
                     </NavLink>
 
                     <button
