@@ -4,6 +4,8 @@ import axiosInstance from "../api/axiosInstance";
 import { Link } from "react-router-dom";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { WebSocketMessageTypes } from "../constants/websocket";
+import Loading from "../components/loading/Loading.jsx";
+import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
 
 const RegisterPage = () => {
     const [form, setForm] = useState({
@@ -14,6 +16,7 @@ const RegisterPage = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const { subscribe, connected } = useWebSocket();
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -28,6 +31,7 @@ const RegisterPage = () => {
             return;
         }
         try {
+            setLoading(true);
             await axiosInstance.post("/auth/register", {
                 email: form.email,
                 password: form.password
@@ -35,10 +39,11 @@ const RegisterPage = () => {
             setSuccess("Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản.");
         } catch (err) {
             setError(err.response?.data?.message || "Đăng ký thất bại.");
+        } finally {
+            setLoading(false);
         }
     };
 
-    // 🔔 Lắng nghe WebSocket message xác minh tài khoản
     useEffect(() => {
         console.log("🔔 Đăng ký lắng nghe xác minh tài khoản qua WebSocket");
         if (!connected || !form.email) return;
@@ -46,7 +51,10 @@ const RegisterPage = () => {
         const unsubscribe = subscribe(`/topic/verify/${form.email}`, (message) => {
             if (message?.type === WebSocketMessageTypes.EMAIL_VERIFIED) {
                 console.log("🔔 Nhận:", message);
-                setSuccess("Tài khoản đã được xác minh!");
+                setSuccess("Tài khoản đã được xác minh! Bạn sẽ được chuyển hướng đến trang đăng nhập.");
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 2000);
             }
         });
 
@@ -58,6 +66,7 @@ const RegisterPage = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
             <form className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md" onSubmit={handleSubmit}>
+                {loading && <LoadingOverlay text="Đang đăng ký tài khoản..." />}
                 <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Tạo tài khoản mới</h2>
                 {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
                 {success && <p className="text-green-600 text-sm mb-3">{success}</p>}

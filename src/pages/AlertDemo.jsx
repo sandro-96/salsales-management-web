@@ -1,5 +1,6 @@
 // src/pages/AlertDemo.jsx
 import { useAlert } from "../hooks/useAlert";
+import {ALERT_TYPES} from "../constants/alertTypes.js";
 
 const AlertDemo = () => {
   const { showAlert } = useAlert();

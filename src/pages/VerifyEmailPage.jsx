@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
 
@@ -6,10 +6,13 @@ const VerifyEmailPage = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const [status, setStatus] = useState("Đang xác minh...");
-
+    const calledRef = useRef(false); // ✅ Chặn gọi lại
     const token = searchParams.get("token");
 
     useEffect(() => {
+        if (calledRef.current) return; // ✅ Ngăn lần gọi thứ 2
+        calledRef.current = true;
+
         if (!token) {
             setStatus("Không tìm thấy token xác minh.");
             return;
@@ -19,12 +22,10 @@ const VerifyEmailPage = () => {
             .get(`/auth/verify?token=${token}`)
             .then(() => {
                 setStatus("Xác minh thành công! Đóng tab này hoặc quay lại trang đăng nhập.");
-                // Thử đóng tab
                 setTimeout(() => {
                     window.close();
-                    // Nếu không được thì fallback về login
                     navigate("/login", { replace: true });
-                }, 3000);
+                }, 2000);
             })
             .catch((err) => {
                 const msg = err?.response?.data?.message || "Xác minh thất bại.";

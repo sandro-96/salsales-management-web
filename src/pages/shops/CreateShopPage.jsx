@@ -6,6 +6,7 @@ import { useAlert } from "../../hooks/useAlert";
 import imageCompression from "browser-image-compression";
 import { COUNTRIES } from "../../constants/countries";
 import { ALERT_TYPES } from "../../constants/alertTypes";
+import LoadingOverlay from "../../components/loading/LoadingOverlay.jsx";
 
 const CreateShopPage = () => {
     const [form, setForm] = useState({
@@ -25,6 +26,7 @@ const CreateShopPage = () => {
     const { showAlert } = useAlert();
     const shopTypes = enums?.shopTypes || [];
     const businessModels = enums?.businessModels || [];
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleFileChange = async (e) => {
         const selectedFile = e.target.files[0];
@@ -123,7 +125,7 @@ const CreateShopPage = () => {
             if (file) {
                 formData.append("file", file);
             }
-
+            setIsLoading(true);
             const res = await axiosInstance.post("/shop", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
@@ -159,12 +161,15 @@ const CreateShopPage = () => {
             setSubmitError(
                 err.response?.data?.message || "Đã xảy ra lỗi khi gửi dữ liệu."
             );
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
             <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow w-full max-w-md space-y-4" noValidate>
+                {isLoading && <LoadingOverlay text="Đang tạo cửa hàng..." />}
                 <h2 className="text-xl font-bold text-center mb-2">Tạo cửa hàng mới</h2>
                 <div>
                     <input

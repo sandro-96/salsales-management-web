@@ -4,6 +4,7 @@ import axiosInstance from "../api/axiosInstance";
 import { Link, useNavigate } from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 import { useAuth } from "../hooks/useAuth";
+import Loading from "../components/loading/Loading.jsx";
 
 const LoginPage = () => {
     const { setUser } = useAuth();
@@ -44,6 +45,8 @@ const LoginPage = () => {
             setLoading(false);
         }
     };
+
+    if (loading) return <Loading text="Đang đăng nhập ..." fullScreen/>;
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
