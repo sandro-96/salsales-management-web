@@ -19,7 +19,6 @@ const AlertProvider = ({ children }) => {
             icon = null,
             position = "bottom-right",
         }) => {
-            // Hủy timeout cũ (nếu có) để tránh alert bị ghi đè chồng nhau
             clearTimeout(timeoutRef.current);
 
             setAlert({ title, description, type, actions, children, variant, icon, position });

@@ -27,7 +27,6 @@ const ShopProvider = ({ children }) => {
         try {
             const res = await axiosInstance.get("/enums/shop/all");
             setEnums(res.data.data);
-            console.log("Fetched enums:", res.data);
         } catch (err) {
             console.error("Lỗi khi tải enums:", err);
         }

@@ -3,11 +3,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useShop } from "../../hooks/useShop.js";
 import { FaStore, FaEdit, FaTimes, FaSave } from "react-icons/fa";
 import imageCompression from "browser-image-compression";
-import axios from "axios";
+import axiosInstance from "../../api/axiosInstance";
+import { ALERT_TYPES } from "../../constants/alertTypes";
+import { useAlert } from "../../hooks/useAlert";
 
 const sidebarColor = "#34516dff";
 
 const ShopSettingsPage = () => {
+  const { showAlert } = useAlert();
   const { selectedShop, enums } = useShop();
   const [editMode, setEditMode] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -17,41 +20,40 @@ const ShopSettingsPage = () => {
   const shopTypes = enums?.shopTypes || [];
   const businessModels = enums?.businessModels || [];
 
-  useEffect(() => {
-        if (selectedShop) {
-            const newState = {
-                name: selectedShop.name || "",
-                industry: selectedShop.industry || "",
-                type: selectedShop.type || "",
-                countryCode: selectedShop.countryCode || "",
-                phone: selectedShop.phone || "",
-                address: selectedShop.address || "",
-                active: selectedShop.active || false,
-                businessModel:
-                    selectedShop.businessModel ||
-                    shopTypes.find((s) => s.value === selectedShop.type)?.defaultBusinessModel ||
-                    "",
-            };
-            // Reset form state to match selected shop
-            setForm(newState);
-            setInitialFormState(newState);
-            setPreviewLogo(
-                selectedShop.logoUrl
-                    ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
-                    : null
-            );
-            setFile(null);
-            setSubmitError("");
-            setErrors({});
-        }
-    }, [selectedShop]);
-
   const [file, setFile] = useState(null);
   const [previewLogo, setPreviewLogo] = useState(
     selectedShop?.logoUrl
       ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
       : null
   );
+
+  useEffect(() => {
+    if (selectedShop) {
+      const newState = {
+        name: selectedShop.name || "",
+        industry: selectedShop.industry || "",
+        type: selectedShop.type || "",
+        countryCode: selectedShop.countryCode || "",
+        phone: selectedShop.phone || "",
+        address: selectedShop.address || "",
+        active: selectedShop.active || false,
+        businessModel:
+          selectedShop.businessModel ||
+          shopTypes.find((s) => s.value === selectedShop.type)?.defaultBusinessModel ||
+          "",
+      };
+      setForm(newState);
+      setInitialFormState(newState);
+      setPreviewLogo(
+        selectedShop.logoUrl
+          ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
+          : null
+      );
+      setFile(null);
+      setSubmitError("");
+      setErrors({});
+    }
+  }, [selectedShop]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -107,11 +109,9 @@ const ShopSettingsPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError("");
-
     if (!validateForm()) return;
 
     try {
@@ -130,11 +130,20 @@ const ShopSettingsPage = () => {
         formData.append("file", file);
       }
 
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/shops/${selectedShop.id}`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      const res = await axiosInstance.put(`/shop/${selectedShop.id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data.success) {
+        showAlert({
+          title: "Cập nhật thành công",
+          type: ALERT_TYPES.SUCCESS,
+          duration: 3000,
+          variant: "toast",
+          position: "top-right",
+        });
+      } else {
+        setSubmitError(res.data.message || "Tạo cửa hàng thất bại.");
+      }
 
       setEditMode(false);
     } catch (err) {
@@ -144,39 +153,38 @@ const ShopSettingsPage = () => {
   };
 
   const handleCancel = () => {
-        setForm(initialFormState);
-        setPreviewLogo(
-            selectedShop?.logoUrl
-                ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
-                : null
-        );
-        setFile(null);
-        setSubmitError("");
-        setErrors({});
-        setEditMode(false);
-    };
+    setForm(initialFormState);
+    setPreviewLogo(
+      selectedShop?.logoUrl
+        ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
+        : null
+    );
+    setFile(null);
+    setSubmitError("");
+    setErrors({});
+    setEditMode(false);
+  };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-md mx-auto px-3 py-4 space-y-3">
       {/* Header */}
       <div
-        className="sticky bg-white z-20 border-b shadow-sm flex justify-between items-center px-6 py-4"
+        className="sticky bg-white border-b shadow-sm flex justify-between items-center px-4 py-3 rounded-b-md z-30"
         style={{ top: "var(--mobile-header-height, 0px)", zIndex: 30 }}
       >
-        <h2 className="text-lg font-semibold">Cài đặt cửa hàng</h2>
+        <h2 className="text-base font-medium">Cài đặt cửa hàng</h2>
         {editMode ? (
           <div className="flex gap-2">
             <button
               onClick={handleCancel}
-              className="flex items-center gap-1 px-4 py-2 rounded text-white"
-              style={{ backgroundColor: "#9CA3AF" }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded text-white bg-gray-400 hover:bg-gray-500 text-sm"
             >
               <FaTimes /> Hủy
             </button>
             <button
               form="shop-form"
               type="submit"
-              className="flex items-center gap-1 px-4 py-2 rounded text-white"
+              className="flex items-center gap-1 px-3 py-1.5 rounded text-white text-sm"
               style={{ backgroundColor: sidebarColor }}
             >
               <FaSave /> Lưu
@@ -185,7 +193,7 @@ const ShopSettingsPage = () => {
         ) : (
           <button
             onClick={() => setEditMode(true)}
-            className="flex items-center gap-1 px-4 py-2 rounded text-white"
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-white text-sm"
             style={{ backgroundColor: sidebarColor }}
           >
             <FaEdit /> Chỉnh sửa
@@ -193,192 +201,189 @@ const ShopSettingsPage = () => {
         )}
       </div>
 
-      {/* Content */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="bg-white shadow-lg rounded-xl p-6 space-y-6 mt-4"
-      >
-        {submitError && <p className="text-red-500">{submitError}</p>}
+      {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
 
-        <AnimatePresence mode="wait">
-          {editMode ? (
-            <motion.form
-              key="edit"
-              id="shop-form"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-              onSubmit={handleSubmit}
-              className="space-y-8"
-            >
-              {/* Logo */}
-              <div className="flex flex-col items-center">
-                <motion.div whileHover={{ scale: 1.05 }} className="relative">
-                  {previewLogo ? (
-                    <img
-                      src={previewLogo}
-                      alt="Shop Logo"
-                      className="w-24 h-24 rounded-full object-cover border-3 border-blue-300"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full flex items-center justify-center border-4 border-blue-500">
-                      <FaStore size={40} color="#3B82F6" />
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    name="logo"
-                    onChange={handleFileChange}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+      <AnimatePresence mode="wait">
+        {editMode ? (
+          <motion.form
+            key="edit"
+            id="shop-form"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.22 }}
+            onSubmit={handleSubmit}
+            className="space-y-3"
+          >
+            {/* Logo Card */}
+            <div className="bg-white shadow rounded-lg p-4 flex flex-col items-center">
+              <div className="relative group">
+                {previewLogo ? (
+                  <img
+                    src={previewLogo}
+                    alt="Shop Logo"
+                    className="w-20 h-20 rounded-full object-cover border-2 border-blue-400 shadow-sm"
                   />
-                </motion.div>
-                <p className="text-gray-500 mt-2">Logo cửa hàng</p>
+                ) : (
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center border-2 border-blue-400">
+                    <FaStore size={28} color="#3B82F6" />
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  name="logo"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                />
               </div>
+              <p className="text-gray-500 text-sm mt-1">Logo cửa hàng</p>
+            </div>
 
-              {/* Các field khác */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Thông tin cơ bản */}
+            <div className="bg-white shadow rounded-lg p-4 space-y-3">
+              <h3 className="text-sm font-semibold">Thông tin cơ bản</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-medium mb-1">Tên cửa hàng</label>
+                  <label className="block text-sm font-medium mb-1">Tên cửa hàng</label>
                   <input
                     type="text"
                     name="name"
                     value={form.name}
                     onChange={handleChange}
-                    className={`border rounded p-2 w-full ${
-                      errors.name ? "border-red-500" : ""
-                    }`}
+                    className={`border rounded p-2 w-full text-sm ${errors.name ? "border-red-500" : ""}`}
                   />
-                  {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Ngành hàng</label>
+                  <label className="block text-sm font-medium mb-1">Ngành hàng</label>
                   <input
                     type="text"
                     value={form.industry}
                     disabled
-                    className="border rounded p-2 w-full bg-gray-100 cursor-not-allowed"
+                    className="border rounded p-2 w-full bg-gray-100 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Loại hình</label>
+                  <label className="block text-sm font-medium mb-1">Loại hình</label>
                   <input
                     type="text"
                     value={form.type}
                     disabled
-                    className="border rounded p-2 w-full bg-gray-100 cursor-not-allowed"
+                    className="border rounded p-2 w-full bg-gray-100 text-sm"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Liên hệ */}
+            <div className="bg-white shadow rounded-lg p-4 space-y-3">
+              <h3 className="text-sm font-semibold">Liên hệ</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-medium mb-1">Mã quốc gia</label>
+                  <label className="block text-sm font-medium mb-1">Mã quốc gia</label>
                   <input
                     type="text"
                     name="countryCode"
                     value={form.countryCode}
                     onChange={handleChange}
-                    className={`border rounded p-2 w-full ${
-                      errors.countryCode ? "border-red-500" : ""
-                    }`}
+                    className={`border rounded p-2 w-full text-sm ${errors.countryCode ? "border-red-500" : ""}`}
                   />
-                  {errors.countryCode && <p className="text-red-500 text-sm">{errors.countryCode}</p>}
+                  {errors.countryCode && <p className="text-red-500 text-xs mt-1">{errors.countryCode}</p>}
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Số điện thoại</label>
+                  <label className="block text-sm font-medium mb-1">Số điện thoại</label>
                   <input
                     type="text"
                     name="phone"
                     value={form.phone}
                     onChange={handleChange}
-                    className={`border rounded p-2 w-full ${
-                      errors.phone ? "border-red-500" : ""
-                    }`}
+                    className={`border rounded p-2 w-full text-sm ${errors.phone ? "border-red-500" : ""}`}
                   />
-                  {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">Mô hình kinh doanh</label>
-                  <select
-                    name="businessModel"
-                    value={form.businessModel}
-                    onChange={handleChange}
-                    className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    {businessModels.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Mặc định theo loại cửa hàng:{" "}
-                    <strong>
-                      {shopTypes.find((s) => s.value === form.type)?.defaultBusinessModel}
-                    </strong>
-                  </p>
+                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
               </div>
-
-              {/* Address */}
               <div>
-                <label className="block font-medium mb-1">Địa chỉ</label>
+                <label className="block text-sm font-medium mb-1">Địa chỉ</label>
                 <input
                   type="text"
                   name="address"
                   value={form.address}
                   onChange={handleChange}
-                  className={`border rounded p-2 w-full ${
-                    errors.address ? "border-red-500" : ""
-                  }`}
+                  className={`border rounded p-2 w-full text-sm ${errors.address ? "border-red-500" : ""}`}
                 />
-                {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
+                {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
               </div>
-            </motion.form>
-          ) : (
-            // View mode giữ nguyên
-            <motion.div
-              key="view"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-8"
-            >
-              {/* Logo */}
-              <div className="flex flex-col items-center">
-                <motion.div whileHover={{ scale: 1.05 }}>
-                  {previewLogo ? (
-                    <img
-                      src={previewLogo}
-                      alt="Shop Logo"
-                      className="w-24 h-24 rounded-full object-cover border-4 border-blue-500"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full flex items-center justify-center border-4 border-blue-500">
-                      <FaStore size={40} color="#3B82F6" />
-                    </div>
-                  )}
-                </motion.div>
-                <p className="text-gray-500 mt-2">Logo cửa hàng</p>
-              </div>
+            </div>
 
-              {/* Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <p><strong>Tên cửa hàng:</strong> {form.name}</p>
-                <p><strong>Ngành hàng:</strong> {form.industry}</p>
-                <p><strong>Loại hình:</strong> {form.type}</p>
-                <p><strong>Mã quốc gia:</strong> {form.countryCode}</p>
-                <p><strong>Số điện thoại:</strong> {form.phone}</p>
-                <p><strong>Mô hình kinh doanh:</strong> {form.businessModel}</p>
-                <p className="md:col-span-2"><strong>Địa chỉ:</strong> {form.address}</p>
-                <p><strong>Kích hoạt:</strong> {form.active ? "Có" : "Không"}</p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+            {/* Mô hình kinh doanh */}
+            <div className="bg-white shadow rounded-lg p-4 space-y-2">
+              <h3 className="text-sm font-semibold">Mô hình kinh doanh</h3>
+              <select
+                name="businessModel"
+                value={form.businessModel}
+                onChange={handleChange}
+                className="border rounded p-2 w-full text-sm"
+              >
+                {businessModels.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500">
+                Mặc định theo loại cửa hàng:{" "}
+                <strong>{shopTypes.find((s) => s.value === form.type)?.defaultBusinessModel}</strong>
+              </p>
+            </div>
+          </motion.form>
+        ) : (
+          // View Mode
+          <motion.div
+            key="view"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.22 }}
+            className="space-y-3"
+          >
+            <div className="bg-white shadow rounded-lg p-4 flex flex-col items-center">
+              {previewLogo ? (
+                <img
+                  src={previewLogo}
+                  alt="Shop Logo"
+                  className="w-20 h-20 rounded-full object-cover border-2 border-blue-400 shadow-sm"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full flex items-center justify-center border-2 border-blue-400">
+                  <FaStore size={28} color="#3B82F6" />
+                </div>
+              )}
+              <p className="text-gray-500 text-sm mt-1">Logo cửa hàng</p>
+            </div>
+
+            <div className="bg-white shadow rounded-lg p-4 space-y-2">
+              <h3 className="text-sm font-semibold">Thông tin cửa hàng</h3>
+              <p className="text-sm"><strong>Tên cửa hàng:</strong> {form.name}</p>
+              <p className="text-sm"><strong>Ngành hàng:</strong> {form.industry}</p>
+              <p className="text-sm"><strong>Loại hình:</strong> {form.type}</p>
+            </div>
+
+            <div className="bg-white shadow rounded-lg p-4 space-y-2">
+              <h3 className="text-sm font-semibold">Liên hệ</h3>
+              <p className="text-sm"><strong>Mã quốc gia:</strong> {form.countryCode}</p>
+              <p className="text-sm"><strong>Số điện thoại:</strong> {form.phone}</p>
+              <p className="text-sm"><strong>Địa chỉ:</strong> {form.address}</p>
+            </div>
+
+            <div className="bg-white shadow rounded-lg p-4 space-y-2">
+              <h3 className="text-sm font-semibold">Mô hình kinh doanh</h3>
+              <p className="text-sm">{form.businessModel}</p>
+              <p className="text-sm"><strong>Kích hoạt:</strong> {form.active ? "Có" : "Không"}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
