@@ -14,7 +14,9 @@ export const getCurrentUser = () => {
  * @param {Object} data { fullName, phone, businessType }
  */
 export const updateProfile = (data) => {
-    return axiosInstance.put(`${USER_API}/update-profile`, data);
+    return axiosInstance.put(`${USER_API}/update-profile`, data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 };
 
 /**

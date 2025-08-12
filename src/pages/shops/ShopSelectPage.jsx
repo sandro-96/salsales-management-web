@@ -1,4 +1,4 @@
-// src/pages/shop/ShopSelectPage.jsx
+import { useEffect } from "react";
 import { useShop } from "../../hooks/useShop";
 import { useNavigate, Navigate } from "react-router-dom";
 
@@ -6,10 +6,23 @@ const ShopSelectPage = () => {
     const navigate = useNavigate();
     const { shops, setSelectedShopId, isShopContextReady } = useShop();
 
+    useEffect(() => {
+        if (!isShopContextReady) {
+            console.log("Dữ liệu chưa sẵn sàng, chờ thêm...");
+            return;
+        }
+        if (shops.length === 0) {
+            navigate("/create-shop", { replace: true });
+        } else if (shops.length === 1) {
+            setSelectedShopId(shops[0].id);
+            navigate("/overview", { replace: true });
+        }
+    }, [isShopContextReady, shops, setSelectedShopId, navigate]);
+
     if (!isShopContextReady) {
-        return <p>Loading...</p>; // hoặc null
+        return <p>Loading...</p>;
     }
-    
+
     if (shops.length === 0) {
         return <Navigate to="/create-shop" replace />;
     }
@@ -32,7 +45,7 @@ const ShopSelectPage = () => {
                     <p className="text-gray-600 text-center">Bạn chưa tham gia cửa hàng nào.</p>
                 ) : (
                     <ul className="space-y-4">
-                        {shops.map(shop => (
+                        {shops.map((shop) => (
                             <li
                                 key={shop.id}
                                 className="border rounded p-4 hover:bg-gray-50 cursor-pointer"

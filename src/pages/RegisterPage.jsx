@@ -16,55 +16,140 @@ const RegisterPage = () => {
         confirmPassword: "",
         firstName: "",
         lastName: "",
-        middleName: "",
-        phone: ""
+        middleName: ""
     });
-    const [error, setError] = useState("");
+    const [errors, setErrors] = useState({
+        email: "",
+        password: "",
+        confirmPassword: "",
+        firstName: "",
+        lastName: "",
+        middleName: ""
+    });
     const [success, setSuccess] = useState("");
     const { subscribe, connected } = useWebSocket();
     const [loading, setLoading] = useState(false);
-    const [method, setMethod] = useState("google");
+    const [method, setMethod] = useState("email");
     const navigate = useNavigate();
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setForm({ ...form, [name]: value });
+        // Xóa lỗi khi người dùng bắt đầu nhập
+        setErrors({ ...errors, [name]: "" });
+    };
+
+    const validateForm = () => {
+        let tempErrors = {
+            email: "",
+            password: "",
+            confirmPassword: "",
+            firstName: "",
+            lastName: "",
+            middleName: ""
+        };
+        let isValid = true;
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!form.email) {
+            tempErrors.email = "Email không được để trống.";
+            isValid = false;
+        } else if (!emailRegex.test(form.email)) {
+            tempErrors.email = "Email không hợp lệ.";
+            isValid = false;
+        }
+
+        // Password validation
+        if (!form.password) {
+            tempErrors.password = "Mật khẩu không được để trống.";
+            isValid = false;
+        } else if (form.password.length < 6) {
+            tempErrors.password = "Mật khẩu phải từ 6 ký tự.";
+            isValid = false;
+        }
+
+        // Confirm Password validation
+        if (!form.confirmPassword) {
+            tempErrors.confirmPassword = "Xác nhận mật khẩu không được để trống.";
+            isValid = false;
+        } else if (form.password !== form.confirmPassword) {
+            tempErrors.confirmPassword = "Mật khẩu không khớp.";
+            isValid = false;
+        }
+
+        // FirstName validation
+        if (!form.firstName) {
+            tempErrors.firstName = "Tên không được để trống.";
+            isValid = false;
+        } else if (form.firstName.length > 50) {
+            tempErrors.firstName = "Tên không được vượt quá 50 ký tự.";
+            isValid = false;
+        }
+
+        // LastName validation
+        if (!form.lastName) {
+            tempErrors.lastName = "Họ không được để trống.";
+            isValid = false;
+        } else if (form.lastName.length > 50) {
+            tempErrors.lastName = "Họ không được vượt quá 50 ký tự.";
+            isValid = false;
+        }
+
+        // MiddleName validation
+        if (form.middleName && form.middleName.length > 50) {
+            tempErrors.middleName = "Tên đệm không được vượt quá 50 ký tự.";
+            isValid = false;
+        }
+
+        setErrors(tempErrors);
+        return isValid;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError("");
-        setSuccess("");
-
-        // Validation phía client
-        if (!form.firstName || !form.lastName) {
-            setError("Họ và tên không được để trống.");
-            return;
-        }
-        if (form.password !== form.confirmPassword) {
-            setError("Mật khẩu không khớp.");
-            return;
-        }
+        if (!validateForm()) return;
 
         try {
             setLoading(true);
-            await axiosInstance.post("/auth/register", {
+            const response = await axiosInstance.post("/auth/register", {
                 email: form.email,
                 password: form.password,
                 firstName: form.firstName,
                 lastName: form.lastName,
-                middleName: form.middleName || null,
-                phone: form.phone || null
+                middleName: form.middleName || null
             });
             setSuccess("Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản.");
         } catch (err) {
-            setError(err.response?.data?.message || "Đăng ký thất bại.");
+            const errorData = err.response?.data;
+            let tempErrors = { ...errors };
+            if (errorData && typeof errorData === "object") {
+                // Giả định backend trả về { errors: { field: "message" } }
+                if (errorData.errors) {
+                    Object.keys(errorData.errors).forEach((field) => {
+                        tempErrors[field] = errorData.errors[field];
+                    });
+                } else {
+                    tempErrors.email = errorData.message || "Đăng ký thất bại.";
+                }
+            } else {
+                tempErrors.email = err.response?.data?.message || "Đăng ký thất bại.";
+            }
+            setErrors(tempErrors);
         } finally {
             setLoading(false);
         }
     };
 
     const handleGoogleSignIn = async (response) => {
-        setError("");
+        setErrors({
+            email: "",
+            password: "",
+            confirmPassword: "",
+            firstName: "",
+            lastName: "",
+            middleName: ""
+        });
         setSuccess("");
         setLoading(true);
 
@@ -81,7 +166,10 @@ const RegisterPage = () => {
                 }, 2000);
             }
         } catch (err) {
-            setError(err.response?.data?.message || "Đăng nhập Google thất bại.");
+            setErrors({
+                ...errors,
+                email: err.response?.data?.message || "Đăng nhập Google thất bại."
+            });
         } finally {
             setLoading(false);
         }
@@ -148,73 +236,77 @@ const RegisterPage = () => {
                         Dùng Google
                     </button>
                 </div>
-                {error && <p className="text-red-500 text-sm mb-2 text-center">{error}</p>}
                 {success && <p className="text-green-600 text-sm mb-2 text-center">{success}</p>}
                 {method === "email" ? (
                     <form onSubmit={handleSubmit} className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
-                            <input
-                                type="text"
-                                name="lastName"
-                                placeholder="Họ"
-                                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={form.lastName}
-                                onChange={handleChange}
-                                required
-                            />
-                            <input
-                                type="text"
-                                name="firstName"
-                                placeholder="Tên"
-                                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={form.firstName}
-                                onChange={handleChange}
-                                required
-                            />
+                            <div>
+                                <input
+                                    type="text"
+                                    name="lastName"
+                                    placeholder="Họ"
+                                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={form.lastName}
+                                    onChange={handleChange}
+                                />
+                                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    name="firstName"
+                                    placeholder="Tên"
+                                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={form.firstName}
+                                    onChange={handleChange}
+                                />
+                                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+                            </div>
                         </div>
-                        <input
-                            type="text"
-                            name="middleName"
-                            placeholder="Tên đệm (tùy chọn)"
-                            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.middleName}
-                            onChange={handleChange}
-                        />
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Email"
-                            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.email}
-                            onChange={handleChange}
-                            required
-                        />
-                        <input
-                            type="tel"
-                            name="phone"
-                            placeholder="Số điện thoại (tùy chọn)"
-                            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.phone}
-                            onChange={handleChange}
-                        />
-                        <input
-                            type="password"
-                            name="password"
-                            placeholder="Mật khẩu"
-                            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.password}
-                            onChange={handleChange}
-                            required
-                        />
-                        <input
-                            type="password"
-                            name="confirmPassword"
-                            placeholder="Xác nhận mật khẩu"
-                            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.confirmPassword}
-                            onChange={handleChange}
-                            required
-                        />
+                        <div>
+                            <input
+                                type="text"
+                                name="middleName"
+                                placeholder="Tên đệm (tùy chọn)"
+                                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={form.middleName}
+                                onChange={handleChange}
+                            />
+                            {errors.middleName && <p className="text-red-500 text-xs mt-1">{errors.middleName}</p>}
+                        </div>
+                        <div>
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="Email"
+                                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={form.email}
+                                onChange={handleChange}
+                            />
+                            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                        </div>
+                        <div>
+                            <input
+                                type="password"
+                                name="password"
+                                placeholder="Mật khẩu"
+                                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={form.password}
+                                onChange={handleChange}
+                            />
+                            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                        </div>
+                        <div>
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                placeholder="Xác nhận mật khẩu"
+                                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={form.confirmPassword}
+                                onChange={handleChange}
+                            />
+                            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+                        </div>
                         <button
                             type="submit"
                             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
