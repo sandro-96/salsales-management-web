@@ -1,14 +1,16 @@
 // src/routes/GuestOnlyRoute.jsx
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
-import { useShop } from "../hooks/useShop.js";
+import Loading from "../components/loading/Loading.jsx";
 
 const GuestOnlyRoute = ({ children }) => {
-    const { user } = useAuth();
-    const { shops, selectedShopId } = useShop();
+    const { user, isUserContextReady } = useAuth();
+
+    if (!isUserContextReady) {
+        return <Loading fullScreen />;
+    }
 
     if (user) {
-        console.log("User is logged in:", user);
         // Nếu là admin → vào trang admin
         if (user.role.includes("ROLE_ADMIN")) {
             return <Navigate to="/admin" replace />;
@@ -16,13 +18,7 @@ const GuestOnlyRoute = ({ children }) => {
 
         // Nếu là user → xử lý theo shop
         if (user.role.includes("ROLE_USER")) {
-            if (!shops || shops.length === 0) {
-                return <Navigate to="/create-shop" replace />;
-            } else if (!selectedShopId) {
-                return <Navigate to="/select-shop" replace />;
-            } else {
-                return <Navigate to="/overview" replace />;
-            }
+            return <Navigate to="/" replace />;
         }
 
         // Trường hợp có user nhưng không role hợp lệ

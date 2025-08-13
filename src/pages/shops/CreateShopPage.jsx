@@ -7,6 +7,7 @@ import { COUNTRIES } from "../../constants/countries";
 import { ALERT_TYPES } from "../../constants/alertTypes";
 import LoadingOverlay from "../../components/loading/LoadingOverlay.jsx";
 import { Store, MapPin, Phone, Image as ImageIcon, Flag } from "lucide-react";
+import {useAuth} from "../../hooks/useAuth.js";
 
 const CreateShopPage = () => {
   const [form, setForm] = useState({
@@ -22,7 +23,8 @@ const CreateShopPage = () => {
   const [file, setFile] = useState(null);
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
-  const { fetchShops, enums } = useShop();
+  const { enums } = useAuth();
+  const { fetchShops } = useShop();
   const { showAlert } = useAlert();
   const shopTypes = enums?.shopTypes || [];
   const businessModels = enums?.businessModels || [];

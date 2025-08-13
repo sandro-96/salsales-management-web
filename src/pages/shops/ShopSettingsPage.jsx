@@ -6,12 +6,14 @@ import imageCompression from "browser-image-compression";
 import axiosInstance from "../../api/axiosInstance";
 import { ALERT_TYPES } from "../../constants/alertTypes";
 import { useAlert } from "../../hooks/useAlert";
+import {useAuth} from "../../hooks/useAuth.js";
 
 const sidebarColor = "#34516dff";
 
 const ShopSettingsPage = () => {
   const { showAlert } = useAlert();
-  const { selectedShop, enums } = useShop();
+  const { enums } = useAuth();
+  const { selectedShop } = useShop();
   const [editMode, setEditMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -25,8 +27,7 @@ const ShopSettingsPage = () => {
   const businessModels = enums?.businessModels || [];
   const countryOptions = [
     { value: "VN", label: "Việt Nam (+84)" },
-    { value: "US", label: "United States (+1)" },
-    // Thêm các quốc gia khác
+    { value: "US", label: "United States (+1)" }
   ];
 
   useEffect(() => {

@@ -7,30 +7,15 @@ const ShopSelectPage = () => {
     const { shops, setSelectedShopId, isShopContextReady } = useShop();
 
     useEffect(() => {
-        if (!isShopContextReady) {
-            console.log("Dữ liệu chưa sẵn sàng, chờ thêm...");
-            return;
-        }
-        if (shops.length === 0) {
-            navigate("/create-shop", { replace: true });
-        } else if (shops.length === 1) {
-            setSelectedShopId(shops[0].id);
-            navigate("/overview", { replace: true });
+        if (isShopContextReady) {
+            if (shops.length === 0) {
+                navigate("/create-shop", { replace: true });
+            } else if (shops.length === 1) {
+                setSelectedShopId(shops[0].id);
+                navigate("/overview", { replace: true });
+            }
         }
     }, [isShopContextReady, shops, setSelectedShopId, navigate]);
-
-    if (!isShopContextReady) {
-        return <p>Loading...</p>;
-    }
-
-    if (shops.length === 0) {
-        return <Navigate to="/create-shop" replace />;
-    }
-
-    if (shops.length === 1) {
-        setSelectedShopId(shops[0].id);
-        return <Navigate to="/overview" replace />;
-    }
 
     const handleSelect = (id) => {
         setSelectedShopId(id);

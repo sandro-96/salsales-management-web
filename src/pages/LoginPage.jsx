@@ -33,9 +33,6 @@ const LoginPage = () => {
             if (res.data.success) {
                 handleAfterLogin(res.data.data);
                 setSuccess("Đăng nhập thành công!");
-                setTimeout(() => {
-                    navigate("/select-shop", { replace: true });
-                }, 1000);
             } else {
                 setError(res.data.message || "Đăng nhập thất bại.");
             }
@@ -58,9 +55,6 @@ const LoginPage = () => {
             if (res.data.success) {
                 handleAfterLogin(res.data.data);
                 setSuccess("Đăng nhập bằng Google thành công!");
-                setTimeout(() => {
-                    navigate("/select-shop", { replace: true });
-                }, 1000);
             } else {
                 setError(res.data.message || "Đăng nhập Google thất bại.");
             }

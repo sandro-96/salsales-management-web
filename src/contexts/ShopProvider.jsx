@@ -1,38 +1,29 @@
 // src/contexts/ShopProvider.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { ShopContext } from "./ShopContext";
 import { useAuth } from "../hooks/useAuth.js";
 
 const ShopProvider = ({ children }) => {
-    const { user } = useAuth();
-    const [isLoading, setIsLoading] = useState(true);
+    const { isUserContextReady } = useAuth();
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
     const [isShopContextReady, setIsShopContextReady] = useState(false);
-    const [enums, setEnums] = useState(null);
+
     const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
     const selectedRole = selectedShop?.role || null;
     const selectedIndustry = selectedShop?.industry || null;
+
     const isOwner = selectedRole === "OWNER";
     const isStaff = selectedRole === "STAFF";
     const isCashier = selectedRole === "CASHIER";
 
     const setSelectedShopId = (id) => {
         setSelectedShopIdState(id);
-        localStorage.setItem("selectedShopId", id); // Ghi vào localStorage
+        localStorage.setItem("selectedShopId", id);
     };
 
-    const fetchEnums = async () => {
-        try {
-            const res = await axiosInstance.get("/enums/shop/all");
-            setEnums(res.data.data);
-        } catch (err) {
-            console.error("Lỗi khi tải enums:", err);
-        }
-    };
-
-    const fetchShops = async () => {
+    const fetchShops = useCallback(async () => {
         try {
             const res = await axiosInstance.get("/shop/my?page=0&size=1000");
             const shopList = res.data.data.content;
@@ -51,27 +42,15 @@ const ShopProvider = ({ children }) => {
         } catch (err) {
             console.error("Lỗi khi tải danh sách cửa hàng", err);
         }
-    };
-
+    }, []);
 
     useEffect(() => {
-        if (!user) {
-            setIsLoading(false);
-            return;
-        }
-
-        const loadData = async () => {
-            setIsLoading(true);
-            try {
-                await Promise.all([fetchShops(), fetchEnums()]);
-            } finally {
-                setIsLoading(false);
+        if (isUserContextReady) {
+            fetchShops().then(() => {
                 setIsShopContextReady(true);
-            }
-        };
-
-        loadData();
-    }, [user]);
+            });
+        }
+    }, [isUserContextReady, fetchShops]);
 
     return (
         <ShopContext.Provider
@@ -84,19 +63,12 @@ const ShopProvider = ({ children }) => {
                 isOwner,
                 isStaff,
                 isCashier,
-                enums,
                 selectedIndustry,
                 fetchShops,
                 isShopContextReady
             }}
         >
-            {isLoading ? (
-                <div className="min-h-screen flex items-center justify-center">
-                    <p>Đang tải cửa hàng...</p>
-                </div>
-            ) : (
-                children
-            )}
+            {children}
         </ShopContext.Provider>
     );
 };

@@ -8,6 +8,17 @@ import { AuthContext } from "./AuthContext";
 const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const navigate = useNavigate();
+    const [enums, setEnums] = useState(null);
+    const [isUserContextReady, setIsUserContextReady] = useState(false);
+
+    const fetchEnums = async () => {
+        try {
+            const res = await axiosInstance.get("/enums/all");
+            setEnums(res.data.data);
+        } catch (err) {
+            console.error("Lỗi khi tải enums:", err);
+        }
+    };
 
     const loadUser = () => {
         const token = localStorage.getItem("accessToken");
@@ -21,7 +32,12 @@ const AuthProvider = ({ children }) => {
                 });
             } catch {
                 logout();
+            } finally {
+                setIsUserContextReady(true);
             }
+        } else {
+            setUser(null);
+            setIsUserContextReady(true);
         }
     };
 
@@ -48,11 +64,12 @@ const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         loadUser();
-    }, []);
+        isUserContextReady && fetchEnums();
+    }, [isUserContextReady]);
 
     return (
         <AuthContext.Provider value={{
-            user, logout, refreshToken, setUser
+            user, logout, refreshToken, setUser, enums, isUserContextReady
         }}>
             {children}
         </AuthContext.Provider>
