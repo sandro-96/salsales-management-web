@@ -9,14 +9,9 @@ const ShopProvider = ({ children }) => {
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
     const [isShopContextReady, setIsShopContextReady] = useState(false);
-
-    const selectedShop = shops.find(shop => shop.id === selectedShopId) || null;
-    const selectedRole = selectedShop?.role || null;
-    const selectedIndustry = selectedShop?.industry || null;
-
-    const isOwner = selectedRole === "OWNER";
-    const isStaff = selectedRole === "STAFF";
-    const isCashier = selectedRole === "CASHIER";
+    const [selectedShop, setSelectedShop] = useState(null);
+    const [selectedRole, setSelectedRole] = useState(null);
+    const [selectedIndustry, setSelectedIndustry] = useState(null);
 
     const setSelectedShopId = (id) => {
         setSelectedShopIdState(id);
@@ -34,8 +29,14 @@ const ShopProvider = ({ children }) => {
 
             if (validSavedShop) {
                 setSelectedShopId(savedShopId);
+                setSelectedShop(validSavedShop);
+                setSelectedRole(validSavedShop.role);
+                setSelectedIndustry(validSavedShop.industry);
             } else if (shopList.length > 0) {
                 setSelectedShopId(shopList[0].id);
+                setSelectedShop(shopList[0]);
+                setSelectedRole(shopList[0].role);
+                setSelectedIndustry(shopList[0].industry);
             }
 
             console.log("Đã tải danh sách cửa hàng:", shopList);
@@ -52,6 +53,10 @@ const ShopProvider = ({ children }) => {
         }
     }, [isUserContextReady, fetchShops]);
 
+    const isOwner = selectedRole === "OWNER";
+    const isStaff = selectedRole === "STAFF";
+    const isCashier = selectedRole === "CASHIER";
+
     return (
         <ShopContext.Provider
             value={{
@@ -59,6 +64,7 @@ const ShopProvider = ({ children }) => {
                 selectedShopId,
                 setSelectedShopId,
                 selectedShop,
+                setSelectedShop,
                 selectedRole,
                 isOwner,
                 isStaff,

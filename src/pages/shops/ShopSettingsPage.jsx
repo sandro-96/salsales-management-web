@@ -1,139 +1,86 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import { useShop } from "../../hooks/useShop.js";
-import { FaStore, FaEdit, FaTimes, FaSave } from "react-icons/fa";
-import imageCompression from "browser-image-compression";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useAlert } from "../../hooks/useAlert.js";
+import { ALERT_TYPES } from "../../constants/alertTypes.js";
+import { handleFileChange } from "../../utils/fileUtils.js";
 import axiosInstance from "../../api/axiosInstance";
-import { ALERT_TYPES } from "../../constants/alertTypes";
-import { useAlert } from "../../hooks/useAlert";
-import {useAuth} from "../../hooks/useAuth.js";
+import { FaStore, FaEdit, FaTimes, FaSave } from "react-icons/fa";
+import LoadingOverlay from "../../components/loading/LoadingOverlay.jsx";
 
 const sidebarColor = "#34516dff";
 
 const ShopSettingsPage = () => {
   const { showAlert } = useAlert();
   const { enums } = useAuth();
-  const { selectedShop } = useShop();
+  const { selectedShop, setSelectedShop } = useShop();
   const [editMode, setEditMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [errors, setErrors] = useState({});
-  const [initialFormState, setInitialFormState] = useState({});
-  const [form, setForm] = useState({});
+  const [fileError, setFileError] = useState("");
   const [file, setFile] = useState(null);
   const [previewLogo, setPreviewLogo] = useState(null);
 
-  const shopTypes = enums?.shopTypes || [];
-  const businessModels = enums?.businessModels || [];
-  const countryOptions = [
-    { value: "VN", label: "Việt Nam (+84)" },
-    { value: "US", label: "United States (+1)" }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, dirtyFields },
+    reset,
+    watch,
+    setValue
+  } = useForm({
+    defaultValues: {
+      name: "",
+      industry: "",
+      type: "",
+      countryCode: "",
+      phone: "",
+      address: "",
+      businessModel: "",
+      active: false,
+    },
+  });
+
+  const countryOptions = enums?.countries || [
+    { value: "VN", label: "Việt Nam (+84)", phonePattern: "\\+84\\d{9,10}" },
+    { value: "US", label: "United States (+1)", phonePattern: "\\+1\\d{10}" },
   ];
+  const shopTypes = useMemo(() => enums?.shopTypes || [], [enums]);
+  const businessModels = enums?.businessModels || [];
+
+  const type = watch("type");
+  const countryCode = watch("countryCode");
+
+  // Cập nhật industry khi type thay đổi
+  useEffect(() => {
+    if (type) {
+      const selectedType = shopTypes.find((s) => s.value === type);
+      if (selectedType) {
+        setValue("industry", selectedType.industry, { shouldDirty: true });
+        setValue("businessModel", selectedType.defaultBusinessModel, { shouldDirty: true });
+      }
+    }
+  }, [type, setValue, shopTypes]);
 
   useEffect(() => {
     if (selectedShop) {
-      const newState = {
-        name: selectedShop.name || "",
-        industry: selectedShop.industry || "",
-        type: selectedShop.type || "",
-        countryCode: selectedShop.countryCode || "",
-        phone: selectedShop.phone || "",
-        address: selectedShop.address || "",
-        active: selectedShop.active || false,
-        businessModel:
-          selectedShop.businessModel ||
-          shopTypes.find((s) => s.value === selectedShop.type)?.defaultBusinessModel ||
-          "",
-      };
-      setForm(newState);
-      setInitialFormState(newState);
+      reset(selectedShop);
       setPreviewLogo(
         selectedShop.logoUrl
           ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
           : null
       );
       setFile(null);
-      setSubmitError("");
-      setErrors({});
+      setEditMode(false);
     }
-  }, [selectedShop]);
+  }, [selectedShop, reset]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
-    setErrors({ ...errors, [name]: "" });
-  };
-
-  const handleFileChange = async (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
-
-    const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    const MAX_FILE_SIZE_MB = 5;
-
-    if (!ALLOWED_TYPES.includes(selectedFile.type)) {
-      setSubmitError("Chỉ hỗ trợ định dạng ảnh JPG, PNG hoặc WebP.");
-      setFile(null);
-      setPreviewLogo(null);
-      return;
-    }
-
-    if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      setSubmitError(`Ảnh vượt quá ${MAX_FILE_SIZE_MB}MB. Đang tiến hành nén ảnh...`);
-      try {
-        const compressedFile = await imageCompression(selectedFile, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1024,
-          useWebWorker: true,
-        });
-        setFile(compressedFile);
-        setPreviewLogo(URL.createObjectURL(compressedFile));
-        setSubmitError("");
-      } catch (err) {
-        console.error("Lỗi khi nén ảnh:", err);
-        setSubmitError("Nén ảnh thất bại. Vui lòng chọn ảnh nhỏ hơn.");
-        setFile(null);
-        setPreviewLogo(null);
-      }
-      return;
-    }
-
-    setFile(selectedFile);
-    setPreviewLogo(URL.createObjectURL(selectedFile));
-    setSubmitError("");
-  };
-
-  const validatePhone = (phone, countryCode) => {
-    const patterns = {
-      VN: /^\+84\d{9,10}$/,
-      US: /^\+1\d{10}$/,
-      // Thêm các định dạng khác
-    };
-    return patterns[countryCode]?.test(phone) || false;
-  };
-
-  const validateForm = () => {
-    let newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Vui lòng nhập tên cửa hàng";
-    if (!form.countryCode.trim()) newErrors.countryCode = "Vui lòng chọn mã quốc gia";
-    if (!form.phone.trim()) newErrors.phone = "Vui lòng nhập số điện thoại";
-    else if (!validatePhone(form.phone, form.countryCode)) {
-      newErrors.phone = "Số điện thoại không đúng định dạng";
-    }
-    if (!form.address.trim()) newErrors.address = "Vui lòng nhập địa chỉ";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitError("");
-    if (!validateForm()) return;
-
+  const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append("shop", new Blob([JSON.stringify(form)], { type: "application/json" }));
+      formData.append("shop", new Blob([JSON.stringify(data)], { type: "application/json" }));
       if (file) formData.append("file", file);
 
       const res = await axiosInstance.put(`/shop/${selectedShop.id}`, formData, {
@@ -141,82 +88,141 @@ const ShopSettingsPage = () => {
       });
 
       if (res.data.success) {
+        //setMessage("Cập nhật cửa hàng thành công!");
         showAlert({
           title: "Cập nhật thành công",
+          description: "Thông tin cửa hàng đã được cập nhật thành công.",
           type: ALERT_TYPES.SUCCESS,
-          duration: 3000,
           variant: "toast",
-          position: "top-right",
         });
+        const response = res.data.data;
         setEditMode(false);
+        reset(data);
+        response.role = selectedShop.role;
+        setSelectedShop(response);
+        setPreviewLogo(
+          response.logoUrl
+            ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${response.logoUrl}`
+            : null
+        );
+        setFile(null);
       } else {
-        setSubmitError(res.data.message || "Cập nhật cửa hàng thất bại.");
+        showAlert({
+          title: "Cập nhật thất bại",
+          description: res.data.message || "Đã xảy ra lỗi khi cập nhật cửa hàng.",
+          type: ALERT_TYPES.ERROR,
+          variant: "toast",
+        });
       }
     } catch (err) {
       const errorMessage =
         err.response?.data?.code === "INVALID_PHONE_NUMBER"
           ? "Số điện thoại không đúng định dạng."
           : err.response?.data?.message || "Cập nhật thất bại. Vui lòng thử lại.";
-      setSubmitError(errorMessage);
+      showAlert({
+        title: "Cập nhật thất bại",
+        description: errorMessage,
+        type: ALERT_TYPES.ERROR,
+        variant: "toast",
+      });
+      console.error("Error updating shop:", err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleCancel = () => {
-    if (window.confirm("Bạn có chắc muốn hủy? Các thay đổi sẽ không được lưu.")) {
-      setForm(initialFormState);
-      setPreviewLogo(
-        selectedShop?.logoUrl
-          ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
-          : null
-      );
-      setFile(null);
-      setSubmitError("");
-      setErrors({});
-      setEditMode(false);
+    if (Object.keys(dirtyFields).length > 0 || file) {
+      showAlert({
+        title: "Hủy thay đổi",
+        description: "Bạn có chắc muốn hủy các thay đổi? Các thay đổi sẽ không được lưu.",
+        type: ALERT_TYPES.WARNING,
+        variant: "modal",
+        actions: [
+          { label: "Hủy", className: "bg-gray-200 text-gray-800" },
+          {
+            label: "OK",
+            className: "bg-red-500 text-white hover:bg-red-600",
+            onClick: () => {
+              resetForm();
+            },
+          },
+        ],
+      });
+    } else {
+      resetForm();
+    }
+  };
+
+  const resetForm = () => {
+    reset({
+      name: selectedShop?.name || "",
+      industry: selectedShop?.industry || "",
+      type: selectedShop?.type || "",
+      countryCode: selectedShop?.countryCode || "",
+      phone: selectedShop?.phone || "",
+      address: selectedShop?.address || "",
+      businessModel:
+        selectedShop?.businessModel ||
+        shopTypes.find((s) => s.value === selectedShop?.type)?.defaultBusinessModel ||
+        "",
+      active: selectedShop?.active || false,
+    });
+    setFile(null);
+    setPreviewLogo(
+      selectedShop?.logoUrl
+        ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
+        : null
+    );
+    setEditMode(false);
+  };
+
+  const handleEditToggle = () => {
+    setEditMode(!editMode);
+    if (editMode) {
+      resetForm();
     }
   };
 
   return (
-    <div className="max-w-md mx-auto px-3 py-4 space-y-3">
-      <div
-        className="sticky bg-white border-b shadow-sm flex justify-between items-center px-4 py-3 rounded-b-md z-30"
+    <div className="p-4 max-w-4xl mx-auto">
+      {isSubmitting && <LoadingOverlay text="Đang cập nhật thông tin cửa hàng..." />}
+      <h1 className="text-2xl font-bold mb-4">Cài đặt cửa hàng</h1>
+
+      <div className="sticky bg-white z-10 flex gap-2 mb-4 border-b pb-2"
         style={{ top: "var(--mobile-header-height, 0px)", zIndex: 30 }}
       >
-        <h2 className="text-base font-medium">Cài đặt cửa hàng</h2>
-        {editMode ? (
-          <div className="flex gap-2">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-1 px-3 py-1.5 rounded text-white bg-gray-400 hover:bg-gray-500 text-sm"
-            >
-              <FaTimes /> Hủy
-            </button>
-            <button
-              form="shop-form"
-              type="submit"
-              disabled={isSubmitting}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded text-white text-sm ${
-                isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              style={{ backgroundColor: sidebarColor }}
-            >
-              <FaSave /> {isSubmitting ? "Đang lưu..." : "Lưu"}
-            </button>
-          </div>
-        ) : (
+        <button
+          className={`px-4 py-2 rounded ${editMode ? "bg-gray-200 hover:bg-gray-300" : "bg-blue-500 text-white"}`}
+          onClick={handleEditToggle}
+          disabled={editMode}
+        >
+          <FaEdit className="inline mr-1" /> Chỉnh sửa
+        </button>
+        {editMode && (
           <button
-            onClick={() => setEditMode(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-white text-sm"
+            form="shop-form"
+            type="submit"
+            disabled={isSubmitting || (Object.keys(dirtyFields).length === 0 && !file)}
+            className={`px-4 py-2 rounded text-white ${
+              isSubmitting || (Object.keys(dirtyFields).length === 0 && !file)
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
             style={{ backgroundColor: sidebarColor }}
           >
-            <FaEdit /> Chỉnh sửa
+            <FaSave className="inline mr-1" /> {isSubmitting ? "Đang lưu..." : "Lưu"}
+          </button>
+        )}
+        {editMode && (
+          <button
+            onClick={handleCancel}
+            className="px-4 py-2 rounded bg-gray-400 text-white hover:bg-gray-500"
+          >
+            <FaTimes className="inline mr-1" /> Hủy
           </button>
         )}
       </div>
-
-      {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
 
       <AnimatePresence mode="wait">
         {editMode ? (
@@ -227,141 +233,164 @@ const ShopSettingsPage = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.22 }}
-            onSubmit={handleSubmit}
-            className="space-y-3"
+            onSubmit={handleSubmit(onSubmit)}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-4"
           >
-            <div className="bg-white shadow rounded-lg p-4 flex flex-col items-center">
-              <div className="relative group">
+            <div className="col-span-2 space-y-3">
+              <div className="bg-white shadow rounded-lg p-4">
+                <h3 className="text-sm font-semibold mb-2">Thông tin cơ bản</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Tên cửa hàng</label>
+                    <input
+                      {...register("name", {
+                        required: "Vui lòng nhập tên cửa hàng",
+                      })}
+                      className={`border p-2 w-full rounded text-sm ${errors.name ? "border-red-500" : ""}`}
+                      disabled={!editMode}
+                    />
+                    {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Loại hình</label>
+                    <select
+                      {...register("type", {
+                        required: "Vui lòng chọn loại hình cửa hàng",
+                      })}
+                      className={`border p-2 w-full rounded text-sm ${
+                        errors.countryCode ? "border-red-500" : ""
+                      }`}
+                      disabled={!editMode}
+                    >
+                      {shopTypes.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Ngành hàng</label>
+                    <input
+                      {...register("industry")}
+                      className="border p-2 w-full rounded bg-gray-100 text-sm"
+                      disabled
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white shadow rounded-lg p-4">
+                <h3 className="text-sm font-semibold mb-2">Mô hình kinh doanh</h3>
+                <select
+                  {...register("businessModel")}
+                  className="border p-2 w-full rounded text-sm"
+                  disabled={!editMode}
+                >
+                  {businessModels.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center mt-2">
+                  <input
+                    type="checkbox"
+                    {...register("active")}
+                    className="mr-2"
+                    disabled={!editMode}
+                  />
+                  <label className="text-sm font-medium">Kích hoạt cửa hàng</label>
+                </div>
+              </div>
+
+              <div className="bg-white shadow rounded-lg p-4">
+                <h3 className="text-sm font-semibold mb-2">Liên hệ</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Mã quốc gia</label>
+                    <select
+                      {...register("countryCode", {
+                        required: "Vui lòng chọn mã quốc gia",
+                      })}
+                      className={`border p-2 w-full rounded text-sm ${
+                        errors.countryCode ? "border-red-500" : ""
+                      }`}
+                      disabled={!editMode}
+                    >
+                      <option value="">Chọn mã quốc gia</option>
+                      {countryOptions.map((opt) => (
+                        <option key={opt.code} value={opt.code}>
+                          {opt.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.countryCode && <p className="text-red-500 text-xs mt-1">{errors.countryCode.message}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Số điện thoại</label>
+                    <input
+                      {...register("phone", {
+                        required: "Vui lòng nhập số điện thoại",
+                        validate: (value) => {
+                          if (value && countryCode) {
+                            const country = countryOptions.find((c) => c.code === countryCode);
+                            if (country && !new RegExp(country.phonePattern).test(value)) {
+                              return "Số điện thoại không đúng định dạng.";
+                            }
+                          }
+                          return true;
+                        },
+                      })}
+                      className={`border p-2 w-full rounded text-sm ${errors.phone ? "border-red-500" : ""}`}
+                      disabled={!editMode}
+                    />
+                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-sm font-medium mb-1">Địa chỉ</label>
+                  <input
+                    {...register("address", {
+                      required: "Vui lòng nhập địa chỉ",
+                    })}
+                    className={`border p-2 w-full rounded text-sm ${errors.address ? "border-red-500" : ""}`}
+                    disabled={!editMode}
+                  />
+                  {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-white shadow rounded-lg p-4">
+                <label className="block text-sm font-medium mb-1">Logo cửa hàng</label>
                 {previewLogo ? (
                   <img
                     src={previewLogo}
                     alt="Shop Logo"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-blue-400 shadow-sm"
+                    className="w-40 h-40 rounded-full object-cover mx-auto mb-2"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center border-2 border-blue-400">
+                  <div className="w-40 h-40 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-blue-400">
                     <FaStore size={28} color="#3B82F6" />
                   </div>
                 )}
                 <input
                   type="file"
                   accept="image/*"
-                  name="logo"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={(e) =>
+                    handleFileChange({
+                      event: e,
+                      setError: setFileError,
+                      setFile,
+                      setPreview: setPreviewLogo,
+                    })
+                  }
+                  className="border p-2 w-full rounded"
+                  disabled={!editMode}
                 />
-              </div>
-              <p className="text-gray-500 text-sm mt-1">Logo cửa hàng</p>
-            </div>
-
-            <div className="bg-white shadow rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-semibold">Thông tin cơ bản</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Tên cửa hàng</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
-                    className={`border rounded p-2 w-full text-sm ${errors.name ? "border-red-500" : ""}`}
-                  />
-                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Ngành hàng</label>
-                  <input
-                    type="text"
-                    value={form.industry}
-                    disabled
-                    className="border rounded p-2 w-full bg-gray-100 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Loại hình</label>
-                  <input
-                    type="text"
-                    value={form.type}
-                    disabled
-                    className="border rounded p-2 w-full bg-gray-100 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white shadow rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-semibold">Liên hệ</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Mã quốc gia</label>
-                  <select
-                    name="countryCode"
-                    value={form.countryCode}
-                    onChange={handleChange}
-                    className={`border rounded p-2 w-full text-sm ${errors.countryCode ? "border-red-500" : ""}`}
-                  >
-                    <option value="">Chọn mã quốc gia</option>
-                    {countryOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.countryCode && <p className="text-red-500 text-xs mt-1">{errors.countryCode}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Số điện thoại</label>
-                  <input
-                    type="text"
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleChange}
-                    className={`border rounded p-2 w-full text-sm ${errors.phone ? "border-red-500" : ""}`}
-                  />
-                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Địa chỉ</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                  className={`border rounded p-2 w-full text-sm ${errors.address ? "border-red-500" : ""}`}
-                />
-                {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
-              </div>
-            </div>
-
-            <div className="bg-white shadow rounded-lg p-4 space-y-2">
-              <h3 className="text-sm font-semibold">Mô hình kinh doanh</h3>
-              <select
-                name="businessModel"
-                value={form.businessModel}
-                onChange={handleChange}
-                className="border rounded p-2 w-full text-sm"
-              >
-                <option value="">Chọn mô hình</option>
-                {businessModels.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500">
-                Mặc định theo loại cửa hàng:{" "}
-                <strong>{shopTypes.find((s) => s.value === form.type)?.defaultBusinessModel}</strong>
-              </p>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="active"
-                  checked={form.active}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                <label className="text-sm font-medium">Kích hoạt cửa hàng</label>
+                {fileError && <p className="text-red-500 text-xs mt-1">{fileError}</p>}
               </div>
             </div>
           </motion.form>
@@ -372,41 +401,62 @@ const ShopSettingsPage = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.22 }}
-            className="space-y-3"
+            className="grid grid-cols-1 lg:grid-cols-3 gap-4"
           >
-            <div className="bg-white shadow rounded-lg p-4 flex flex-col items-center">
-              {previewLogo ? (
-                <img
-                  src={previewLogo}
-                  alt="Shop Logo"
-                  className="w-20 h-20 rounded-full object-cover border-2 border-blue-400 shadow-sm"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full flex items-center justify-center border-2 border-blue-400">
-                  <FaStore size={28} color="#3B82F6" />
-                </div>
-              )}
-              <p className="text-gray-500 text-sm mt-1">Logo cửa hàng</p>
+            <div className="col-span-2 space-y-3">
+              <div className="bg-white shadow rounded-lg p-4">
+                <h3 className="text-sm font-semibold mb-2">Thông tin cửa hàng</h3>
+                <p className="text-sm">
+                  <strong>Tên cửa hàng:</strong> {watch("name") || "Chưa cập nhật"}
+                </p>
+                <p className="text-sm">
+                  <strong>Ngành hàng:</strong> {watch("industry") || "Chưa cập nhật"}
+                </p>
+                <p className="text-sm">
+                  <strong>Loại hình:</strong> {shopTypes.find((s) => s.value === watch("type"))?.label || "Chưa cập nhật"}
+                </p>
+              </div>
+
+              <div className="bg-white shadow rounded-lg p-4">
+                <h3 className="text-sm font-semibold mb-2">Liên hệ</h3>
+                <p className="text-sm">
+                  <strong>Mã quốc gia:</strong>{" "}
+                  {countryOptions.find((c) => c.code === watch("countryCode"))?.name || "Chưa cập nhật"} ({watch("countryCode")})
+                </p>
+                <p className="text-sm">
+                  <strong>Số điện thoại:</strong> {watch("phone") || "Chưa cập nhật"}
+                </p>
+                <p className="text-sm">
+                  <strong>Địa chỉ:</strong> {watch("address") || "Chưa cập nhật"}
+                </p>
+              </div>
+
+              <div className="bg-white shadow rounded-lg p-4">
+                <h3 className="text-sm font-semibold mb-2">Mô hình kinh doanh</h3>
+                <p className="text-sm">
+                  {businessModels.find((opt) => opt.value === watch("businessModel"))?.label || "Chưa cập nhật"}
+                  </p>
+                <p className="text-sm">
+                  <strong>Kích hoạt:</strong> {watch("active") ? "Có" : "Không"}
+                </p>
+              </div>
             </div>
 
-            <div className="bg-white shadow rounded-lg p-4 space-y-2">
-              <h3 className="text-sm font-semibold">Thông tin cửa hàng</h3>
-              <p className="text-sm"><strong>Tên cửa hàng:</strong> {form.name}</p>
-              <p className="text-sm"><strong>Ngành hàng:</strong> {form.industry}</p>
-              <p className="text-sm"><strong>Loại hình:</strong> {form.type}</p>
-            </div>
-
-            <div className="bg-white shadow rounded-lg p-4 space-y-2">
-              <h3 className="text-sm font-semibold">Liên hệ</h3>
-              <p className="text-sm"><strong>Mã quốc gia:</strong> {form.countryCode}</p>
-              <p className="text-sm"><strong>Số điện thoại:</strong> {form.phone}</p>
-              <p className="text-sm"><strong>Địa chỉ:</strong> {form.address}</p>
-            </div>
-
-            <div className="bg-white shadow rounded-lg p-4 space-y-2">
-              <h3 className="text-sm font-semibold">Mô hình kinh doanh</h3>
-              <p className="text-sm">{form.businessModel}</p>
-              <p className="text-sm"><strong>Kích hoạt:</strong> {form.active ? "Có" : "Không"}</p>
+            <div className="space-y-4">
+              <div className="bg-white shadow rounded-lg p-4">
+                <h3 className="text-sm font-semibold mb-2">Logo cửa hàng</h3>
+                {previewLogo ? (
+                  <img
+                    src={previewLogo}
+                    alt="Shop Logo"
+                    className="w-40 h-40 rounded-full object-cover mx-auto mb-2"
+                  />
+                ) : (
+                  <div className="w-40 h-40 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-blue-400">
+                    <FaStore size={28} color="#3B82F6" />
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

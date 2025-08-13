@@ -4,10 +4,10 @@ import { getCurrentUser, updateProfile, changePassword } from "../api/userApi";
 import { useAuth } from "../hooks/useAuth";
 import { useShop } from "../hooks/useShop";
 import { Navigate } from "react-router-dom";
-import imageCompression from "browser-image-compression";
 import {useAlert} from "../hooks/useAlert.js";
 import {ALERT_TYPES} from "../constants/alertTypes.js";
 import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
+import { handleFileChange } from "../utils/fileUtils.js"; 
 
 const AccountPage = () => {
   const { user: authUser, enums } = useAuth();
@@ -21,7 +21,7 @@ const AccountPage = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [previewAvatar, setPreviewAvatar] = useState(null);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [fileError, setFileError] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
 
   const {
@@ -94,53 +94,20 @@ const AccountPage = () => {
       });
       setIsEditMode(false); // Reset to view mode after loading
     } catch (err) {
-      setError("Không thể tải thông tin người dùng.");
+      console.error("Error loading user data:", err);
+      showAlert({
+        title: "Lỗi tải thông tin",
+        description: "Không thể tải thông tin người dùng. Vui lòng thử lại sau.",
+        type: ALERT_TYPES.ERROR,
+        variant: "toast",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFileChange = async (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
-
-    const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    const MAX_FILE_SIZE_MB = 5;
-
-    if (!ALLOWED_TYPES.includes(selectedFile.type)) {
-      setError("Chỉ hỗ trợ định dạng ảnh JPG, PNG hoặc WebP.");
-      setAvatarFile(null);
-      setPreviewAvatar(null);
-      return;
-    }
-
-    if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      setError(`Ảnh vượt quá ${MAX_FILE_SIZE_MB}MB. Đang tiến hành nén ảnh...`);
-      try {
-        const compressedFile = await imageCompression(selectedFile, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1024,
-          useWebWorker: true,
-        });
-        setAvatarFile(compressedFile);
-        setPreviewAvatar(URL.createObjectURL(compressedFile));
-        setError("");
-      } catch (err) {
-        setError("Nén ảnh thất bại. Vui lòng chọn ảnh nhỏ hơn.");
-        setAvatarFile(null);
-        setPreviewAvatar(null);
-      }
-      return;
-    }
-
-    setAvatarFile(selectedFile);
-    setPreviewAvatar(URL.createObjectURL(selectedFile));
-    setError("");
-  };
-
   const onProfileSubmit = async (data) => {
     try {
-      setError("");
       setIsSubmitting(true);
       const formData = new FormData();
       const userData = { ...data };
@@ -158,12 +125,23 @@ const AccountPage = () => {
       setPreviewAvatar(null);
       setIsEditMode(false);
       loadUser();
+      showAlert({
+        title: "Thành công",
+        description: "Thông tin tài khoản đã được cập nhật.",
+        type: ALERT_TYPES.SUCCESS,
+        variant: "toast"
+      });
     } catch (err) {
       const errorMessage =
           err.response?.data?.code === "INVALID_PHONE_NUMBER"
               ? "Số điện thoại không đúng định dạng."
               : err.response?.data?.message || "Có lỗi khi cập nhật thông tin.";
-      setError(errorMessage);
+      showAlert({
+        title: "Lỗi cập nhật thông tin",
+        description: errorMessage,
+        type: ALERT_TYPES.ERROR,
+        variant: "toast",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -171,7 +149,6 @@ const AccountPage = () => {
 
   const onPasswordSubmit = async (data) => {
     try {
-      setError("");
       setIsSubmitting(true);
       await changePassword({
         currentPassword: data.currentPassword,
@@ -179,10 +156,21 @@ const AccountPage = () => {
       });
       setMessage("Đổi mật khẩu thành công!");
       resetPassword();
-      setIsEditMode(false); // Switch back to view mode after save
+      setIsEditMode(false);
+      showAlert({
+        title: "Thành công",
+        description: "Mật khẩu đã được đổi thành công.",
+        type: ALERT_TYPES.SUCCESS,
+        variant: "toast"
+      });
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Có lỗi khi đổi mật khẩu.";
-      setError(errorMessage);
+      showAlert({
+        title: "Lỗi đổi mật khẩu",
+        description: errorMessage,
+        type: ALERT_TYPES.ERROR,
+        variant: "toast"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -217,7 +205,6 @@ const AccountPage = () => {
   const resetForm = () => {
     setAvatarFile(null);
     setPreviewAvatar(null);
-    setError("");
     setIsEditMode(false);
     reset(user);
   }
@@ -461,10 +448,20 @@ const AccountPage = () => {
                     <input
                         type="file"
                         accept="image/*"
-                        onChange={handleFileChange}
+                        onChange={(e) =>
+                          handleFileChange({
+                            event: e,
+                            setError: setFileError,
+                            setFile: setAvatarFile,
+                            setPreview: setPreviewAvatar,
+                          })
+                        }
                         className="border p-2 w-full rounded"
                         disabled={!isEditMode}
                     />
+                    {fileError && isEditMode && (
+                        <p className="text-red-500 text-xs">{fileError}</p>
+                    )}
                   </div>
                   {isEditMode && (
                       <div className="flex gap-2 justify-center">
@@ -657,37 +654,8 @@ const AccountPage = () => {
               )}
             </div>
         )}
-
-        {/* Toast Notifications with Auto-Hide */}
-        {message && (
-            <div
-                className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-300"
-                onAnimationEnd={() => setMessage("")}
-                style={{ animation: "fadeOut 3s forwards" }}
-            />
-        )}
-        {error && (
-            <div
-                className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-300"
-                onAnimationEnd={() => setError("")}
-                style={{ animation: "fadeOut 3s forwards" }}
-            />
-        )}
       </div>
   );
 };
-
-// CSS Animation for Toast
-const styles = `
-  @keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-`;
-
-// Inject CSS
-const styleSheet = document.createElement("style");
-styleSheet.textContent = styles;
-document.head.appendChild(styleSheet);
 
 export default AccountPage;
