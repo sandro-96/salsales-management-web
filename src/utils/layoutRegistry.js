@@ -22,6 +22,7 @@ import { healthcareWebNav, healthcarePosNav } from "../layouts/healthcare/navIte
 import { educationWebNav, educationPosNav } from "../layouts/education/navItems";
 import { ecommerceWebNav, ecommercePosNav } from "../layouts/ecommerce/navItems";
 import { serviceWebNav, servicePosNav } from "../layouts/service/navItems";
+import { commonWebNav } from "../layouts/common/baseNavItems";
 
 export const layoutRegistry = {
     FNB: {
@@ -127,5 +128,14 @@ export const layoutRegistry = {
             ADMIN: { layout: ServicePosLayout, props: { title: "Service POS Admin", navItems: servicePosNav.admin } },
             STAFF: { layout: ServicePosLayout, props: { title: "Service POS Staff", navItems: servicePosNav.staff } },
         },
+    },
+
+    COMMON: {
+        web: {
+            USER: { layout: BaseWebLayout, props: { title: "Common Web Customers", navItems: commonWebNav.user } },
+        },
+        pos: {
+            USER: { layout: BaseWebLayout, props: { title: "Common POS Customers", navItems: commonWebNav.user } },
+        }
     }
 };

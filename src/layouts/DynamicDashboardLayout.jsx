@@ -9,9 +9,9 @@ const DynamicDashboardLayout = ({ children }) => {
     const { device = "web", selectedIndustry, selectedRole } = useShop();
     const navigate = useNavigate();
     const location = useLocation();
-
-    const industry = selectedIndustry;
-    const role = selectedRole;
+    debugger
+    const industry = selectedIndustry || "COMMON";
+    const role = selectedRole || "USER";
     const config = layoutRegistry?.[industry]?.[device]?.[role];
 
     const Layout = config?.layout || DefaultDashboard;

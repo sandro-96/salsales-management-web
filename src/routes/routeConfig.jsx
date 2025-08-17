@@ -7,7 +7,7 @@ const RegisterPage = lazy(() => import("../pages/RegisterPage"));
 const VerifyEmailPage = lazy(() => import("../pages/VerifyEmailPage"));
 const ForgotPasswordPage = lazy(() => import("../pages/ForgotPasswordPage"));
 const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
-const ShopSelectPage = lazy(() => import("../pages/shops/ShopSelectPage"));
+const ShopPage = lazy(() => import("../pages/shops/ShopPage"));
 const CreateShopPage = lazy(() => import("../pages/shops/CreateShopPage"));
 const DynamicDashboardLayout = lazy(() => import("../layouts/DynamicDashboardLayout"));
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
@@ -21,7 +21,10 @@ const CustomerListPage = lazy(() => import("../pages/customers/CustomerListPage"
 const InventoryListPage = lazy(() => import("../pages/inventory/InventoryListPage"));
 const ReportListPage = lazy(() => import("../pages/reports/ReportListPage"));
 const TableListPage = lazy(() => import("../pages/tables/TableListPage"));
-const AccountPage = lazy(() => import("../pages/AccountPage.jsx"));
+const AccountPage = lazy(() => import("../pages/AccountPage"));
+const MainPage = lazy(() => import("../pages/MainPage"));
+const HistoryPage = lazy(() => import("../pages/HistoryPage"));
+const ErrorPage = lazy(() => import("../pages/ErrorPage"));
 
 export const routeConfig = [
     { path: "/login", element: <LoginPage />, guestOnly: true, title: "Đăng nhập" },
@@ -29,10 +32,7 @@ export const routeConfig = [
     { path: "/register", element: <RegisterPage />, guestOnly: true, title: "Đăng ký tài khoản" },
     { path: "/verify", element: <VerifyEmailPage />, title: "Xác thực email" },
     { path: "/forgot-password", element: <ForgotPasswordPage />, title: "Quên mật khẩu" },
-
     { path: "/admin", element: <AdminPage />, protected: true, roles: ["ROLE_ADMIN"], title: "Trang quản trị" },
-    { path: "/select-shop", element: <ShopSelectPage />, protected: true, roles: ["ROLE_USER"], title: "Chọn cửa hàng" },
-    { path: "/create-shop", element: <CreateShopPage />, protected: true, roles: ["ROLE_USER"], title: "Tạo cửa hàng" },
     {
         path: "/",
         protected: true,
@@ -48,9 +48,14 @@ export const routeConfig = [
             { path: "inventory", element: <InventoryListPage />, title: "Kho hàng" },
             { path: "reports", element: <ReportListPage />, title: "Báo cáo" },
             { path: "tables", element: <TableListPage />, title: "Bàn" },
-            { path: "/shop-settings", element: <ShopSettingsPage />, title: "Cài đặt cửa hàng" },
-            { path: "/accounts", element: <AccountPage />, title: "Cài đặt cửa hàng" },
+            { path: "/accounts", element: <AccountPage />, title: "Tài khoản" },
+            { path: "/main", element: <MainPage />, title: "Trang chủ" },
+            { path: "/history", element: <HistoryPage />, title: "Lịch sử" },
+            { path: "/shops", element: <ShopPage />, title: "Cửa hàng" },
+            { path: "/shops/:shopId", element: <ShopSettingsPage />, title: "Chi tiết cửa hàng" },
+            { path: "/shops/create", element: <CreateShopPage />, title: "Tạo cửa hàng" }
         ]
     },
+    { path: "/error", element: <ErrorPage />, title: "Trang lỗi" },
     { path: "*", element: <NotFoundPage />, title: "Không tìm thấy trang" },
 ];

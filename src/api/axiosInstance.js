@@ -26,6 +26,11 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
     const status = error.response?.status;
 
+    // Bỏ qua logic refresh token nếu request là /auth/refresh-token
+    if (originalRequest.url.includes("/auth/refresh-token")) {
+      return Promise.reject(error);
+    }
+
     // Xử lý lỗi 401 hoặc 403
     if ((status === 401 || status === 403) && !originalRequest._retry) {
       originalRequest._retry = true;

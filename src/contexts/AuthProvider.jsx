@@ -33,6 +33,7 @@ const AuthProvider = ({ children }) => {
             } catch {
                 logout();
             } finally {
+                fetchEnums();
                 setIsUserContextReady(true);
             }
         } else {
@@ -63,9 +64,9 @@ const AuthProvider = ({ children }) => {
     };
 
     useEffect(() => {
+        console.log("AuthProvider mounted, loading user...");
         loadUser();
-        isUserContextReady && fetchEnums();
-    }, [isUserContextReady]);
+    }, []);
 
     return (
         <AuthContext.Provider value={{

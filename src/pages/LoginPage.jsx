@@ -53,8 +53,8 @@ const LoginPage = () => {
                 idToken: response.credential
             });
             if (res.data.success) {
-                handleAfterLogin(res.data.data);
                 setSuccess("Đăng nhập bằng Google thành công!");
+                handleAfterLogin(res.data.data);
             } else {
                 setError(res.data.message || "Đăng nhập Google thất bại.");
             }
@@ -80,7 +80,7 @@ const LoginPage = () => {
         if (role.includes("ROLE_ADMIN")) {
             navigate("/admin", { replace: true });
         } else {
-            navigate("/select-shop", { replace: true });
+            navigate("/", { replace: true });
         }
     };
 

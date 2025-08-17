@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { getCurrentUser, updateProfile, changePassword } from "../api/userApi";
 import { useAuth } from "../hooks/useAuth";
-import { useShop } from "../hooks/useShop";
 import { Navigate } from "react-router-dom";
 import {useAlert} from "../hooks/useAlert.js";
 import {ALERT_TYPES} from "../constants/alertTypes.js";
@@ -10,8 +9,7 @@ import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
 import { handleFileChange } from "../utils/fileUtils.js"; 
 
 const AccountPage = () => {
-  const { user: authUser, enums } = useAuth();
-  const { selectedShop } = useShop();
+  const { user: authUser, enums, isUserContextReady } = useAuth();
   const { showAlert } = useAlert();
 
   const [tab, setTab] = useState("profile");
@@ -69,10 +67,10 @@ const AccountPage = () => {
   const countryCode = watch("countryCode");
 
   useEffect(() => {
-    if (authUser && selectedShop) {
+    if (authUser && isUserContextReady) {
       loadUser();
     }
-  }, [authUser, selectedShop]);
+  }, []);
 
   const loadUser = async () => {
     try {
@@ -222,7 +220,7 @@ const AccountPage = () => {
     }
   };
 
-  if (!authUser || !selectedShop) {
+  if (!authUser && isUserContextReady) {
     return <Navigate to="/login" replace />;
   }
 
@@ -438,10 +436,10 @@ const AccountPage = () => {
                                 `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${user.avatarUrl}`
                             }
                             alt="Avatar"
-                            className="w-40 h-40 rounded-full mx-auto mb-2"
+                            className="w-24 h-24 rounded-full mx-auto mb-2"
                         />
                     ) : (
-                        <div className="w-40 h-40 rounded-full bg-gray-200 flex items-center justify-center mx-auto mb-2">
+                        <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto mb-2">
                           <span className="text-gray-500">No Avatar</span>
                         </div>
                     )}
@@ -551,10 +549,10 @@ const AccountPage = () => {
                             <img
                                 src={`${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${user.avatarUrl}`}
                                 alt="Avatar"
-                                className="w-40 h-40 rounded-full mx-auto mb-2"
+                                className="w-24 h-24 rounded-full mx-auto mb-2"
                             />
                         ) : (
-                            <div className="w-40 h-40 rounded-full bg-gray-200 flex items-center justify-center mx-auto mb-2">
+                            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto mb-2">
                               <span className="text-gray-500">No Avatar</span>
                             </div>
                         )}

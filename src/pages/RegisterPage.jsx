@@ -159,10 +159,10 @@ const RegisterPage = () => {
             });
             if (res.data.success) {
                 console.log("🔔 Đăng nhập Google thành công:", res.data);
-                handleAfterLogin(res.data.data);
                 setSuccess("Đăng ký/Đăng nhập bằng Google thành công!");
+                handleAfterLogin(res.data.data);
                 setTimeout(() => {
-                    navigate("/select-shop", { replace: true });
+                    navigate("/", { replace: true });
                 }, 2000);
             }
         } catch (err) {
@@ -190,7 +190,7 @@ const RegisterPage = () => {
         if (role.includes("ROLE_ADMIN")) {
             navigate("/admin", { replace: true });
         } else {
-            navigate("/select-shop", { replace: true });
+            navigate("/", { replace: true });
         }
     };
 

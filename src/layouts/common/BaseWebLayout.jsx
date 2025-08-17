@@ -35,26 +35,29 @@ const BaseWebLayout = ({ title, navItems }) => {
 
     const SidebarContent = (
         <>
-            {/* Shop info */}
-            <div className="flex items-center mb-6 space-x-3">
-                {selectedShop?.logoUrl ? (
-                    <img
-                        src={`${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`}
-                        alt="Shop Logo"
-                        className="w-10 h-10 rounded-full object-cover"
-                        style={{ border: `2px solid ${pastelMint}` }}
-                    />
-                ) : (
-                    <FaStore size={40} style={{ color: pastelMint }} />
-                )}
-                <div>
-                    <p className="font-bold text-lg">{selectedShop?.name || "Cửa hàng"}</p>
-                    <p className="text-sm" style={{ color: pastelMint }}>
-                        {selectedShop?.industry || "Industry"}
-                    </p>
-                </div>
-            </div>
-
+            {
+                selectedShop && (
+                    <div className="flex items-center mb-6 space-x-3">
+                        {selectedShop?.logoUrl ? (
+                            <img
+                                src={`${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`}
+                                alt="Shop Logo"
+                                className="w-10 h-10 rounded-full object-cover"
+                                style={{ border: `2px solid ${pastelMint}` }}
+                            />
+                        ) : (
+                            <FaStore size={40} style={{ color: pastelMint }} />
+                        )}
+                        <div>
+                            <p className="font-bold text-lg">{selectedShop?.name || "Cửa hàng"}</p>
+                            <p className="text-sm" style={{ color: pastelMint }}>
+                                {selectedShop?.industry || "Industry"}
+                            </p>
+                        </div>
+                    </div>
+                )
+            }
+            
             {/* Menu nav */}
             <nav className="flex flex-col gap-1 flex-1 text-sm">
                 {items.map(({ to, icon: Icon, label, onClick }) => (
@@ -85,7 +88,7 @@ const BaseWebLayout = ({ title, navItems }) => {
                 style={{ borderTop: `1px solid ${pastelMint}` }}
             >
                 <NavLink
-                    to="/shop-settings"
+                    to="/shops"
                     className={({ isActive }) =>
                         `flex items-center px-4 py-2 rounded-md transition-colors duration-200 ${
                             isActive ? "font-semibold" : "hover:bg-white/10"
@@ -103,7 +106,7 @@ const BaseWebLayout = ({ title, navItems }) => {
                                 className="mr-2"
                                 style={{ color: isActive ? textDark : pastelMint }}
                             />
-                            Cài đặt cửa hàng
+                            Cửa hàng
                         </>
                     )}
                 </NavLink>

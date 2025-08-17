@@ -1,22 +1,48 @@
-// src/contexts/ShopProvider.jsx
 import { useState, useEffect, useCallback } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { ShopContext } from "./ShopContext";
 import { useAuth } from "../hooks/useAuth.js";
 
 const ShopProvider = ({ children }) => {
-    const { isUserContextReady } = useAuth();
+    const { isUserContextReady, user } = useAuth();
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
     const [isShopContextReady, setIsShopContextReady] = useState(false);
-    const [selectedShop, setSelectedShop] = useState(null);
+    const [selectedShop, setSelectedShopState] = useState(null);
     const [selectedRole, setSelectedRole] = useState(null);
     const [selectedIndustry, setSelectedIndustry] = useState(null);
 
-    const setSelectedShopId = (id) => {
+    const setSelectedShopId = useCallback((id) => {
         setSelectedShopIdState(id);
         localStorage.setItem("selectedShopId", id);
-    };
+
+        const shop = shops.find((s) => s.id === id);
+        if (shop) {
+            setSelectedShopState(shop);
+            setSelectedRole(shop.role);
+            setSelectedIndustry(shop.industry);
+        } else {
+            setSelectedShopState(null);
+            setSelectedRole(null);
+            setSelectedIndustry(null);
+        }
+    }, [shops]);
+
+    const setSelectedShop = useCallback((shop) => {
+        if (!shop) {
+            setSelectedShopIdState(null);
+            setSelectedShopState(null);
+            setSelectedRole(null);
+            setSelectedIndustry(null);
+            localStorage.removeItem("selectedShopId");
+        } else {
+            setSelectedShopIdState(shop.id);
+            setSelectedShopState(shop);
+            setSelectedRole(shop.role);
+            setSelectedIndustry(shop.industry);
+            localStorage.setItem("selectedShopId", shop.id);
+        }
+    }, []);
 
     const fetchShops = useCallback(async () => {
         try {
@@ -25,33 +51,37 @@ const ShopProvider = ({ children }) => {
             setShops(shopList);
 
             const savedShopId = localStorage.getItem("selectedShopId");
-            const validSavedShop = shopList.find(s => s.id === savedShopId);
+            const validSavedShop = shopList.find((s) => s.id === savedShopId);
 
             if (validSavedShop) {
-                setSelectedShopId(savedShopId);
-                setSelectedShop(validSavedShop);
+                // Trực tiếp set state thay vì gọi setSelectedShopId
+                setSelectedShopIdState(savedShopId);
+                setSelectedShopState(validSavedShop);
                 setSelectedRole(validSavedShop.role);
                 setSelectedIndustry(validSavedShop.industry);
-            } else if (shopList.length > 0) {
-                setSelectedShopId(shopList[0].id);
-                setSelectedShop(shopList[0]);
-                setSelectedRole(shopList[0].role);
-                setSelectedIndustry(shopList[0].industry);
+            } else {
+                setSelectedShopIdState(null);
+                setSelectedShopState(null);
+                setSelectedRole(null);
+                setSelectedIndustry(null);
             }
 
             console.log("Đã tải danh sách cửa hàng:", shopList);
         } catch (err) {
             console.error("Lỗi khi tải danh sách cửa hàng", err);
+        } finally {
+            setIsShopContextReady(true);
         }
     }, []);
 
     useEffect(() => {
-        if (isUserContextReady) {
-            fetchShops().then(() => {
-                setIsShopContextReady(true);
-            });
+        if (isUserContextReady && user) {
+            console.log("User context is ready, fetching shops...");
+            fetchShops();
+        } else {
+            setIsShopContextReady(true);
         }
-    }, [isUserContextReady, fetchShops]);
+    }, [isUserContextReady, fetchShops, user]);
 
     const isOwner = selectedRole === "OWNER";
     const isStaff = selectedRole === "STAFF";
@@ -71,7 +101,7 @@ const ShopProvider = ({ children }) => {
                 isCashier,
                 selectedIndustry,
                 fetchShops,
-                isShopContextReady
+                isShopContextReady,
             }}
         >
             {children}

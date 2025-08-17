@@ -3,8 +3,7 @@ import { useShop } from "../hooks/useShop";
 
 const OverviewPage = () => {
     const { selectedShop, selectedRole, isOwner, isStaff, isCashier } = useShop();
-
-    /*if (!selectedShop) return <p>Đang tải cửa hàng...</p>;*/
+    if (!selectedShop) return <p>Đang tải cửa hàng...</p>;
 
     return (
         <div className="p-6">

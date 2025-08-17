@@ -7,6 +7,7 @@ import GuestOnlyRoute from "./routes/GuestOnlyRoute";
 import RoleBasedRoute from "./routes/RoleBasedRoute";
 import RouteWithTitle from "./routes/RouteWithTitle";
 import Loading from "./components/loading/Loading.jsx";
+import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
 
 function renderRoute(route) {
     let element = <RouteWithTitle element={route.element} title={route.title} />;
@@ -48,9 +49,11 @@ function renderRoute(route) {
 
 function App() {
     return (
-        <Suspense fallback={<Loading text="Đang tải trang..." fullScreen/>}>
-            <Routes>{routeConfig.map(renderRoute)}</Routes>
-        </Suspense>
+        <ErrorBoundaryWithNavigate>
+            <Suspense fallback={<Loading text="Đang tải trang..." fullScreen />}>
+                <Routes>{routeConfig.map(renderRoute)}</Routes>
+            </Suspense>
+        </ErrorBoundaryWithNavigate>
     );
 }
 
