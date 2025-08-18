@@ -1,13 +1,12 @@
 import { useState } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
-import { useAlert } from "../../hooks/useAlert";
 import imageCompression from "browser-image-compression";
 import { COUNTRIES } from "../../constants/countries";
-import { ALERT_TYPES } from "../../constants/alertTypes";
 import LoadingOverlay from "../../components/loading/LoadingOverlay.jsx";
 import { Store, MapPin, Phone, Image as ImageIcon, Flag } from "lucide-react";
 import {useAuth} from "../../hooks/useAuth.js";
+import { useNavigate } from "react-router-dom";
 
 const CreateShopPage = () => {
   const [form, setForm] = useState({
@@ -25,10 +24,10 @@ const CreateShopPage = () => {
   const [submitError, setSubmitError] = useState("");
   const { enums } = useAuth();
   const { fetchShops } = useShop();
-  const { showAlert } = useAlert();
   const shopTypes = enums?.shopTypes || [];
   const businessModels = enums?.businessModels || [];
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
@@ -129,19 +128,7 @@ const CreateShopPage = () => {
       });
       if (res.data.success) {
         await fetchShops();
-        showAlert({
-          type: ALERT_TYPES.SUCCESS,
-          title: "Tạo cửa hàng thành công",
-          description: "🎉 Đã tạo chi nhánh mặc định cho cửa hàng",
-          variant: "modal",
-          actions: [
-            {
-                label: "Đi đến cửa hàng",
-                className: "bg-blue-500 text-white hover:bg-blue-600",
-                to: "/overview",
-            }
-        ]
-        });
+        navigate(-1);
       } else {
         setSubmitError(res.data.message || "Tạo cửa hàng thất bại.");
       }

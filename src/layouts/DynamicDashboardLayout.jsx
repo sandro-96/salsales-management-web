@@ -6,10 +6,9 @@ import { useShop } from "../hooks/useShop";
 import { getFirstValidNavItem } from "../utils/getFirstValidNavItem";
 
 const DynamicDashboardLayout = ({ children }) => {
-    const { device = "web", selectedIndustry, selectedRole } = useShop();
+    const { device = "web", selectedIndustry, selectedRole, isShopContextReady } = useShop();
     const navigate = useNavigate();
     const location = useLocation();
-    debugger
     const industry = selectedIndustry || "COMMON";
     const role = selectedRole || "USER";
     const config = layoutRegistry?.[industry]?.[device]?.[role];
@@ -20,10 +19,10 @@ const DynamicDashboardLayout = ({ children }) => {
     const firstNavItem = getFirstValidNavItem(layoutProps?.navItems);
 
     useEffect(() => {
-        if (location.pathname === "/" && firstNavItem?.to) {
+        if (location.pathname === "/" && firstNavItem?.to && isShopContextReady) {
             navigate(firstNavItem.to, { replace: true });
         }
-    }, [location.pathname, firstNavItem, navigate]);
+    }, [location.pathname, firstNavItem, navigate, industry, device, role, isShopContextReady]);
 
     return <Layout {...layoutProps}>{children}</Layout>;
 };

@@ -14,6 +14,7 @@ const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));
 const OverviewPage = lazy(() => import("../pages/OverviewPage"));
 const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
+const ProductManagementPage = lazy(() => import("../pages/products/ProductManagementPage"));
 const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
 const AlertDemo = lazy(() => import("../pages/AlertDemo"));
 const OrderListPage = lazy(() => import("../pages/orders/OrderListPage"));
@@ -40,7 +41,7 @@ export const routeConfig = [
         element: <DynamicDashboardLayout />,
         children: [
             { path: "overview", element: <OverviewPage />, title: "Tổng quan" },
-            { path: "products", element: <ProductListPage />, title: "Sản phẩm" },
+            { path: "products", element: <ProductManagementPage />, title: "Sản phẩm" },
             { path: "staffs", element: <StaffListPage />, title: "Nhân sự" },
             { path: "branches", element: <BranchManagementPage />, title: "Quản lý Chi nhánh" },
             { path: "orders", element: <OrderListPage />, title: "Đơn hàng" },

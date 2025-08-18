@@ -4,7 +4,7 @@ import { ShopContext } from "./ShopContext";
 import { useAuth } from "../hooks/useAuth.js";
 
 const ShopProvider = ({ children }) => {
-    const { isUserContextReady, user } = useAuth();
+    const { isUserContextReady, user, fetchEnums } = useAuth();
     const [shops, setShops] = useState([]);
     const [selectedShopId, setSelectedShopIdState] = useState(null);
     const [isShopContextReady, setIsShopContextReady] = useState(false);
@@ -54,7 +54,6 @@ const ShopProvider = ({ children }) => {
             const validSavedShop = shopList.find((s) => s.id === savedShopId);
 
             if (validSavedShop) {
-                // Trực tiếp set state thay vì gọi setSelectedShopId
                 setSelectedShopIdState(savedShopId);
                 setSelectedShopState(validSavedShop);
                 setSelectedRole(validSavedShop.role);
@@ -76,12 +75,10 @@ const ShopProvider = ({ children }) => {
 
     useEffect(() => {
         if (isUserContextReady && user) {
-            console.log("User context is ready, fetching shops...");
             fetchShops();
-        } else {
-            setIsShopContextReady(true);
+            fetchEnums();
         }
-    }, [isUserContextReady, fetchShops, user]);
+    }, [isUserContextReady, user, fetchShops]);
 
     const isOwner = selectedRole === "OWNER";
     const isStaff = selectedRole === "STAFF";

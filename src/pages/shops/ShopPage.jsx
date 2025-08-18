@@ -52,7 +52,7 @@ const ShopPage = () => {
             <div className="flex items-center mb-4">
               {shop.logoUrl ? (
                 <img
-                  src={shop.logoUrl}
+                  src={`${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${shop.logoUrl}`}
                   alt="Shop Logo"
                   className="w-12 h-12 rounded-full object-cover mr-3"
                 />

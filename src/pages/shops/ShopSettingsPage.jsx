@@ -15,7 +15,7 @@ const sidebarColor = "#34516dff";
 const ShopSettingsPage = () => {
   const { showAlert } = useAlert();
   const { enums } = useAuth();
-  const { selectedShop, setSelectedShop } = useShop();
+  const { selectedShop, setSelectedShop, fetchShops } = useShop();
   const [editMode, setEditMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileError, setFileError] = useState("");
@@ -106,6 +106,7 @@ const ShopSettingsPage = () => {
             : null
         );
         setFile(null);
+        await fetchShops();
       } else {
         showAlert({
           title: "Cập nhật thất bại",
