@@ -1,0 +1,50 @@
+export const SHOP_CATEGORIES = {
+  FNB: [
+    { id: "food" },
+    { id: "drink" },
+    { id: "ingredient" },
+    { id: "fast_food" },
+    { id: "snack" },
+    { id: "beverage_bottled" },
+    { id: "dessert" },
+  ],
+  RETAIL: [
+    { id: "grocery" },
+    { id: "fashion" },
+    { id: "electronics" },
+    { id: "household" },
+    { id: "cosmetics" },
+    { id: "toys" },
+    { id: "stationery" },
+  ],
+  HEALTHCARE: [
+    { id: "medicine" },
+    { id: "equipment" },
+    { id: "supplement" },
+    { id: "consumables" },
+  ],
+  SERVICE: [
+    { id: "spa" },
+    { id: "salon" },
+    { id: "repair" },
+    { id: "transport" },
+    { id: "event" },
+  ],
+  EDUCATION: [
+    { id: "book" },
+    { id: "course" },
+    { id: "stationery" },
+    { id: "digital_content" },
+  ],
+  ECOMMERCE: [
+    { id: "general" },
+    { id: "digital" },
+    { id: "accessories" },
+    { id: "personalized" },
+  ],
+  OTHER: [
+    { id: "other" },
+    { id: "specialty" },
+    { id: "gift" },
+  ],
+};

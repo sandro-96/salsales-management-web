@@ -147,7 +147,6 @@ const BranchManagementPage = () => {
                 </table>
             </div>
 
-            {/* Modal để chỉnh sửa hoặc tạo chi nhánh */}
             {isModalOpen && selectedBranch && (
                 <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
@@ -192,7 +191,7 @@ const BranchManagementPage = () => {
                                     }
                                 }}
                                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2"
-                                disabled={!selectedBranch.name.trim()} // Vô hiệu hóa nếu tên trống
+                                disabled={!selectedBranch.name.trim()}
                             >
                                 {isCreateMode ? 'Tạo' : 'Lưu'}
                             </button>
