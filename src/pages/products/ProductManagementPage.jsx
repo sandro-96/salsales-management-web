@@ -25,6 +25,7 @@ const ProductManagementPage = () => {
   const [previewImages, setPreviewImages] = useState([]);
   const [useSuggestedCode, setUseSuggestedCode] = useState(true);
   const [suggestedCode, setSuggestedCode] = useState("");
+  const shopTypes = enums?.shopTypes || [];
 
   const {
     register,
@@ -65,6 +66,7 @@ const ProductManagementPage = () => {
 
   const unitOptions = enums?.units || ["kg", "cái", "lít"];
   const category = watch("category");
+  const trackInventory = shopTypes.find((type) => type.value === selectedShop?.type)?.trackInventory;
 
   const categoryOptions = useMemo(() => {
     if (!selectedShop?.industry) return [];
@@ -259,11 +261,11 @@ const ProductManagementPage = () => {
   };
 
   const columns = useMemo(
-    () => [
+  () => {
+    const baseColumns = [
       { Header: "Tên sản phẩm", accessor: "name" },
       { Header: "SKU", accessor: "sku" },
       { Header: "Giá bán", accessor: "price" },
-      { Header: "Tồn kho", accessor: "quantity" },
       {
         Header: "Trạng thái",
         accessor: "activeInBranch",
@@ -289,9 +291,17 @@ const ProductManagementPage = () => {
           </div>
         ),
       },
-    ],
-    []
-  );
+    ];
+
+    // Conditionally add the "Tồn kho" column if trackInventory is true
+    if (trackInventory) {
+      baseColumns.splice(3, 0, { Header: "Tồn kho", accessor: "quantity" });
+    }
+
+    return baseColumns;
+  },
+  [trackInventory] // Add trackInventory as a dependency
+);
 
   return (
     <div className="p-6">
@@ -343,7 +353,7 @@ const ProductManagementPage = () => {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white p-6 rounded-lg max-w-lg w-full"
+              className="bg-white p-6 rounded-lg max-w-max w-full max-h-8/10 overflow-y-auto"
             >
               <h2 className="text-lg font-bold mb-4">
                 {editProductId ? "Chỉnh sửa sản phẩm" : "Tạo sản phẩm mới"}
