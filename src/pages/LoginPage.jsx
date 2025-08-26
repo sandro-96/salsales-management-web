@@ -86,16 +86,15 @@ const LoginPage = () => {
     return (
         <div className="flex flex-row h-screen">
             <div className="basis-full p-12 flex flex-col gap-2 justify-center max-w-lg mx-auto relative">
-                <div className="grid w-full max-w-sm grid-cols-1 gap-8">
+                <div className="grid w-full max-w-sm grid-cols-1 gap-4">
                     {loading && <LoadingOverlay text="Đang xử lý..." />}
                     <h1 className="text-xl font-bold font-serif text-blue-900">VMANAGE</h1>
                     <div className="flex flex-col gap-3">
                         <h2 className="text-xl font-bold text-gray-800">Sign in to your account</h2>
                         <p className="text-sm text-gray-600">Not having an account? <Link to="/register" className="text-sm font-bold text-blue-600 hover:underline">Sign up for free today.</Link></p>
                     </div>
-                    
-                    {error && <p className="text-red-500 text-sm mb-3 text-center">{error}</p>}
-                    {success && <p className="text-green-600 text-sm mb-3 text-center">{success}</p>}
+                    {error && <p className="text-red-500 text-sm">{error}</p>}
+                    {success && <p className="text-green-600 text-sm">{success}</p>}
                     <form onSubmit={handleLogin} className="flex flex-col gap-6">
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm font-medium text-gray-700">Email address</label>
@@ -142,7 +141,7 @@ const LoginPage = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full mt-2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
+                                className="w-full mt-2 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 font-medium"
                             >
                                 {loading ? "Processing ..." : "Login"}
                             </button>
