@@ -3,6 +3,7 @@ import { Outlet, NavLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useShop } from "../../hooks/useShop";
 import { FaSignOutAlt, FaCog, FaUserCircle, FaStore, FaBars, FaTimes } from "react-icons/fa";
+import DropdownComponent from "../../components/common/Dropdown";
 
 const navyDark = "#1B2A41";
 const navyLight = "#2C3E50";
@@ -87,58 +88,48 @@ const BaseWebLayout = ({ title, navItems }) => {
                 className="pt-4 mt-4 space-y-2 text-sm"
                 style={{ borderTop: `1px solid ${pastelMint}` }}
             >
-                <NavLink
-                    to="/shops"
-                    className={({ isActive }) =>
-                        `flex items-center px-4 py-2 rounded-md transition-colors duration-200 ${
-                            isActive ? "font-semibold" : "hover:bg-white/10"
-                        }`
-                    }
-                    style={({ isActive }) =>
-                        isActive
-                            ? { backgroundColor: pastelSand, color: textDark }
-                            : { color: textLight }
-                    }
-                >
-                    {({ isActive }) => (
-                        <>
-                            <FaCog
-                                className="mr-2"
-                                style={{ color: isActive ? textDark : pastelMint }}
+                {
+                    console.log(user)
+                }
+                <DropdownComponent
+                    position="top"
+                    buttonLabel={
+                        <div className="flex items-center text-left">
+                        {user?.avatarUrl ? (
+                            <img
+                                src={`${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${user.avatarUrl}`}
+                                alt="User Avatar"
+                                className="w-8 h-8 rounded-full mr-3"
                             />
-                            Cửa hàng
-                        </>
-                    )}
-                </NavLink>
-
-                <NavLink
-                    to="/accounts"
-                    className={({ isActive }) =>
-                        `flex items-center px-4 py-2 rounded-md transition-colors duration-200 ${
-                            isActive ? "font-semibold" : "hover:bg-white/10"
-                        }`
+                        ) : (
+                            <FaUserCircle className="w-8 h-8 mr-3" style={{ color: pastelMint }} />
+                        )}
+                        <div className="flex flex-col">
+                            <span className="font-semibold text-sm">{user?.fullName || "Người dùng"}</span>
+                            <span className="text-xs text-gray-300">{user?.email || "email@example.com"}</span>
+                        </div>
+                        </div>
                     }
-                    style={({ isActive }) =>
-                        isActive
-                            ? { backgroundColor: pastelSand, color: textDark }
-                            : { color: textLight }
-                    }
-                >
-                    {({ isActive }) => (
-                        <>
-                            <FaUserCircle className="mr-2" style={{ color: isActive ? textDark : pastelMint }} />
-                            {user?.name || "Tài khoản"}
-                        </>
-                    )}
-                </NavLink>
-
-                <button
-                    onClick={logout}
-                    className="flex items-center px-4 py-2 rounded-md hover:bg-white/10 transition-colors w-full text-left"
-                    style={{ color: textLight }}
-                >
-                    <FaSignOutAlt className="mr-2" style={{ color: pastelMint }} /> Đăng xuất
-                </button>
+                    items={[
+                        {
+                            title: "Tài khoản",
+                            icon: <FaUserCircle className="h-4 w-4" />,
+                            to: "/accounts",
+                        },
+                        {
+                            divider: true,
+                            title: "Cửa hàng",
+                            icon: <FaCog className="h-4 w-4" />,
+                            to: "/shops",
+                        },
+                        {
+                            divider: true,
+                            title: "Đăng xuất",
+                            icon: <FaSignOutAlt className="h-4 w-4" />,
+                            onClick: logout,
+                        },
+                    ]}
+                />
             </div>
         </>
     );
