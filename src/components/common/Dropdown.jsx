@@ -15,7 +15,9 @@ export default function DropdownComponent({ buttonLabel, items, position = "bott
       <MenuButton className="inline-flex w-full justify-between items-center gap-x-1.5 
       rounded-md cursor-pointer px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800 outline-none">
         {buttonLabel}
-        <ChevronDownIcon aria-hidden="true" className="size-5 text-gray-400" />
+        <span className={`${position === "top" ? "rotate-180" : ""}`}>
+          <ChevronDownIcon aria-hidden="true" className="size-5 text-gray-400" />
+        </span>
       </MenuButton>
 
       <MenuItems
