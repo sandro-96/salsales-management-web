@@ -4,10 +4,6 @@
   padding: 2rem;
   text-align: center;
 }
-html {
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
 .logo {
   height: 6em;
   padding: 1.5em;

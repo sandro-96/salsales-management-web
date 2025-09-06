@@ -38,10 +38,10 @@ const AuthProvider = ({ children }) => {
 
       setUser({
         id: decoded.sub,
-        email: res.data.data.email, // dùng data từ API để chính xác
+        email: res.data.data.email,
         role: res.data.data.role,
         fullName: res.data.data.fullName,
-        avatarUrl: res.data.data.avatarUrl
+        avatarUrl: res.data.data.avatarUrl,
       });
     } catch (err) {
       console.error("Không load được user:", err);
@@ -64,7 +64,9 @@ const AuthProvider = ({ children }) => {
     if (!refreshToken) return logout();
 
     try {
-      const res = await axiosInstance.post("/auth/refresh-token", { refreshToken });
+      const res = await axiosInstance.post("/auth/refresh-token", {
+        refreshToken,
+      });
       localStorage.setItem("accessToken", res.data.data.accessToken);
       await loadUser();
     } catch {
@@ -86,6 +88,7 @@ const AuthProvider = ({ children }) => {
         enums,
         isUserContextReady,
         fetchEnums,
+        loadUser,
       }}
     >
       {children}

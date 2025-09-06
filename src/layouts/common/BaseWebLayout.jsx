@@ -245,7 +245,7 @@ const BaseWebLayout = ({ title, navItems }) => {
           {/* Sidebar */}
           <div className="lg:hidden fixed inset-y-0 left-0 w-64 z-50 transition-transform duration-300 ease-in-out transform translate-x-0">
             <nav
-              className="flex h-full min-h-0 flex-col"
+              className="flex h-full min-h-0 flex-col pt-5"
               style={{
                 background: `linear-gradient(to bottom, ${navyDark}, ${navyLight})`,
                 color: textLight,
