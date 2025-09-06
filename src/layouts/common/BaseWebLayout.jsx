@@ -282,8 +282,8 @@ const BaseWebLayout = ({ title, navItems }) => {
           background: `linear-gradient(to bottom, ${navyDark}, ${navyLight})`,
         }}
       >
-        <div className="grow p-6 lg:rounded-lg lg:bg-white lg:p-10 lg:shadow-xs lg:ring-1 lg:ring-zinc-950/5 bg-white">
-          <div className="mx-auto max-w-6xl">
+        <div className="grow p-6 lg:rounded-lg lg:bg-white lg:p-10 lg:shadow-xs lg:ring-1 lg:ring-zinc-950/5 bg-white relative">
+          <div className="mx-auto max-w-6xl h-full">
             <Outlet />
           </div>
         </div>

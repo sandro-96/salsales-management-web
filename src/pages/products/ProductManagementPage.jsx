@@ -7,8 +7,14 @@ import { useAlert } from "../../hooks/useAlert.js";
 import { ALERT_TYPES } from "../../constants/alertTypes.js";
 import { handleFileChange } from "../../utils/fileUtils.js";
 import axiosInstance from "../../api/axiosInstance";
-import { FaPlus, FaEdit, FaTrash, FaToggleOn, FaToggleOff } from "react-icons/fa";
-import LoadingOverlay from "../../components/loading/LoadingOverlay.jsx";
+import {
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaToggleOn,
+  FaToggleOff,
+} from "react-icons/fa";
+import Loading from "../../components/loading/Loading.jsx";
 import { SHOP_CATEGORIES } from "../../constants/shopCategories.js";
 
 const sidebarColor = "#34516dff";
@@ -60,13 +66,15 @@ const ProductManagementPage = () => {
       expiryDate: null,
       branchVariants: [],
       activeInBranch: true,
-      branchIds: []
+      branchIds: [],
     },
   });
 
   const unitOptions = enums?.units || ["kg", "cái", "lít"];
   const category = watch("category");
-  const trackInventory = shopTypes.find((type) => type.value === selectedShop?.type)?.trackInventory;
+  const trackInventory = shopTypes.find(
+    (type) => type.value === selectedShop?.type
+  )?.trackInventory;
 
   const categoryOptions = useMemo(() => {
     if (!selectedShop?.industry) return [];
@@ -85,9 +93,16 @@ const ProductManagementPage = () => {
 
   const fetchSuggestedCode = async () => {
     try {
-      const res = await axiosInstance.get(`/shops/${selectedShop.id}/suggested-sku`, {
-        params: { industry: selectedShop.industry, category: category, type: "SKU" },
-      });
+      const res = await axiosInstance.get(
+        `/shops/${selectedShop.id}/suggested-sku`,
+        {
+          params: {
+            industry: selectedShop.industry,
+            category: category,
+            type: "SKU",
+          },
+        }
+      );
       setSuggestedCode(res.data.data);
       setValue("sku", res.data.data);
     } catch (err) {
@@ -102,6 +117,7 @@ const ProductManagementPage = () => {
 
   useEffect(() => {
     if (selectedShop) {
+      debugger;
       fetchBranches();
       fetchProducts();
     }
@@ -109,7 +125,9 @@ const ProductManagementPage = () => {
 
   const fetchBranches = async () => {
     try {
-      const res = await axiosInstance.get(`/branches?shopId=${selectedShop.id}`);
+      const res = await axiosInstance.get(
+        `/branches?shopId=${selectedShop.id}`
+      );
       setBranches(res.data.data.content || []);
     } catch (err) {
       console.error("Error fetching branches:", err);
@@ -125,9 +143,12 @@ const ProductManagementPage = () => {
   const fetchProducts = async (branchId) => {
     setIsLoading(true);
     try {
-      const res = await axiosInstance.get(`/shops/${selectedShop.id}/products`, {
-        params: { branchId, page: 0, size: 20, sort: "createdAt,desc" },
-      });
+      const res = await axiosInstance.get(
+        `/shops/${selectedShop.id}/products`,
+        {
+          params: { branchId, page: 0, size: 20, sort: "createdAt,desc" },
+        }
+      );
       setProducts(res.data.data.content || []);
     } catch (err) {
       console.error("Error fetching products:", err);
@@ -157,15 +178,21 @@ const ProductManagementPage = () => {
           requestData
         );
       } else {
-        res = await axiosInstance.post(`/shops/${selectedShop.id}/products`, requestData, {
-          params: { branchId: data.branchId },
-        });
+        res = await axiosInstance.post(
+          `/shops/${selectedShop.id}/products`,
+          requestData,
+          {
+            params: { branchId: data.branchId },
+          }
+        );
       }
 
       if (res.data.success) {
         showAlert({
           title: "Thành công",
-          description: `Sản phẩm đã được ${editProductId ? "cập nhật" : "tạo"} thành công.`,
+          description: `Sản phẩm đã được ${
+            editProductId ? "cập nhật" : "tạo"
+          } thành công.`,
           type: ALERT_TYPES.SUCCESS,
           variant: "toast",
         });
@@ -197,7 +224,9 @@ const ProductManagementPage = () => {
           className: "bg-red-500 text-white hover:bg-red-600",
           onClick: async () => {
             try {
-              await axiosInstance.delete(`/shops/${selectedShop.id}/branches/${branchId}/products/${id}`);
+              await axiosInstance.delete(
+                `/shops/${selectedShop.id}/branches/${branchId}/products/${id}`
+              );
               showAlert({
                 title: "Thành công",
                 description: "Sản phẩm đã được xóa.",
@@ -221,10 +250,14 @@ const ProductManagementPage = () => {
 
   const handleToggleActive = async (id, branchId, currentActive) => {
     try {
-      await axiosInstance.put(`/shops/${selectedShop.id}/branches/${branchId}/products/${id}/toggle-active`);
+      await axiosInstance.put(
+        `/shops/${selectedShop.id}/branches/${branchId}/products/${id}/toggle-active`
+      );
       showAlert({
         title: "Thành công",
-        description: `Sản phẩm đã được ${currentActive ? "ngưng bán" : "kích hoạt"}.`,
+        description: `Sản phẩm đã được ${
+          currentActive ? "ngưng bán" : "kích hoạt"
+        }.`,
         type: ALERT_TYPES.SUCCESS,
         variant: "toast",
       });
@@ -261,51 +294,62 @@ const ProductManagementPage = () => {
   };
 
   const columns = useMemo(
-  () => {
-    const baseColumns = [
-      { Header: "Tên sản phẩm", accessor: "name" },
-      { Header: "SKU", accessor: "sku" },
-      { Header: "Giá bán", accessor: "price" },
-      {
-        Header: "Trạng thái",
-        accessor: "activeInBranch",
-        Cell: ({ value }) => (value ? "Active" : "Inactive"),
-      },
-      {
-        Header: "Hành động",
-        Cell: ({ row }) => (
-          <div className="flex gap-2">
-            <button onClick={() => openModal(row.original)}>
-              <FaEdit />
-            </button>
-            <button onClick={() => handleDelete(row.original.id, row.original.branchId)}>
-              <FaTrash />
-            </button>
-            <button
-              onClick={() =>
-                handleToggleActive(row.original.id, row.original.branchId, row.original.activeInBranch)
-              }
-            >
-              {row.original.activeInBranch ? <FaToggleOn /> : <FaToggleOff />}
-            </button>
-          </div>
-        ),
-      },
-    ];
+    () => {
+      const baseColumns = [
+        { Header: "Tên sản phẩm", accessor: "name" },
+        { Header: "SKU", accessor: "sku" },
+        { Header: "Giá bán", accessor: "price" },
+        {
+          Header: "Trạng thái",
+          accessor: "activeInBranch",
+          Cell: ({ value }) => (value ? "Active" : "Inactive"),
+        },
+        {
+          Header: "Hành động",
+          Cell: ({ row }) => (
+            <div className="flex gap-2">
+              <button onClick={() => openModal(row.original)}>
+                <FaEdit />
+              </button>
+              <button
+                onClick={() =>
+                  handleDelete(row.original.id, row.original.branchId)
+                }
+              >
+                <FaTrash />
+              </button>
+              <button
+                onClick={() =>
+                  handleToggleActive(
+                    row.original.id,
+                    row.original.branchId,
+                    row.original.activeInBranch
+                  )
+                }
+              >
+                {row.original.activeInBranch ? <FaToggleOn /> : <FaToggleOff />}
+              </button>
+            </div>
+          ),
+        },
+      ];
 
-    // Conditionally add the "Tồn kho" column if trackInventory is true
-    if (trackInventory) {
-      baseColumns.splice(3, 0, { Header: "Tồn kho", accessor: "quantity" });
-    }
+      // Conditionally add the "Tồn kho" column if trackInventory is true
+      if (trackInventory) {
+        baseColumns.splice(3, 0, { Header: "Tồn kho", accessor: "quantity" });
+      }
 
-    return baseColumns;
-  },
-  [trackInventory] // Add trackInventory as a dependency
-);
+      return baseColumns;
+    },
+    [trackInventory] // Add trackInventory as a dependency
+  );
+
+  if (isLoading) {
+    return <Loading text="Đang tải trang..." />;
+  }
 
   return (
     <div className="p-6">
-      {isLoading && <LoadingOverlay text="Đang tải dữ liệu..." />}
       <h2 className="text-2xl font-semibold mb-4">Quản lý sản phẩm</h2>
       <div className="mb-4">
         <button
@@ -331,7 +375,9 @@ const ProductManagementPage = () => {
               <tr key={product.id}>
                 {columns.map((col) => (
                   <td key={col.Header}>
-                    {col.Cell ? col.Cell({ row: { original: product } }) : product[col.accessor]}
+                    {col.Cell
+                      ? col.Cell({ row: { original: product } })
+                      : product[col.accessor]}
                   </td>
                 ))}
               </tr>
@@ -363,17 +409,27 @@ const ProductManagementPage = () => {
                   <div>
                     <label>Tên sản phẩm</label>
                     <input
-                      {...register("name", { required: "Vui lòng nhập tên sản phẩm" })}
-                      className={`border p-2 w-full ${errors.name ? "border-red-500" : ""}`}
+                      {...register("name", {
+                        required: "Vui lòng nhập tên sản phẩm",
+                      })}
+                      className={`border p-2 w-full ${
+                        errors.name ? "border-red-500" : ""
+                      }`}
                     />
-                    {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+                    {errors.name && (
+                      <p className="text-red-500">{errors.name.message}</p>
+                    )}
                   </div>
                   <div>
                     <label>Danh mục</label>
                     <div className="flex gap-2">
                       <select
-                        {...register("category", { required: "Vui lòng chọn hạng mục" })}
-                        className={`border p-2 w-full ${errors.category ? "border-red-500" : ""}`}
+                        {...register("category", {
+                          required: "Vui lòng chọn hạng mục",
+                        })}
+                        className={`border p-2 w-full ${
+                          errors.category ? "border-red-500" : ""
+                        }`}
                       >
                         <option value="">Chọn hạng mục</option>
                         {categoryOptions.map((cat) => (
@@ -383,7 +439,9 @@ const ProductManagementPage = () => {
                         ))}
                       </select>
                     </div>
-                    {errors.category && <p className="text-red-500">{errors.category.message}</p>}
+                    {errors.category && (
+                      <p className="text-red-500">{errors.category.message}</p>
+                    )}
                   </div>
                   <div>
                     <label>SKU</label>
@@ -397,8 +455,14 @@ const ProductManagementPage = () => {
                           },
                         })}
                         disabled={useSuggestedCode && !editProductId}
-                        placeholder={useSuggestedCode && !editProductId ? suggestedCode : "Nhập SKU (ví dụ: FNB_FOOD_001)"}
-                        className={`border p-2 w-full ${errors.sku ? "border-red-500" : ""}`}
+                        placeholder={
+                          useSuggestedCode && !editProductId
+                            ? suggestedCode
+                            : "Nhập SKU (ví dụ: FNB_FOOD_001)"
+                        }
+                        className={`border p-2 w-full ${
+                          errors.sku ? "border-red-500" : ""
+                        }`}
                       />
                       {!editProductId && (
                         <button
@@ -413,13 +477,19 @@ const ProductManagementPage = () => {
                         </button>
                       )}
                     </div>
-                    {errors.sku && <p className="text-red-500">{errors.sku.message}</p>}
+                    {errors.sku && (
+                      <p className="text-red-500">{errors.sku.message}</p>
+                    )}
                   </div>
                   <div>
                     <label>Đơn vị</label>
                     <select
-                      {...register("unit", { required: "Vui lòng chọn đơn vị" })}
-                      className={`border p-2 w-full ${errors.unit ? "border-red-500" : ""}`}
+                      {...register("unit", {
+                        required: "Vui lòng chọn đơn vị",
+                      })}
+                      className={`border p-2 w-full ${
+                        errors.unit ? "border-red-500" : ""
+                      }`}
                     >
                       <option value="">Chọn đơn vị</option>
                       {unitOptions.map((u) => (
@@ -428,14 +498,20 @@ const ProductManagementPage = () => {
                         </option>
                       ))}
                     </select>
-                    {errors.unit && <p className="text-red-500">{errors.unit.message}</p>}
+                    {errors.unit && (
+                      <p className="text-red-500">{errors.unit.message}</p>
+                    )}
                   </div>
                   <div>
                     <label>Chi nhánh</label>
                     <select
                       multiple
-                      {...register("branchIds", { required: "Vui lòng chọn ít nhất một chi nhánh" })}
-                      className={`border p-2 w-full ${errors.branchIds ? "border-red-500" : ""}`}
+                      {...register("branchIds", {
+                        required: "Vui lòng chọn ít nhất một chi nhánh",
+                      })}
+                      className={`border p-2 w-full ${
+                        errors.branchIds ? "border-red-500" : ""
+                      }`}
                     >
                       <option value="">Chọn chi nhánh</option>
                       {branches.map((branch) => (
@@ -444,14 +520,21 @@ const ProductManagementPage = () => {
                         </option>
                       ))}
                     </select>
-                    {errors.branchIds && <p className="text-red-500">{errors.branchIds.message}</p>}
+                    {errors.branchIds && (
+                      <p className="text-red-500">{errors.branchIds.message}</p>
+                    )}
                   </div>
                   <div>
                     <label>Hình ảnh</label>
                     <input
                       type="file"
                       multiple
-                      onChange={(e) => handleFileChange({ event: e, setPreview: setPreviewImages })}
+                      onChange={(e) =>
+                        handleFileChange({
+                          event: e,
+                          setPreview: setPreviewImages,
+                        })
+                      }
                       className="border p-2 w-full"
                     />
                   </div>

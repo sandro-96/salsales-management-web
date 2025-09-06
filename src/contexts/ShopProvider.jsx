@@ -55,7 +55,6 @@ const ShopProvider = ({ children }) => {
 
       const savedShopId = localStorage.getItem("selectedShopId");
       const validSavedShop = shopList.find((s) => s.id === savedShopId);
-
       if (validSavedShop) {
         setSelectedShopIdState(savedShopId);
         setSelectedShopState(validSavedShop);
@@ -72,13 +71,15 @@ const ShopProvider = ({ children }) => {
           console.log(
             "Cửa hàng đã chọn không hợp lệ, chuyển sang cửa hàng đầu tiên."
           );
+        } else if (shopList.length === 0) {
+          setSelectedShopIdState(null);
+          setSelectedShopState(null);
+          setSelectedRole(null);
+          setSelectedIndustry(null);
+          localStorage.removeItem("selectedShopId");
+          console.log("Người dùng không có cửa hàng nào.");
         }
-        setSelectedShopIdState(null);
-        setSelectedShopState(null);
-        setSelectedRole(null);
-        setSelectedIndustry(null);
       }
-
       console.log("Đã tải danh sách cửa hàng:", shopList);
     } catch (err) {
       console.error("Lỗi khi tải danh sách cửa hàng", err);

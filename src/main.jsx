@@ -10,17 +10,17 @@ import WebSocketProvider from "./contexts/WebSocketProvider.jsx";
 import AlertProvider from "./contexts/AlertProvider.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-    <React.StrictMode>
-        <BrowserRouter>
-            <AuthProvider>
-                 <ShopProvider>
-                     <WebSocketProvider>
-                        <AlertProvider>
-                            <App />
-                        </AlertProvider>
-                     </WebSocketProvider>
-                 </ShopProvider>
-            </AuthProvider>
-        </BrowserRouter>
-    </React.StrictMode>
+  <React.StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <ShopProvider>
+          <WebSocketProvider>
+            <AlertProvider>
+              <App />
+            </AlertProvider>
+          </WebSocketProvider>
+        </ShopProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </React.StrictMode>
 );
