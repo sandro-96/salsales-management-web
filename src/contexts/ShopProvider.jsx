@@ -62,8 +62,16 @@ const ShopProvider = ({ children }) => {
         setSelectedRole(validSavedShop.role);
         setSelectedIndustry(validSavedShop.industry);
       } else {
-        if (shopList.length > 0) {
-          console.log();
+        if (shopList.length > 0 && !selectedShop) {
+          const firstShop = shopList[0];
+          setSelectedShopIdState(firstShop.id);
+          setSelectedShopState(firstShop);
+          setSelectedRole(firstShop.role);
+          setSelectedIndustry(firstShop.industry);
+          localStorage.setItem("selectedShopId", firstShop.id);
+          console.log(
+            "Cửa hàng đã chọn không hợp lệ, chuyển sang cửa hàng đầu tiên."
+          );
         }
         setSelectedShopIdState(null);
         setSelectedShopState(null);
