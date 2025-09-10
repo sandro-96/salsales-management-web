@@ -1,32 +1,36 @@
 // src/layouts/other/navItems.js
 import {
-    FaHome, FaTasks, FaUsers, FaChartBar, FaCog
-} from "react-icons/fa";
+  Home,
+  CheckSquare,
+  Users,
+  BarChart,
+  Settings,
+} from "lucide-react";
 
 export const otherWebNav = {
-    admin: [
-        { to: "/dashboard", icon: FaHome, label: "Dashboard" },
-        { to: "/tasks", icon: FaTasks, label: "Công việc" },
-        { to: "/users", icon: FaUsers, label: "Người dùng" }
-    ],
-    manager: [
-        { to: "/dashboard", icon: FaHome, label: "Dashboard" },
-        { to: "/tasks", icon: FaTasks, label: "Công việc" },
-        { to: "/users", icon: FaUsers, label: "Người dùng" },
-        { to: "/reports", icon: FaChartBar, label: "Báo cáo" }
-    ],
-    staff: [
-        { to: "/tasks", icon: FaTasks, label: "Công việc" }
-    ]
+  admin: [
+    { to: "/dashboard", icon: Home, label: "Dashboard" },
+    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
+    { to: "/users", icon: Users, label: "Người dùng" },
+  ],
+  manager: [
+    { to: "/dashboard", icon: Home, label: "Dashboard" },
+    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
+    { to: "/users", icon: Users, label: "Người dùng" },
+    { to: "/reports", icon: BarChart, label: "Báo cáo" },
+  ],
+  staff: [
+    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
+  ],
 };
 
 export const otherPosNav = {
-    admin: [
-        { to: "/dashboard", icon: FaHome, label: "Dashboard" },
-        { to: "/tasks", icon: FaTasks, label: "Công việc" }
-    ],
-    staff: [
-        { to: "/tasks", icon: FaTasks, label: "Công việc" },
-        { to: "/settings", icon: FaCog, label: "Cài đặt" }
-    ]
+  admin: [
+    { to: "/dashboard", icon: Home, label: "Dashboard" },
+    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
+  ],
+  staff: [
+    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
+    { to: "/settings", icon: Settings, label: "Cài đặt" },
+  ],
 };

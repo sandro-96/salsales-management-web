@@ -1,43 +1,49 @@
 // src/layouts/pharmacy/navItems.js
 import {
-    FaHome, FaCapsules, FaUserFriends, FaStore,
-    FaUsers, FaChartBar, FaShoppingCart, FaCog
-} from "react-icons/fa";
+  Home,
+  Pill,
+  User,
+  Store,
+  Users,
+  BarChart,
+  ShoppingCart,
+  Settings,
+} from "lucide-react";
 
 export const pharmacyWebNav = {
-    admin: [
-        { to: "/orders", icon: FaShoppingCart, label: "Đơn thuốc" },
-        { to: "/products", icon: FaCapsules, label: "Thuốc & Sản phẩm" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
-        { to: "/branches", icon: FaStore, label: "Chi nhánh" },
-        { to: "/inventory", icon: FaCapsules, label: "Kho thuốc" }
-    ],
-    manager: [
-        { to: "/overview", icon: FaHome, label: "Tổng quan" },
-        { to: "/products", icon: FaCapsules, label: "Thuốc & Sản phẩm" },
-        { to: "/orders", icon: FaShoppingCart, label: "Đơn thuốc" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
-        { to: "/branches", icon: FaStore, label: "Chi nhánh" },
-        { to: "/inventory", icon: FaCapsules, label: "Kho thuốc" },
-        { to: "/reports", icon: FaChartBar, label: "Báo cáo" },
-        { to: "/staffs", icon: FaUsers, label: "Nhân sự" }
-    ],
-    staff: [
-        { to: "/orders", icon: FaShoppingCart, label: "Đơn thuốc" },
-        { to: "/products", icon: FaCapsules, label: "Thuốc & Sản phẩm" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" }
-    ]
+  admin: [
+    { to: "/orders", icon: ShoppingCart, label: "Đơn thuốc" },
+    { to: "/products", icon: Pill, label: "Thuốc & Sản phẩm" },
+    { to: "/customers", icon: User, label: "Khách hàng" },
+    { to: "/branches", icon: Store, label: "Chi nhánh" },
+    { to: "/inventory", icon: Pill, label: "Kho thuốc" },
+  ],
+  manager: [
+    { to: "/overview", icon: Home, label: "Tổng quan" },
+    { to: "/products", icon: Pill, label: "Thuốc & Sản phẩm" },
+    { to: "/orders", icon: ShoppingCart, label: "Đơn thuốc" },
+    { to: "/customers", icon: User, label: "Khách hàng" },
+    { to: "/branches", icon: Store, label: "Chi nhánh" },
+    { to: "/inventory", icon: Pill, label: "Kho thuốc" },
+    { to: "/reports", icon: BarChart, label: "Báo cáo" },
+    { to: "/staffs", icon: Users, label: "Nhân sự" },
+  ],
+  staff: [
+    { to: "/orders", icon: ShoppingCart, label: "Đơn thuốc" },
+    { to: "/products", icon: Pill, label: "Thuốc & Sản phẩm" },
+    { to: "/customers", icon: User, label: "Khách hàng" },
+  ],
 };
 
 export const pharmacyPosNav = {
-    admin: [
-        { to: "/overview", icon: FaHome, label: "Tổng quan" },
-        { to: "/orders", icon: FaShoppingCart, label: "Đơn thuốc" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
-    ],
-    staff: [
-        { to: "/overview", icon: FaHome, label: "Tổng quan" },
-        { to: "/customers", icon: FaUserFriends, label: "Khách hàng" },
-        { to: "/settings", icon: FaCog, label: "Cài đặt" }
-    ]
+  admin: [
+    { to: "/overview", icon: Home, label: "Tổng quan" },
+    { to: "/orders", icon: ShoppingCart, label: "Đơn thuốc" },
+    { to: "/customers", icon: User, label: "Khách hàng" },
+  ],
+  staff: [
+    { to: "/overview", icon: Home, label: "Tổng quan" },
+    { to: "/customers", icon: User, label: "Khách hàng" },
+    { to: "/settings", icon: Settings, label: "Cài đặt" },
+  ],
 };

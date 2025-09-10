@@ -2,6 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
+import path from "path"
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   plugins: [
@@ -9,12 +13,12 @@ export default defineConfig({
     tailwindcss()
   ],
   define: {
-    global: 'globalThis',   // 👈 Fix lỗi "global is not defined"
+    global: 'globalThis',
   },
   optimizeDeps: {
     esbuildOptions: {
       define: {
-        global: 'globalThis', // 👈 cần ở đây cho esbuild
+        global: 'globalThis', 
       },
       plugins: [
         NodeGlobalsPolyfillPlugin({
@@ -24,4 +28,9 @@ export default defineConfig({
       ],
     },
   },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  }
 })

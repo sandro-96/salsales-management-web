@@ -117,7 +117,6 @@ const ProductManagementPage = () => {
 
   useEffect(() => {
     if (selectedShop) {
-      debugger;
       fetchBranches();
       fetchProducts();
     }
