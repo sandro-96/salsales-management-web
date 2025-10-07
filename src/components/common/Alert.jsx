@@ -29,7 +29,8 @@ const Alert = ({
   title,
   description,
   type = "info",
-  actions = [], children,
+  actions = [],
+  children,
   onClose,
   variant = "toast",
   position = "bottom-right",
@@ -66,8 +67,10 @@ const Alert = ({
               {alertIcons[type]}
               <h3 className="text-lg font-semibold">{title}</h3>
             </div>
-            {description && <p className="text-gray-700 text-sm">{description}</p>}
-            { children && <div className="mt-4">{children}</div>}
+            {description && (
+              <p className="text-gray-700 text-sm">{description}</p>
+            )}
+            {children && <div className="mt-4">{children}</div>}
             <div className="flex justify-end gap-2 mt-4">
               {actions.length > 0 ? (
                 actions.map(({ label, onClick, to, className = "" }, index) => (
@@ -108,12 +111,17 @@ const Alert = ({
               <div>
                 <div className="font-semibold">{title}</div>
                 {description && (
-                  <div className="text-sm text-gray-700 mt-1">{description}</div>
+                  <div className="text-sm text-gray-700 mt-1">
+                    {description}
+                  </div>
                 )}
                 {children && <div className="mt-2">{children}</div>}
               </div>
             </div>
-            <button onClick={onClose} className="text-lg font-bold ml-2 leading-none">
+            <button
+              onClick={onClose}
+              className="text-lg font-bold ml-2 leading-none"
+            >
               &times;
             </button>
           </div>

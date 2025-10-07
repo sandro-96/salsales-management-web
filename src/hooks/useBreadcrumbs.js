@@ -1,21 +1,20 @@
 // src/hooks/useBreadcrumbs.js
-import { useLocation, matchRoutes } from "react-router-dom";
+import { useLocation, useParams, matchRoutes } from "react-router-dom";
 import { routeConfig } from "../routes/routeConfig.jsx";
 
 export const useBreadcrumbs = () => {
-    const location = useLocation();
+  const location = useLocation();
+  const params = useParams();
 
-    // matchRoutes sẽ tìm tất cả route phù hợp với URL hiện tại
-    const matches = matchRoutes(routeConfig, location.pathname);
+  const matches = matchRoutes(routeConfig, location.pathname);
+  if (!matches) return [];
 
-    if (!matches) return [];
-
-    // Trả ra mảng breadcrumb { title, path }
-    return matches
-        .map(({ route, pathname }) => {
-            const title = route.title || null;
-            if (!title) return null;
-            return { title, path: pathname };
-        })
-        .filter(Boolean); // loại bỏ null
+  return matches
+    .map(({ route, pathname }) => {
+      const bc = route.breadcrumb ?? route.title;
+      if (!bc) return null;
+      const label = typeof bc === "function" ? bc(params) : bc;
+      return { title: label, path: pathname };
+    })
+    .filter(Boolean);
 };

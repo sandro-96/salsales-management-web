@@ -1,5 +1,5 @@
 // src/App.jsx
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Suspense } from "react";
 import { routeConfig } from "./routes/routeConfig.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -8,6 +8,7 @@ import RoleBasedRoute from "./routes/RoleBasedRoute";
 import RouteWithTitle from "./routes/RouteWithTitle";
 import Loading from "./components/loading/Loading.jsx";
 import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
+import BranchFormModal from "./pages/branchs/BranchFormModal.jsx";
 
 function renderRoute(route) {
   console.log("Rendering route:", route);
@@ -48,10 +49,19 @@ function renderRoute(route) {
 }
 
 function App() {
+  const location = useLocation();
+  const state = location.state;
   return (
     <ErrorBoundaryWithNavigate>
       <Suspense fallback={<Loading text="Đang tải trang..." fullScreen />}>
-        <Routes>{routeConfig.map(renderRoute)}</Routes>
+        <Routes location={state?.background || location}>
+          {routeConfig.map(renderRoute)}
+        </Routes>
+        {state?.background && (
+          <Routes>
+            <Route path="/branches/new" element={<BranchFormModal />} />
+          </Routes>
+        )}
       </Suspense>
     </ErrorBoundaryWithNavigate>
   );
