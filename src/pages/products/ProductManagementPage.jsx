@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import { useShop } from "../../hooks/useShop.js";
 import { useAuth } from "../../hooks/useAuth.js";
-import { useAlert } from "../../hooks/useAlert.js";
 import { ALERT_TYPES } from "../../constants/alertTypes.js";
 import { handleFileChange } from "../../utils/fileUtils.js";
 import axiosInstance from "../../api/axiosInstance";
@@ -20,7 +19,6 @@ import { SHOP_CATEGORIES } from "../../constants/shopCategories.js";
 const sidebarColor = "#34516dff";
 
 const ProductManagementPage = () => {
-  const { showAlert } = useAlert();
   const { enums } = useAuth();
   const { selectedShop } = useShop();
   const [products, setProducts] = useState([]);
@@ -106,12 +104,7 @@ const ProductManagementPage = () => {
       setSuggestedCode(res.data.data);
       setValue("sku", res.data.data);
     } catch (err) {
-      showAlert({
-        title: "Lỗi",
-        description: "Không thể lấy mã SKU gợi ý.",
-        type: ALERT_TYPES.ERROR,
-        variant: "toast",
-      });
+      console.log("Error fetching suggested SKU:", err);
     }
   };
 
@@ -130,12 +123,6 @@ const ProductManagementPage = () => {
       setBranches(res.data.data.content || []);
     } catch (err) {
       console.error("Error fetching branches:", err);
-      showAlert({
-        title: "Lỗi",
-        description: "Không thể tải danh sách chi nhánh.",
-        type: ALERT_TYPES.ERROR,
-        variant: "toast",
-      });
     }
   };
 
@@ -151,12 +138,6 @@ const ProductManagementPage = () => {
       setProducts(res.data.data.content || []);
     } catch (err) {
       console.error("Error fetching products:", err);
-      showAlert({
-        title: "Lỗi",
-        description: "Không thể tải danh sách sản phẩm.",
-        type: ALERT_TYPES.ERROR,
-        variant: "toast",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -187,64 +168,26 @@ const ProductManagementPage = () => {
       }
 
       if (res.data.success) {
-        showAlert({
-          title: "Thành công",
-          description: `Sản phẩm đã được ${
-            editProductId ? "cập nhật" : "tạo"
-          } thành công.`,
-          type: ALERT_TYPES.SUCCESS,
-          variant: "toast",
-        });
         fetchProducts();
         closeModal();
       }
     } catch (err) {
-      showAlert({
-        title: "Lỗi",
-        description: err.response?.data?.message || "Đã xảy ra lỗi.",
-        type: ALERT_TYPES.ERROR,
-        variant: "toast",
-      });
+      console.error("Error saving product:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = (id, branchId) => {
-    showAlert({
-      title: "Xác nhận xóa",
-      description: "Bạn có chắc muốn xóa sản phẩm này?",
-      type: ALERT_TYPES.WARNING,
-      variant: "modal",
-      actions: [
-        { label: "Hủy", className: "bg-gray-200 text-gray-800" },
-        {
-          label: "Xóa",
-          className: "bg-red-500 text-white hover:bg-red-600",
-          onClick: async () => {
-            try {
-              await axiosInstance.delete(
-                `/shops/${selectedShop.id}/branches/${branchId}/products/${id}`
-              );
-              showAlert({
-                title: "Thành công",
-                description: "Sản phẩm đã được xóa.",
-                type: ALERT_TYPES.SUCCESS,
-                variant: "toast",
-              });
-              fetchProducts();
-            } catch {
-              showAlert({
-                title: "Lỗi",
-                description: "Không thể xóa sản phẩm.",
-                type: ALERT_TYPES.ERROR,
-                variant: "toast",
-              });
-            }
-          },
-        },
-      ],
-    });
+  const handleDelete = async (id, branchId) => {
+    try {
+      await axiosInstance.delete(
+        `/shops/${selectedShop.id}/branches/${branchId}/products/${id}`
+      );
+
+      fetchProducts();
+    } catch {
+      console.log("Error deleting product");
+    }
   };
 
   const handleToggleActive = async (id, branchId, currentActive) => {
@@ -252,22 +195,10 @@ const ProductManagementPage = () => {
       await axiosInstance.put(
         `/shops/${selectedShop.id}/branches/${branchId}/products/${id}/toggle-active`
       );
-      showAlert({
-        title: "Thành công",
-        description: `Sản phẩm đã được ${
-          currentActive ? "ngưng bán" : "kích hoạt"
-        }.`,
-        type: ALERT_TYPES.SUCCESS,
-        variant: "toast",
-      });
+
       fetchProducts();
     } catch {
-      showAlert({
-        title: "Lỗi",
-        description: "Không thể thay đổi trạng thái.",
-        type: ALERT_TYPES.ERROR,
-        variant: "toast",
-      });
+      console.log("Error toggling product active status");
     }
   };
 

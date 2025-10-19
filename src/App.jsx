@@ -11,8 +11,6 @@ import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
 import BranchFormModal from "./pages/branchs/BranchFormModal.jsx";
 
 function renderRoute(route) {
-  console.log("Rendering route:", route);
-  console.log("Title:", route.title);
   let element = <RouteWithTitle element={route.element} title={route.title} />;
 
   if (route.guestOnly) {

@@ -1,6 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { FaStore, FaPlus, FaEdit } from "react-icons/fa";
 import { useShop } from "../../hooks/useShop";
+import { Store } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const ShopPage = () => {
   const { shops, setSelectedShop } = useShop();
@@ -8,20 +11,29 @@ const ShopPage = () => {
 
   if (shops.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <FaStore size={64} className="mx-auto mb-4 text-blue-500" />
-          <h2 className="text-2xl font-bold mb-2">Chưa có cửa hàng nào</h2>
-          <p className="text-gray-600 mb-6">
-            Hãy tạo cửa hàng đầu tiên của bạn để bắt đầu!
-          </p>
-          <button
-            onClick={() => navigate("create")}
-            className="bg-blue-500 text-white px-6 py-3 rounded-md flex items-center justify-center mx-auto hover:bg-blue-600 transition"
-          >
-            <FaPlus className="mr-2" /> Tạo cửa hàng
-          </button>
-        </div>
+      <div className="flex flex-col items-center justify-center text-center py-20">
+        <Card className="w-full max-w-md p-8 shadow-lg border border-border/50">
+          <CardContent className="flex flex-col items-center gap-6">
+            <div className="bg-primary/10 p-4 rounded-full">
+              <Store className="w-10 h-10 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold mb-2">
+                Chào mừng bạn đến với hệ thống quản lý cửa hàng
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Bạn chưa có cửa hàng nào. Hãy bắt đầu bằng cách tạo cửa hàng đầu
+                tiên để quản lý chi nhánh, sản phẩm và đơn hàng.
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate("/shops/create")}
+              className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700"
+            >
+              + Tạo cửa hàng đầu tiên
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -29,7 +41,7 @@ const ShopPage = () => {
   const handleShopSelect = (shop) => {
     setSelectedShop(shop);
     navigate(shop.id);
-  }
+  };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -52,7 +64,10 @@ const ShopPage = () => {
             <div className="flex items-center mb-4">
               {shop.logoUrl ? (
                 <img
-                  src={`${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${shop.logoUrl}`}
+                  src={`${import.meta.env.VITE_API_BASE_URL.replace(
+                    "/api",
+                    ""
+                  )}${shop.logoUrl}`}
                   alt="Shop Logo"
                   className="w-12 h-12 rounded-full object-cover mr-3"
                 />

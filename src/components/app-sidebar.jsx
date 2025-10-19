@@ -15,6 +15,7 @@ import {
   SearchIcon,
   SettingsIcon,
   UsersIcon,
+  StoreIcon,
 } from "lucide-react";
 
 import { NavDocuments } from "@/components/nav-documents";
@@ -152,9 +153,9 @@ export function AppSidebar({ navItems, ...props }) {
 
   const navSecondary = [
     {
-      label: "Settings",
+      label: "Shops",
       to: "/shops" + (selectedShop ? `/${selectedShop.id}` : ""),
-      icon: SettingsIcon,
+      icon: StoreIcon,
     },
     {
       label: "Get Help",

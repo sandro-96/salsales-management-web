@@ -5,7 +5,6 @@ import { routeConfig } from "../routes/routeConfig.jsx";
 export const useBreadcrumbs = () => {
   const location = useLocation();
   const params = useParams();
-
   const matches = matchRoutes(routeConfig, location.pathname);
   if (!matches) return [];
 

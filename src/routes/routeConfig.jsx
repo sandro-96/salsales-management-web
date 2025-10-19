@@ -1,4 +1,5 @@
 // src/routes/routeConfig.jsx
+import path from "path";
 import { lazy } from "react";
 const BranchFormModal = lazy(() =>
   import("../pages/branchs/BranchFormModal.jsx")
@@ -24,7 +25,6 @@ const ProductManagementPage = lazy(() =>
   import("../pages/products/ProductManagementPage")
 );
 const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
-const AlertDemo = lazy(() => import("../pages/AlertDemo"));
 const OrderListPage = lazy(() => import("../pages/orders/OrderListPage"));
 const CustomerListPage = lazy(() =>
   import("../pages/customers/CustomerListPage")
@@ -38,6 +38,7 @@ const AccountPage = lazy(() => import("../pages/AccountPage"));
 const MainPage = lazy(() => import("../pages/MainPage"));
 const HistoryPage = lazy(() => import("../pages/HistoryPage"));
 const ErrorPage = lazy(() => import("../pages/ErrorPage"));
+const ShopLayout = lazy(() => import("../layouts/common/ShopLayout.jsx"));
 
 export const routeConfig = [
   {
@@ -46,14 +47,6 @@ export const routeConfig = [
     guestOnly: true,
     title: "Đăng nhập",
     breadcrumb: "Đăng nhập",
-  },
-  {
-    path: "/alert-demo",
-    element: <AlertDemo />,
-    protected: true,
-    roles: ["ROLE_USER"],
-    title: "Demo Alert",
-    breadcrumb: "Demo Alert",
   },
   {
     path: "/register",
@@ -149,40 +142,46 @@ export const routeConfig = [
         breadcrumb: "Bàn",
       },
       {
-        path: "/accounts",
+        path: "accounts",
         element: <AccountPage />,
         title: "Tài khoản",
         breadcrumb: "Tài khoản",
       },
       {
-        path: "/main",
+        path: "main",
         element: <MainPage />,
         title: "Trang chủ",
         breadcrumb: "Trang chủ",
       },
       {
-        path: "/history",
+        path: "history",
         element: <HistoryPage />,
         title: "Lịch sử",
         breadcrumb: "Lịch sử",
       },
       {
-        path: "/shops",
-        element: <ShopPage />,
+        path: "shops",
         title: "Cửa hàng",
         breadcrumb: "Cửa hàng",
-      },
-      {
-        path: "/shops/:shopId",
-        element: <ShopSettingsPage />,
-        title: "Chi tiết cửa hàng",
-        breadcrumb: "Chi tiết cửa hàng",
-      },
-      {
-        path: "/shops/create",
-        element: <CreateShopPage />,
-        title: "Tạo cửa hàng",
-        breadcrumb: "Tạo cửa hàng",
+        element: <ShopLayout />,
+        children: [
+          {
+            path: "",
+            element: <ShopPage />,
+          },
+          {
+            path: ":shopId",
+            element: <ShopSettingsPage />,
+            title: "Chi tiết cửa hàng",
+            breadcrumb: "Chi tiết cửa hàng",
+          },
+          {
+            path: "create",
+            element: <CreateShopPage />,
+            title: "Tạo cửa hàng",
+            breadcrumb: "Tạo cửa hàng",
+          },
+        ],
       },
     ],
   },

@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import { useShop } from "../../hooks/useShop.js";
 import { useAuth } from "../../hooks/useAuth.js";
-import { useAlert } from "../../hooks/useAlert.js";
 import { ALERT_TYPES } from "../../constants/alertTypes.js";
 import { handleFileChange } from "../../utils/fileUtils.js";
 import axiosInstance from "../../api/axiosInstance";
@@ -13,7 +12,6 @@ import LoadingOverlay from "../../components/loading/LoadingOverlay.jsx";
 const sidebarColor = "#34516dff";
 
 const ShopSettingsPage = () => {
-  const { showAlert } = useAlert();
   const { enums } = useAuth();
   const { selectedShop, setSelectedShop, fetchShops } = useShop();
   const [editMode, setEditMode] = useState(false);
@@ -28,7 +26,7 @@ const ShopSettingsPage = () => {
     formState: { errors, dirtyFields },
     reset,
     watch,
-    setValue
+    setValue,
   } = useForm({
     defaultValues: {
       name: "",
@@ -58,7 +56,9 @@ const ShopSettingsPage = () => {
       const selectedType = shopTypes.find((s) => s.value === type);
       if (selectedType) {
         setValue("industry", selectedType.industry, { shouldDirty: true });
-        setValue("businessModel", selectedType.defaultBusinessModel, { shouldDirty: true });
+        setValue("businessModel", selectedType.defaultBusinessModel, {
+          shouldDirty: true,
+        });
       }
     }
   }, [type, setValue, shopTypes]);
@@ -68,7 +68,9 @@ const ShopSettingsPage = () => {
       reset(selectedShop);
       setPreviewLogo(
         selectedShop.logoUrl
-          ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
+          ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
+              selectedShop.logoUrl
+            }`
           : null
       );
       setFile(null);
@@ -80,21 +82,24 @@ const ShopSettingsPage = () => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append("shop", new Blob([JSON.stringify(data)], { type: "application/json" }));
+      formData.append(
+        "shop",
+        new Blob([JSON.stringify(data)], { type: "application/json" })
+      );
       if (file) formData.append("file", file);
 
-      const res = await axiosInstance.put(`/shop/${selectedShop.id}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await axiosInstance.put(
+        `/shop/${selectedShop.id}`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
 
       if (res.data.success) {
         //setMessage("Cập nhật cửa hàng thành công!");
-        showAlert({
-          title: "Cập nhật thành công",
-          description: "Thông tin cửa hàng đã được cập nhật thành công.",
-          type: ALERT_TYPES.SUCCESS,
-          variant: "toast",
-        });
+        console.log("Cập nhật cửa hàng thành công!");
+
         const response = res.data.data;
         setEditMode(false);
         reset(data);
@@ -102,31 +107,24 @@ const ShopSettingsPage = () => {
         setSelectedShop(response);
         setPreviewLogo(
           response.logoUrl
-            ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${response.logoUrl}`
+            ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
+                response.logoUrl
+              }`
             : null
         );
         setFile(null);
         await fetchShops();
       } else {
-        showAlert({
-          title: "Cập nhật thất bại",
-          description: res.data.message || "Đã xảy ra lỗi khi cập nhật cửa hàng.",
-          type: ALERT_TYPES.ERROR,
-          variant: "toast",
-        });
+        console.log("Cập nhật thất bại:", res.data.message);
       }
     } catch (err) {
       const errorMessage =
         err.response?.data?.code === "INVALID_PHONE_NUMBER"
           ? "Số điện thoại không đúng định dạng."
-          : err.response?.data?.message || "Cập nhật thất bại. Vui lòng thử lại.";
-      showAlert({
-        title: "Cập nhật thất bại",
-        description: errorMessage,
-        type: ALERT_TYPES.ERROR,
-        variant: "toast",
-      });
-      console.error("Error updating shop:", err);
+          : err.response?.data?.message ||
+            "Cập nhật thất bại. Vui lòng thử lại.";
+
+      console.error("Error updating shop:", errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -134,22 +132,7 @@ const ShopSettingsPage = () => {
 
   const handleCancel = () => {
     if (Object.keys(dirtyFields).length > 0 || file) {
-      showAlert({
-        title: "Hủy thay đổi",
-        description: "Bạn có chắc muốn hủy các thay đổi? Các thay đổi sẽ không được lưu.",
-        type: ALERT_TYPES.WARNING,
-        variant: "modal",
-        actions: [
-          { label: "Hủy", className: "bg-gray-200 text-gray-800" },
-          {
-            label: "OK",
-            className: "bg-red-500 text-white hover:bg-red-600",
-            onClick: () => {
-              resetForm();
-            },
-          },
-        ],
-      });
+      resetForm();
     } else {
       resetForm();
     }
@@ -165,14 +148,17 @@ const ShopSettingsPage = () => {
       address: selectedShop?.address || "",
       businessModel:
         selectedShop?.businessModel ||
-        shopTypes.find((s) => s.value === selectedShop?.type)?.defaultBusinessModel ||
+        shopTypes.find((s) => s.value === selectedShop?.type)
+          ?.defaultBusinessModel ||
         "",
       active: selectedShop?.active || false,
     });
     setFile(null);
     setPreviewLogo(
       selectedShop?.logoUrl
-        ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${selectedShop.logoUrl}`
+        ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
+            selectedShop.logoUrl
+          }`
         : null
     );
     setEditMode(false);
@@ -187,14 +173,21 @@ const ShopSettingsPage = () => {
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
-      {isSubmitting && <LoadingOverlay text="Đang cập nhật thông tin cửa hàng..." />}
+      {isSubmitting && (
+        <LoadingOverlay text="Đang cập nhật thông tin cửa hàng..." />
+      )}
       <h1 className="text-2xl font-bold mb-4">Cài đặt cửa hàng</h1>
 
-      <div className="sticky bg-white z-10 flex gap-2 mb-4 border-b pb-2"
+      <div
+        className="sticky bg-white z-10 flex gap-2 mb-4 border-b pb-2"
         style={{ top: "var(--mobile-header-height, 0px)", zIndex: 30 }}
       >
         <button
-          className={`px-4 py-2 rounded ${editMode ? "bg-gray-200 hover:bg-gray-300" : "bg-blue-500 text-white"}`}
+          className={`px-4 py-2 rounded ${
+            editMode
+              ? "bg-gray-200 hover:bg-gray-300"
+              : "bg-blue-500 text-white"
+          }`}
           onClick={handleEditToggle}
           disabled={editMode}
         >
@@ -204,7 +197,9 @@ const ShopSettingsPage = () => {
           <button
             form="shop-form"
             type="submit"
-            disabled={isSubmitting || (Object.keys(dirtyFields).length === 0 && !file)}
+            disabled={
+              isSubmitting || (Object.keys(dirtyFields).length === 0 && !file)
+            }
             className={`px-4 py-2 rounded text-white ${
               isSubmitting || (Object.keys(dirtyFields).length === 0 && !file)
                 ? "opacity-50 cursor-not-allowed"
@@ -212,7 +207,8 @@ const ShopSettingsPage = () => {
             }`}
             style={{ backgroundColor: sidebarColor }}
           >
-            <FaSave className="inline mr-1" /> {isSubmitting ? "Đang lưu..." : "Lưu"}
+            <FaSave className="inline mr-1" />{" "}
+            {isSubmitting ? "Đang lưu..." : "Lưu"}
           </button>
         )}
         {editMode && (
@@ -242,18 +238,28 @@ const ShopSettingsPage = () => {
                 <h3 className="text-sm font-semibold mb-2">Thông tin cơ bản</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Tên cửa hàng</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Tên cửa hàng
+                    </label>
                     <input
                       {...register("name", {
                         required: "Vui lòng nhập tên cửa hàng",
                       })}
-                      className={`border p-2 w-full rounded text-sm ${errors.name ? "border-red-500" : ""}`}
+                      className={`border p-2 w-full rounded text-sm ${
+                        errors.name ? "border-red-500" : ""
+                      }`}
                       disabled={!editMode}
                     />
-                    {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+                    {errors.name && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.name.message}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Loại hình</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Loại hình
+                    </label>
                     <select
                       {...register("type", {
                         required: "Vui lòng chọn loại hình cửa hàng",
@@ -271,7 +277,9 @@ const ShopSettingsPage = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Ngành hàng</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Ngành hàng
+                    </label>
                     <input
                       {...register("industry")}
                       className="border p-2 w-full rounded bg-gray-100 text-sm"
@@ -282,7 +290,9 @@ const ShopSettingsPage = () => {
               </div>
 
               <div className="bg-white shadow rounded-lg p-4">
-                <h3 className="text-sm font-semibold mb-2">Mô hình kinh doanh</h3>
+                <h3 className="text-sm font-semibold mb-2">
+                  Mô hình kinh doanh
+                </h3>
                 <select
                   {...register("businessModel")}
                   className="border p-2 w-full rounded text-sm"
@@ -301,7 +311,9 @@ const ShopSettingsPage = () => {
                     className="mr-2"
                     disabled={!editMode}
                   />
-                  <label className="text-sm font-medium">Kích hoạt cửa hàng</label>
+                  <label className="text-sm font-medium">
+                    Kích hoạt cửa hàng
+                  </label>
                 </div>
               </div>
 
@@ -309,7 +321,9 @@ const ShopSettingsPage = () => {
                 <h3 className="text-sm font-semibold mb-2">Liên hệ</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Mã quốc gia</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Mã quốc gia
+                    </label>
                     <select
                       {...register("countryCode", {
                         required: "Vui lòng chọn mã quốc gia",
@@ -326,46 +340,73 @@ const ShopSettingsPage = () => {
                         </option>
                       ))}
                     </select>
-                    {errors.countryCode && <p className="text-red-500 text-xs mt-1">{errors.countryCode.message}</p>}
+                    {errors.countryCode && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.countryCode.message}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Số điện thoại</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Số điện thoại
+                    </label>
                     <input
                       {...register("phone", {
                         required: "Vui lòng nhập số điện thoại",
                         validate: (value) => {
                           if (value && countryCode) {
-                            const country = countryOptions.find((c) => c.code === countryCode);
-                            if (country && !new RegExp(country.phonePattern).test(value)) {
+                            const country = countryOptions.find(
+                              (c) => c.code === countryCode
+                            );
+                            if (
+                              country &&
+                              !new RegExp(country.phonePattern).test(value)
+                            ) {
                               return "Số điện thoại không đúng định dạng.";
                             }
                           }
                           return true;
                         },
                       })}
-                      className={`border p-2 w-full rounded text-sm ${errors.phone ? "border-red-500" : ""}`}
+                      className={`border p-2 w-full rounded text-sm ${
+                        errors.phone ? "border-red-500" : ""
+                      }`}
                       disabled={!editMode}
                     />
-                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+                    {errors.phone && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.phone.message}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="block text-sm font-medium mb-1">Địa chỉ</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Địa chỉ
+                  </label>
                   <input
                     {...register("address", {
                       required: "Vui lòng nhập địa chỉ",
                     })}
-                    className={`border p-2 w-full rounded text-sm ${errors.address ? "border-red-500" : ""}`}
+                    className={`border p-2 w-full rounded text-sm ${
+                      errors.address ? "border-red-500" : ""
+                    }`}
                     disabled={!editMode}
                   />
-                  {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>}
+                  {errors.address && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.address.message}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="bg-white shadow rounded-lg p-4">
-                <label className="block text-sm font-medium mb-1">Logo cửa hàng</label>
+                <label className="block text-sm font-medium mb-1">
+                  Logo cửa hàng
+                </label>
                 {previewLogo ? (
                   <img
                     src={previewLogo}
@@ -391,7 +432,9 @@ const ShopSettingsPage = () => {
                   className="border p-2 w-full rounded"
                   disabled={!editMode}
                 />
-                {fileError && <p className="text-red-500 text-xs mt-1">{fileError}</p>}
+                {fileError && (
+                  <p className="text-red-500 text-xs mt-1">{fileError}</p>
+                )}
               </div>
             </div>
           </motion.form>
@@ -406,15 +449,21 @@ const ShopSettingsPage = () => {
           >
             <div className="col-span-2 space-y-3">
               <div className="bg-white shadow rounded-lg p-4">
-                <h3 className="text-sm font-semibold mb-2">Thông tin cửa hàng</h3>
+                <h3 className="text-sm font-semibold mb-2">
+                  Thông tin cửa hàng
+                </h3>
                 <p className="text-sm">
-                  <strong>Tên cửa hàng:</strong> {watch("name") || "Chưa cập nhật"}
+                  <strong>Tên cửa hàng:</strong>{" "}
+                  {watch("name") || "Chưa cập nhật"}
                 </p>
                 <p className="text-sm">
-                  <strong>Ngành hàng:</strong> {watch("industry") || "Chưa cập nhật"}
+                  <strong>Ngành hàng:</strong>{" "}
+                  {watch("industry") || "Chưa cập nhật"}
                 </p>
                 <p className="text-sm">
-                  <strong>Loại hình:</strong> {shopTypes.find((s) => s.value === watch("type"))?.label || "Chưa cập nhật"}
+                  <strong>Loại hình:</strong>{" "}
+                  {shopTypes.find((s) => s.value === watch("type"))?.label ||
+                    "Chưa cập nhật"}
                 </p>
               </div>
 
@@ -422,21 +471,29 @@ const ShopSettingsPage = () => {
                 <h3 className="text-sm font-semibold mb-2">Liên hệ</h3>
                 <p className="text-sm">
                   <strong>Mã quốc gia:</strong>{" "}
-                  {countryOptions.find((c) => c.code === watch("countryCode"))?.name || "Chưa cập nhật"} ({watch("countryCode")})
+                  {countryOptions.find((c) => c.code === watch("countryCode"))
+                    ?.name || "Chưa cập nhật"}{" "}
+                  ({watch("countryCode")})
                 </p>
                 <p className="text-sm">
-                  <strong>Số điện thoại:</strong> {watch("phone") || "Chưa cập nhật"}
+                  <strong>Số điện thoại:</strong>{" "}
+                  {watch("phone") || "Chưa cập nhật"}
                 </p>
                 <p className="text-sm">
-                  <strong>Địa chỉ:</strong> {watch("address") || "Chưa cập nhật"}
+                  <strong>Địa chỉ:</strong>{" "}
+                  {watch("address") || "Chưa cập nhật"}
                 </p>
               </div>
 
               <div className="bg-white shadow rounded-lg p-4">
-                <h3 className="text-sm font-semibold mb-2">Mô hình kinh doanh</h3>
+                <h3 className="text-sm font-semibold mb-2">
+                  Mô hình kinh doanh
+                </h3>
                 <p className="text-sm">
-                  {businessModels.find((opt) => opt.value === watch("businessModel"))?.label || "Chưa cập nhật"}
-                  </p>
+                  {businessModels.find(
+                    (opt) => opt.value === watch("businessModel")
+                  )?.label || "Chưa cập nhật"}
+                </p>
                 <p className="text-sm">
                   <strong>Kích hoạt:</strong> {watch("active") ? "Có" : "Không"}
                 </p>

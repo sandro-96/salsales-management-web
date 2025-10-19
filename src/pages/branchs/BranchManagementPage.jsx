@@ -49,7 +49,6 @@ const BranchManagementPage = () => {
   const shopId = selectedShopId; // Lấy ID cửa hàng đã chọn từ context
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const [selectedBranch, setSelectedBranch] = useState(null); // State để lưu chi nhánh đang chỉnh sửa hoặc tạo
   const [isModalOpen, setIsModalOpen] = useState(false); // State để quản lý modal
@@ -69,9 +68,7 @@ const BranchManagementPage = () => {
         });
         setBranches(response.data.data.content || []);
       } catch (err) {
-        setError(
-          err.response?.data?.message || "Không thể tải danh sách chi nhánh"
-        );
+        console.log(err);
       } finally {
         setLoading(false);
       }
@@ -87,10 +84,9 @@ const BranchManagementPage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setBranches([...branches, response.data.data]);
-      setError(null);
       setIsModalOpen(false); // Đóng modal sau khi tạo
     } catch (err) {
-      setError(err.response?.data?.message || "Không thể tạo chi nhánh");
+      console.log(err);
     }
   };
 
@@ -102,10 +98,9 @@ const BranchManagementPage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setBranches(branches.map((b) => (b.id === id ? response.data.data : b)));
-      setError(null);
-      setIsModalOpen(false); // Đóng modal sau khi cập nhật
+      setIsModalOpen(false);
     } catch (err) {
-      setError(err.response?.data?.message || "Không thể cập nhật chi nhánh");
+      console.log(err);
     }
   };
 
@@ -117,21 +112,10 @@ const BranchManagementPage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setBranches(branches.filter((b) => b.id !== id));
-      setError(null);
     } catch (err) {
-      setError(err.response?.data?.message || "Không thể xóa chi nhánh");
+      console.log(err);
     }
   };
-
-  // Tự động ẩn lỗi sau 5 giây
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
 
   const columns = [
     {
@@ -165,9 +149,14 @@ const BranchManagementPage = () => {
       },
       cell: ({ row }) => {
         const active = row.getValue("active");
+        const isDefault = row.getValue("isDefault");
         return (
           <div>
-            <Switch id="airplane-mode" defaultChecked={active} />
+            <Switch
+              id="airplane-mode"
+              defaultChecked={active}
+              disabled={isDefault}
+            />
           </div>
         );
       },
@@ -225,17 +214,6 @@ const BranchManagementPage = () => {
 
   return (
     <div className="hidden h-full flex-1 flex-col gap-8 p-8 md:flex">
-      {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 border border-red-400 rounded flex justify-between">
-          <span>{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="text-red-700 hover:text-red-900"
-          >
-            &times;
-          </button>
-        </div>
-      )}
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-semibold tracking-tight">
           Quản lý Chi nhánh

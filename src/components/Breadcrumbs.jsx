@@ -1,4 +1,3 @@
-// src/components/Breadcrumbs.jsx
 import { Link } from "react-router-dom";
 import {
   Breadcrumb,
@@ -9,6 +8,7 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
+import React from "react";
 
 export default function Breadcrumbs() {
   const breadcrumbs = useBreadcrumbs();
@@ -21,18 +21,18 @@ export default function Breadcrumbs() {
         {breadcrumbs.map((bc, i) => {
           const isLast = i === breadcrumbs.length - 1;
           return (
-            <BreadcrumbItem key={bc.path}>
-              {isLast ? (
-                <BreadcrumbPage>{bc.title}</BreadcrumbPage>
-              ) : (
-                <>
+            <React.Fragment key={bc.path}>
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage>{bc.title}</BreadcrumbPage>
+                ) : (
                   <BreadcrumbLink asChild>
                     <Link to={bc.path}>{bc.title}</Link>
                   </BreadcrumbLink>
-                  <BreadcrumbSeparator />
-                </>
-              )}
-            </BreadcrumbItem>
+                )}
+              </BreadcrumbItem>
+              {!isLast && <BreadcrumbSeparator />}
+            </React.Fragment>
           );
         })}
       </BreadcrumbList>
