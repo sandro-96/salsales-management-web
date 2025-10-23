@@ -11,7 +11,7 @@ const ShopPage = () => {
 
   if (shops.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="flex flex-col items-center justify-center text-center h-full">
         <Card className="w-full max-w-md p-8 shadow-lg border border-border/50">
           <CardContent className="flex flex-col items-center gap-6">
             <div className="bg-primary/10 p-4 rounded-full">

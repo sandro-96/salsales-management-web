@@ -29,9 +29,9 @@ export function ShopSwitcher() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton className="w-fit px-1.5">
+            <SidebarMenuButton className="w-full px-1.5">
               <div className="flex aspect-square size-6 items-center justify-center rounded-md border ">
-                <Avatar className="size-5 rounded-lg">
+                <Avatar className="size-6 rounded-md">
                   <AvatarImage
                     src={`${import.meta.env.VITE_API_BASE_URL.replace(
                       "/api",
@@ -39,11 +39,15 @@ export function ShopSwitcher() {
                     )}${selectedShop.logoUrl}`}
                     alt={selectedShop.name}
                   />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {selectedShop.name.charAt(0)}
+                  </AvatarFallback>
                 </Avatar>
               </div>
-              <span className="truncate font-medium">{selectedShop.name}</span>
-              <ChevronDown className="opacity-50" />
+              <span className="truncate font-medium grow-1">
+                {selectedShop.name}
+              </span>
+              <ChevronDown className="opacity-50 " />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -71,7 +75,7 @@ export function ShopSwitcher() {
                   className="gap-2 p-2 data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground [&>[data-radix-menu-item-indicator]]:hidden"
                 >
                   <div className="flex size-6 items-center justify-center rounded-md border">
-                    <Avatar className="size-5 rounded-lg">
+                    <Avatar className="size-6 rounded-lg">
                       <AvatarImage
                         src={`${import.meta.env.VITE_API_BASE_URL.replace(
                           "/api",

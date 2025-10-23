@@ -9,6 +9,7 @@ import RouteWithTitle from "./routes/RouteWithTitle";
 import Loading from "./components/loading/Loading.jsx";
 import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
 import BranchFormModal from "./pages/branchs/BranchFormModal.jsx";
+import { Toaster } from "sonner";
 
 function renderRoute(route) {
   let element = <RouteWithTitle element={route.element} title={route.title} />;
@@ -52,6 +53,7 @@ function App() {
   return (
     <ErrorBoundaryWithNavigate>
       <Suspense fallback={<Loading text="Đang tải trang..." fullScreen />}>
+        <Toaster />
         <Routes location={state?.background || location}>
           {routeConfig.map(renderRoute)}
         </Routes>
