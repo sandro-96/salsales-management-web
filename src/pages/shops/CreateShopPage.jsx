@@ -6,13 +6,14 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import imageCompression from "browser-image-compression";
 import { useNavigate } from "react-router-dom";
-import { Image as ImageIcon } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 
 import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
 import { useAuth } from "../../hooks/useAuth";
 import { COUNTRIES } from "../../constants/countries";
 import LoadingOverlay from "../../components/loading/LoadingOverlay";
+import { toast } from "sonner";
 
 import {
   Form,
@@ -56,7 +57,6 @@ export default function CreateShopPage() {
   const [fileInputKey, setFileInputKey] = useState(Date.now());
   const [submitError, setSubmitError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,7 +72,6 @@ export default function CreateShopPage() {
   const country =
     COUNTRIES.find((c) => c.code === form.watch("countryCode")) || COUNTRIES[0];
 
-  // --- Xử lý file upload ---
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -85,34 +84,40 @@ export default function CreateShopPage() {
     ];
     const MAX_FILE_SIZE_MB = 5;
 
+    // Kiểm tra định dạng
     if (!ALLOWED_TYPES.includes(selectedFile.type)) {
-      setSubmitError("Chỉ hỗ trợ định dạng ảnh JPG, PNG, WEBP.");
+      toast.error("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP");
       return;
     }
 
+    // Kiểm tra dung lượng
     if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      setSubmitError(
-        `Ảnh vượt quá ${MAX_FILE_SIZE_MB}MB. Đang tiến hành nén ảnh...`
-      );
+      const toastId = toast.loading("Ảnh vượt quá 5MB. Đang nén ảnh...");
+
       try {
         const compressedFile = await imageCompression(selectedFile, {
           maxSizeMB: 1,
           maxWidthOrHeight: 1024,
           useWebWorker: true,
         });
+
+        toast.success("Nén ảnh thành công!", { id: toastId });
         setFile(compressedFile);
         setImagePreview(URL.createObjectURL(compressedFile));
-        setSubmitError("");
       } catch (err) {
         console.error("Lỗi khi nén ảnh:", err);
-        setSubmitError("Nén ảnh thất bại. Vui lòng chọn ảnh nhỏ hơn.");
-        return;
+        toast.error("Nén ảnh thất bại. Vui lòng chọn ảnh nhỏ hơn.", {
+          id: toastId,
+        });
       }
-    } else {
-      setFile(selectedFile);
-      setImagePreview(URL.createObjectURL(selectedFile));
-      setSubmitError("");
+
+      return;
     }
+
+    // Ảnh hợp lệ và không cần nén
+    setFile(selectedFile);
+    setImagePreview(URL.createObjectURL(selectedFile));
+    toast.success("Ảnh đã sẵn sàng để tải lên!");
   };
 
   // --- Submit ---
@@ -140,16 +145,15 @@ export default function CreateShopPage() {
       });
 
       if (res.data.success) {
+        toast.success("Tạo cửa hàng thành công.");
         await fetchShops();
         navigate(-1);
       } else {
-        setSubmitError(res.data.message || "Tạo cửa hàng thất bại.");
+        toast.error("Đã xảy ra lỗi khi tạo cửa hàng.");
       }
     } catch (err) {
       console.error("Lỗi khi tạo cửa hàng:", err);
-      setSubmitError(
-        err.response?.data?.message || "Đã xảy ra lỗi khi gửi dữ liệu."
-      );
+      toast.error("Đã xảy ra lỗi khi tạo cửa hàng.");
     } finally {
       setIsLoading(false);
     }
@@ -174,12 +178,16 @@ export default function CreateShopPage() {
               <FormField
                 control={form.control}
                 name="name"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>Tên cửa hàng</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Input placeholder="Nhập tên cửa hàng" {...field} />
+                        <Input
+                          placeholder="Nhập tên cửa hàng"
+                          aria-invalid={!!fieldState.error}
+                          {...field}
+                        />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -333,13 +341,14 @@ export default function CreateShopPage() {
               <FormField
                 control={form.control}
                 name="address"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>Địa chỉ</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Nhập địa chỉ chi tiết"
                         rows={3}
+                        aria-invalid={!!fieldState.error}
                         {...field}
                       ></Textarea>
                     </FormControl>
@@ -373,7 +382,7 @@ export default function CreateShopPage() {
                               />
                             ) : (
                               <AvatarFallback className="rounded-lg">
-                                <ImageIcon className="w-8 h-8 text-gray-400" />
+                                <ImagePlus className="w-8 h-8 text-gray-400" />
                               </AvatarFallback>
                             )}
                           </Avatar>
@@ -388,24 +397,26 @@ export default function CreateShopPage() {
                                   setImagePreview(null);
                                   setFileInputKey(Date.now());
                                 }}
-                                className="text-xs cursor-pointer"
+                                className="text-xs"
                               >
                                 Xóa ảnh
                               </Button>
                             )}
-                            <Button variant="outline" type="button">
-                              <label className="text-xs cursor-pointer">
-                                {imagePreview
-                                  ? "Tải ảnh khác"
-                                  : "Tải logo cửa hàng"}
-                                <input
-                                  key={fileInputKey}
-                                  type="file"
-                                  accept=".jpg,.jpeg,.png,.webp"
-                                  onChange={handleFileChange}
-                                  className="hidden"
-                                />
-                              </label>
+                            <Button
+                              variant="outline"
+                              type="button"
+                              className="relative overflow-hidden text-xs"
+                            >
+                              {imagePreview
+                                ? "Tải ảnh khác"
+                                : "Tải logo cửa hàng"}
+                              <input
+                                key={fileInputKey}
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.webp"
+                                onChange={handleFileChange}
+                                className="absolute inset-0 cursor-pointer opacity-0"
+                              />
                             </Button>
                           </div>
                         </div>

@@ -1,0 +1,7 @@
+[data-sonner-toast][data-type="success"][data-styled="true"] {
+  color: var(--color-green-800) !important;
+}
+
+[data-sonner-toast][data-type="error"][data-styled="true"] {
+  color: var(--color-red-700) !important;
+}

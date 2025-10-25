@@ -53,7 +53,7 @@ function App() {
   return (
     <ErrorBoundaryWithNavigate>
       <Suspense fallback={<Loading text="Đang tải trang..." fullScreen />}>
-        <Toaster />
+        <Toaster position="top-right" />
         <Routes location={state?.background || location}>
           {routeConfig.map(renderRoute)}
         </Routes>

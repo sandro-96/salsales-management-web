@@ -5,6 +5,18 @@
 Tất cả thay đổi quan trọng của project này sẽ được ghi lại ở đây.  
 Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/).
 
+## 2025-10-25
+
+### Added
+
+- Add global.css file
+
+### Updated
+
+- Update UI for create shop page, change to toaster for action
+- Update error state for Input and TextArea
+- Update UI for shops page
+
 ## 2025-10-23
 
 ### Added
