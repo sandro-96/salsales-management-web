@@ -5,6 +5,17 @@
 Tất cả thay đổi quan trọng của project này sẽ được ghi lại ở đây.  
 Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/).
 
+## 2025-10-26
+
+### Added
+
+- ShopForm.jsx
+- commonUtils.js
+
+### Changed
+
+- Shop page UI
+
 ## 2025-10-25
 
 ### Added

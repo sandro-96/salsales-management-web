@@ -2,9 +2,25 @@ import { useNavigate } from "react-router-dom";
 import { FaStore, FaEdit } from "react-icons/fa";
 import { useShop } from "../../hooks/useShop";
 import { Store } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemSeparator,
+  ItemTitle,
+} from "@/components/ui/item";
+import { Badge } from "@/components/ui/badge";
+import { getFlagUrl } from "../../utils/commonUtils";
+import { COUNTRIES } from "../../constants/countries";
 
 const ShopPage = () => {
   const { shops, setSelectedShop } = useShop();
@@ -58,68 +74,106 @@ const ShopPage = () => {
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {shops.map((shop) => (
-          <div
-            key={shop.id}
-            className="flex flex-col gap-4 p-6 rounded-lg shadow-md"
-            onClick={() => handleShopSelect(shop)}
-          >
-            <div className="flex items-center gap-3">
-              <Avatar className="size-12 rounded-lg border-b-blue-700 border-2">
-                {shop.logoUrl ? (
-                  <img
-                    src={`${import.meta.env.VITE_API_BASE_URL.replace(
-                      "/api",
-                      ""
-                    )}${shop.logoUrl}`}
-                    alt="Shop Logo"
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <AvatarFallback className="rounded-lg">
-                    <Store className="size-8 text-gray-400" />
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div>
-                <h3 className="font-semibold text-lg">{shop.name}</h3>
-                <p className="text-sm text-gray-500">{shop.type}</p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <p className="text-sm">
-                <strong>Địa chỉ:</strong> {shop.address || "Chưa cập nhật"}
-              </p>
-              <p className="text-sm">
-                <strong>SĐT:</strong> {shop.phone || "Chưa cập nhật"}
-              </p>
-              <p className="text-sm">
-                <strong>Ngành hàng:</strong> {shop.industry || "Chưa cập nhật"}
-              </p>
-              <p className="text-sm">
-                <strong>Mô hình:</strong>{" "}
-                {shop.businessModel || "Chưa cập nhật"}
-              </p>
-            </div>
-            <div className="flex justify-between">
-              <span
-                className={`text-sm px-2 py-1 rounded ${
-                  shop.active
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {shop.active ? "Hoạt động" : "Không hoạt động"}
-              </span>
-              <button
-                onClick={() => navigate(`/shops/${shop.id}`)}
-                className="text-blue-500 hover:text-blue-700 flex items-center"
-              >
-                <FaEdit className="mr-1" /> Chỉnh sửa
-              </button>
-            </div>
-          </div>
-        ))}
+        {
+          /* Shops list by Cards */
+          shops.map((shop) => (
+            <Card
+              key={shop.id}
+              className="bg-gradient-to-r from-sky-100 via-sky-50 flex flex-col gap-4 rounded-lg shadow-md border hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => handleShopSelect(shop)}
+            >
+              <CardHeader>
+                <Item className="bg-secondary/10 text-secondary border-0 px-2 py-1 rounded w-fit">
+                  <ItemMedia>
+                    <Avatar className="size-10 rounded-lg">
+                      <AvatarImage
+                        src={`${import.meta.env.VITE_API_BASE_URL.replace(
+                          "/api",
+                          ""
+                        )}${shop.logoUrl}`}
+                        alt="Shop Logo"
+                      />
+                      <AvatarFallback>
+                        <Store className="size-8 text-gray-400" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle className="text-lg font-semibold line-clamp-1">
+                      {shop.name}
+                    </ItemTitle>
+                    <ItemDescription className="text-sm text-muted-foreground capitalize">
+                      {shop.type.toLowerCase()}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+                <ItemSeparator />
+              </CardHeader>
+
+              <CardContent className="grow-1">
+                <Item className="bg-secondary/10 text-secondary border-0 px-2 py-1 rounded w-fit">
+                  <ItemContent>
+                    <ItemTitle>Address</ItemTitle>
+                    <ItemDescription>
+                      {shop.address || "Chưa cập nhật"}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+                <Item className="bg-secondary/10 text-secondary border-0 px-2 py-1 rounded w-fit">
+                  <ItemContent>
+                    <ItemTitle>Phone</ItemTitle>
+                    <ItemDescription>
+                      {COUNTRIES.find((c) => c.code === shop.countryCode)
+                        ? `${
+                            COUNTRIES.find((c) => c.code === shop.countryCode)
+                              .dialCode
+                          } `
+                        : ""}
+                      {shop.phone || "Chưa cập nhật"}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+                <Item className="bg-secondary/10 text-secondary border-0 px-2 py-1 rounded w-fit">
+                  <ItemContent>
+                    <ItemTitle>Industry</ItemTitle>
+                    <ItemDescription>
+                      {shop.industry || "Chưa cập nhật"}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+                <Item className="bg-secondary/10 text-secondary border-0 px-2 py-1 rounded w-fit">
+                  <ItemContent>
+                    <ItemTitle>Business Model</ItemTitle>
+                    <ItemDescription>
+                      {shop.businessModel || "Chưa cập nhật"}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+              </CardContent>
+              <ItemSeparator />
+              <CardFooter>
+                <Badge variant="secondary">
+                  {shop.countryCode ? (
+                    <img
+                      src={getFlagUrl(shop.countryCode)}
+                      alt={shop.countryCode}
+                      className="inline-block size-4 rounded-sm"
+                    />
+                  ) : null}
+                  {COUNTRIES.find((c) => c.code === shop.countryCode)?.name}
+                </Badge>
+                <Badge
+                  variant={shop.active ? "secondary" : "destructive"}
+                  className={`ml-auto ${
+                    shop.active ? "bg-green-100 text-green-700" : ""
+                  }`}
+                >
+                  {shop.active ? "Active" : "Inactive"}
+                </Badge>
+              </CardFooter>
+            </Card>
+          ))
+        }
       </div>
     </div>
   );

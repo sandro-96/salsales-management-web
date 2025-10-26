@@ -172,7 +172,7 @@ const ShopSettingsPage = () => {
   };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
+    <div className="p-6 h-full w-full">
       {isSubmitting && (
         <LoadingOverlay text="Đang cập nhật thông tin cửa hàng..." />
       )}
