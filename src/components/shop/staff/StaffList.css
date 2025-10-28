@@ -1,9 +1,0 @@
-.staff-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-.no-staff {
-    text-align: center;
-    color: #666;
-}

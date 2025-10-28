@@ -38,6 +38,7 @@ export function ShopSwitcher() {
                       ""
                     )}${selectedShop.logoUrl}`}
                     alt={selectedShop.name}
+                    className="size-full object-cover"
                   />
                   <AvatarFallback className="rounded-lg">
                     {selectedShop.name.charAt(0)}

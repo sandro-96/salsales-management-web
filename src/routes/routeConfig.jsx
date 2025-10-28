@@ -170,7 +170,7 @@ export const routeConfig = [
             element: <ShopPage />,
           },
           {
-            path: ":shopId",
+            path: ":slug",
             element: <ShopSettingsPage />,
             title: "Chi tiết cửa hàng",
             breadcrumb: "Chi tiết cửa hàng",

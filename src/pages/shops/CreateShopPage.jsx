@@ -7,7 +7,7 @@ import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
 import { useAuth } from "../../hooks/useAuth";
 import { toast } from "sonner";
-import ShopForm from "./ShopForm";
+import ShopForm from "../../components/shop/ShopForm";
 
 export default function CreateShopPage() {
   const { enums } = useAuth();
@@ -35,7 +35,7 @@ export default function CreateShopPage() {
         await fetchShops();
         navigate(-1);
       } else {
-        toast.error("Đã xảy ra lỗi khi tạo cửa hàng.");
+        toast.error(res.data.message || "Đã xảy ra lỗi khi tạo cửa hàng.");
       }
     } catch (err) {
       console.error("Lỗi khi tạo cửa hàng:", err);

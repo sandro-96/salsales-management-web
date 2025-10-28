@@ -57,22 +57,25 @@ const ShopPage = () => {
 
   const handleShopSelect = (shop) => {
     setSelectedShop(shop);
-    navigate(shop.id);
+    navigate(shop.slug);
   };
 
   return (
     <div className="p-6 h-full w-full">
-      <div className="flex justify-between items-center mb-6">
-        <div className="font-medium text-2xl">Danh sách cửa hàng</div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <div className="font-medium text-2xl text-center sm:text-left">
+          Danh sách cửa hàng
+        </div>
         <Button
           onClick={() => navigate("create")}
-          variant="info"
-          className="w-fit"
+          variant="success"
+          className="w-fit self-center sm:self-auto"
         >
-          <Store />
+          <Store className="mr-1" />
           Tạo cửa hàng mới
         </Button>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {
           /* Shops list by Cards */
@@ -92,6 +95,7 @@ const ShopPage = () => {
                           ""
                         )}${shop.logoUrl}`}
                         alt="Shop Logo"
+                        className="size-full object-cover"
                       />
                       <AvatarFallback>
                         <Store className="size-8 text-gray-400" />
