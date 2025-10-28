@@ -28,8 +28,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { COUNTRIES } from "@/constants/countries";
 import { getFlagUrl } from "@/utils/commonUtils";
-import { isDirty } from "zod/v3";
-import { m } from "framer-motion";
 
 const formSchema = z
   .object({
@@ -105,6 +103,7 @@ export default function ShopForm({
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
+
     const ALLOWED_TYPES = [
       "image/jpeg",
       "image/jpg",
@@ -118,25 +117,29 @@ export default function ShopForm({
       return;
     }
 
+    let processedFile = selectedFile;
+
     if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
       const toastId = toast.loading("Ảnh vượt quá 5MB. Đang nén ảnh...");
       try {
-        const compressedFile = await imageCompression(selectedFile, {
+        processedFile = await imageCompression(selectedFile, {
           maxSizeMB: 1,
           maxWidthOrHeight: 1024,
           useWebWorker: true,
         });
         toast.success("Nén ảnh thành công!", { id: toastId });
-        setFile(compressedFile);
-        setImagePreview(URL.createObjectURL(compressedFile));
       } catch {
         toast.error("Nén ảnh thất bại.", { id: toastId });
       }
-      return;
     }
 
-    setFile(selectedFile);
-    setImagePreview(URL.createObjectURL(selectedFile));
+    // 👉 Cập nhật cả React state và form
+    setFile(processedFile);
+    setImagePreview(URL.createObjectURL(processedFile));
+
+    // Cập nhật vào react-hook-form
+    form.setValue("logo", processedFile, { shouldDirty: true });
+
     toast.success("Ảnh đã sẵn sàng!");
   };
 
@@ -229,6 +232,9 @@ export default function ShopForm({
                                 setFile(null);
                                 setImagePreview(null);
                                 setFileInputKey(Date.now());
+                                form.setValue("logo", null, {
+                                  shouldDirty: true,
+                                });
                               }}
                               className="text-xs"
                             >
