@@ -16,13 +16,19 @@ import {
 
 export function DataTablePagination({ table }) {
   return (
-    <div className="flex items-center justify-between px-2">
+    <div className="flex items-center justify-between px-2 flex-wrap gap-2">
+      {table.getFilteredSelectedRowModel().rows.length > 0 && (
+        <div className="text-muted-foreground flex-1 text-sm">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+      )}
       <div className="text-muted-foreground flex-1 text-sm">
         {table.getFilteredSelectedRowModel().rows.length} of{" "}
         {table.getFilteredRowModel().rows.length} row(s) selected.
       </div>
 
-      <div className="flex items-center space-x-6 lg:space-x-8">
+      <div className="flex items-center space-x-6 lg:space-x-8 flex-wrap gap-2 justify-end">
         {/* Rows per page */}
         <div className="flex items-center space-x-2">
           <p className="text-sm font-medium">Rows per page</p>
@@ -42,13 +48,11 @@ export function DataTablePagination({ table }) {
             </SelectContent>
           </Select>
         </div>
-
         {/* Page info */}
         <div className="flex w-[100px] items-center justify-center text-sm font-medium">
           Page {table.getState().pagination.pageIndex + 1} of{" "}
           {table.getPageCount()}
         </div>
-
         {/* Pagination controls */}
         <div className="flex items-center space-x-2">
           <Button

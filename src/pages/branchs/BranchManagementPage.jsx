@@ -11,18 +11,11 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  ArrowUpDown,
-  ChevronsUpDown,
-  MoreHorizontal,
-  Settings2,
-} from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -46,13 +39,10 @@ import { DataTablePagination } from "@/components/table/DataTablePagination.jsx"
 
 const BranchManagementPage = () => {
   const { selectedShopId } = useShop();
-  const shopId = selectedShopId; // Lấy ID cửa hàng đã chọn từ context
+  const shopId = selectedShopId;
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [selectedBranch, setSelectedBranch] = useState(null); // State để lưu chi nhánh đang chỉnh sửa hoặc tạo
-  const [isModalOpen, setIsModalOpen] = useState(false); // State để quản lý modal
-  const [isCreateMode, setIsCreateMode] = useState(false); // State để xác định modal dùng để tạo hay sửa
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -66,7 +56,7 @@ const BranchManagementPage = () => {
         const response = await axiosInstance.get(`/branches`, {
           params: { shopId },
         });
-        setBranches(response.data.data.content || []);
+        setBranches(response.data.data || []);
       } catch (err) {
         console.log(err);
       } finally {
@@ -84,7 +74,6 @@ const BranchManagementPage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setBranches([...branches, response.data.data]);
-      setIsModalOpen(false); // Đóng modal sau khi tạo
     } catch (err) {
       console.log(err);
     }
@@ -98,7 +87,6 @@ const BranchManagementPage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setBranches(branches.map((b) => (b.id === id ? response.data.data : b)));
-      setIsModalOpen(false);
     } catch (err) {
       console.log(err);
     }
@@ -148,8 +136,9 @@ const BranchManagementPage = () => {
         return <DataTableColumnHeader column={column} title="Active" />;
       },
       cell: ({ row }) => {
+        const branch = row.original;
         const active = row.getValue("active");
-        const isDefault = row.getValue("isDefault");
+        const isDefault = branch.default;
         return (
           <div>
             <Switch
@@ -178,12 +167,14 @@ const BranchManagementPage = () => {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 focus:bg-red-100 focus:text-red-700">
-                Delete
-                <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
-                  ⌘⌫
-                </DropdownMenuShortcut>
-              </DropdownMenuItem>
+              {branch.default ? null : (
+                <DropdownMenuItem className="text-red-600 focus:bg-red-100 focus:text-red-700">
+                  Delete
+                  <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
+                    ⌘⌫
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -213,12 +204,26 @@ const BranchManagementPage = () => {
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="hidden h-full flex-1 flex-col gap-8 p-8 md:flex">
+    <div className="h-full flex-1 flex-col gap-8 p-8 md:flex">
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-semibold tracking-tight">
           Quản lý Chi nhánh
         </h2>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-end">
+          <Button
+            variant="success"
+            size="sm"
+            className="cursor-pointer"
+            onClick={() =>
+              navigate("/branches/new", {
+                state: { background: { pathname: location.pathname } },
+              })
+            }
+          >
+            Add Branch
+          </Button>
+        </div>
+        <div className="flex items-center justify-between space-x-2">
           <div className="flex flex-1 items-center gap-2">
             <Input
               placeholder="Filter names..."
@@ -229,21 +234,7 @@ const BranchManagementPage = () => {
               className="max-w-sm"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <DataTableViewOptions table={table} />
-            <Button
-              variant="success"
-              size="sm"
-              className="cursor-pointer"
-              onClick={() =>
-                navigate("/branches/new", {
-                  state: { background: { pathname: location.pathname } },
-                })
-              }
-            >
-              Add Branch
-            </Button>
-          </div>
+          <DataTableViewOptions table={table} />
         </div>
 
         <div className="overflow-hidden rounded-md border">
@@ -297,61 +288,6 @@ const BranchManagementPage = () => {
           </Table>
         </div>
         <DataTablePagination table={table} />
-      </div>
-      <h2 className="text-2xl font-semibold mb-4">Quản lý Chi nhánh</h2>
-      <div className="mb-4">
-        <button
-          onClick={() => {
-            setSelectedBranch({ name: "", address: "", phone: "" }); // Khởi tạo giá trị mặc định
-            setIsCreateMode(true);
-            setIsModalOpen(true);
-          }}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Thêm Chi nhánh mới
-        </button>
-      </div>
-      <div className="bg-white p-4 rounded shadow">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2 text-left">Tên Chi nhánh</th>
-              <th className="p-2 text-left">Địa chỉ</th>
-              <th className="p-2 text-left">Số điện thoại</th>
-              <th className="p-2 text-left">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {branches.map((branch) => (
-              <tr key={branch.id} className="border-b">
-                <td className="p-2">{branch.name}</td>
-                <td className="p-2">{branch.address}</td>
-                <td className="p-2">{branch.phone || "Chưa có"}</td>
-                <td className="p-2">
-                  <button
-                    onClick={() => {
-                      setSelectedBranch(branch);
-                      setIsCreateMode(false);
-                      setIsModalOpen(true);
-                    }}
-                    className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 mr-2"
-                  >
-                    Sửa
-                  </button>
-                  <button
-                    onClick={() =>
-                      branches.length > 1 && handleDeleteBranch(branch.id)
-                    }
-                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 disabled:opacity-50 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
-                    disabled={branches.length <= 1}
-                  >
-                    Xóa
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );

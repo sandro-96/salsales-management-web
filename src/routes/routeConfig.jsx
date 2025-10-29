@@ -1,5 +1,4 @@
 // src/routes/routeConfig.jsx
-import path from "path";
 import { lazy } from "react";
 const BranchFormModal = lazy(() =>
   import("../pages/branchs/BranchFormModal.jsx")
