@@ -5,6 +5,13 @@
 Tất cả thay đổi quan trọng của project này sẽ được ghi lại ở đây.  
 Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/).
 
+## 2025-10-29
+
+### Added
+
+- Alert Dialog
+- Logic for delete shop
+
 ## 2025-10-28
 
 ### Added

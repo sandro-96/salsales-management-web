@@ -47,12 +47,15 @@ export default function CreateShopPage() {
 
   return (
     <div className="p-6 h-full w-full">
-      <ShopForm
-        mode="create"
-        enums={enums}
-        onSubmit={onSubmit}
-        isLoading={isLoading}
-      />
+      <div className="w-full h-full flex flex-col gap-6">
+        <div className="font-medium text-2xl">Tạo cửa hàng</div>
+        <ShopForm
+          mode="create"
+          enums={enums}
+          onSubmit={onSubmit}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 }

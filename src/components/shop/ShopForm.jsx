@@ -74,6 +74,13 @@ export default function ShopForm({
   } = form;
 
   useEffect(() => {
+    setImagePreview(
+      shop?.logoUrl
+        ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
+            shop.logoUrl
+          }`
+        : null
+    );
     if (mode === "view") {
       reset(shop);
     } else if (mode === "edit") {
@@ -182,14 +189,6 @@ export default function ShopForm({
         onSubmit={form.handleSubmit(handleSubmit)}
         className="w-full h-full flex flex-col gap-6"
       >
-        <div className="font-medium text-2xl">
-          {mode === "create"
-            ? "Tạo cửa hàng"
-            : mode === "edit"
-            ? "Chỉnh sửa cửa hàng"
-            : "Thông tin cửa hàng"}
-        </div>
-
         <div className="flex gap-8 grow-1 items-start justify-center w-full">
           <div className="flex flex-col gap-6 w-full md:max-w-lg">
             {/* logo upload */}

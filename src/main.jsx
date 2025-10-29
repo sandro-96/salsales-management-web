@@ -8,6 +8,7 @@ import "./global.css";
 import AuthProvider from "./contexts/AuthProvider.jsx";
 import ShopProvider from "./contexts/ShopProvider.jsx";
 import WebSocketProvider from "./contexts/WebSocketProvider.jsx";
+import AlertDialogProvider from "./contexts/AlertDialogProvider";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -15,7 +16,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <AuthProvider>
         <ShopProvider>
           <WebSocketProvider>
-            <App />
+            <AlertDialogProvider>
+              <App />
+            </AlertDialogProvider>
           </WebSocketProvider>
         </ShopProvider>
       </AuthProvider>
