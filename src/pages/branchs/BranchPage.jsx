@@ -37,10 +37,9 @@ import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.js
 import { Switch } from "@/components/ui/switch";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
 
-const BranchManagementPage = () => {
-  const { selectedShopId } = useShop();
+const BranchPage = () => {
+  const { selectedShopId, branches, setBranches } = useShop();
   const shopId = selectedShopId;
-  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -52,6 +51,7 @@ const BranchManagementPage = () => {
   // Lấy danh sách chi nhánh
   useEffect(() => {
     const fetchBranches = async () => {
+      setLoading(true);
       try {
         const response = await axiosInstance.get(`/branches`, {
           params: { shopId },
@@ -63,47 +63,9 @@ const BranchManagementPage = () => {
         setLoading(false);
       }
     };
-    if (shopId) fetchBranches();
-  }, [shopId]);
-
-  // Tạo chi nhánh mới
-  const handleCreateBranch = async (request) => {
-    try {
-      const response = await axiosInstance.post(`/branches`, request, {
-        params: { shopId },
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setBranches([...branches, response.data.data]);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  // Cập nhật chi nhánh
-  const handleUpdateBranch = async (id, request) => {
-    try {
-      const response = await axiosInstance.put(`/branches/${id}`, request, {
-        params: { shopId },
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setBranches(branches.map((b) => (b.id === id ? response.data.data : b)));
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  // Xóa chi nhánh
-  const handleDeleteBranch = async (id) => {
-    try {
-      await axiosInstance.delete(`/branches/${id}`, {
-        params: { shopId },
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setBranches(branches.filter((b) => b.id !== id));
-    } catch (err) {
-      console.log(err);
-    }
-  };
+    if (shopId && branches.length === 0) fetchBranches();
+    else setLoading(false);
+  }, [shopId, branches.length, setBranches]);
 
   const columns = [
     {
@@ -209,22 +171,8 @@ const BranchManagementPage = () => {
         <h2 className="text-2xl font-semibold tracking-tight">
           Quản lý Chi nhánh
         </h2>
-        <div className="flex items-center justify-end">
-          <Button
-            variant="success"
-            size="sm"
-            className="cursor-pointer"
-            onClick={() =>
-              navigate("/branches/new", {
-                state: { background: { pathname: location.pathname } },
-              })
-            }
-          >
-            Add Branch
-          </Button>
-        </div>
-        <div className="flex items-center justify-between space-x-2">
-          <div className="flex flex-1 items-center gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <Input
               placeholder="Filter names..."
               value={table.getColumn("name")?.getFilterValue() ?? ""}
@@ -233,8 +181,16 @@ const BranchManagementPage = () => {
               }
               className="max-w-sm"
             />
+            <DataTableViewOptions table={table} />
           </div>
-          <DataTableViewOptions table={table} />
+          <Button
+            variant="success"
+            size="sm"
+            className="cursor-pointer"
+            onClick={() => navigate("create")}
+          >
+            Add Branch
+          </Button>
         </div>
 
         <div className="overflow-hidden rounded-md border">
@@ -293,4 +249,4 @@ const BranchManagementPage = () => {
   );
 };
 
-export default BranchManagementPage;
+export default BranchPage;

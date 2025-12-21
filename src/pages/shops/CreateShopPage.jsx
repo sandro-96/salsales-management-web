@@ -15,7 +15,6 @@ export default function CreateShopPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- Submit ---
   const onSubmit = async (data, file) => {
     try {
       const formData = new FormData();

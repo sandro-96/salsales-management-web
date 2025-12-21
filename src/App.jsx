@@ -57,11 +57,11 @@ function App() {
         <Routes location={state?.background || location}>
           {routeConfig.map(renderRoute)}
         </Routes>
-        {state?.background && (
+        {/* {state?.background && (
           <Routes>
             <Route path="/branches/new" element={<BranchFormModal />} />
           </Routes>
-        )}
+        )} */}
       </Suspense>
     </ErrorBoundaryWithNavigate>
   );

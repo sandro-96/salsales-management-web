@@ -56,6 +56,7 @@ export default function ShopForm({
   onSubmit,
   isLoading,
   onModeChange,
+  handleDelete,
 }) {
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -571,6 +572,14 @@ export default function ShopForm({
                 onClick={() => history.back()}
               >
                 Quay lại
+              </Button>
+              <Button
+                variant="destructive"
+                type="button"
+                onClick={() => handleDelete()}
+                disabled={isLoading}
+              >
+                Delete
               </Button>
               <Button
                 variant="warning"

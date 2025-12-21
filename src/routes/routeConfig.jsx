@@ -1,10 +1,12 @@
 // src/routes/routeConfig.jsx
+import path from "path";
 import { lazy } from "react";
-const BranchFormModal = lazy(() =>
-  import("../pages/branchs/BranchFormModal.jsx")
+const BranchPage = lazy(() => import("../pages/branchs/BranchPage.jsx"));
+const BranchSettingsPage = lazy(() =>
+  import("../pages/branchs/BranchSettingsPage.jsx")
 );
-const BranchManagementPage = lazy(() =>
-  import("../pages/branchs/BranchManagementPage.jsx")
+const CreateBranchPage = lazy(() =>
+  import("../pages/branchs/CreateBranchPage.jsx")
 );
 const LoginPage = lazy(() => import("../pages/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/RegisterPage"));
@@ -38,6 +40,7 @@ const MainPage = lazy(() => import("../pages/MainPage"));
 const HistoryPage = lazy(() => import("../pages/HistoryPage"));
 const ErrorPage = lazy(() => import("../pages/ErrorPage"));
 const ShopLayout = lazy(() => import("../layouts/common/ShopLayout.jsx"));
+const BranchLayout = lazy(() => import("../layouts/common/BranchLayout.jsx"));
 
 export const routeConfig = [
   {
@@ -99,18 +102,6 @@ export const routeConfig = [
         breadcrumb: "Nhân sự",
       },
       {
-        path: "branches",
-        element: <BranchManagementPage />,
-        title: "Chi nhánh",
-        breadcrumb: "Chi nhánh",
-      },
-      {
-        path: "branches/new",
-        element: <BranchFormModal />,
-        title: "Thêm chi nhánh",
-        breadcrumb: "Thêm chi nhánh",
-      },
-      {
         path: "orders",
         element: <OrderListPage />,
         title: "Đơn hàng",
@@ -157,6 +148,30 @@ export const routeConfig = [
         element: <HistoryPage />,
         title: "Lịch sử",
         breadcrumb: "Lịch sử",
+      },
+      {
+        path: "branches",
+        title: "Chi nhánh",
+        breadcrumb: "Chi nhánh",
+        element: <BranchLayout />,
+        children: [
+          {
+            path: "",
+            element: <BranchPage />,
+          },
+          {
+            path: ":id",
+            element: <BranchSettingsPage />,
+            title: "Cài đặt chi nhánh",
+            breadcrumb: "Cài đặt chi nhánh",
+          },
+          {
+            path: "create",
+            element: <CreateBranchPage />,
+            title: "Tạo chi nhánh",
+            breadcrumb: "Tạo chi nhánh",
+          },
+        ],
       },
       {
         path: "shops",

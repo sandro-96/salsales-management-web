@@ -11,6 +11,7 @@ const ShopProvider = ({ children }) => {
   const [selectedShop, setSelectedShopState] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedIndustry, setSelectedIndustry] = useState(null);
+  const [branches, setBranches] = useState([]);
 
   const setSelectedShopId = useCallback(
     (id) => {
@@ -31,21 +32,27 @@ const ShopProvider = ({ children }) => {
     [shops]
   );
 
-  const setSelectedShop = useCallback((shop) => {
-    if (!shop) {
-      setSelectedShopIdState(null);
-      setSelectedShopState(null);
-      setSelectedRole(null);
-      setSelectedIndustry(null);
-      localStorage.removeItem("selectedShopId");
-    } else {
-      setSelectedShopIdState(shop.id);
-      setSelectedShopState(shop);
-      setSelectedRole(shop.role);
-      setSelectedIndustry(shop.industry);
-      localStorage.setItem("selectedShopId", shop.id);
-    }
-  }, []);
+  const setSelectedShop = useCallback(
+    (shop) => {
+      if (shop?.id === selectedShopId) return;
+      if (!shop) {
+        setSelectedShopIdState(null);
+        setSelectedShopState(null);
+        setSelectedRole(null);
+        setSelectedIndustry(null);
+        setBranches([]);
+        localStorage.removeItem("selectedShopId");
+      } else {
+        setSelectedShopIdState(shop.id);
+        setSelectedShopState(shop);
+        setSelectedRole(shop.role);
+        setSelectedIndustry(shop.industry);
+        setBranches([]);
+        localStorage.setItem("selectedShopId", shop.id);
+      }
+    },
+    [selectedShopId]
+  );
 
   const fetchShops = useCallback(async () => {
     try {
@@ -114,6 +121,8 @@ const ShopProvider = ({ children }) => {
         selectedIndustry,
         fetchShops,
         isShopContextReady,
+        setBranches,
+        branches,
       }}
     >
       {children}

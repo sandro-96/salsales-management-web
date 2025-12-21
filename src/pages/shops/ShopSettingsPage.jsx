@@ -97,16 +97,6 @@ const ShopSettingsPage = () => {
               ? "Chỉnh sửa cửa hàng"
               : ""}
           </div>
-          {mode === "edit" && (
-            <Button
-              variant="destructive"
-              type="button"
-              onClick={() => handleDelete()}
-              disabled={isSubmitting}
-            >
-              Delete
-            </Button>
-          )}
         </div>
 
         <ShopForm
@@ -116,6 +106,7 @@ const ShopSettingsPage = () => {
           onSubmit={onSubmit}
           isLoading={isSubmitting}
           onModeChange={setMode}
+          handleDelete={handleDelete}
         />
       </div>
     </div>
