@@ -95,6 +95,25 @@ const ShopProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchBranches = useCallback(
+    async (shopIdParam) => {
+      const id = shopIdParam || selectedShopId;
+      if (!id) return;
+
+      try {
+        const res = await axiosInstance.get("/branches", {
+          params: { shopId: id },
+        });
+
+        setBranches(res.data.data || []);
+      } catch (err) {
+        console.error("Lỗi khi tải danh sách chi nhánh", err);
+        setBranches([]);
+      }
+    },
+    [selectedShopId]
+  );
+
   useEffect(() => {
     if (isUserContextReady && user) {
       fetchShops();
@@ -123,6 +142,7 @@ const ShopProvider = ({ children }) => {
         isShopContextReady,
         setBranches,
         branches,
+        fetchBranches,
       }}
     >
       {children}

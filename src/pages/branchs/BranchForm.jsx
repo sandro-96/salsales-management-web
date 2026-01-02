@@ -18,20 +18,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { COUNTRIES } from "@/constants/countries";
 import { getFlagUrl } from "@/utils/commonUtils";
 import { cn } from "@/lib/utils"; // giả sử bạn có utils cn cho className
@@ -229,7 +221,7 @@ export default function BranchForm({
                     ) : (
                       <FormControl>
                         <div className="flex">
-                          <span className="px-3 py-2 bg-gray-200 border border-r-0 rounded-l-md text-gray-700 text-sm">
+                          <span className="px-3 py-1 bg-gray-200 border border-r-0 rounded-l-md text-gray-700 text-sm">
                             {country.dialCode}
                           </span>
                           <Input
@@ -295,7 +287,7 @@ export default function BranchForm({
                             <Button
                               variant="outline"
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "w-full text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
@@ -309,7 +301,7 @@ export default function BranchForm({
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent
-                          className="w-auto overflow-hidden p-0"
+                          className="p-0 min-w-[280px]"
                           align="start"
                         >
                           <Calendar
@@ -317,7 +309,7 @@ export default function BranchForm({
                             selected={field.value}
                             onSelect={field.onChange}
                             captionLayout="dropdown"
-                            className="rounded-md border shadow-sm"
+                            className="w-full rounded-md"
                             disabled={(date) =>
                               date > new Date() || date < new Date("1900-01-01")
                             }

@@ -38,7 +38,7 @@ import { Switch } from "@/components/ui/switch";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
 
 const BranchPage = () => {
-  const { selectedShopId, branches, setBranches } = useShop();
+  const { selectedShopId, branches, fetchBranches } = useShop();
   const shopId = selectedShopId;
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -50,22 +50,13 @@ const BranchPage = () => {
 
   // Lấy danh sách chi nhánh
   useEffect(() => {
-    const fetchBranches = async () => {
-      setLoading(true);
-      try {
-        const response = await axiosInstance.get(`/branches`, {
-          params: { shopId },
-        });
-        setBranches(response.data.data || []);
-      } catch (err) {
-        console.log(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (shopId && branches.length === 0) fetchBranches();
-    else setLoading(false);
-  }, [shopId, branches.length, setBranches]);
+    if (!selectedShopId) return;
+
+    setLoading(true);
+    fetchBranches(selectedShopId).finally(() => {
+      setLoading(false);
+    });
+  }, [selectedShopId, fetchBranches]);
 
   const columns = [
     {
@@ -128,7 +119,13 @@ const BranchPage = () => {
             <DropdownMenuContent align="end" className="bg-background">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Edit</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  navigate(`${branch.id}`);
+                }}
+              >
+                Edit
+              </DropdownMenuItem>
               {branch.default ? null : (
                 <DropdownMenuItem className="text-red-600 focus:bg-red-100 focus:text-red-700">
                   Delete
