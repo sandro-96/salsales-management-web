@@ -160,7 +160,7 @@ export const routeConfig = [
             element: <BranchPage />,
           },
           {
-            path: ":id",
+            path: ":slug",
             element: <BranchSettingsPage />,
             title: "Cài đặt chi nhánh",
             breadcrumb: "Cài đặt chi nhánh",

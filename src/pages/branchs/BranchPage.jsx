@@ -50,13 +50,13 @@ const BranchPage = () => {
 
   // Lấy danh sách chi nhánh
   useEffect(() => {
-    if (!selectedShopId) return;
+    if (!shopId) return;
 
     setLoading(true);
-    fetchBranches(selectedShopId).finally(() => {
+    fetchBranches(shopId).finally(() => {
       setLoading(false);
     });
-  }, [selectedShopId, fetchBranches]);
+  }, [shopId, fetchBranches]);
 
   const columns = [
     {
@@ -121,7 +121,7 @@ const BranchPage = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  navigate(`${branch.id}`);
+                  navigate(`${branch.slug}`);
                 }}
               >
                 Edit

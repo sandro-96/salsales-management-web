@@ -33,24 +33,25 @@ const formSchema = z
     name: z.string().min(1, "Tên chi nhánh không được để trống."),
     address: z.string().min(10, "Địa chỉ phải có ít nhất 10 ký tự."),
     phone: z.string().min(1, "Số điện thoại không được để trống."),
-    countryCode: z.string().min(1),
+    countryCode: z.string().optional().default("VN"),
 
-    openingDate: z
-      .date({
-        required_error: "Vui lòng chọn ngày khai trương.",
-      })
+    openingDate: z.date().optional().nullable(),
+
+    openingTime: z.string().optional().nullable(),
+    closingTime: z.string().optional().nullable(),
+
+    managerName: z.string().optional().nullable(),
+    managerPhone: z.string().optional().nullable(),
+
+    capacity: z
+      .union([
+        z.coerce.number().int().positive(),
+        z.literal("").transform(() => undefined),
+      ])
       .optional()
-      .or(z.literal(undefined)),
+      .nullable(),
 
-    openingTime: z.string().optional(),
-    closingTime: z.string().optional(),
-
-    managerName: z.string().optional(),
-    managerPhone: z.string().optional(),
-
-    capacity: z.coerce.number().int().positive().optional(),
-
-    description: z.string().optional(),
+    description: z.string().optional().nullable(),
 
     isDefault: z.boolean().default(false),
     active: z.boolean().default(true),
@@ -77,6 +78,7 @@ export default function BranchForm({
   isLoading = false,
   onModeChange,
   handleDelete,
+  shop,
 }) {
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -84,14 +86,7 @@ export default function BranchForm({
       name: "",
       address: "",
       phone: "",
-      countryCode: "VN",
-      openingDate: undefined,
-      openingTime: "",
-      closingTime: "",
-      managerName: "",
-      managerPhone: "",
-      capacity: undefined,
-      description: "",
+      countryCode: shop?.countryCode ?? "VN",
       isDefault: false,
       active: true,
     },
@@ -109,24 +104,37 @@ export default function BranchForm({
         openingDate: branch.openingDate
           ? new Date(branch.openingDate)
           : undefined,
+        capacity: branch.capacity ?? undefined,
+        countryCode: shop?.countryCode || "VN",
       });
     }
-  }, [branch, reset]);
+  }, [branch, reset, shop]);
 
   const country =
     COUNTRIES.find((c) => c.code === form.watch("countryCode")) || COUNTRIES[0];
   const isReadOnly = mode === "view";
 
-  const ReadOnlyValue = ({ value, className = "min-h-[2.75rem]" }) => {
+  const ReadOnlyValue = ({
+    value,
+    variant = "single", // "single" | "multi"
+    className = "min-h-[2.75rem]",
+  }) => {
     const text = value ?? "-";
+
+    const textClass =
+      variant === "multi"
+        ? "whitespace-pre-line break-words line-clamp-3"
+        : "truncate whitespace-nowrap";
+
     return (
       <div
-        className={`border border-gray-200 rounded-md bg-gray-50 px-3 py-2 text-gray-800 flex items-center justify-between ${className}`}
+        className={`border border-gray-200 rounded-md bg-gray-50 px-3 py-2 text-gray-800 flex items-center justify-between gap-2 ${className}`}
       >
-        <div className="truncate break-words text-sm">{text}</div>
+        <div className={`text-sm ${textClass}`}>{text}</div>
+
         {value && (
           <Copy
-            className="w-4 h-4 ml-3 text-gray-400 cursor-pointer hover:text-gray-600"
+            className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400 cursor-pointer hover:text-gray-600"
             onClick={(e) => {
               e.stopPropagation();
               navigator.clipboard
@@ -247,7 +255,7 @@ export default function BranchForm({
                   <FormLabel>Địa chỉ</FormLabel>
                   {isReadOnly ? (
                     <FormControl>
-                      <ReadOnlyValue value={field.value} />
+                      <ReadOnlyValue value={field.value} variant="multi" />
                     </FormControl>
                   ) : (
                     <FormControl>
@@ -310,9 +318,7 @@ export default function BranchForm({
                             onSelect={field.onChange}
                             captionLayout="dropdown"
                             className="w-full rounded-md"
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
+                            disabled={(date) => date < new Date("1900-01-01")}
                             initialFocus
                           />
                         </PopoverContent>
@@ -419,10 +425,7 @@ export default function BranchForm({
                 <FormItem>
                   <FormLabel>Mô tả chi nhánh (tùy chọn)</FormLabel>
                   {isReadOnly ? (
-                    <ReadOnlyValue
-                      value={field.value}
-                      className="min-h-[6rem]"
-                    />
+                    <ReadOnlyValue value={field.value} variant="multi" />
                   ) : (
                     <Textarea
                       rows={4}

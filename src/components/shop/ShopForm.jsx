@@ -126,7 +126,6 @@ export default function ShopForm({
     }
 
     let processedFile = selectedFile;
-
     if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
       const toastId = toast.loading("Ảnh vượt quá 5MB. Đang nén ảnh...");
       try {
@@ -159,24 +158,33 @@ export default function ShopForm({
   // -----------------------
   // Read-only small component
   // -----------------------
-  const ReadOnlyValue = ({ value, className = "min-h-[2.75rem]" }) => {
+  const ReadOnlyValue = ({
+    value,
+    variant = "single", // "single" | "multi"
+    className = "min-h-[2.75rem]",
+  }) => {
     const text = value ?? "-";
+
+    const textClass =
+      variant === "multi"
+        ? "whitespace-pre-line break-words line-clamp-3"
+        : "truncate whitespace-nowrap";
+
     return (
       <div
-        className={`border border-gray-200 rounded-md bg-gray-50 px-3 py-2 text-gray-800 flex items-center justify-between ${className}`}
+        className={`border border-gray-200 rounded-md bg-gray-50 px-3 py-2 text-gray-800 flex items-center justify-between gap-2 ${className}`}
       >
-        <div className="truncate break-words text-sm">{text}</div>
+        <div className={`text-sm ${textClass}`}>{text}</div>
+
         {value && (
           <Copy
-            className="w-4 h-4 ml-3 text-gray-400 cursor-pointer hover:text-gray-600"
+            className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400 cursor-pointer hover:text-gray-600"
             onClick={(e) => {
               e.stopPropagation();
-              try {
-                navigator.clipboard.writeText(String(value));
-                toast.success("Đã sao chép!");
-              } catch {
-                toast.error("Không thể sao chép");
-              }
+              navigator.clipboard
+                .writeText(String(value))
+                .then(() => toast.success("Đã sao chép!"))
+                .catch(() => toast.error("Không thể sao chép"));
             }}
           />
         )}
@@ -536,7 +544,10 @@ export default function ShopForm({
                     <FormItem>
                       <FormLabel>Địa chỉ</FormLabel>
                       <FormControl>
-                        <ReadOnlyValue value={form.getValues("address")} />
+                        <ReadOnlyValue
+                          value={form.getValues("address")}
+                          variant="multi"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

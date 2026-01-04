@@ -21,7 +21,7 @@ export default function CreateBranchPage() {
     try {
       setIsLoading(true);
       const res = await axiosInstance.post(
-        `/shop/${selectedShop.id}/branch`,
+        `branches?shopId=${selectedShop.id}`,
         data
       );
 
@@ -43,7 +43,12 @@ export default function CreateBranchPage() {
     <div className="p-6 h-full w-full">
       <div className="w-full h-full flex flex-col gap-6">
         <div className="font-medium text-2xl">Tạo chi nhánh mới</div>
-        <BranchForm mode="create" onSubmit={onSubmit} isLoading={isLoading} />
+        <BranchForm
+          mode="create"
+          onSubmit={onSubmit}
+          isLoading={isLoading}
+          shop={selectedShop}
+        />
       </div>
     </div>
   );

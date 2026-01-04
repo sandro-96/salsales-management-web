@@ -8,13 +8,14 @@ import axiosInstance from "../../api/axiosInstance";
 import BranchForm from "./BranchForm";
 import { useShop } from "../../hooks/useShop";
 import { useAlertDialog } from "../../hooks/useAlertDialog";
+import { getBranchBySlug } from "@/api/branchApi";
 
 const BranchSettingsPage = () => {
   const navigate = useNavigate();
   const { confirm } = useAlertDialog();
-  const { id } = useParams();
+  const { slug } = useParams();
 
-  const { fetchBranches } = useShop();
+  const { fetchBranches, selectedShop } = useShop();
 
   const [branch, setBranch] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,7 @@ const BranchSettingsPage = () => {
       try {
         setLoading(true);
 
-        const res = await axiosInstance.get(`/branches/${id}`);
+        const res = await getBranchBySlug(slug, selectedShop.id);
 
         if (res.data.success) {
           setBranch(res.data.data);
@@ -44,10 +45,10 @@ const BranchSettingsPage = () => {
       }
     };
 
-    if (id) {
+    if (slug && selectedShop) {
       fetchBranch();
     }
-  }, [id]);
+  }, [slug, selectedShop]);
 
   /* =======================
    * SUBMIT UPDATE
@@ -58,7 +59,10 @@ const BranchSettingsPage = () => {
     try {
       setIsSubmitting(true);
 
-      const res = await axiosInstance.put(`branches/${branch.id}`, data);
+      const res = await axiosInstance.put(
+        `branches/${branch.id}?shopId=${selectedShop.id}`,
+        data
+      );
 
       if (res.data.success) {
         toast.success("Cập nhật chi nhánh thành công.");
@@ -97,7 +101,9 @@ const BranchSettingsPage = () => {
     try {
       setIsSubmitting(true);
 
-      const res = await axiosInstance.delete(`branches/${branch.id}`);
+      const res = await axiosInstance.delete(
+        `branches/${branch.id}?shopId=${branch.shopId}`
+      );
 
       if (res.data.success) {
         toast.success("Xóa chi nhánh thành công.");
@@ -143,6 +149,7 @@ const BranchSettingsPage = () => {
         </div>
 
         <BranchForm
+          shop={selectedShop}
           mode={mode}
           branch={branch}
           onSubmit={onSubmit}
