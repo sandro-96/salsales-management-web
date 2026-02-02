@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useShop } from "../../hooks/useShop.js";
 import axiosInstance from "../../api/axiosInstance.js";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import {
   flexRender,
@@ -36,12 +37,15 @@ import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
 import { Switch } from "@/components/ui/switch";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
+import { useAlertDialog } from "../../hooks/useAlertDialog";
 
 const BranchPage = () => {
   const { selectedShopId, branches, fetchBranches } = useShop();
   const shopId = selectedShopId;
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { confirm } = useAlertDialog();
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -57,6 +61,42 @@ const BranchPage = () => {
       setLoading(false);
     });
   }, [shopId, fetchBranches]);
+
+  const handleDelete = async (branch) => {
+    if (!branch) return;
+
+    const ok = await confirm(
+      "Bạn có chắc muốn xóa chi nhánh này không? Hành động này không thể hoàn tác.",
+      {
+        title: "Xóa chi nhánh",
+        confirmText: "Xóa",
+        cancelText: "Hủy",
+        variant: "destructive",
+      },
+    );
+
+    if (!ok) return;
+
+    try {
+      setIsSubmitting(true);
+
+      const res = await axiosInstance.delete(
+        `branches/${branch.id}?shopId=${shopId}`,
+      );
+
+      if (res.data.success) {
+        toast.success("Xóa chi nhánh thành công.");
+        await fetchBranches?.(shopId);
+      } else {
+        toast.error(res.data.message || "Xóa chi nhánh thất bại.");
+      }
+    } catch (err) {
+      console.error("Delete branch error:", err);
+      toast.error("Đã xảy ra lỗi khi xóa chi nhánh.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const columns = [
     {
@@ -120,14 +160,22 @@ const BranchPage = () => {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => {
-                  navigate(`${branch.slug}`);
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`${branch.slug}?mode=edit`);
                 }}
               >
                 Edit
               </DropdownMenuItem>
               {branch.default ? null : (
-                <DropdownMenuItem className="text-red-600 focus:bg-red-100 focus:text-red-700">
+                <DropdownMenuItem
+                  className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                  disabled={isSubmitting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(branch);
+                  }}
+                >
                   Delete
                   <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
                     ⌘⌫
@@ -202,7 +250,7 @@ const BranchPage = () => {
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                       </TableHead>
                     );
@@ -216,12 +264,14 @@ const BranchPage = () => {
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                    className="cursor-pointer"
+                    onClick={() => navigate(`${row.original.slug}`)}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

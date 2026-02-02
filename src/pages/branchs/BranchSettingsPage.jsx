@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import axiosInstance from "../../api/axiosInstance";
@@ -14,13 +14,21 @@ const BranchSettingsPage = () => {
   const navigate = useNavigate();
   const { confirm } = useAlertDialog();
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
 
   const { fetchBranches, selectedShop } = useShop();
 
   const [branch, setBranch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mode, setMode] = useState("view");
+  const [mode, setMode] = useState(
+    searchParams.get("mode") === "edit" ? "edit" : "view",
+  );
+
+  useEffect(() => {
+    const nextMode = searchParams.get("mode") === "edit" ? "edit" : "view";
+    setMode(nextMode);
+  }, [searchParams]);
 
   /* =======================
    * FETCH BRANCH BY ID
@@ -61,7 +69,7 @@ const BranchSettingsPage = () => {
 
       const res = await axiosInstance.put(
         `branches/${branch.id}?shopId=${selectedShop.id}`,
-        data
+        data,
       );
 
       if (res.data.success) {
@@ -93,7 +101,7 @@ const BranchSettingsPage = () => {
         confirmText: "Xóa",
         cancelText: "Hủy",
         variant: "destructive",
-      }
+      },
     );
 
     if (!ok) return;
@@ -102,7 +110,7 @@ const BranchSettingsPage = () => {
       setIsSubmitting(true);
 
       const res = await axiosInstance.delete(
-        `branches/${branch.id}?shopId=${branch.shopId}`
+        `branches/${branch.id}?shopId=${branch.shopId}`,
       );
 
       if (res.data.success) {

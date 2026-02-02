@@ -2,11 +2,11 @@
 import path from "path";
 import { lazy } from "react";
 const BranchPage = lazy(() => import("../pages/branchs/BranchPage.jsx"));
-const BranchSettingsPage = lazy(() =>
-  import("../pages/branchs/BranchSettingsPage.jsx")
+const BranchSettingsPage = lazy(
+  () => import("../pages/branchs/BranchSettingsPage.jsx"),
 );
-const CreateBranchPage = lazy(() =>
-  import("../pages/branchs/CreateBranchPage.jsx")
+const CreateBranchPage = lazy(
+  () => import("../pages/branchs/CreateBranchPage.jsx"),
 );
 const LoginPage = lazy(() => import("../pages/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/RegisterPage"));
@@ -15,23 +15,23 @@ const ForgotPasswordPage = lazy(() => import("../pages/ForgotPasswordPage"));
 const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
 const ShopPage = lazy(() => import("../pages/shops/ShopPage"));
 const CreateShopPage = lazy(() => import("../pages/shops/CreateShopPage"));
-const DynamicDashboardLayout = lazy(() =>
-  import("../layouts/DynamicDashboardLayout")
+const DynamicDashboardLayout = lazy(
+  () => import("../layouts/DynamicDashboardLayout"),
 );
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));
 const OverviewPage = lazy(() => import("../pages/OverviewPage"));
 const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
-const ProductManagementPage = lazy(() =>
-  import("../pages/products/ProductManagementPage")
+const ProductManagementPage = lazy(
+  () => import("../pages/products/ProductManagementPage"),
 );
 const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
 const OrderListPage = lazy(() => import("../pages/orders/OrderListPage"));
-const CustomerListPage = lazy(() =>
-  import("../pages/customers/CustomerListPage")
+const CustomerListPage = lazy(
+  () => import("../pages/customers/CustomerListPage"),
 );
-const InventoryListPage = lazy(() =>
-  import("../pages/inventory/InventoryListPage")
+const InventoryListPage = lazy(
+  () => import("../pages/inventory/InventoryListPage"),
 );
 const ReportListPage = lazy(() => import("../pages/reports/ReportListPage"));
 const TableListPage = lazy(() => import("../pages/tables/TableListPage"));
@@ -41,6 +41,7 @@ const HistoryPage = lazy(() => import("../pages/HistoryPage"));
 const ErrorPage = lazy(() => import("../pages/ErrorPage"));
 const ShopLayout = lazy(() => import("../layouts/common/ShopLayout.jsx"));
 const BranchLayout = lazy(() => import("../layouts/common/BranchLayout.jsx"));
+const ProductLayout = lazy(() => import("../layouts/common/ProductLayout.jsx"));
 
 export const routeConfig = [
   {
@@ -91,9 +92,15 @@ export const routeConfig = [
       },
       {
         path: "products",
-        element: <ProductManagementPage />,
+        element: <ProductLayout />,
         title: "Sản phẩm",
         breadcrumb: "Sản phẩm",
+        children: [
+          {
+            path: "",
+            element: <ProductManagementPage />,
+          },
+        ],
       },
       {
         path: "staffs",
