@@ -22,9 +22,7 @@ const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));
 const OverviewPage = lazy(() => import("../pages/OverviewPage"));
 const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
-const ProductManagementPage = lazy(
-  () => import("../pages/products/ProductManagementPage"),
-);
+const ProductPage = lazy(() => import("../pages/products/ProductPage.jsx"));
 const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
 const OrderListPage = lazy(() => import("../pages/orders/OrderListPage"));
 const CustomerListPage = lazy(
@@ -98,7 +96,7 @@ export const routeConfig = [
         children: [
           {
             path: "",
-            element: <ProductManagementPage />,
+            element: <ProductPage />,
           },
         ],
       },

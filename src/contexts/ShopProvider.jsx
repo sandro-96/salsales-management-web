@@ -29,7 +29,7 @@ const ShopProvider = ({ children }) => {
         setSelectedIndustry(null);
       }
     },
-    [shops]
+    [shops],
   );
 
   const setSelectedShop = useCallback(
@@ -51,7 +51,7 @@ const ShopProvider = ({ children }) => {
         localStorage.setItem("selectedShopId", shop.id);
       }
     },
-    [selectedShopId]
+    [selectedShopId],
   );
 
   const fetchShops = useCallback(async () => {
@@ -76,7 +76,7 @@ const ShopProvider = ({ children }) => {
           setSelectedIndustry(firstShop.industry);
           localStorage.setItem("selectedShopId", firstShop.id);
           console.log(
-            "Cửa hàng đã chọn không hợp lệ, chuyển sang cửa hàng đầu tiên."
+            "Cửa hàng đã chọn không hợp lệ, chuyển sang cửa hàng đầu tiên.",
           );
         } else if (shopList.length === 0) {
           setSelectedShopIdState(null);
@@ -111,7 +111,7 @@ const ShopProvider = ({ children }) => {
         setBranches([]);
       }
     },
-    [selectedShopId]
+    [selectedShopId],
   );
 
   useEffect(() => {
@@ -120,6 +120,15 @@ const ShopProvider = ({ children }) => {
       fetchEnums();
     }
   }, [isUserContextReady, user, fetchShops]);
+
+  // Tự động load branches khi selectedShopId thay đổi
+  useEffect(() => {
+    if (selectedShopId) {
+      fetchBranches(selectedShopId);
+    } else {
+      setBranches([]);
+    }
+  }, [selectedShopId, fetchBranches]);
 
   const isOwner = selectedRole === "OWNER";
   const isStaff = selectedRole === "STAFF";
