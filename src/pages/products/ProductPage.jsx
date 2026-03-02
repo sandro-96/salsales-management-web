@@ -74,7 +74,7 @@ const ProductPage = () => {
     if (!shopId) return;
     setLoading(true);
     try {
-      const params = selectedBranchId ? { branchId: selectedBranchId } : {};
+      const params = selectedBranchId ? { branchIds: [selectedBranchId] } : {};
       const res = await getProducts(shopId, params);
       const data = res.data?.data;
       const list = Array.isArray(data) ? data : (data?.content ?? data ?? []);

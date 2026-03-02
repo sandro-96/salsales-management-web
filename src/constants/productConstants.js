@@ -15,6 +15,8 @@ export const PRODUCT_UNITS = [
   { value: "sheet", label: "Tờ" },
   { value: "tablet", label: "Viên" },
   { value: "serving", label: "Suất" },
+  { value: "cup", label: "Ly" },
+  { value: "bowl", label: "Tô / Bát" },
   { value: "kg", label: "Kilogram (kg)" },
   { value: "g", label: "Gram (g)" },
   { value: "l", label: "Lít (l)" },

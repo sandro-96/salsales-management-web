@@ -113,6 +113,7 @@ export default function ProductForm({
   onSubmit,
   isLoading = false,
   onModeChange,
+  onCancel,
   handleDelete,
   branches = [],
 }) {
@@ -169,15 +170,46 @@ export default function ProductForm({
     }
   };
 
+  const savedCategory = isCreate
+    ? (localStorage.getItem("lastProductCategory") ?? "")
+    : "";
+  const savedUnit = isCreate
+    ? (localStorage.getItem("lastProductUnit") ?? "")
+    : "";
+
   // Custom select state for unit / category
-  const [unitMode, setUnitMode] = useState(
-    isCustomUnit(product?.unit) ? "custom" : "select",
-  );
-  const [categoryMode, setCategoryMode] = useState(
-    isCustomCategory(product?.category) ? "custom" : "select",
-  );
+  const [unitMode, setUnitMode] = useState(() => {
+    if (product?.unit) return isCustomUnit(product.unit) ? "custom" : "select";
+    if (isCreate && savedUnit)
+      return isCustomUnit(savedUnit) ? "custom" : "select";
+    return "select";
+  });
+  const [categoryMode, setCategoryMode] = useState(() => {
+    if (product?.category)
+      return isCustomCategory(product.category) ? "custom" : "select";
+    if (isCreate && savedCategory)
+      return isCustomCategory(savedCategory) ? "custom" : "select";
+    return "select";
+  });
 
   const defaultBranchIds = branches.map((b) => b.id);
+
+  const savedBranchIds = isCreate
+    ? (() => {
+        try {
+          const raw = localStorage.getItem("lastProductBranchIds");
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (Array.isArray(parsed)) {
+            // Only keep IDs that still exist in the current branch list
+            const valid = parsed.filter((id) => defaultBranchIds.includes(id));
+            return valid.length > 0 ? valid : defaultBranchIds;
+          }
+        } catch {
+          // ignore
+        }
+        return defaultBranchIds;
+      })()
+    : defaultBranchIds;
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -204,8 +236,8 @@ export default function ProductForm({
       : {
           name: "",
           sku: "",
-          unit: "",
-          category: "",
+          unit: savedUnit,
+          category: savedCategory,
           barcode: "",
           description: "",
           supplierId: "",
@@ -218,7 +250,7 @@ export default function ProductForm({
           discountPrice: null,
           discountPercentage: null,
           active: true,
-          branchIds: defaultBranchIds,
+          branchIds: savedBranchIds,
         },
   });
 
@@ -229,6 +261,21 @@ export default function ProductForm({
   } = form;
 
   const watchedCategory = watch("category");
+  const watchedUnit = watch("unit");
+  const watchedBranchIds = watch("branchIds");
+
+  // Persist last used category, unit & branchIds for create mode
+  useEffect(() => {
+    if (!isCreate) return;
+    if (watchedCategory)
+      localStorage.setItem("lastProductCategory", watchedCategory);
+    if (watchedUnit) localStorage.setItem("lastProductUnit", watchedUnit);
+    if (watchedBranchIds)
+      localStorage.setItem(
+        "lastProductBranchIds",
+        JSON.stringify(watchedBranchIds),
+      );
+  }, [watchedCategory, watchedUnit, watchedBranchIds, isCreate]);
 
   useEffect(() => {
     if (product) {
@@ -242,13 +289,6 @@ export default function ProductForm({
         supplierId: product.supplierId ?? "",
         defaultPrice: product.defaultPrice ?? 0,
         costPrice: product.costPrice ?? 0,
-        price: product.price ?? 0,
-        branchCostPrice: product.branchCostPrice ?? 0,
-        quantity: product.quantity ?? 0,
-        minQuantity: product.minQuantity ?? 0,
-        discountPrice: product.discountPrice ?? null,
-        discountPercentage: product.discountPercentage ?? null,
-        active: product.activeInBranch ?? true,
         branchIds: defaultBranchIds,
       });
       setUnitMode(isCustomUnit(product.unit) ? "custom" : "select");
@@ -497,8 +537,8 @@ export default function ProductForm({
 
       {/* Danh mục & Đơn vị */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <CategoryField />
-        <UnitField />
+        {CategoryField()}
+        {UnitField()}
       </div>
 
       {/* Giá mặc định shop & Giá vốn */}
@@ -829,14 +869,10 @@ export default function ProductForm({
 
   // ── Action buttons ─────────────────────────────────────────────────────────
   const ActionButtons = () => (
-    <div className="flex justify-end gap-2 pt-2 border-t">
+    <div className="flex justify-end gap-2 pt-2 border-t sticky bottom-0 bg-background pb-1">
       {mode === "view" ? (
         <>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => history.back()}
-          >
+          <Button variant="outline" type="button" onClick={() => onCancel?.()}>
             Quay lại
           </Button>
           {handleDelete && (
@@ -863,7 +899,7 @@ export default function ProductForm({
             variant="outline"
             type="button"
             onClick={() =>
-              mode === "create" ? history.back() : onModeChange?.("view")
+              mode === "create" ? onCancel?.() : onModeChange?.("view")
             }
           >
             Hủy
@@ -889,7 +925,7 @@ export default function ProductForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleSubmit)}
-        className="w-full flex flex-col gap-6"
+        className="w-full flex flex-col gap-6 h-full justify-between p-1"
       >
         {isCreate ? (
           /* CREATE MODE: Tabs layout */
@@ -900,7 +936,7 @@ export default function ProductForm({
             </TabsList>
 
             <TabsContent value="product" className="mt-4">
-              <ProductInfoSection />
+              {ProductInfoSection()}
             </TabsContent>
 
             <TabsContent value="branch" className="mt-4 flex flex-col gap-6">
@@ -939,7 +975,7 @@ export default function ProductForm({
           </>
         )}
 
-        <ActionButtons />
+        {ActionButtons()}
       </form>
     </Form>
   );

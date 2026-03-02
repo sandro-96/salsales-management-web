@@ -40,9 +40,12 @@ export default function ProductFormModal({
       if (isEdit) {
         // Cập nhật: id = BranchProduct ID, áp dụng cho chi nhánh của product
         const { branchIds: _ignored, ...productData } = data;
-        const res = await updateProduct(shopId, product.id, productData, [
-          product.branchId ?? branchId,
-        ]);
+        const res = await updateProduct(
+          shopId,
+          product.id,
+          productData,
+          data?.branchIds,
+        );
         if (res.data?.success) {
           toast.success("Cập nhật sản phẩm thành công.");
           onSuccess?.();
@@ -80,8 +83,8 @@ export default function ProductFormModal({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
-      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[720px] h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>
             {isEdit ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
           </DialogTitle>
@@ -91,14 +94,17 @@ export default function ProductFormModal({
               : "Điền thông tin để thêm sản phẩm mới vào cửa hàng."}
           </DialogDescription>
         </DialogHeader>
-        <ProductForm
-          mode={isEdit ? "edit" : "create"}
-          product={product}
-          onSubmit={handleSubmit}
-          isLoading={loading}
-          onModeChange={() => {}}
-          branches={branches}
-        />
+        <div className="flex-1 overflow-y-auto pr-1">
+          <ProductForm
+            mode={isEdit ? "edit" : "create"}
+            product={product}
+            onSubmit={handleSubmit}
+            isLoading={loading}
+            onModeChange={() => {}}
+            onCancel={onClose}
+            branches={branches}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -3,10 +3,23 @@ import axiosInstance from "./axiosInstance";
 /**
  * 📦 Lấy danh sách sản phẩm theo shopId (ProductSearchRequest)
  * GET /api/shops/{shopId}/products
- * params: { keyword, category, active, minPrice, maxPrice, page, size, sortBy, sortDir, branchId }
+ * params: { keyword, category, active, minPrice, maxPrice, page, size, sortBy, sortDir, branchIds[] }
  */
 export const getProducts = (shopId, params = {}) =>
-  axiosInstance.get(`/shops/${shopId}/products`, { params });
+  axiosInstance.get(`/shops/${shopId}/products`, {
+    params,
+    paramsSerializer: (p) => {
+      const sp = new URLSearchParams();
+      Object.entries(p).forEach(([key, val]) => {
+        if (Array.isArray(val)) {
+          val.forEach((v) => sp.append(key, v));
+        } else if (val !== undefined && val !== null) {
+          sp.append(key, val);
+        }
+      });
+      return sp.toString();
+    },
+  });
 
 /**
  * 📦 Lấy danh sách sản phẩm theo chi nhánh cụ thể
@@ -34,6 +47,17 @@ export const getProductById = (shopId, branchId, id) =>
 export const createProduct = (shopId, data, branchIds = []) =>
   axiosInstance.post(`/shops/${shopId}/products`, data, {
     params: branchIds.length ? { branchIds } : {},
+    paramsSerializer: (p) => {
+      const sp = new URLSearchParams();
+      Object.entries(p).forEach(([key, val]) => {
+        if (Array.isArray(val)) {
+          val.forEach((v) => sp.append(key, v));
+        } else if (val !== undefined && val !== null) {
+          sp.append(key, val);
+        }
+      });
+      return sp.toString();
+    },
   });
 
 /**
@@ -54,6 +78,17 @@ export const createBranchProduct = (shopId, branchId, data) =>
 export const updateProduct = (shopId, id, data, branchIds = []) =>
   axiosInstance.put(`/shops/${shopId}/products/${id}`, data, {
     params: branchIds.length ? { branchIds } : {},
+    paramsSerializer: (p) => {
+      const sp = new URLSearchParams();
+      Object.entries(p).forEach(([key, val]) => {
+        if (Array.isArray(val)) {
+          val.forEach((v) => sp.append(`${key}[]`, v));
+        } else if (val !== undefined && val !== null) {
+          sp.append(key, val);
+        }
+      });
+      return sp.toString();
+    },
   });
 
 /**
