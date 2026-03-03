@@ -95,17 +95,15 @@ export const updateProduct = (shopId, id, data, branchIds = []) =>
  * 🗑️ Xóa sản phẩm (id = BranchProduct ID)
  * DELETE /api/shops/{shopId}/branches/{branchId}/products/{id}
  */
-export const deleteProduct = (shopId, branchId, id) =>
-  axiosInstance.delete(`/shops/${shopId}/branches/${branchId}/products/${id}`);
+export const deleteProduct = (shopId, id) =>
+  axiosInstance.delete(`/shops/${shopId}/products/${id}`);
 
 /**
  * 🔄 Bật/tắt trạng thái activeInBranch
  * PATCH /api/shops/{shopId}/branches/{branchId}/products/{branchProductId}/toggle-active
  */
 export const toggleProductActive = (shopId, branchId, branchProductId) =>
-  axiosInstance.patch(
-    `/shops/${shopId}/branches/${branchId}/products/${branchProductId}/toggle-active`,
-  );
+  axiosInstance.patch(`/shops/${shopId}/products/${branchProductId}/toggle`);
 
 /**
  * ⚠️ Lấy danh sách sản phẩm tồn kho thấp

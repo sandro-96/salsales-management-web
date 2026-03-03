@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,12 +26,17 @@ export default function ProductFormModal({
   onClose,
   product,
   shopId,
-  branchId,
   branches = [],
   onSuccess,
 }) {
   const isEdit = !!product;
+  const [mode, setMode] = useState(() => (product ? "view" : "create"));
   const [loading, setLoading] = useState(false);
+
+  // Reset mode when product changes or modal opens
+  useEffect(() => {
+    setMode(product ? "view" : "create");
+  }, [product, open]);
 
   const handleSubmit = async (data) => {
     try {
@@ -86,21 +91,27 @@ export default function ProductFormModal({
       <DialogContent className="sm:max-w-[720px] h-[90vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle>
-            {isEdit ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
+            {!isEdit
+              ? "Thêm sản phẩm mới"
+              : mode === "view"
+                ? "Chi tiết sản phẩm"
+                : "Chỉnh sửa sản phẩm"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {isEdit
-              ? "Chỉnh sửa thông tin sản phẩm tại chi nhánh."
+              ? mode === "view"
+                ? "Xem thông tin chi tiết sản phẩm."
+                : "Chỉnh sửa thông tin sản phẩm."
               : "Điền thông tin để thêm sản phẩm mới vào cửa hàng."}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto pr-1">
           <ProductForm
-            mode={isEdit ? "edit" : "create"}
+            mode={isEdit ? mode : "create"}
             product={product}
             onSubmit={handleSubmit}
             isLoading={loading}
-            onModeChange={() => {}}
+            onModeChange={setMode}
             onCancel={onClose}
             branches={branches}
           />

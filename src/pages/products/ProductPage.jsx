@@ -94,11 +94,7 @@ const ProductPage = () => {
   // Toggle active tại chi nhánh (activeInBranch)
   const handleToggleActive = async (product) => {
     try {
-      const res = await toggleProductActive(
-        shopId,
-        product.branchId ?? selectedBranchId,
-        product.id,
-      );
+      const res = await toggleProductActive(shopId, product.id);
       if (res.data?.success) {
         const updated = res.data.data;
         setProducts((prev) =>
@@ -129,11 +125,7 @@ const ProductPage = () => {
 
     try {
       setIsSubmitting(true);
-      const res = await deleteProduct(
-        shopId,
-        product.branchId ?? selectedBranchId,
-        product.id,
-      );
+      const res = await deleteProduct(shopId, product.id);
       if (res.data?.success) {
         toast.success("Xóa sản phẩm thành công.");
         await fetchProducts();
@@ -225,28 +217,6 @@ const ProductPage = () => {
                 {Number(discountPrice).toLocaleString("vi-VN")} ₫
               </span>
             )}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "quantity",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Tồn kho" />
-      ),
-      cell: ({ row }) => {
-        const product = row.original;
-        const qty = row.getValue("quantity");
-        const isLow = product.minQuantity > 0 && qty <= product.minQuantity;
-        return (
-          <div className="flex items-center gap-1">
-            {isLow && <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
-            <span className={isLow ? "text-amber-600 font-medium" : ""}>
-              {qty}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {product.unit}
-            </span>
           </div>
         );
       },
@@ -471,7 +441,6 @@ const ProductPage = () => {
         onClose={() => setModalOpen(false)}
         product={editingProduct}
         shopId={shopId}
-        branchId={editingProduct?.branchId ?? selectedBranchId}
         branches={branches ?? []}
         onSuccess={fetchProducts}
       />
