@@ -39,14 +39,12 @@ export const getProductById = (shopId, branchId, id) =>
 
 /**
  * ➕ Tạo sản phẩm mới từ shop (multipart/form-data)
- * POST /api/shops/{shopId}/products?branchIds=...
+ * POST /api/shops/{shopId}/products
  * @param {string}   shopId
- * @param {Object}   data      - ProductRequest (JSON)
- * @param {string[]} branchIds - Danh sách branchId tùy chọn
- * @param {File[]}   files     - Ảnh đính kèm (tối đa 10)
+ * @param {Object}   data   - ProductRequest (JSON)
+ * @param {File[]}   files  - Ảnh đính kèm (tối đa 10)
  */
-export const createProduct = (shopId, data, branchIds = [], files = []) => {
-  debugger;
+export const createProduct = (shopId, data, files = []) => {
   const formData = new FormData();
   formData.append(
     "product",
@@ -54,14 +52,9 @@ export const createProduct = (shopId, data, branchIds = [], files = []) => {
   );
   files.forEach((file) => formData.append("files", file));
 
-  const params = new URLSearchParams();
-  branchIds.forEach((id) => params.append("branchIds", id));
-
-  return axiosInstance.post(
-    `/shops/${shopId}/products${params.toString() ? `?${params}` : ""}`,
-    formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
-  );
+  return axiosInstance.post(`/shops/${shopId}/products`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 };
 
 /**
@@ -73,14 +66,13 @@ export const createBranchProduct = (shopId, branchId, data) =>
 
 /**
  * ✏️ Cập nhật sản phẩm (id = BranchProduct ID)
- * PUT /api/shops/{shopId}/products/{id}?branchIds=...
+ * PUT /api/shops/{shopId}/products/{id}
  * @param {string}   shopId
- * @param {string}   id        - BranchProduct ID
- * @param {Object}   data      - ProductRequest (JSON)
- * @param {string[]} branchIds - Chi nhánh cần cập nhật (tùy chọn)
- * @param {File[]}   files     - Ảnh mới (thay thế toàn bộ ảnh cũ)
+ * @param {string}   id     - BranchProduct ID
+ * @param {Object}   data   - ProductRequest (JSON)
+ * @param {File[]}   files  - Ảnh mới (thay thế toàn bộ ảnh cũ)
  */
-export const updateProduct = (shopId, id, data, branchIds = [], files = []) => {
+export const updateProduct = (shopId, id, data, files = []) => {
   const formData = new FormData();
   formData.append(
     "product",
@@ -88,14 +80,9 @@ export const updateProduct = (shopId, id, data, branchIds = [], files = []) => {
   );
   files.forEach((file) => formData.append("files", file));
 
-  const params = new URLSearchParams();
-  branchIds.forEach((bid) => params.append("branchIds", bid));
-
-  return axiosInstance.put(
-    `/shops/${shopId}/products/${id}${params.toString() ? `?${params}` : ""}`,
-    formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
-  );
+  return axiosInstance.put(`/shops/${shopId}/products/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 };
 
 /**

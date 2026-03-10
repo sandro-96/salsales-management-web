@@ -17,8 +17,6 @@ import { toast } from "sonner";
  * @param {Function} onClose    - Callback đóng dialog
  * @param {Object}   [product]  - ProductResponse nếu ở mode edit (id = BranchProduct ID)
  * @param {string}   shopId     - ID cửa hàng
- * @param {string}   branchId   - ID chi nhánh hiện tại (dùng fallback khi edit)
- * @param {Array}    branches   - Danh sách chi nhánh của shop (dùng khi create)
  * @param {Function} onSuccess  - Callback sau khi lưu thành công
  */
 export default function ProductFormModal({
@@ -26,7 +24,6 @@ export default function ProductFormModal({
   onClose,
   product,
   shopId,
-  branches = [],
   onSuccess,
 }) {
   const isEdit = !!product;
@@ -43,15 +40,8 @@ export default function ProductFormModal({
       setLoading(true);
 
       if (isEdit) {
-        // Cập nhật: id = BranchProduct ID, áp dụng cho chi nhánh của product
-        const { branchIds: _ignored, ...productData } = data;
-        const res = await updateProduct(
-          shopId,
-          product.id,
-          productData,
-          data?.branchIds,
-          files,
-        );
+        // Cập nhật sản phẩm
+        const res = await updateProduct(shopId, product.id, data, files);
         if (res.data?.success) {
           toast.success("Cập nhật sản phẩm thành công.");
           onSuccess?.();
@@ -60,14 +50,10 @@ export default function ProductFormModal({
           toast.error(res.data?.message || "Cập nhật thất bại.");
         }
       } else {
-        // Tạo mới: dùng createProduct (shop-level) với danh sách chi nhánh đã chọn
-        const { branchIds = [], ...productData } = data;
-
-        const res = await createProduct(shopId, productData, branchIds, files);
+        // Tạo mới
+        const res = await createProduct(shopId, data, files);
         if (res.data?.success) {
-          toast.success(
-            `Thêm sản phẩm thành công${branchIds.length > 0 ? ` vào ${branchIds.length} chi nhánh` : ""}.`,
-          );
+          toast.success("Thêm sản phẩm thành công.");
           onSuccess?.();
           onClose?.();
         } else {
@@ -112,7 +98,6 @@ export default function ProductFormModal({
             isLoading={loading}
             onModeChange={setMode}
             onCancel={onClose}
-            branches={branches}
           />
         </div>
       </DialogContent>

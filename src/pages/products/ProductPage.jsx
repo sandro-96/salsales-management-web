@@ -1,21 +1,14 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useShop } from "../../hooks/useShop.js";
 import { toast } from "sonner";
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  MoreHorizontal,
-  PackagePlus,
-  Package,
-  ChevronDown,
-  AlertTriangle,
-} from "lucide-react";
+import { MoreHorizontal, PackagePlus, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -49,14 +42,14 @@ import {
 import ProductFormModal from "./ProductFormModal.jsx";
 
 const ProductPage = () => {
-  const { selectedShopId, branches } = useShop();
+  const { selectedShopId } = useShop();
   const shopId = selectedShopId;
   const { confirm } = useAlertDialog();
 
   // Chọn chi nhánh để xem sản phẩm
-  const [selectedBranchId, setSelectedBranchId] = useState(null);
 
   const [products, setProducts] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,28 +57,52 @@ const ProductPage = () => {
   const [editingProduct, setEditingProduct] = useState(null);
 
   const [sorting, setSorting] = useState([]);
-  const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+  const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const debounceRef = useRef(null);
 
-  // Không auto-select chi nhánh - null = tất cả sản phẩm của shop
+  const handleKeywordChange = (value) => {
+    setKeyword(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedKeyword(value);
+      setPagination((p) => ({ ...p, pageIndex: 0 }));
+    }, 400);
+  };
 
   const fetchProducts = useCallback(async () => {
     if (!shopId) return;
     setLoading(true);
     try {
-      const params = selectedBranchId ? { branchIds: [selectedBranchId] } : {};
+      const params = {
+        page: pagination.pageIndex,
+        size: pagination.pageSize,
+      };
+      if (sorting.length > 0) {
+        params.sortBy = sorting[0].id;
+        params.sortDir = sorting[0].desc ? "DESC" : "ASC";
+      }
+      if (debouncedKeyword) params.keyword = debouncedKeyword;
       const res = await getProducts(shopId, params);
       const data = res.data?.data;
-      const list = Array.isArray(data) ? data : (data?.content ?? data ?? []);
-      setProducts(list);
+      if (data && typeof data === "object" && "content" in data) {
+        setProducts(data.content ?? []);
+        setTotalCount(data.page?.totalElements ?? data.totalElements ?? 0);
+      } else {
+        const list = Array.isArray(data) ? data : [];
+        setProducts(list);
+        setTotalCount(list.length);
+      }
     } catch (err) {
       console.error("Fetch products error:", err);
       toast.error("Không thể tải danh sách sản phẩm.");
     } finally {
       setLoading(false);
     }
-  }, [shopId, selectedBranchId]);
+  }, [shopId, pagination, sorting, debouncedKeyword]);
 
   useEffect(() => {
     fetchProducts();
@@ -94,7 +111,7 @@ const ProductPage = () => {
   // Toggle active tại chi nhánh (activeInBranch)
   const handleToggleActive = async (product) => {
     try {
-      const res = await toggleProductActive(shopId, product.id);
+      const res = await toggleProductActive(shopId, product.productId);
       if (res.data?.success) {
         const updated = res.data.data;
         setProducts((prev) =>
@@ -229,10 +246,12 @@ const ProductPage = () => {
       cell: ({ row }) => {
         const product = row.original;
         return (
-          <Switch
-            checked={!!product.activeInBranch}
-            onCheckedChange={() => handleToggleActive(product)}
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <Switch
+              checked={!!product.activeInBranch}
+              onCheckedChange={() => handleToggleActive(product)}
+            />
+          </div>
         );
       },
     },
@@ -283,23 +302,26 @@ const ProductPage = () => {
   const table = useReactTable({
     data: products,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    manualPagination: true,
+    manualSorting: true,
+    pageCount: Math.ceil(totalCount / pagination.pageSize),
+    onSortingChange: (updater) => {
+      setSorting(updater);
+      setPagination((p) => ({ ...p, pageIndex: 0 }));
+    },
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      columnFilters,
+      pagination,
       columnVisibility,
       rowSelection,
     },
   });
-
-  const selectedBranch = branches?.find((b) => b.id === selectedBranchId);
 
   return (
     <div className="h-full flex-1 flex-col gap-8 p-8 md:flex">
@@ -309,41 +331,6 @@ const ProductPage = () => {
           <h2 className="text-2xl font-semibold tracking-tight">
             Quản lý sản phẩm
           </h2>
-
-          {/* Branch filter dropdown */}
-          {branches?.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1 w-fit">
-                  {selectedBranch?.name ?? "Tất cả chi nhánh"}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background">
-                <DropdownMenuItem
-                  onClick={() => setSelectedBranchId(null)}
-                  className={!selectedBranchId ? "font-semibold" : ""}
-                >
-                  Tất cả chi nhánh
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {branches.map((b) => (
-                  <DropdownMenuItem
-                    key={b.id}
-                    onClick={() => setSelectedBranchId(b.id)}
-                    className={b.id === selectedBranchId ? "font-semibold" : ""}
-                  >
-                    {b.name}
-                    {b.default && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        Mặc định
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
 
         {/* Toolbar */}
@@ -351,10 +338,8 @@ const ProductPage = () => {
           <div className="flex items-center gap-2">
             <Input
               placeholder="Tìm kiếm sản phẩm..."
-              value={table.getColumn("name")?.getFilterValue() ?? ""}
-              onChange={(e) =>
-                table.getColumn("name")?.setFilterValue(e.target.value)
-              }
+              value={keyword}
+              onChange={(e) => handleKeywordChange(e.target.value)}
               className="max-w-sm"
             />
             <DataTableViewOptions table={table} />
@@ -423,9 +408,7 @@ const ProductPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    {selectedBranchId
-                      ? "Chưa có sản phẩm nào tại chi nhánh này."
-                      : "Chưa có sản phẩm nào trong cửa hàng."}
+                    Chưa có sản phẩm nào trong cửa hàng.
                   </TableCell>
                 </TableRow>
               )}
@@ -441,7 +424,6 @@ const ProductPage = () => {
         onClose={() => setModalOpen(false)}
         product={editingProduct}
         shopId={shopId}
-        branches={branches ?? []}
         onSuccess={fetchProducts}
       />
     </div>
