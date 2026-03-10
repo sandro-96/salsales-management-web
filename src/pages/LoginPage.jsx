@@ -81,9 +81,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex flex-row h-screen">
-      <div className="basis-full p-12 flex flex-col gap-2 justify-center max-w-lg mx-auto relative">
-        <div className="grid w-full max-w-sm grid-cols-1 gap-4">
+    <div className="flex flex-col md:flex-row min-h-screen">
+      <div className="flex-1 p-6 md:p-12 flex flex-col gap-2 justify-center w-full md:max-w-lg md:mx-auto relative">
+        <div className="grid w-full max-w-sm grid-cols-1 gap-4 mx-auto">
           {loading && <LoadingOverlay text="Đang xử lý..." />}
           <h1 className="text-xl font-bold font-serif text-blue-900">
             VMANAGE
@@ -179,7 +179,7 @@ const LoginPage = () => {
           </form>
         </div>
       </div>
-      <div className="basis-full bg-[url(https://images.unsplash.com/photo-1496917756835-20cb06e75b4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1908&q=80)] bg-center bg-cover"></div>
+      <div className="hidden md:block flex-1 bg-[url(https://images.unsplash.com/photo-1496917756835-20cb06e75b4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1908&q=80)] bg-center bg-cover"></div>
     </div>
   );
 };

@@ -36,26 +36,24 @@ import { ShopSwitcher } from "../shop-switcher";
 
 export function AppSidebar({ navItems, ...props }) {
   const { logout, user } = useAuth();
-  const { selectedShop, shops, setSelectedShop } = useShop();
+  const { selectedShop, shops } = useShop();
 
   console.log("selectedShop", selectedShop);
 
   const userData = {
     name: user?.fullName || "Người dùng",
     email: user?.email || "email@example.com",
-    avatar: user?.avatarUrl
-      ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
-          user.avatarUrl
-        }`
-      : null,
+    avatar: user?.avatarUrl ? user.avatarUrl : null,
   };
 
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarTrigger />
-      <SidebarHeader>
-        <ShopSwitcher shops={shops} activeShop={selectedShop} />
-      </SidebarHeader>
+      {shops.length > 0 && (
+        <SidebarHeader>
+          <ShopSwitcher shops={shops} activeShop={selectedShop} />
+        </SidebarHeader>
+      )}
       <SidebarContent>
         <SidebarMenu>
           {navItems.map(({ to, icon: Icon, label, onClick }) => (

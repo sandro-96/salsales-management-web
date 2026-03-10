@@ -33,10 +33,7 @@ export function ShopSwitcher() {
               <div className="flex aspect-square size-6 items-center justify-center rounded-md border ">
                 <Avatar className="size-6 rounded-md">
                   <AvatarImage
-                    src={`${import.meta.env.VITE_API_BASE_URL.replace(
-                      "/api",
-                      ""
-                    )}${selectedShop.logoUrl}`}
+                    src={selectedShop.logoUrl}
                     alt={selectedShop.name}
                     className="size-full object-cover"
                   />
@@ -77,13 +74,7 @@ export function ShopSwitcher() {
                 >
                   <div className="flex size-6 items-center justify-center rounded-md border">
                     <Avatar className="size-6 rounded-lg">
-                      <AvatarImage
-                        src={`${import.meta.env.VITE_API_BASE_URL.replace(
-                          "/api",
-                          ""
-                        )}${shop.logoUrl}`}
-                        alt={shop.name}
-                      />
+                      <AvatarImage src={shop.logoUrl} alt={shop.name} />
                       <AvatarFallback className="rounded-lg">
                         {shop.name.charAt(0)}
                       </AvatarFallback>

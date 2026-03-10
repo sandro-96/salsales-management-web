@@ -106,7 +106,7 @@ const AccountPage = () => {
       }
       formData.append(
         "user",
-        new Blob([JSON.stringify(userData)], { type: "application/json" })
+        new Blob([JSON.stringify(userData)], { type: "application/json" }),
       );
       if (avatarFile) {
         formData.append("file", avatarFile);
@@ -336,7 +336,7 @@ const AccountPage = () => {
                       validate: (value) => {
                         if (value && countryCode) {
                           const country = countryOptions.find(
-                            (c) => c.code === countryCode
+                            (c) => c.code === countryCode,
                           );
                           if (
                             country &&
@@ -471,13 +471,7 @@ const AccountPage = () => {
                 </label>
                 {previewAvatar || user.avatarUrl ? (
                   <img
-                    src={
-                      previewAvatar ||
-                      `${import.meta.env.VITE_API_BASE_URL.replace(
-                        "/api",
-                        ""
-                      )}${user.avatarUrl}`
-                    }
+                    src={previewAvatar || user.avatarUrl}
                     alt="Avatar"
                     className="w-24 h-24 rounded-full mx-auto mb-2"
                   />
@@ -635,10 +629,7 @@ const AccountPage = () => {
                   </label>
                   {user.avatarUrl ? (
                     <img
-                      src={`${import.meta.env.VITE_API_BASE_URL.replace(
-                        "/api",
-                        ""
-                      )}${user.avatarUrl}`}
+                      src={user.avatarUrl}
                       alt="Avatar"
                       className="w-24 h-24 rounded-full mx-auto mb-2"
                     />

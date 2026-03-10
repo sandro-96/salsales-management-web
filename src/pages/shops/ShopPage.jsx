@@ -90,10 +90,7 @@ const ShopPage = () => {
                   <ItemMedia>
                     <Avatar className="size-10 rounded-lg">
                       <AvatarImage
-                        src={`${import.meta.env.VITE_API_BASE_URL.replace(
-                          "/api",
-                          ""
-                        )}${shop.logoUrl}`}
+                        src={shop.logoUrl}
                         alt="Shop Logo"
                         className="size-full object-cover"
                       />

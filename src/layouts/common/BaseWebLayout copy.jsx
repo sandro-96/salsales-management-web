@@ -29,11 +29,7 @@ const BaseWebLayout = ({ title, navItems }) => {
 
   const shopItems = shops.map((shop) => ({
     title: shop.name,
-    avatar: shop.logoUrl
-      ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
-          shop.logoUrl
-        }`
-      : null,
+    avatar: shop.logoUrl ? shop.logoUrl : null,
     icon: <FaStore />,
     onClick: () => {
       if (shop.id !== selectedShop?.id) {
@@ -53,10 +49,7 @@ const BaseWebLayout = ({ title, navItems }) => {
               <span className="size-6 inline-grid shrink-0 align-middle [--avatar-radius:50%] outline -outline-offset-1 outline-black/10 dark:outline-white/10 rounded-(--avatar-radius) *:rounded-(--avatar-radius)">
                 {selectedShop?.logoUrl ? (
                   <img
-                    src={`${import.meta.env.VITE_API_BASE_URL.replace(
-                      "/api",
-                      ""
-                    )}${selectedShop?.logoUrl}`}
+                    src={selectedShop.logoUrl}
                     alt="Shop Avatar"
                     className="w-full h-full"
                   />
@@ -120,10 +113,7 @@ const BaseWebLayout = ({ title, navItems }) => {
               <span className="size-10 inline-grid shrink-0 align-middle [--avatar-radius:20%] outline -outline-offset-1 outline-black/10 dark:outline-white/10 rounded-(--avatar-radius) *:rounded-(--avatar-radius)">
                 {user?.avatarUrl ? (
                   <img
-                    src={`${import.meta.env.VITE_API_BASE_URL.replace(
-                      "/api",
-                      ""
-                    )}${user.avatarUrl}`}
+                    src={user.avatarUrl}
                     alt="User Avatar"
                     className="w-full h-full"
                   />
@@ -195,10 +185,7 @@ const BaseWebLayout = ({ title, navItems }) => {
                 <span className="size-6 inline-grid shrink-0 align-middle [--avatar-radius:20%] outline -outline-offset-1 outline-black/10 dark:outline-white/10 rounded-(--avatar-radius) *:rounded-(--avatar-radius)">
                   {user?.avatarUrl ? (
                     <img
-                      src={`${import.meta.env.VITE_API_BASE_URL.replace(
-                        "/api",
-                        ""
-                      )}${user.avatarUrl}`}
+                      src={user.avatarUrl}
                       alt="User Avatar"
                       className="w-full h-full"
                     />

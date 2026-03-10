@@ -12,9 +12,11 @@ import {
 } from "@/components/ui/sidebar";
 import { ShopSwitcher } from "./shop-switcher";
 import { useAuth } from "@/hooks/useAuth";
+import { useShop } from "@/hooks/useShop";
 
 export function AppSidebar({ navItems, ...props }) {
   const { user } = useAuth();
+  const { shops } = useShop();
 
   const navSecondary = [
     {
@@ -32,17 +34,15 @@ export function AppSidebar({ navItems, ...props }) {
   const userData = {
     name: user?.fullName || "Người dùng",
     email: user?.email || "email@example.com",
-    avatar: user?.avatarUrl
-      ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
-          user.avatarUrl
-        }`
-      : null,
+    avatar: user?.avatarUrl ? user.avatarUrl : null,
   };
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
-        <ShopSwitcher />
-      </SidebarHeader>
+      {shops.length > 0 && (
+        <SidebarHeader>
+          <ShopSwitcher />
+        </SidebarHeader>
+      )}
       <SidebarContent>
         <NavMain items={navItems} />
         {/* <NavDocuments items={data.documents} /> */}

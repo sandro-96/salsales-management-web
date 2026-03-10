@@ -38,27 +38,31 @@ export const getProductById = (shopId, branchId, id) =>
   axiosInstance.get(`/shops/${shopId}/branches/${branchId}/products/${id}`);
 
 /**
- * ➕ Tạo sản phẩm mới từ shop (JSON body, không phải multipart)
+ * ➕ Tạo sản phẩm mới từ shop (multipart/form-data)
  * POST /api/shops/{shopId}/products?branchIds=...
  * @param {string}   shopId
  * @param {Object}   data      - ProductRequest (JSON)
  * @param {string[]} branchIds - Danh sách branchId tùy chọn
+ * @param {File[]}   files     - Ảnh đính kèm (tối đa 10)
  */
-export const createProduct = (shopId, data, branchIds = []) =>
-  axiosInstance.post(`/shops/${shopId}/products`, data, {
-    params: branchIds.length ? { branchIds } : {},
-    paramsSerializer: (p) => {
-      const sp = new URLSearchParams();
-      Object.entries(p).forEach(([key, val]) => {
-        if (Array.isArray(val)) {
-          val.forEach((v) => sp.append(key, v));
-        } else if (val !== undefined && val !== null) {
-          sp.append(key, val);
-        }
-      });
-      return sp.toString();
-    },
-  });
+export const createProduct = (shopId, data, branchIds = [], files = []) => {
+  debugger;
+  const formData = new FormData();
+  formData.append(
+    "product",
+    new Blob([JSON.stringify(data)], { type: "application/json" }),
+  );
+  files.forEach((file) => formData.append("files", file));
+
+  const params = new URLSearchParams();
+  branchIds.forEach((id) => params.append("branchIds", id));
+
+  return axiosInstance.post(
+    `/shops/${shopId}/products${params.toString() ? `?${params}` : ""}`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+};
 
 /**
  * ➕ Tạo sản phẩm từ chi nhánh
@@ -74,22 +78,25 @@ export const createBranchProduct = (shopId, branchId, data) =>
  * @param {string}   id        - BranchProduct ID
  * @param {Object}   data      - ProductRequest (JSON)
  * @param {string[]} branchIds - Chi nhánh cần cập nhật (tùy chọn)
+ * @param {File[]}   files     - Ảnh mới (thay thế toàn bộ ảnh cũ)
  */
-export const updateProduct = (shopId, id, data, branchIds = []) =>
-  axiosInstance.put(`/shops/${shopId}/products/${id}`, data, {
-    params: branchIds.length ? { branchIds } : {},
-    paramsSerializer: (p) => {
-      const sp = new URLSearchParams();
-      Object.entries(p).forEach(([key, val]) => {
-        if (Array.isArray(val)) {
-          val.forEach((v) => sp.append(`${key}[]`, v));
-        } else if (val !== undefined && val !== null) {
-          sp.append(key, val);
-        }
-      });
-      return sp.toString();
-    },
-  });
+export const updateProduct = (shopId, id, data, branchIds = [], files = []) => {
+  const formData = new FormData();
+  formData.append(
+    "product",
+    new Blob([JSON.stringify(data)], { type: "application/json" }),
+  );
+  files.forEach((file) => formData.append("files", file));
+
+  const params = new URLSearchParams();
+  branchIds.forEach((bid) => params.append("branchIds", bid));
+
+  return axiosInstance.put(
+    `/shops/${shopId}/products/${id}${params.toString() ? `?${params}` : ""}`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+};
 
 /**
  * 🗑️ Xóa sản phẩm (id = BranchProduct ID)

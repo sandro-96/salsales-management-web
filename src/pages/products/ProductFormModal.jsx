@@ -38,7 +38,7 @@ export default function ProductFormModal({
     setMode(product ? "view" : "create");
   }, [product, open]);
 
-  const handleSubmit = async (data) => {
+  const handleSubmit = async (data, files = []) => {
     try {
       setLoading(true);
 
@@ -50,6 +50,7 @@ export default function ProductFormModal({
           product.id,
           productData,
           data?.branchIds,
+          files,
         );
         if (res.data?.success) {
           toast.success("Cập nhật sản phẩm thành công.");
@@ -62,15 +63,10 @@ export default function ProductFormModal({
         // Tạo mới: dùng createProduct (shop-level) với danh sách chi nhánh đã chọn
         const { branchIds = [], ...productData } = data;
 
-        if (branchIds.length === 0) {
-          toast.error("Vui lòng chọn ít nhất 1 chi nhánh để phân bổ sản phẩm.");
-          return;
-        }
-
-        const res = await createProduct(shopId, productData, branchIds);
+        const res = await createProduct(shopId, productData, branchIds, files);
         if (res.data?.success) {
           toast.success(
-            `Thêm sản phẩm thành công cho ${branchIds.length} chi nhánh.`,
+            `Thêm sản phẩm thành công${branchIds.length > 0 ? ` vào ${branchIds.length} chi nhánh` : ""}.`,
           );
           onSuccess?.();
           onClose?.();
@@ -88,7 +84,10 @@ export default function ProductFormModal({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
-      <DialogContent className="sm:max-w-[720px] h-[90vh] flex flex-col">
+      <DialogContent
+        className="sm:max-w-[720px] h-[90vh] flex flex-col"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {!isEdit

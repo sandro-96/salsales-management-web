@@ -3,7 +3,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Copy, Sparkles } from "lucide-react";
+import { Copy, ImagePlus, Sparkles, X } from "lucide-react";
+import imageCompression from "browser-image-compression";
 import { useShop } from "@/hooks/useShop.js";
 import { getSuggestedSku, getSuggestedBarcode } from "@/api/productApi.js";
 import {
@@ -214,6 +215,77 @@ export default function ProductForm({
     formState: { isDirty },
   } = form;
 
+  // ── Image upload state ───────────────────────────────────────────────────
+  const MAX_IMAGES = 10;
+  const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+  // Existing images from server (URLs)
+  const existingImages = product?.images ?? [];
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [fileInputKey, setFileInputKey] = useState(Date.now());
+
+  // Reset images when product changes
+  useEffect(() => {
+    setFiles([]);
+    setPreviews([]);
+    setFileInputKey(Date.now());
+  }, [product]);
+
+  const handleImageChange = async (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+
+    const remaining = MAX_IMAGES - files.length;
+    if (remaining <= 0) {
+      toast.error(`Tối đa ${MAX_IMAGES} ảnh.`);
+      return;
+    }
+    const toProcess = selected.slice(0, remaining);
+    if (selected.length > remaining) {
+      toast.warning(
+        `Chỉ thêm ${remaining} ảnh, bỏ qua ${selected.length - remaining} ảnh còn lại.`,
+      );
+    }
+
+    const invalid = toProcess.filter((f) => !ALLOWED_TYPES.includes(f.type));
+    if (invalid.length) {
+      toast.error("Chỉ hỗ trợ JPG, PNG hoặc WEBP.");
+      return;
+    }
+
+    const processed = await Promise.all(
+      toProcess.map(async (f) => {
+        if (f.size > 2 * 1024 * 1024) {
+          try {
+            const compressed = await imageCompression(f, {
+              maxSizeMB: 1.5,
+              maxWidthOrHeight: 1920,
+              useWebWorker: true,
+            });
+            return new File([compressed], f.name, { type: compressed.type });
+          } catch {
+            return f;
+          }
+        }
+        return f;
+      }),
+    );
+
+    setFiles((prev) => [...prev, ...processed]);
+    setPreviews((prev) => [
+      ...prev,
+      ...processed.map((f) => URL.createObjectURL(f)),
+    ]);
+    setFileInputKey(Date.now());
+  };
+
+  const removeImage = (index) => {
+    URL.revokeObjectURL(previews[index]);
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const watchedCategory = watch("category");
   const watchedUnit = watch("unit");
   const watchedActive = watch("active");
@@ -244,11 +316,10 @@ export default function ProductForm({
       setUnitMode(isCustomUnit(product.unit) ? "custom" : "select");
       setCategoryMode(isCustomCategory(product.category) ? "custom" : "select");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product, reset]);
 
   const handleSubmit = (data) => {
-    onSubmit(data);
+    onSubmit(data, files);
   };
 
   // ── Unit select field ──────────────────────────────────────────────────────
@@ -579,6 +650,98 @@ export default function ProductForm({
     </div>
   );
 
+  // ── Image upload section ───────────────────────────────────────────────────
+  const ImageUploadSection = () => (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">
+          Hình ảnh sản phẩm{" "}
+          <span className="text-xs text-muted-foreground">
+            (JPG, PNG, WEBP — tối đa {MAX_IMAGES} ảnh, mỗi ảnh ≤ 2MB)
+          </span>
+        </span>
+        {!isReadOnly && files.length < MAX_IMAGES && (
+          <label className="cursor-pointer">
+            <input
+              key={fileInputKey}
+              type="file"
+              multiple
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+            <span className="inline-flex items-center gap-1 text-xs text-primary border border-primary rounded px-2 py-1 hover:bg-primary/10 transition-colors">
+              <ImagePlus className="w-3.5 h-3.5" />
+              Thêm ảnh
+            </span>
+          </label>
+        )}
+      </div>
+
+      {/* Existing images (view/edit mode) */}
+      {existingImages.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {existingImages.map((url, i) => (
+            <div
+              key={i}
+              className="relative size-20 rounded-md overflow-hidden border"
+            >
+              <img
+                src={url}
+                alt={`product-${i}`}
+                className="size-full object-cover"
+              />
+              {!isReadOnly && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <span className="text-white text-xs">Hiện tại</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* New previews */}
+      {previews.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {previews.map((src, i) => (
+            <div
+              key={i}
+              className="relative size-20 rounded-md overflow-hidden border"
+            >
+              <img
+                src={src}
+                alt={`preview-${i}`}
+                className="size-full object-cover"
+              />
+              {!isReadOnly && (
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {existingImages.length === 0 && previews.length === 0 && (
+        <div className="flex items-center justify-center h-20 border border-dashed rounded-md text-muted-foreground text-sm">
+          Chưa có ảnh
+        </div>
+      )}
+
+      {!isReadOnly && files.length > 0 && existingImages.length > 0 && (
+        <p className="text-xs text-amber-600">
+          Khi lưu, {files.length} ảnh mới sẽ thay thế toàn bộ ảnh cũ.
+        </p>
+      )}
+    </div>
+  );
+
   // ── Action buttons ─────────────────────────────────────────────────────────
   const ActionButtons = () => (
     <div className="flex justify-end gap-2 pt-2 border-t sticky bottom-0 bg-background pb-1">
@@ -640,6 +803,8 @@ export default function ProductForm({
         className="w-full flex flex-col gap-6 h-full justify-between p-1"
       >
         {ProductInfoSection()}
+
+        {ImageUploadSection()}
 
         {ActionButtons()}
       </form>

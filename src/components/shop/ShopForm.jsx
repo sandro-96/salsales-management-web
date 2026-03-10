@@ -75,13 +75,7 @@ export default function ShopForm({
   } = form;
 
   useEffect(() => {
-    setImagePreview(
-      shop?.logoUrl
-        ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
-            shop.logoUrl
-          }`
-        : null
-    );
+    setImagePreview(shop?.logoUrl ? shop.logoUrl : null);
     if (mode === "view") {
       reset(shop);
     } else if (mode === "edit") {
@@ -94,11 +88,7 @@ export default function ShopForm({
 
   const [file, setFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(
-    shop?.logoUrl
-      ? `${import.meta.env.VITE_API_BASE_URL.replace("/api", "")}${
-          shop.logoUrl
-        }`
-      : null
+    shop?.logoUrl ? shop.logoUrl : null,
   );
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
@@ -338,12 +328,12 @@ export default function ShopForm({
                         <Select
                           onValueChange={(value) => {
                             const selectedType = shopTypes.find(
-                              (s) => s.value === value
+                              (s) => s.value === value,
                             );
                             field.onChange(value);
                             form.setValue(
                               "businessModel",
-                              selectedType?.defaultBusinessModel || "DINE_IN"
+                              selectedType?.defaultBusinessModel || "DINE_IN",
                             );
                           }}
                           value={field.value}
@@ -458,7 +448,7 @@ export default function ShopForm({
                                 <span>
                                   {
                                     COUNTRIES.find(
-                                      (c) => c.code === field.value
+                                      (c) => c.code === field.value,
                                     )?.name
                                   }
                                 </span>
@@ -625,8 +615,8 @@ export default function ShopForm({
                 {isLoading
                   ? "Đang xử lý..."
                   : mode === "edit"
-                  ? "Cập nhật"
-                  : "Tạo cửa hàng"}
+                    ? "Cập nhật"
+                    : "Tạo cửa hàng"}
               </Button>
             </>
           )}
