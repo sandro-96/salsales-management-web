@@ -219,24 +219,29 @@ export default function ProductForm({
   const MAX_IMAGES = 10;
   const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
-  // Existing images from server (URLs)
-  const existingImages = product?.images ?? [];
+  // Existing image URLs to keep (user can remove individual ones)
+  const [keptImages, setKeptImages] = useState(product?.images ?? []);
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
   // Reset images when product changes
   useEffect(() => {
+    setKeptImages(product?.images ?? []);
     setFiles([]);
     setPreviews([]);
     setFileInputKey(Date.now());
   }, [product]);
 
+  const removeExistingImage = (index) => {
+    setKeptImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleImageChange = async (e) => {
     const selected = Array.from(e.target.files || []);
     if (!selected.length) return;
 
-    const remaining = MAX_IMAGES - files.length;
+    const remaining = MAX_IMAGES - keptImages.length - files.length;
     if (remaining <= 0) {
       toast.error(`Tối đa ${MAX_IMAGES} ảnh.`);
       return;
@@ -286,6 +291,11 @@ export default function ProductForm({
     setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const imageDirty =
+    files.length > 0 ||
+    keptImages.length !== (product?.images?.length ?? 0) ||
+    keptImages.some((url, i) => url !== (product?.images ?? [])[i]);
+
   const watchedCategory = watch("category");
   const watchedUnit = watch("unit");
   const watchedActive = watch("active");
@@ -319,7 +329,7 @@ export default function ProductForm({
   }, [product, reset]);
 
   const handleSubmit = (data) => {
-    onSubmit(data, files);
+    onSubmit({ ...data, images: keptImages }, files);
   };
 
   // ── Unit select field ──────────────────────────────────────────────────────
@@ -660,7 +670,7 @@ export default function ProductForm({
             (JPG, PNG, WEBP — tối đa {MAX_IMAGES} ảnh, mỗi ảnh ≤ 2MB)
           </span>
         </span>
-        {!isReadOnly && files.length < MAX_IMAGES && (
+        {!isReadOnly && keptImages.length + files.length < MAX_IMAGES && (
           <label className="cursor-pointer">
             <input
               key={fileInputKey}
@@ -679,9 +689,9 @@ export default function ProductForm({
       </div>
 
       {/* Existing images (view/edit mode) */}
-      {existingImages.length > 0 && (
+      {keptImages.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {existingImages.map((url, i) => (
+          {keptImages.map((url, i) => (
             <div
               key={i}
               className="relative size-20 rounded-md overflow-hidden border"
@@ -692,9 +702,13 @@ export default function ProductForm({
                 className="size-full object-cover"
               />
               {!isReadOnly && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                  <span className="text-white text-xs">Hiện tại</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => removeExistingImage(i)}
+                  className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               )}
             </div>
           ))}
@@ -728,15 +742,15 @@ export default function ProductForm({
         </div>
       )}
 
-      {existingImages.length === 0 && previews.length === 0 && (
+      {keptImages.length === 0 && previews.length === 0 && (
         <div className="flex items-center justify-center h-20 border border-dashed rounded-md text-muted-foreground text-sm">
           Chưa có ảnh
         </div>
       )}
 
-      {!isReadOnly && files.length > 0 && existingImages.length > 0 && (
-        <p className="text-xs text-amber-600">
-          Khi lưu, {files.length} ảnh mới sẽ thay thế toàn bộ ảnh cũ.
+      {!isReadOnly && files.length > 0 && (
+        <p className="text-xs text-blue-600">
+          {files.length} ảnh mới sẽ được thêm vào.
         </p>
       )}
     </div>
@@ -782,7 +796,9 @@ export default function ProductForm({
           <Button
             variant={mode === "edit" ? "warning" : "success"}
             type="submit"
-            disabled={isLoading || (mode !== "create" && !isDirty)}
+            disabled={
+              isLoading || (mode !== "create" && !isDirty && !imageDirty)
+            }
           >
             {isLoading
               ? "Đang xử lý..."

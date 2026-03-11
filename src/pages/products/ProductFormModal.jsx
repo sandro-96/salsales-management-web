@@ -41,7 +41,7 @@ export default function ProductFormModal({
 
       if (isEdit) {
         // Cập nhật sản phẩm
-        const res = await updateProduct(shopId, product.id, data, files);
+        const res = await updateProduct(shopId, product.productId, data, files);
         if (res.data?.success) {
           toast.success("Cập nhật sản phẩm thành công.");
           onSuccess?.();

@@ -108,19 +108,19 @@ const ProductPage = () => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Toggle active tại chi nhánh (activeInBranch)
+  // Toggle active tại chi nhánh (active)
   const handleToggleActive = async (product) => {
     try {
       const res = await toggleProductActive(shopId, product.productId);
       if (res.data?.success) {
         const updated = res.data.data;
         setProducts((prev) =>
-          prev.map((p) => (p.id === product.id ? { ...p, ...updated } : p)),
+          prev.map((p) =>
+            p.productId === product.productId ? { ...p, ...updated } : p,
+          ),
         );
         toast.success(
-          updated?.activeInBranch
-            ? "Đã kích hoạt sản phẩm."
-            : "Đã tắt sản phẩm.",
+          updated?.active ? "Đã kích hoạt sản phẩm." : "Đã tắt sản phẩm.",
         );
       }
     } catch {
@@ -142,7 +142,7 @@ const ProductPage = () => {
 
     try {
       setIsSubmitting(true);
-      const res = await deleteProduct(shopId, product.id);
+      const res = await deleteProduct(shopId, product.productId);
       if (res.data?.success) {
         toast.success("Xóa sản phẩm thành công.");
         await fetchProducts();
@@ -216,13 +216,13 @@ const ProductPage = () => {
       cell: ({ row }) => <div>{row.getValue("category") || "-"}</div>,
     },
     {
-      accessorKey: "price",
+      accessorKey: "defaultPrice",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Giá bán" />
       ),
       cell: ({ row }) => {
         const product = row.original;
-        const price = row.getValue("price");
+        const price = row.getValue("defaultPrice");
         const discountPrice = product.discountPrice;
         return (
           <div className="flex flex-col gap-0.5">
@@ -239,7 +239,7 @@ const ProductPage = () => {
       },
     },
     {
-      accessorKey: "activeInBranch",
+      accessorKey: "active",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Hoạt động" />
       ),
@@ -248,7 +248,7 @@ const ProductPage = () => {
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <Switch
-              checked={!!product.activeInBranch}
+              checked={!!product.active}
               onCheckedChange={() => handleToggleActive(product)}
             />
           </div>

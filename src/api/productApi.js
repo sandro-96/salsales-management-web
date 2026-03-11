@@ -70,7 +70,8 @@ export const createBranchProduct = (shopId, branchId, data) =>
  * @param {string}   shopId
  * @param {string}   id     - BranchProduct ID
  * @param {Object}   data   - ProductRequest (JSON)
- * @param {File[]}   files  - Ảnh mới (thay thế toàn bộ ảnh cũ)
+ * @param {File[]}   files  - Ảnh mới muốn thêm vào
+ * Note: data.images phải chứa các URL ảnh cũ muốn giữ lại; ảnh không có trong list sẽ bị xóa khỏi S3
  */
 export const updateProduct = (shopId, id, data, files = []) => {
   const formData = new FormData();
@@ -96,8 +97,8 @@ export const deleteProduct = (shopId, id) =>
  * 🔄 Bật/tắt trạng thái activeInBranch
  * PATCH /api/shops/{shopId}/branches/{branchId}/products/{branchProductId}/toggle-active
  */
-export const toggleProductActive = (shopId, branchId, branchProductId) =>
-  axiosInstance.patch(`/shops/${shopId}/products/${branchProductId}/toggle`);
+export const toggleProductActive = (shopId, productId) =>
+  axiosInstance.patch(`/shops/${shopId}/products/${productId}/toggle`);
 
 /**
  * ⚠️ Lấy danh sách sản phẩm tồn kho thấp
