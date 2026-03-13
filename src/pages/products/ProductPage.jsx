@@ -8,7 +8,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MoreHorizontal, PackagePlus, Package } from "lucide-react";
+import { MoreHorizontal, PackagePlus, Package, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,7 +59,7 @@ const ProductPage = () => {
   const [sorting, setSorting] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const debounceRef = useRef(null);
@@ -140,18 +140,26 @@ const ProductPage = () => {
     );
     if (!ok) return;
 
+    // Optimistic update: remove immediately from UI
+    setProducts((prev) =>
+      prev.filter((p) => p.productId !== product.productId),
+    );
+    setTotalCount((c) => c - 1);
+
     try {
       setIsSubmitting(true);
       const res = await deleteProduct(shopId, product.productId);
       if (res.data?.success) {
         toast.success("Xóa sản phẩm thành công.");
-        await fetchProducts();
+        fetchProducts(); // background sync, no await
       } else {
         toast.error(res.data?.message || "Xóa sản phẩm thất bại.");
+        fetchProducts(); // revert
       }
     } catch (err) {
       console.error("Delete product error:", err);
       toast.error("Đã xảy ra lỗi khi xóa sản phẩm.");
+      fetchProducts(); // revert
     } finally {
       setIsSubmitting(false);
     }
@@ -356,7 +364,12 @@ const ProductPage = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-hidden rounded-md border">
+        <div className="relative overflow-hidden rounded-md border">
+          {loading && products.length > 0 && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -375,7 +388,7 @@ const ProductPage = () => {
               ))}
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {loading && products.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={columns.length}
