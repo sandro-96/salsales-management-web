@@ -36,17 +36,19 @@ import { DataTablePagination } from "@/components/table/DataTablePagination.jsx"
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import {
   getProducts,
+  getBranchProducts,
   deleteProduct,
   toggleProductActive,
+  toggleProductActiveInBranch,
 } from "../../api/productApi.js";
 import ProductFormModal from "./ProductFormModal.jsx";
 
 const ProductPage = () => {
-  const { selectedShopId } = useShop();
+  const { selectedShopId, selectedShop, selectedBranchId, selectedBranch } =
+    useShop();
+  const trackInventory = selectedShop?.trackInventory ?? false;
   const shopId = selectedShopId;
   const { confirm } = useAlertDialog();
-
-  // Chọn chi nhánh để xem sản phẩm
 
   const [products, setProducts] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -86,7 +88,9 @@ const ProductPage = () => {
         params.sortDir = sorting[0].desc ? "DESC" : "ASC";
       }
       if (debouncedKeyword) params.keyword = debouncedKeyword;
-      const res = await getProducts(shopId, params);
+      const res = await (selectedBranchId
+        ? getBranchProducts(shopId, selectedBranchId, params)
+        : getProducts(shopId, params));
       const data = res.data?.data;
       if (data && typeof data === "object" && "content" in data) {
         setProducts(data.content ?? []);
@@ -102,16 +106,23 @@ const ProductPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [shopId, pagination, sorting, debouncedKeyword]);
+  }, [shopId, selectedBranchId, pagination, sorting, debouncedKeyword]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Reset to first page when branch changes
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [selectedBranchId]);
+
   // Toggle active tại chi nhánh (active)
   const handleToggleActive = async (product) => {
     try {
-      const res = await toggleProductActive(shopId, product.productId);
+      const res = await (selectedBranchId
+        ? toggleProductActiveInBranch(shopId, selectedBranchId, product.id)
+        : toggleProductActive(shopId, product.productId));
       if (res.data?.success) {
         const updated = res.data.data;
         setProducts((prev) =>
@@ -230,33 +241,80 @@ const ProductPage = () => {
       ),
       cell: ({ row }) => {
         const product = row.original;
-        const price = row.getValue("defaultPrice");
+        // When branch selected, show branch price (price) and its discount
+        const price = selectedBranchId
+          ? (product.price ?? product.defaultPrice)
+          : product.defaultPrice;
         const discountPrice = product.discountPrice;
+        const discountPercentage = product.discountPercentage;
+        const calculatedDiscount =
+          discountPrice != null && discountPrice > 0
+            ? discountPrice
+            : discountPercentage != null && discountPercentage > 0 && price
+              ? price * (1 - discountPercentage / 100)
+              : null;
         return (
           <div className="flex flex-col gap-0.5">
             <span className="font-medium">
               {price ? Number(price).toLocaleString("vi-VN") + " ₫" : "-"}
             </span>
-            {discountPrice != null && discountPrice > 0 && (
-              <span className="text-xs text-green-600 line-through">
-                {Number(discountPrice).toLocaleString("vi-VN")} ₫
+            {calculatedDiscount != null && (
+              <span className="text-xs text-green-600">
+                KM: {Number(calculatedDiscount).toLocaleString("vi-VN")} ₫
+                {discountPercentage != null && discountPercentage > 0 && (
+                  <span className="ml-1 opacity-75">
+                    (-{discountPercentage}%)
+                  </span>
+                )}
               </span>
             )}
           </div>
         );
       },
     },
+    // Quantity column — only when a branch is selected and shop tracks inventory
+    ...(selectedBranchId && trackInventory
+      ? [
+          {
+            accessorKey: "quantity",
+            header: ({ column }) => (
+              <DataTableColumnHeader column={column} title="Tồn kho" />
+            ),
+            cell: ({ row }) => {
+              const qty = row.getValue("quantity");
+              const min = row.original.minQuantity;
+              const low = min != null && qty != null && qty <= min;
+              return (
+                <div
+                  className={`font-medium tabular-nums ${
+                    low ? "text-red-500" : ""
+                  }`}
+                >
+                  {qty ?? "-"}
+                  {low && <span className="ml-1 text-xs">(thấp)</span>}
+                </div>
+              );
+            },
+          },
+        ]
+      : []),
     {
       accessorKey: "active",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Hoạt động" />
+        <DataTableColumnHeader
+          column={column}
+          title={selectedBranchId ? "Đang bán" : "Hoạt động"}
+        />
       ),
       cell: ({ row }) => {
         const product = row.original;
+        const checked = selectedBranchId
+          ? !!(product.activeInBranch ?? product.active)
+          : !!product.active;
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <Switch
-              checked={!!product.active}
+              checked={checked}
               onCheckedChange={() => handleToggleActive(product)}
             />
           </div>
@@ -336,9 +394,16 @@ const ProductPage = () => {
       <div className="flex flex-col gap-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Quản lý sản phẩm
-          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Quản lý sản phẩm
+            </h2>
+            {selectedBranch && (
+              <Badge variant="outline" className="text-xs font-normal">
+                {selectedBranch.name}
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Toolbar */}
@@ -437,6 +502,7 @@ const ProductPage = () => {
         onClose={() => setModalOpen(false)}
         product={editingProduct}
         shopId={shopId}
+        selectedBranchId={selectedBranchId}
         onSuccess={fetchProducts}
       />
     </div>

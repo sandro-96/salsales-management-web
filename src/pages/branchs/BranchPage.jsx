@@ -133,7 +133,7 @@ const BranchPage = () => {
         const active = row.getValue("active");
         const isDefault = branch.default;
         return (
-          <div>
+          <div onClick={(e) => e.stopPropagation()}>
             <Switch
               id="airplane-mode"
               defaultChecked={active}

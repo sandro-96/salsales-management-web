@@ -12,6 +12,8 @@ const ShopProvider = ({ children }) => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedIndustry, setSelectedIndustry] = useState(null);
   const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchIdState] = useState(null);
+  const [selectedBranch, setSelectedBranchState] = useState(null);
 
   const setSelectedShopId = useCallback(
     (id) => {
@@ -32,6 +34,21 @@ const ShopProvider = ({ children }) => {
     [shops],
   );
 
+  const setSelectedBranchId = useCallback(
+    (id) => {
+      setSelectedBranchIdState(id);
+      if (id) {
+        localStorage.setItem("selectedBranchId", id);
+        const branch = branches.find((b) => b.id === id);
+        setSelectedBranchState(branch ?? null);
+      } else {
+        localStorage.removeItem("selectedBranchId");
+        setSelectedBranchState(null);
+      }
+    },
+    [branches],
+  );
+
   const setSelectedShop = useCallback(
     (shop) => {
       if (shop?.id === selectedShopId) return;
@@ -41,13 +58,20 @@ const ShopProvider = ({ children }) => {
         setSelectedRole(null);
         setSelectedIndustry(null);
         setBranches([]);
+        setSelectedBranchIdState(null);
+        setSelectedBranchState(null);
         localStorage.removeItem("selectedShopId");
+        localStorage.removeItem("selectedBranchId");
       } else {
         setSelectedShopIdState(shop.id);
         setSelectedShopState(shop);
         setSelectedRole(shop.role);
         setSelectedIndustry(shop.industry);
         setBranches([]);
+        // Reset branch when switching shops
+        setSelectedBranchIdState(null);
+        setSelectedBranchState(null);
+        localStorage.removeItem("selectedBranchId");
         localStorage.setItem("selectedShopId", shop.id);
       }
     },
@@ -104,8 +128,24 @@ const ShopProvider = ({ children }) => {
         const res = await axiosInstance.get("/branches", {
           params: { shopId: id },
         });
+        const list = res.data.data || [];
+        setBranches(list);
 
-        setBranches(res.data.data || []);
+        // Restore saved branch selection for this shop
+        const savedBranchId = localStorage.getItem("selectedBranchId");
+        const validBranch = list.find((b) => b.id === savedBranchId);
+        if (validBranch) {
+          setSelectedBranchIdState(savedBranchId);
+          setSelectedBranchState(validBranch);
+        } else if (list.length === 1) {
+          // Auto-select if only one branch
+          setSelectedBranchIdState(list[0].id);
+          setSelectedBranchState(list[0]);
+          localStorage.setItem("selectedBranchId", list[0].id);
+        } else {
+          setSelectedBranchIdState(null);
+          setSelectedBranchState(null);
+        }
       } catch (err) {
         console.error("Lỗi khi tải danh sách chi nhánh", err);
         setBranches([]);
@@ -152,6 +192,9 @@ const ShopProvider = ({ children }) => {
         setBranches,
         branches,
         fetchBranches,
+        selectedBranchId,
+        selectedBranch,
+        setSelectedBranchId,
       }}
     >
       {children}

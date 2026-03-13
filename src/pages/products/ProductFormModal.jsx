@@ -6,7 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ProductForm from "./ProductForm.jsx";
+import BranchPricesTab from "./BranchPricesTab.jsx";
 import { createProduct, updateProduct } from "../../api/productApi.js";
 import { toast } from "sonner";
 
@@ -24,15 +26,18 @@ export default function ProductFormModal({
   onClose,
   product,
   shopId,
+  selectedBranchId,
   onSuccess,
 }) {
   const isEdit = !!product;
   const [mode, setMode] = useState(() => (product ? "view" : "create"));
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("info");
 
-  // Reset mode when product changes or modal opens
+  // Reset mode and tab when product changes or modal opens
   useEffect(() => {
     setMode(product ? "view" : "create");
+    setActiveTab("info");
   }, [product, open]);
 
   const handleSubmit = async (data, files = []) => {
@@ -90,16 +95,60 @@ export default function ProductFormModal({
               : "Điền thông tin để thêm sản phẩm mới vào cửa hàng."}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-1">
-          <ProductForm
-            mode={isEdit ? mode : "create"}
-            product={product}
-            onSubmit={handleSubmit}
-            isLoading={loading}
-            onModeChange={setMode}
-            onCancel={onClose}
-          />
-        </div>
+
+        {isEdit ? (
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex flex-col flex-1 min-h-0"
+          >
+            <TabsList className="shrink-0 w-fit">
+              <TabsTrigger value="info">Thông tin chung</TabsTrigger>
+              <TabsTrigger value="branch-prices">
+                {selectedBranchId
+                  ? "Thông tin chi nhánh"
+                  : "Giá theo chi nhánh"}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent
+              value="info"
+              className="flex-1 overflow-y-auto pr-1 mt-0"
+            >
+              <ProductForm
+                mode={mode}
+                product={product}
+                onSubmit={handleSubmit}
+                isLoading={loading}
+                onModeChange={setMode}
+                onCancel={onClose}
+              />
+            </TabsContent>
+
+            <TabsContent
+              value="branch-prices"
+              className="flex-1 overflow-y-auto pr-1 mt-0"
+            >
+              <BranchPricesTab
+                shopId={shopId}
+                product={product}
+                focusBranchId={selectedBranchId}
+                onSuccess={onSuccess}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="flex-1 overflow-y-auto pr-1">
+            <ProductForm
+              mode="create"
+              product={product}
+              onSubmit={handleSubmit}
+              isLoading={loading}
+              onModeChange={setMode}
+              onCancel={onClose}
+            />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

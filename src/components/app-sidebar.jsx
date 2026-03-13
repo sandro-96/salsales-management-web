@@ -11,6 +11,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { ShopSwitcher } from "./shop-switcher";
+import { BranchSwitcher } from "./branch-switcher";
 import { useAuth } from "@/hooks/useAuth";
 import { useShop } from "@/hooks/useShop";
 
@@ -41,6 +42,7 @@ export function AppSidebar({ navItems, ...props }) {
       {shops.length > 0 && (
         <SidebarHeader>
           <ShopSwitcher />
+          <BranchSwitcher />
         </SidebarHeader>
       )}
       <SidebarContent>

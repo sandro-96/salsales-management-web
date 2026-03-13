@@ -5,8 +5,8 @@ import axiosInstance from "./axiosInstance";
  * GET /api/shops/{shopId}/products
  * params: { keyword, category, active, minPrice, maxPrice, page, size, sortBy, sortDir, branchIds[] }
  */
-export const getProducts = (shopId, params = {}) =>
-  axiosInstance.get(`/shops/${shopId}/products`, {
+export const getProducts = (shopId, params = {}, isSearch = false) =>
+  axiosInstance.get(`/shops/${shopId}/products${isSearch ? "/search" : ""}`, {
     params,
     paramsSerializer: (p) => {
       const sp = new URLSearchParams();
@@ -87,6 +87,20 @@ export const updateProduct = (shopId, id, data, files = []) => {
 };
 
 /**
+ * ✏️ Cập nhật BranchProduct (giá, tồn kho, trạng thái theo chi nhánh)
+ * PUT /api/shops/{shopId}/branches/{branchId}/products/{id}
+ * @param {string} shopId
+ * @param {string} branchId
+ * @param {string} id       - BranchProduct ID
+ * @param {Object} data     - { price, branchCostPrice, discountPrice, discountPercentage, quantity, minQuantity, expiryDate, activeInBranch }
+ */
+export const updateBranchProduct = (shopId, branchId, id, data) =>
+  axiosInstance.put(
+    `/shops/${shopId}/branches/${branchId}/products/${id}`,
+    data,
+  );
+
+/**
  * 🗑️ Xóa sản phẩm (id = BranchProduct ID)
  * DELETE /api/shops/{shopId}/branches/{branchId}/products/{id}
  */
@@ -94,11 +108,24 @@ export const deleteProduct = (shopId, id) =>
   axiosInstance.delete(`/shops/${shopId}/products/${id}`);
 
 /**
- * 🔄 Bật/tắt trạng thái activeInBranch
- * PATCH /api/shops/{shopId}/branches/{branchId}/products/{branchProductId}/toggle-active
+ * 🔄 Bật/tắt trạng thái active
+ * PATCH /api/shops/{shopId}/products/{productId}/toggle-active
  */
 export const toggleProductActive = (shopId, productId) =>
   axiosInstance.patch(`/shops/${shopId}/products/${productId}/toggle`);
+
+/**
+ * 🔄 Bật/tắt trạng thái activeInBranch
+ * PATCH /api/shops/{shopId}/branches/{branchId}/products/{branchProductId}/toggle-active
+ */
+export const toggleProductActiveInBranch = (
+  shopId,
+  branchId,
+  branchProductId,
+) =>
+  axiosInstance.patch(
+    `/shops/${shopId}/branches/${branchId}/products/${branchProductId}/toggle`,
+  );
 
 /**
  * ⚠️ Lấy danh sách sản phẩm tồn kho thấp
