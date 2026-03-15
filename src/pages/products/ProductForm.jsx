@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Copy, ImagePlus, Sparkles, X } from "lucide-react";
+import { Copy, ImagePlus, Plus, Sparkles, Trash2, X } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import { useShop } from "@/hooks/useShop.js";
 import { getSuggestedSku, getSuggestedBarcode } from "@/api/productApi.js";
@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -72,6 +73,21 @@ function ReadOnlyValue({
   );
 }
 
+// ── Variant Schema ──────────────────────────────────────────────────────────
+const variantAttributeSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+});
+
+const variantSchema = z.object({
+  variantId: z.string().optional(),
+  name: z.string().min(1, "Tên biến thể không được để trống"),
+  sku: z.string().optional().nullable(),
+  price: z.coerce.number().min(0).default(0),
+  costPrice: z.coerce.number().min(0).default(0),
+  attributes: z.array(variantAttributeSchema).default([]),
+});
+
 // ── Zod Schema ───────────────────────────────────────────────────────────────
 const formSchema = z.object({
   // Product fields
@@ -90,7 +106,207 @@ const formSchema = z.object({
     .positive("Giá bán mặc định phải > 0"),
   costPrice: z.coerce.number().min(0).default(0),
   active: z.boolean().default(true),
+  variants: z.array(variantSchema).default([]),
 });
+
+// ── Variant Card ─────────────────────────────────────────────────────────────
+function VariantCard({ nestIndex, control, isReadOnly, onRemove }) {
+  const {
+    fields: attrFields,
+    append: appendAttr,
+    remove: removeAttr,
+  } = useFieldArray({ control, name: `variants.${nestIndex}.attributes` });
+
+  return (
+    <div className="border border-border rounded-lg p-4 flex flex-col gap-3 bg-muted/20">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">Biến thể #{nestIndex + 1}</span>
+        {!isReadOnly && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-destructive hover:text-destructive/80 p-1 rounded transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Name & SKU */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <FormField
+          control={control}
+          name={`variants.${nestIndex}.name`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">
+                Tên biến thể <span className="text-red-500">*</span>
+              </FormLabel>
+              {isReadOnly ? (
+                <ReadOnlyValue value={field.value} />
+              ) : (
+                <FormControl>
+                  <Input placeholder="VD: Màu đỏ, Size L..." {...field} />
+                </FormControl>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${nestIndex}.sku`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">SKU biến thể</FormLabel>
+              {isReadOnly ? (
+                <ReadOnlyValue value={field.value} />
+              ) : (
+                <FormControl>
+                  <Input
+                    placeholder="VD: SP001-RED-L"
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) =>
+                      field.onChange(e.target.value.toUpperCase())
+                    }
+                  />
+                </FormControl>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      {/* Price & CostPrice */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <FormField
+          control={control}
+          name={`variants.${nestIndex}.price`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Giá bán</FormLabel>
+              {isReadOnly ? (
+                <ReadOnlyValue value={formatVND(field.value)} />
+              ) : (
+                <FormControl>
+                  <NumericInput
+                    placeholder="0"
+                    value={String(field.value ?? "")}
+                    onChange={(val) =>
+                      field.onChange(val === "" ? 0 : Number(val))
+                    }
+                    suffix=" ₫"
+                  />
+                </FormControl>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${nestIndex}.costPrice`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Giá vốn</FormLabel>
+              {isReadOnly ? (
+                <ReadOnlyValue value={formatVND(field.value)} />
+              ) : (
+                <FormControl>
+                  <NumericInput
+                    placeholder="0"
+                    value={String(field.value ?? "")}
+                    onChange={(val) =>
+                      field.onChange(val === "" ? 0 : Number(val))
+                    }
+                    suffix=" ₫"
+                  />
+                </FormControl>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      {/* Attributes */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
+            Thuộc tính
+          </span>
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={() => appendAttr({ key: "", value: "" })}
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Thêm thuộc tính
+            </button>
+          )}
+        </div>
+
+        {attrFields.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">
+            {isReadOnly ? "Không có thuộc tính" : "Chưa có thuộc tính."}
+          </p>
+        )}
+
+        {attrFields.map((attr, attrIdx) => (
+          <div key={attr.id} className="flex gap-2 items-start">
+            <FormField
+              control={control}
+              name={`variants.${nestIndex}.attributes.${attrIdx}.key`}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  {isReadOnly ? (
+                    <ReadOnlyValue value={field.value} />
+                  ) : (
+                    <FormControl>
+                      <Input placeholder="Tên (VD: Màu sắc)" {...field} />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <span className="text-muted-foreground text-sm shrink-0 mt-2.5">
+              :
+            </span>
+            <FormField
+              control={control}
+              name={`variants.${nestIndex}.attributes.${attrIdx}.value`}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  {isReadOnly ? (
+                    <ReadOnlyValue value={field.value} />
+                  ) : (
+                    <FormControl>
+                      <Input placeholder="Giá trị (VD: Đỏ)" {...field} />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {!isReadOnly && (
+              <button
+                type="button"
+                onClick={() => removeAttr(attrIdx)}
+                className="text-destructive hover:text-destructive/80 p-1 rounded shrink-0 mt-1 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function ProductForm({
@@ -194,6 +410,19 @@ export default function ProductForm({
           defaultPrice: product.defaultPrice ?? 0,
           costPrice: product.costPrice ?? 0,
           active: product.active ?? true,
+          variants: (product.variants ?? []).map((v) => ({
+            variantId: v.variantId ?? undefined,
+            name: v.name ?? "",
+            sku: v.sku ?? "",
+            price: v.price ?? 0,
+            costPrice: v.costPrice ?? 0,
+            attributes: v.attributes
+              ? Object.entries(v.attributes).map(([key, value]) => ({
+                  key,
+                  value,
+                }))
+              : [],
+          })),
         }
       : {
           name: "",
@@ -206,6 +435,7 @@ export default function ProductForm({
           defaultPrice: 0,
           costPrice: 0,
           active: savedActive,
+          variants: [],
         },
   });
 
@@ -214,6 +444,12 @@ export default function ProductForm({
     watch,
     formState: { isDirty },
   } = form;
+
+  const {
+    fields: variantFields,
+    append: appendVariant,
+    remove: removeVariant,
+  } = useFieldArray({ control: form.control, name: "variants" });
 
   // ── Image upload state ───────────────────────────────────────────────────
   const MAX_IMAGES = 10;
@@ -322,6 +558,19 @@ export default function ProductForm({
         defaultPrice: product.defaultPrice ?? 0,
         costPrice: product.costPrice ?? 0,
         active: product.active ?? true,
+        variants: (product.variants ?? []).map((v) => ({
+          variantId: v.variantId ?? undefined,
+          name: v.name ?? "",
+          sku: v.sku ?? "",
+          price: v.price ?? 0,
+          costPrice: v.costPrice ?? 0,
+          attributes: v.attributes
+            ? Object.entries(v.attributes).map(([key, value]) => ({
+                key,
+                value,
+              }))
+            : [],
+        })),
       });
       setUnitMode(isCustomUnit(product.unit) ? "custom" : "select");
       setCategoryMode(isCustomCategory(product.category) ? "custom" : "select");
@@ -329,7 +578,19 @@ export default function ProductForm({
   }, [product, reset]);
 
   const handleSubmit = (data) => {
-    onSubmit({ ...data, images: keptImages }, files);
+    const transformedVariants = (data.variants ?? []).map(
+      ({ attributes, ...rest }) => ({
+        ...rest,
+        attributes: (attributes ?? []).reduce((acc, { key, value }) => {
+          if (key?.trim()) acc[key.trim()] = value ?? "";
+          return acc;
+        }, {}),
+      }),
+    );
+    onSubmit(
+      { ...data, images: keptImages, variants: transformedVariants },
+      files,
+    );
   };
 
   // ── Unit select field ──────────────────────────────────────────────────────
@@ -343,7 +604,12 @@ export default function ProductForm({
             Đơn vị tính <span className="text-red-500">*</span>
           </FormLabel>
           {isReadOnly ? (
-            <ReadOnlyValue value={field.value} />
+            <ReadOnlyValue
+              value={
+                PRODUCT_UNITS.find((u) => u.value === field.value)?.label ??
+                field.value
+              }
+            />
           ) : (
             <div className="flex flex-col gap-2">
               <Select
@@ -401,7 +667,12 @@ export default function ProductForm({
         <FormItem>
           <FormLabel>Danh mục</FormLabel>
           {isReadOnly ? (
-            <ReadOnlyValue value={field.value} />
+            <ReadOnlyValue
+              value={
+                PRODUCT_CATEGORIES.find((c) => c.value === field.value)
+                  ?.label ?? field.value
+              }
+            />
           ) : (
             <div className="flex flex-col gap-2">
               <Select
@@ -580,13 +851,20 @@ export default function ProductForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                Giá bán mặc định (₫) <span className="text-red-500">*</span>
+                Giá bán mặc định <span className="text-red-500">*</span>
               </FormLabel>
               {isReadOnly ? (
                 <ReadOnlyValue value={formatVND(field.value)} />
               ) : (
                 <FormControl>
-                  <Input type="number" min={0} placeholder="0" {...field} />
+                  <NumericInput
+                    placeholder="0"
+                    value={String(field.value ?? "")}
+                    onChange={(val) =>
+                      field.onChange(val === "" ? 0 : Number(val))
+                    }
+                    suffix=" ₫"
+                  />
                 </FormControl>
               )}
               <FormMessage />
@@ -598,12 +876,19 @@ export default function ProductForm({
           name="costPrice"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Giá vốn mặc định (₫)</FormLabel>
+              <FormLabel>Giá vốn mặc định</FormLabel>
               {isReadOnly ? (
                 <ReadOnlyValue value={formatVND(field.value)} />
               ) : (
                 <FormControl>
-                  <Input type="number" min={0} placeholder="0" {...field} />
+                  <NumericInput
+                    placeholder="0"
+                    value={String(field.value ?? "")}
+                    onChange={(val) =>
+                      field.onChange(val === "" ? 0 : Number(val))
+                    }
+                    suffix=" ₫"
+                  />
                 </FormControl>
               )}
               <FormMessage />
@@ -661,6 +946,61 @@ export default function ProductForm({
   );
 
   // ── Image upload section ───────────────────────────────────────────────────
+  // ── Variants section ─────────────────────────────────────────────────────
+  const VariantsSection = () => (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold">
+          Biến thể sản phẩm{" "}
+          <span className="text-xs text-muted-foreground font-normal">
+            ({variantFields.length})
+          </span>
+        </span>
+        {!isReadOnly && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              appendVariant({
+                variantId: undefined,
+                name: "",
+                sku: "",
+                price: form.getValues("defaultPrice") ?? 0,
+                costPrice: form.getValues("costPrice") ?? 0,
+                attributes: [],
+              })
+            }
+            className="flex items-center gap-1 h-8 text-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Thêm biến thể
+          </Button>
+        )}
+      </div>
+
+      {variantFields.length === 0 ? (
+        <div className="flex items-center justify-center h-14 border border-dashed rounded-md text-muted-foreground text-sm">
+          {isReadOnly
+            ? "Không có biến thể"
+            : 'Chưa có biến thể. Nhấn "Thêm biến thể" để bắt đầu.'}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {variantFields.map((variant, index) => (
+            <VariantCard
+              key={variant.id}
+              nestIndex={index}
+              control={form.control}
+              isReadOnly={isReadOnly}
+              onRemove={() => removeVariant(index)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const ImageUploadSection = () => (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -819,6 +1159,8 @@ export default function ProductForm({
         className="w-full flex flex-col gap-6 h-full justify-between p-1"
       >
         {ProductInfoSection()}
+
+        {VariantsSection()}
 
         {ImageUploadSection()}
 

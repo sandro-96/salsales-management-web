@@ -5,6 +5,7 @@ import { useShop } from "@/hooks/useShop.js";
 import { getProducts, updateBranchProduct } from "@/api/productApi.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 
@@ -254,26 +255,29 @@ export default function BranchPricesTab({
                   {/* Pricing */}
                   <div className="grid grid-cols-2 gap-3">
                     <Field
-                      label="Giá bán tại chi nhánh (₫)"
+                      label="Giá bán tại chi nhánh"
                       placeholder={String(product?.defaultPrice ?? "")}
                       value={draft.price}
                       onChange={(v) => setDraftField(branch.id, "price", v)}
+                      suffix=" ₫"
                     />
                     <Field
-                      label="Giá vốn tại chi nhánh (₫)"
+                      label="Giá vốn tại chi nhánh"
                       placeholder={String(product?.costPrice ?? "")}
                       value={draft.branchCostPrice}
                       onChange={(v) =>
                         setDraftField(branch.id, "branchCostPrice", v)
                       }
+                      suffix=" ₫"
                     />
                     <Field
-                      label="Giá khuyến mãi (₫)"
+                      label="Giá khuyến mãi"
                       placeholder="Không áp dụng"
                       value={draft.discountPrice}
                       onChange={(v) =>
                         setDraftField(branch.id, "discountPrice", v)
                       }
+                      suffix=" ₫"
                     />
                     <Field
                       label="Giảm giá (%)"
@@ -283,6 +287,7 @@ export default function BranchPricesTab({
                       onChange={(v) =>
                         setDraftField(branch.id, "discountPercentage", v)
                       }
+                      suffix=" %"
                     />
                   </div>
 
@@ -306,20 +311,24 @@ export default function BranchPricesTab({
                             setDraftField(branch.id, "minQuantity", v)
                           }
                         />
+                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                          <label className="text-xs text-muted-foreground font-medium">
+                            Hạn sử dụng
+                          </label>
+                          <Input
+                            type="date"
+                            value={draft.expiryDate}
+                            onChange={(e) =>
+                              setDraftField(
+                                branch.id,
+                                "expiryDate",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </div>
                       </>
                     )}
-                    <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                      <label className="text-xs text-muted-foreground font-medium">
-                        Hạn sử dụng
-                      </label>
-                      <Input
-                        type="date"
-                        value={draft.expiryDate}
-                        onChange={(e) =>
-                          setDraftField(branch.id, "expiryDate", e.target.value)
-                        }
-                      />
-                    </div>
                   </div>
 
                   <div className="flex justify-end">
@@ -356,19 +365,18 @@ export default function BranchPricesTab({
 }
 
 // ── Small helper ─────────────────────────────────────────────────────────────
-function Field({ label, value, onChange, placeholder = "", max }) {
+function Field({ label, value, onChange, placeholder = "", max, suffix = "" }) {
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs text-muted-foreground font-medium">
         {label}
       </label>
-      <Input
-        type="number"
-        min={0}
+      <NumericInput
         max={max}
         placeholder={placeholder}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
+        suffix={suffix}
       />
     </div>
   );
