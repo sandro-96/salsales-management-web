@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -46,6 +46,19 @@ const BranchSettingsPage = () => {
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [activeService, setActiveService] = useState("products");
   const [productCount, setProductCount] = useState(null);
+  const prevShopIdRef = useRef(null);
+
+  /* ── Navigate away when shop changes ───────────────────────────────────── */
+  useEffect(() => {
+    if (prevShopIdRef.current === null) {
+      prevShopIdRef.current = selectedShop?.id ?? null;
+      return;
+    }
+    if (selectedShop?.id !== prevShopIdRef.current) {
+      navigate("/branches");
+    }
+    prevShopIdRef.current = selectedShop?.id ?? null;
+  }, [selectedShop, navigate]);
 
   /* ── Fetch branch ───────────────────────────────────────────────────────── */
   const fetchBranch = useCallback(async () => {
@@ -56,10 +69,12 @@ const BranchSettingsPage = () => {
       if (res.data.success) {
         setBranch(res.data.data);
       } else {
+        setBranch(null);
         toast.error("Không tìm thấy chi nhánh.");
       }
     } catch (err) {
       console.error("Fetch branch error:", err);
+      setBranch(null);
       toast.error("Đã xảy ra lỗi khi tải chi nhánh.");
     } finally {
       setLoading(false);

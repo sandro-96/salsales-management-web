@@ -178,3 +178,34 @@ export const getSuggestedBarcode = (shopId, industry, category) =>
   axiosInstance.get(`/shops/${shopId}/suggested-barcode`, {
     params: { industry, category },
   });
+
+/**
+ * 📥 Xuất sản phẩm ra file Excel
+ * GET /api/products/import-export/export
+ * @param {string}      shopId
+ * @param {string|null} branchId - Nếu null: xuất cấp shop (cột chi nhánh trống)
+ */
+export const exportProductsExcel = (shopId, branchId = null) => {
+  const params = { shopId };
+  if (branchId) params.branchId = branchId;
+  return axiosInstance.get("/products/import-export/export", {
+    params,
+    responseType: "blob",
+  });
+};
+
+/**
+ * 📤 Nhập sản phẩm từ file Excel
+ * POST /api/products/import-export/import
+ * @param {string} shopId
+ * @param {string} branchId
+ * @param {File}   file
+ */
+export const importProductsExcel = (shopId, branchId, file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return axiosInstance.post("/products/import-export/import", formData, {
+    params: { shopId, branchId },
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};

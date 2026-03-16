@@ -14,6 +14,7 @@ import {
   Package,
   Loader2,
   ScanLine,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,10 +47,12 @@ import {
   toggleProductActive,
 } from "../../api/productApi.js";
 import ProductFormModal from "./ProductFormModal.jsx";
+import ProductImportExportDialog from "./ProductImportExportDialog.jsx";
 
 const ProductPage = () => {
-  const { selectedShopId } = useShop();
+  const { selectedShopId, branches, isOwner, isStaff } = useShop();
   const shopId = selectedShopId;
+  const canImportExport = isOwner || isStaff;
   const { confirm } = useAlertDialog();
 
   const [products, setProducts] = useState([]);
@@ -59,6 +62,7 @@ const ProductPage = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [importExportOpen, setImportExportOpen] = useState(false);
   const [createStep, setCreateStep] = useState("scan"); // "scan" | "form"
 
   const [sorting, setSorting] = useState([]);
@@ -344,6 +348,17 @@ const ProductPage = () => {
             <DataTableViewOptions table={table} />
           </div>
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            {canImportExport && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+                onClick={() => setImportExportOpen(true)}
+              >
+                <FileSpreadsheet className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Excel</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -449,6 +464,14 @@ const ProductPage = () => {
         shopId={shopId}
         onSuccess={fetchProducts}
         startStep={editingProduct ? undefined : createStep}
+      />
+
+      <ProductImportExportDialog
+        open={importExportOpen}
+        onClose={() => setImportExportOpen(false)}
+        shopId={shopId}
+        branches={branches}
+        onImportSuccess={fetchProducts}
       />
     </div>
   );
