@@ -4,10 +4,21 @@ import { format } from "date-fns";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Copy, ImagePlus, Plus, Sparkles, Trash2, X } from "lucide-react";
+import {
+  Copy,
+  ImagePlus,
+  Loader2,
+  Plus,
+  ScanLine,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import imageCompression from "browser-image-compression";
 import { useShop } from "@/hooks/useShop.js";
 import { getSuggestedSku, getSuggestedBarcode } from "@/api/productApi.js";
+import BarcodeScanner from "@/components/products/BarcodeScanner.jsx";
+import { lookupBarcode } from "@/utils/barcodeUtils.js";
 import {
   Form,
   FormControl,
@@ -314,6 +325,7 @@ function VariantCard({ nestIndex, control, isReadOnly, onRemove }) {
 export default function ProductForm({
   mode = "create",
   product,
+  prefill,
   onSubmit,
   isLoading = false,
   onModeChange,
@@ -328,6 +340,10 @@ export default function ProductForm({
   // Suggest loading states
   const [suggestingSkU, setSuggestingSkU] = useState(false);
   const [suggestingBarcode, setSuggestingBarcode] = useState(false);
+
+  // Barcode scanner
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
 
   const handleSuggestSku = async () => {
     if (!selectedShopId) return;
@@ -348,6 +364,46 @@ export default function ProductForm({
       toast.error("Không thể lấy gợi ý SKU.");
     } finally {
       setSuggestingSkU(false);
+    }
+  };
+
+  const handleBarcodeDetected = async (barcode) => {
+    setScannerOpen(false);
+    // Fill barcode field
+    form.setValue("barcode", barcode, { shouldDirty: true });
+
+    // Try Open Food Facts lookup
+    setLookingUp(true);
+    toast.info("Đang tra cứu thông tin sản phẩm...", { id: "barcode-lookup" });
+    try {
+      const info = await lookupBarcode(barcode);
+      if (info) {
+        if (info.name && !form.getValues("name")) {
+          form.setValue("name", info.name, { shouldDirty: true });
+        }
+        if (info.category && !form.getValues("category")) {
+          form.setValue("category", info.category, { shouldDirty: true });
+          setCategoryMode(
+            isCustomCategory(info.category) ? "custom" : "select",
+          );
+        }
+        if (info.description && !form.getValues("description")) {
+          form.setValue("description", info.description, { shouldDirty: true });
+        }
+        toast.success(
+          info.name
+            ? `Đã điền: "${info.name}" từ Open Food Facts`
+            : "Quét thành công, chưa tìm thấy thông tin trên CSDL",
+          { id: "barcode-lookup" },
+        );
+      } else {
+        toast.success(
+          `Quét được: ${barcode} — không tìm thấy thông tin trên cơ sở dữ liệu`,
+          { id: "barcode-lookup" },
+        );
+      }
+    } finally {
+      setLookingUp(false);
     }
   };
 
@@ -393,6 +449,8 @@ export default function ProductForm({
   const [categoryMode, setCategoryMode] = useState(() => {
     if (product?.category)
       return isCustomCategory(product.category) ? "custom" : "select";
+    if (isCreate && prefill?.category)
+      return isCustomCategory(prefill.category) ? "custom" : "select";
     if (isCreate && savedCategory)
       return isCustomCategory(savedCategory) ? "custom" : "select";
     return "select";
@@ -442,6 +500,22 @@ export default function ProductForm({
           variants: [],
         },
   });
+
+  // Apply prefill when it changes (scan-first flow)
+  useEffect(() => {
+    if (!isCreate || !prefill || Object.keys(prefill).length === 0) return;
+    if (prefill.barcode)
+      form.setValue("barcode", prefill.barcode, { shouldDirty: true });
+    if (prefill.name)
+      form.setValue("name", prefill.name, { shouldDirty: true });
+    if (prefill.description)
+      form.setValue("description", prefill.description, { shouldDirty: true });
+    if (prefill.category) {
+      form.setValue("category", prefill.category, { shouldDirty: true });
+      setCategoryMode(isCustomCategory(prefill.category) ? "custom" : "select");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
 
   const {
     reset,
@@ -804,24 +878,42 @@ export default function ProductForm({
               <div className="flex items-center justify-between">
                 <FormLabel>Mã vạch (Barcode)</FormLabel>
                 {!isReadOnly && (
-                  <button
-                    type="button"
-                    onClick={handleSuggestBarcode}
-                    disabled={suggestingBarcode || !watchedCategory}
-                    title={
-                      !watchedCategory
-                        ? "Chọn danh mục trước để gợi ý Barcode"
-                        : ""
-                    }
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    {suggestingBarcode
-                      ? "Đang lấy..."
-                      : !watchedCategory
-                        ? "Chọn DM trước"
-                        : "Gợi ý EAN-13"}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {/* Scan button only in edit mode — create uses scan-first flow in modal */}
+                    {!isCreate && (
+                      <button
+                        type="button"
+                        onClick={() => setScannerOpen(true)}
+                        disabled={lookingUp}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {lookingUp ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <ScanLine className="w-3 h-3" />
+                        )}
+                        {lookingUp ? "Tra cứu..." : "Quét"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSuggestBarcode}
+                      disabled={suggestingBarcode || !watchedCategory}
+                      title={
+                        !watchedCategory
+                          ? "Chọn danh mục trước để gợi ý Barcode"
+                          : ""
+                      }
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      {suggestingBarcode
+                        ? "Đang lấy..."
+                        : !watchedCategory
+                          ? "Chọn DM trước"
+                          : "Gợi ý EAN-13"}
+                    </button>
+                  </div>
                 )}
               </div>
               {isReadOnly ? (
@@ -1259,6 +1351,12 @@ export default function ProductForm({
 
         {ActionButtons()}
       </form>
+
+      <BarcodeScanner
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onDetected={handleBarcodeDetected}
+      />
     </Form>
   );
 }

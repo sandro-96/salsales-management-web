@@ -8,7 +8,13 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MoreHorizontal, PackagePlus, Package, Loader2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  PackagePlus,
+  Package,
+  Loader2,
+  ScanLine,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -53,6 +59,7 @@ const ProductPage = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [createStep, setCreateStep] = useState("scan"); // "scan" | "form"
 
   const [sorting, setSorting] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -160,11 +167,6 @@ const ProductPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleOpenCreate = () => {
-    setEditingProduct(null);
-    setModalOpen(true);
   };
 
   const handleOpenEdit = (product) => {
@@ -321,7 +323,7 @@ const ProductPage = () => {
   });
 
   return (
-    <div className="h-full flex-1 flex-col gap-8 p-8 md:flex">
+    <div className="h-full flex-1 flex-col gap-8 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -331,25 +333,44 @@ const ProductPage = () => {
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 min-w-0">
             <Input
               placeholder="Tìm kiếm sản phẩm..."
               value={keyword}
               onChange={(e) => handleKeywordChange(e.target.value)}
-              className="max-w-sm"
+              className="flex-1 min-w-0 sm:max-w-sm"
             />
             <DataTableViewOptions table={table} />
           </div>
-          <Button
-            variant="success"
-            size="sm"
-            className="cursor-pointer"
-            onClick={handleOpenCreate}
-          >
-            <PackagePlus className="mr-1 h-4 w-4" />
-            Thêm sản phẩm
-          </Button>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => {
+                setEditingProduct(null);
+                setCreateStep("scan");
+                setModalOpen(true);
+              }}
+            >
+              <ScanLine className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Quét mã vạch</span>
+            </Button>
+            <Button
+              variant="success"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => {
+                setEditingProduct(null);
+                setCreateStep("form");
+                setModalOpen(true);
+              }}
+            >
+              <PackagePlus className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Thêm sản phẩm</span>
+            </Button>
+          </div>
         </div>
 
         {/* Table */}
@@ -427,6 +448,7 @@ const ProductPage = () => {
         product={editingProduct}
         shopId={shopId}
         onSuccess={fetchProducts}
+        startStep={editingProduct ? undefined : createStep}
       />
     </div>
   );
