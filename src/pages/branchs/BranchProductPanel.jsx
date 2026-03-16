@@ -111,7 +111,8 @@ export default function BranchProductPanel({
       }
       setProducts(list);
       setTotalCount(total);
-      onCountChange?.(total);
+      // Chỉ cập nhật số lượng trên card khi không có keyword (tổng thực, không phải kết quả search)
+      if (!debouncedKeyword) onCountChange?.(total);
     } catch (err) {
       console.error("BranchProductPanel fetch error:", err);
       toast.error("Không thể tải danh sách sản phẩm chi nhánh.");

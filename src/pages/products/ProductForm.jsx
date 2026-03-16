@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { format } from "date-fns";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -106,6 +107,7 @@ const formSchema = z.object({
     .positive("Giá bán mặc định phải > 0"),
   costPrice: z.coerce.number().min(0).default(0),
   active: z.boolean().default(true),
+  reason: z.string().optional().nullable(),
   variants: z.array(variantSchema).default([]),
 });
 
@@ -410,6 +412,7 @@ export default function ProductForm({
           defaultPrice: product.defaultPrice ?? 0,
           costPrice: product.costPrice ?? 0,
           active: product.active ?? true,
+          reason: "",
           variants: (product.variants ?? []).map((v) => ({
             variantId: v.variantId ?? undefined,
             name: v.name ?? "",
@@ -435,6 +438,7 @@ export default function ProductForm({
           defaultPrice: 0,
           costPrice: 0,
           active: savedActive,
+          reason: "",
           variants: [],
         },
   });
@@ -942,8 +946,95 @@ export default function ProductForm({
           </FormItem>
         )}
       />
+
+      {/* Lý do thay đổi giá — chỉ hiển thị khi chỉnh sửa */}
+      {!isReadOnly && !isCreate && (
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Lý do thay đổi giá</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Lý do thay đổi giá (không bắt buộc)"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      )}
     </div>
   );
+
+  // ── Price history section (view mode only) ─────────────────────────────────
+  const PriceHistorySection = () => {
+    const history = product?.priceHistory ?? [];
+    if (!isReadOnly || history.length === 0) return null;
+    return (
+      <div className="flex flex-col gap-3">
+        <span className="text-sm font-semibold">
+          Lịch sử thay đổi giá{" "}
+          <span className="text-xs text-muted-foreground font-normal">
+            ({history.length} mục)
+          </span>
+        </span>
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-muted text-muted-foreground border-b">
+                <th className="text-left px-3 py-2 font-medium">Thời điểm</th>
+                <th className="text-right px-3 py-2 font-medium">Giá cũ</th>
+                <th className="text-right px-3 py-2 font-medium">Giá mới</th>
+                <th className="text-right px-3 py-2 font-medium">Vốn cũ</th>
+                <th className="text-right px-3 py-2 font-medium">Vốn mới</th>
+                <th className="text-left px-3 py-2 font-medium">Lý do</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h, i) => (
+                <tr
+                  key={i}
+                  className="border-b last:border-0 hover:bg-muted/30"
+                >
+                  <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                    {h.changedAt
+                      ? format(new Date(h.changedAt), "dd/MM/yyyy HH:mm")
+                      : "-"}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {h.oldPrice != null
+                      ? Number(h.oldPrice).toLocaleString("vi-VN") + " ₫"
+                      : "-"}
+                  </td>
+                  <td className="px-3 py-2 text-right font-medium">
+                    {h.newPrice != null
+                      ? Number(h.newPrice).toLocaleString("vi-VN") + " ₫"
+                      : "-"}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {h.oldCostPrice != null
+                      ? Number(h.oldCostPrice).toLocaleString("vi-VN") + " ₫"
+                      : "-"}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {h.newCostPrice != null
+                      ? Number(h.newCostPrice).toLocaleString("vi-VN") + " ₫"
+                      : "-"}
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground italic">
+                    {h.reason ?? "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   // ── Image upload section ───────────────────────────────────────────────────
   // ── Variants section ─────────────────────────────────────────────────────
@@ -1163,6 +1254,8 @@ export default function ProductForm({
         {VariantsSection()}
 
         {ImageUploadSection()}
+
+        {PriceHistorySection()}
 
         {ActionButtons()}
       </form>

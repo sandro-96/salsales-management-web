@@ -42,7 +42,7 @@ export function AppSidebar({ navItems, ...props }) {
       {shops.length > 0 && (
         <SidebarHeader>
           <ShopSwitcher />
-          <BranchSwitcher />
+          {/* <BranchSwitcher /> */}
         </SidebarHeader>
       )}
       <SidebarContent>

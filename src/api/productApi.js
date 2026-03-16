@@ -1,12 +1,35 @@
 import axiosInstance from "./axiosInstance";
 
 /**
- * 📦 Lấy danh sách sản phẩm theo shopId (ProductSearchRequest)
+ * 📦 Lấy danh sách sản phẩm (phân trang, lọc cơ bản — KHÔNG hỗ trợ keyword search)
  * GET /api/shops/{shopId}/products
- * params: { keyword, category, active, minPrice, maxPrice, page, size, sortBy, sortDir, branchIds[] }
+ * params: { category, active, minPrice, maxPrice, page, size, sortBy, sortDir, branchIds[] }
+ * Dùng khi không cần tìm kiếm theo keyword (VD: load list sơ bộ, dropdown chọn sản phẩm...)
  */
-export const getProducts = (shopId, params = {}, isSearch = false) =>
-  axiosInstance.get(`/shops/${shopId}/products${isSearch ? "/search" : ""}`, {
+export const getProducts = (shopId, params = {}) =>
+  axiosInstance.get(`/shops/${shopId}/products`, {
+    params,
+    paramsSerializer: (p) => {
+      const sp = new URLSearchParams();
+      Object.entries(p).forEach(([key, val]) => {
+        if (Array.isArray(val)) {
+          val.forEach((v) => sp.append(key, v));
+        } else if (val !== undefined && val !== null) {
+          sp.append(key, val);
+        }
+      });
+      return sp.toString();
+    },
+  });
+
+/**
+ * 🔍 Tìm kiếm sản phẩm — hỗ trợ keyword (name/SKU/barcode) + filter nâng cao
+ * GET /api/shops/{shopId}/products/search
+ * params: { keyword, category, active, minPrice, maxPrice, branchId, page, size, sortBy, sortDir }
+ * Dùng cho ProductPage và mọi màn hình có ô tìm kiếm.
+ */
+export const searchProducts = (shopId, params = {}) =>
+  axiosInstance.get(`/shops/${shopId}/products/search`, {
     params,
     paramsSerializer: (p) => {
       const sp = new URLSearchParams();
@@ -24,6 +47,8 @@ export const getProducts = (shopId, params = {}, isSearch = false) =>
 /**
  * 📦 Lấy danh sách sản phẩm theo chi nhánh cụ thể
  * GET /api/shops/{shopId}/branches/{branchId}/products
+ * params: { keyword, page, size, sortBy, sortDir }
+ * Hỗ trợ keyword tìm theo tên/SKU/barcode (cập nhật 16/03/2026)
  */
 export const getBranchProducts = (shopId, branchId, params = {}) =>
   axiosInstance.get(`/shops/${shopId}/branches/${branchId}/products`, {

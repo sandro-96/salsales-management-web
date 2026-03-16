@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Loader2, Store } from "lucide-react";
 import { useShop } from "@/hooks/useShop.js";
-import { getProducts, updateBranchProduct } from "@/api/productApi.js";
+import { searchProducts, updateBranchProduct } from "@/api/productApi.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
@@ -52,6 +52,7 @@ export default function BranchPricesTab({
           minQuantity: bp.minQuantity ?? "",
           expiryDate: bp.expiryDate ?? "",
           activeInBranch: bp.activeInBranch ?? bp.active ?? true,
+          reason: "",
         },
       });
       return;
@@ -60,11 +61,11 @@ export default function BranchPricesTab({
     if (!product.sku) return;
     setLoading(true);
     try {
-      const res = await getProducts(
-        shopId,
-        { keyword: product.sku, page: 0, size: 100 },
-        true,
-      );
+      const res = await searchProducts(shopId, {
+        keyword: product.sku,
+        page: 0,
+        size: 100,
+      });
       const data = res.data?.data;
       const list =
         data && "content" in data
@@ -91,6 +92,7 @@ export default function BranchPricesTab({
             minQuantity: bp.minQuantity ?? "",
             expiryDate: bp.expiryDate ?? "",
             activeInBranch: bp.activeInBranch ?? bp.active ?? true,
+            reason: "",
           };
         }
       });
@@ -136,6 +138,7 @@ export default function BranchPricesTab({
           draft.minQuantity !== "" ? Number(draft.minQuantity) : null,
         expiryDate: draft.expiryDate || null,
         activeInBranch: draft.activeInBranch,
+        reason: draft.reason || null,
       };
       const res = await updateBranchProduct(shopId, branchId, row.id, payload);
       if (res.data?.success) {
@@ -143,6 +146,11 @@ export default function BranchPricesTab({
         setRowsMap((prev) => ({
           ...prev,
           [branchId]: { ...prev[branchId], ...res.data.data },
+        }));
+        // Reset reason after successful save
+        setDrafts((prev) => ({
+          ...prev,
+          [branchId]: { ...prev[branchId], reason: "" },
         }));
         onSuccess?.();
       } else {
@@ -331,6 +339,20 @@ export default function BranchPricesTab({
                     )}
                   </div>
 
+                  {/* Lý do thay đổi giá */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground font-medium">
+                      Lý do thay đổi giá
+                    </label>
+                    <Input
+                      placeholder="Lý do thay đổi giá (không bắt buộc)"
+                      value={draft.reason}
+                      onChange={(e) =>
+                        setDraftField(branch.id, "reason", e.target.value)
+                      }
+                    />
+                  </div>
+
                   <div className="flex justify-end">
                     <Button
                       size="sm"
@@ -350,6 +372,75 @@ export default function BranchPricesTab({
                       )}
                     </Button>
                   </div>
+
+                  {/* Lịch sử giá chi nhánh */}
+                  {rowsMap[branch.id]?.branchPriceHistory?.length > 0 && (
+                    <div className="border-t pt-3 flex flex-col gap-2">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Lịch sử giá chi nhánh (
+                        {rowsMap[branch.id].branchPriceHistory.length} mục)
+                      </span>
+                      <div className="overflow-x-auto rounded-md border">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-muted text-muted-foreground border-b">
+                              <th className="text-left px-2 py-1.5 font-medium">
+                                Thời điểm
+                              </th>
+                              <th className="text-right px-2 py-1.5 font-medium">
+                                Giá cũ
+                              </th>
+                              <th className="text-right px-2 py-1.5 font-medium">
+                                Giá mới
+                              </th>
+                              <th className="text-left px-2 py-1.5 font-medium">
+                                Lý do
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rowsMap[branch.id].branchPriceHistory.map(
+                              (h, i) => (
+                                <tr
+                                  key={i}
+                                  className="border-b last:border-0 hover:bg-muted/30"
+                                >
+                                  <td className="px-2 py-1.5 whitespace-nowrap text-muted-foreground">
+                                    {h.changedAt
+                                      ? new Date(h.changedAt).toLocaleString(
+                                          "vi-VN",
+                                          {
+                                            dateStyle: "short",
+                                            timeStyle: "short",
+                                          },
+                                        )
+                                      : "-"}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {h.oldPrice != null
+                                      ? Number(h.oldPrice).toLocaleString(
+                                          "vi-VN",
+                                        ) + " ₫"
+                                      : "-"}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right font-medium">
+                                    {h.newPrice != null
+                                      ? Number(h.newPrice).toLocaleString(
+                                          "vi-VN",
+                                        ) + " ₫"
+                                      : "-"}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-muted-foreground italic">
+                                    {h.reason ?? "-"}
+                                  </td>
+                                </tr>
+                              ),
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <p className="text-xs text-muted-foreground italic">
