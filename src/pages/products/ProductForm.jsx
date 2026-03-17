@@ -372,7 +372,7 @@ export default function ProductForm({
     // Fill barcode field
     form.setValue("barcode", barcode, { shouldDirty: true });
 
-    // Try Open Food Facts lookup
+    // Tra cứu: catalog hệ thống
     setLookingUp(true);
     toast.info("Đang tra cứu thông tin sản phẩm...", { id: "barcode-lookup" });
     try {
@@ -382,9 +382,13 @@ export default function ProductForm({
           form.setValue("name", info.name, { shouldDirty: true });
         }
         if (info.category && !form.getValues("category")) {
-          form.setValue("category", info.category, { shouldDirty: true });
+          const normalizedCategory =
+            typeof info.category === "string"
+              ? info.category.toLowerCase()
+              : info.category;
+          form.setValue("category", normalizedCategory, { shouldDirty: true });
           setCategoryMode(
-            isCustomCategory(info.category) ? "custom" : "select",
+            isCustomCategory(normalizedCategory) ? "custom" : "select",
           );
         }
         if (info.description && !form.getValues("description")) {
@@ -392,7 +396,7 @@ export default function ProductForm({
         }
         toast.success(
           info.name
-            ? `Đã điền: "${info.name}" từ Open Food Facts`
+            ? `Đã điền: "${info.name}" từ catalog hệ thống`
             : "Quét thành công, chưa tìm thấy thông tin trên CSDL",
           { id: "barcode-lookup" },
         );
@@ -534,18 +538,22 @@ export default function ProductForm({
   const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
   // Existing image URLs to keep (user can remove individual ones)
-  const [keptImages, setKeptImages] = useState(product?.images ?? []);
+  const [keptImages, setKeptImages] = useState(
+    product?.images ?? (isCreate && prefill?.images ? prefill.images : []),
+  );
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
   // Reset images when product changes
   useEffect(() => {
-    setKeptImages(product?.images ?? []);
+    setKeptImages(
+      product?.images ?? (isCreate && prefill?.images ? prefill.images : []),
+    );
     setFiles([]);
     setPreviews([]);
     setFileInputKey(Date.now());
-  }, [product]);
+  }, [product, prefill, isCreate]);
 
   const removeExistingImage = (index) => {
     setKeptImages((prev) => prev.filter((_, i) => i !== index));

@@ -42,6 +42,7 @@ export default function ProductFormModal({
   // Camera state
   const videoRef = useRef(null);
   const readerRef = useRef(null);
+  const scanSessionRef = useRef(0);
   const [cameras, setCameras] = useState([]);
   const [cameraIdx, setCameraIdx] = useState(0);
   const [scanning, setScanning] = useState(false);
@@ -75,6 +76,8 @@ export default function ProductFormModal({
   }, [step, open, cameraIdx]);
 
   const startCamera = async () => {
+    scanSessionRef.current += 1;
+    const mySession = scanSessionRef.current;
     setScanning(false);
     setScanError(null);
     setScannedCode(null);
@@ -91,7 +94,7 @@ export default function ProductFormModal({
         deviceId,
         videoRef.current,
         (result, err) => {
-          if (result) {
+          if (result && scanSessionRef.current === mySession) {
             handleScanned(result.getText());
           }
           if (err && !(err instanceof NotFoundException)) {
@@ -99,7 +102,7 @@ export default function ProductFormModal({
           }
         },
       );
-      setScanning(true);
+      if (scanSessionRef.current === mySession) setScanning(true);
     } catch (err) {
       console.error("Camera error:", err);
       if (err?.name === "NotAllowedError") {
@@ -135,6 +138,7 @@ export default function ProductFormModal({
         name: info?.name ?? "",
         category: info?.category ?? "",
         description: info?.description ?? "",
+        images: Array.isArray(info?.images) ? info.images : [],
       });
       if (info?.name) {
         toast.success(`Tìm thấy: "${info.name}"`);
