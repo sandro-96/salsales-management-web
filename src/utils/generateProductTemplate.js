@@ -20,8 +20,6 @@ const HEADERS = [
   { name: "% Giảm giá", required: false, width: 14 },
   { name: "Hạn sử dụng", required: false, width: 16 },
   { name: "Mô tả", required: false, width: 36 },
-  { name: "Trạng thái SP", required: false, width: 16 },
-  { name: "Trạng thái chi nhánh", required: false, width: 22 },
 ];
 
 const DATA_ROWS = 500; // số dòng áp dụng dropdown
@@ -38,13 +36,15 @@ export const generateProductTemplate = async () => {
   wb.creator = "Sales Management";
   wb.created = new Date();
 
-  const categoryLabels = PRODUCT_CATEGORIES.map((c) => c.label);
-  const unitLabels = PRODUCT_UNITS.map((u) => u.label);
+  const categoryLabels = PRODUCT_CATEGORIES.map(
+    (c) => `${c.value}-(${c.label})`,
+  );
+  const unitLabels = PRODUCT_UNITS.map((u) => `${u.value}-(${u.label})`);
 
   /* ── Sheet ẩn chứa danh sách dropdown ─────────────────────────────────── */
   const listsSheet = wb.addWorksheet(LISTS_SHEET, { state: "veryHidden" });
-  listsSheet.getColumn(1).header = "Danh mục";
-  listsSheet.getColumn(2).header = "Đơn vị";
+  listsSheet.getColumn(1).header = "Category";
+  listsSheet.getColumn(2).header = "Unit";
 
   const maxListLen = Math.max(categoryLabels.length, unitLabels.length);
   for (let i = 0; i < maxListLen; i++) {
@@ -103,8 +103,6 @@ export const generateProductTemplate = async () => {
     "",
     "",
     "",
-    "",
-    "",
   ]);
   noteRow.height = 18;
   noteRow.getCell(1).font = {
@@ -131,8 +129,6 @@ export const generateProductTemplate = async () => {
     "",
     "",
     "Cà phê nguyên chất",
-    "TRUE",
-    "TRUE",
   ]);
   exRow.height = 22;
   exRow.eachCell((cell) => {

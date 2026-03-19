@@ -198,14 +198,13 @@ export const exportProductsExcel = (shopId, branchId = null) => {
  * 📤 Nhập sản phẩm từ file Excel
  * POST /api/products/import-export/import
  * @param {string} shopId
- * @param {string} branchId
  * @param {File}   file
  */
-export const importProductsExcel = (shopId, branchId, file) => {
+export const importProductsExcel = (shopId, file) => {
   const formData = new FormData();
   formData.append("file", file);
   return axiosInstance.post("/products/import-export/import", formData, {
-    params: { shopId, branchId },
+    params: { shopId },
     headers: { "Content-Type": "multipart/form-data" },
   });
 };

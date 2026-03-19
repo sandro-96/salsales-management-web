@@ -91,10 +91,10 @@ const ProductImportExportDialog = ({
   };
 
   const handleImport = async () => {
-    if (!shopId || !importBranchId || !importFile) return;
+    if (!shopId || !importFile) return;
     setIsImporting(true);
     try {
-      const res = await importProductsExcel(shopId, importBranchId, importFile);
+      const res = await importProductsExcel(shopId, importFile);
       const count = res.data?.data ?? 0;
       toast.success(`Đã nhập ${count} sản phẩm thành công.`);
       setImportFile(null);
@@ -156,18 +156,9 @@ const ProductImportExportDialog = ({
               <Label htmlFor="import-branch">
                 Chi nhánh <span className="text-red-500">*</span>
               </Label>
-              <Select value={importBranchId} onValueChange={setImportBranchId}>
-                <SelectTrigger id="import-branch">
-                  <SelectValue placeholder="Chọn chi nhánh nhập vào..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <span className="text-muted-foreground">
+                Không cần chọn chi nhánh
+              </span>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -235,7 +226,7 @@ const ProductImportExportDialog = ({
 
             <Button
               onClick={handleImport}
-              disabled={!importBranchId || !importFile || isImporting}
+              disabled={!importFile || isImporting}
               className="w-full"
             >
               {isImporting ? (
