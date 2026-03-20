@@ -64,6 +64,9 @@ export const generateProductTemplate = async () => {
     ws.getColumn(i + 1).width = h.width;
   });
 
+  // Make "Hạn sử dụng" (col 14) a date column with a display format
+  ws.getColumn(14).numFmt = "dd/mm/yyyy";
+
   // Header row
   const headerRow = ws.addRow(HEADERS.map((h) => h.name));
   headerRow.height = 30;
@@ -127,7 +130,7 @@ export const generateProductTemplate = async () => {
     10,
     "",
     "",
-    "",
+    new Date(2025, 0, 1),
     "Cà phê nguyên chất",
   ]);
   exRow.height = 22;
@@ -178,6 +181,16 @@ export const generateProductTemplate = async () => {
     errorStyle: "stop",
     errorTitle: "Giá trị không hợp lệ",
     error: "Chỉ chấp nhận TRUE hoặc FALSE.",
+  });
+
+  // Hạn sử dụng (col N = 14) - require a valid date if provided
+  ws.dataValidations.add(`N${firstDataRow}:N${lastDataRow}`, {
+    type: "date",
+    allowBlank: true,
+    showErrorMessage: true,
+    errorStyle: "warning",
+    errorTitle: "Giá trị không hợp lệ",
+    error: "Vui lòng nhập ngày hợp lệ (dd/mm/yyyy).",
   });
 
   // Trạng thái chi nhánh (col Q = 17)
