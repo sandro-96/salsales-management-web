@@ -1,24 +1,64 @@
-import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import React, { useState, useEffect, useCallback } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { getCurrentUser, updateProfile, changePassword } from "../api/userApi";
 import { useAuth } from "../hooks/useAuth";
 import { Navigate } from "react-router-dom";
-import { ALERT_TYPES } from "../constants/alertTypes.js";
-import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
+import { toast } from "sonner";
 import { handleFileChange } from "../utils/fileUtils.js";
+import {
+  User,
+  Lock,
+  Camera,
+  MapPin,
+  Phone,
+  Globe,
+  Mail,
+  Shield,
+  Pencil,
+  X,
+  Save,
+  Loader2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const GENDER_MAP = {
+  MALE: "Nam",
+  FEMALE: "Nữ",
+  OTHER: "Khác",
+};
 
 const AccountPage = () => {
   const { user: authUser, enums, isUserContextReady } = useAuth();
 
-  const [tab, setTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [previewAvatar, setPreviewAvatar] = useState(null);
-  const [message, setMessage] = useState("");
   const [fileError, setFileError] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+
+  const countryOptions = enums?.countries || [];
 
   const {
     register,
@@ -26,6 +66,7 @@ const AccountPage = () => {
     formState: { errors, dirtyFields },
     reset,
     watch,
+    control,
   } = useForm({
     defaultValues: {
       firstName: "",
@@ -46,6 +87,7 @@ const AccountPage = () => {
     handleSubmit: handlePasswordSubmit,
     formState: { errors: passwordErrors },
     reset: resetPassword,
+    watch: watchPassword,
   } = useForm({
     defaultValues: {
       currentPassword: "",
@@ -54,23 +96,9 @@ const AccountPage = () => {
     },
   });
 
-  const countryOptions = enums?.countries || [];
-  const genderOptions = [
-    { value: "", label: "Chưa chọn" },
-    { value: "MALE", label: "Nam" },
-    { value: "FEMALE", label: "Nữ" },
-    { value: "OTHER", label: "Khác" },
-  ];
-
   const countryCode = watch("countryCode");
 
-  useEffect(() => {
-    if (authUser && isUserContextReady) {
-      loadUser();
-    }
-  }, []);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       setLoading(true);
       const res = await getCurrentUser();
@@ -88,42 +116,43 @@ const AccountPage = () => {
         countryCode: data.countryCode || "",
         gender: data.gender || "",
       });
-      setIsEditMode(false); // Reset to view mode after loading
-    } catch (err) {
-      console.error("Error loading user data:", err);
+      setIsEditMode(false);
+    } catch {
+      toast.error("Không thể tải thông tin tài khoản.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [reset]);
+
+  useEffect(() => {
+    if (authUser && isUserContextReady) {
+      loadUser();
+    }
+  }, [authUser, isUserContextReady, loadUser]);
 
   const onProfileSubmit = async (data) => {
     try {
       setIsSubmitting(true);
       const formData = new FormData();
       const userData = { ...data };
-      if (userData.gender === "") {
-        delete userData.gender;
-      }
+      if (userData.gender === "") delete userData.gender;
       formData.append(
         "user",
         new Blob([JSON.stringify(userData)], { type: "application/json" }),
       );
-      if (avatarFile) {
-        formData.append("file", avatarFile);
-      }
+      if (avatarFile) formData.append("file", avatarFile);
 
       await updateProfile(formData);
-      setMessage("Cập nhật thông tin thành công!");
+      toast.success("Cập nhật thông tin thành công!");
       setAvatarFile(null);
       setPreviewAvatar(null);
-      setIsEditMode(false);
       loadUser();
     } catch (err) {
-      const errorMessage =
+      const msg =
         err.response?.data?.code === "INVALID_PHONE_NUMBER"
           ? "Số điện thoại không đúng định dạng."
           : err.response?.data?.message || "Có lỗi khi cập nhật thông tin.";
-      console.log(errorMessage);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -136,646 +165,454 @@ const AccountPage = () => {
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       });
-      setMessage("Đổi mật khẩu thành công!");
+      toast.success("Đổi mật khẩu thành công!");
       resetPassword();
-      setIsEditMode(false);
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || "Có lỗi khi đổi mật khẩu.";
-      console.log(errorMessage);
+      toast.error(err.response?.data?.message || "Có lỗi khi đổi mật khẩu.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => {
-    if (Object.keys(dirtyFields).length > 0) {
-      console.log("Discarding changes.");
-    } else {
-      resetForm();
-    }
-  };
-
-  const resetForm = () => {
+  const cancelEdit = () => {
+    setIsEditMode(false);
     setAvatarFile(null);
     setPreviewAvatar(null);
-    setIsEditMode(false);
-    reset(user);
-  };
-
-  const handleEditToggle = () => {
-    setIsEditMode(!isEditMode);
-    if (isEditMode) {
-      // Reset form when exiting edit mode
-      reset(user);
-      setAvatarFile(null);
-      setPreviewAvatar(null);
-    } else {
-      // Reset form with current user data when entering edit mode
-      reset(user);
-    }
+    if (user) reset(user);
   };
 
   if (!authUser && isUserContextReady) {
     return <Navigate to="/login" replace />;
   }
 
-  if (loading) return <p className="text-center">Đang tải...</p>;
+  if (loading) {
+    return (
+      <div className="flex-1 flex-col gap-6 p-4 md:p-8 md:flex max-w-4xl mx-auto w-full">
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-4 w-64 mb-6" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Skeleton className="h-72 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl lg:col-span-2" />
+        </div>
+      </div>
+    );
+  }
+
+  const avatarSrc = previewAvatar || user?.avatarUrl;
+  const fullName = [user?.lastName, user?.middleName, user?.firstName]
+    .filter(Boolean)
+    .join(" ");
+  const country = countryOptions.find((c) => c.code === user?.countryCode);
+  const hasDirtyFields = Object.keys(dirtyFields).length > 0 || !!avatarFile;
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      {isSubmitting && (
-        <LoadingOverlay text="Đang tải thông tin tài khoản..." />
-      )}
-      <h1 className="text-2xl font-bold mb-4">Thông tin tài khoản</h1>
-      <p className="text-gray-600 mb-4">
-        Email: {user.email}{" "}
-        {user.verified ? "(Đã xác thực)" : "(Chưa xác thực)"}
-      </p>
-
-      {/* Sticky Tabs with Hover Effect */}
-      <div className="sticky top-0 bg-white z-10 flex gap-2 mb-4 border-b pb-2">
-        <button
-          className={`px-4 py-2 rounded ${
-            tab === "profile"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-200 hover:bg-gray-300"
-          }`}
-          onClick={() => setTab("profile")}
-        >
-          Hồ sơ
-        </button>
-        <button
-          className={`px-4 py-2 rounded ${
-            tab === "password"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-200 hover:bg-gray-300"
-          }`}
-          onClick={() => setTab("password")}
-        >
-          Đổi mật khẩu
-        </button>
+    <div className="flex-1 flex-col gap-6 p-4 md:p-8 md:flex max-w-4xl mx-auto w-full">
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight">Tài khoản</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Quản lý thông tin cá nhân và bảo mật
+        </p>
       </div>
 
-      {/* Profile Form */}
-      {tab === "profile" && (
-        <div>
-          {!isEditMode && (
-            <button
-              onClick={handleEditToggle}
-              className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
-            >
-              Chỉnh sửa
-            </button>
-          )}
-          <form
-            onSubmit={handleSubmit(onProfileSubmit)}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-            style={{ display: isEditMode ? "grid" : "none" }}
-          >
-            {/* Left and Center Columns: Personal Info */}
-            <div className="col-span-2 space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Họ</label>
-                  <input
-                    {...register("lastName", {
-                      required: "Họ không được để trống.",
-                      maxLength: {
-                        value: 50,
-                        message: "Họ không được vượt quá 50 ký tự.",
-                      },
-                    })}
-                    className={`border p-2 w-full rounded ${
-                      errors.lastName ? "border-red-500" : ""
-                    }`}
-                    disabled={!isEditMode}
-                  />
-                  {errors.lastName && isEditMode && (
-                    <p className="text-red-500 text-xs">
-                      {errors.lastName.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Tên</label>
-                  <input
-                    {...register("firstName", {
-                      required: "Tên không được để trống.",
-                      maxLength: {
-                        value: 50,
-                        message: "Tên không được vượt quá 50 ký tự.",
-                      },
-                    })}
-                    className={`border p-2 w-full rounded ${
-                      errors.firstName ? "border-red-500" : ""
-                    }`}
-                    disabled={!isEditMode}
-                  />
-                  {errors.firstName && isEditMode && (
-                    <p className="text-red-500 text-xs">
-                      {errors.firstName.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Tên đệm
-                  </label>
-                  <input
-                    {...register("middleName", {
-                      maxLength: {
-                        value: 50,
-                        message: "Tên đệm không được vượt quá 50 ký tự.",
-                      },
-                    })}
-                    className={`border p-2 w-full rounded ${
-                      errors.middleName ? "border-red-500" : ""
-                    }`}
-                    disabled={!isEditMode}
-                  />
-                  {errors.middleName && isEditMode && (
-                    <p className="text-red-500 text-xs">
-                      {errors.middleName.message}
-                    </p>
-                  )}
-                </div>
-              </div>
+      <Tabs defaultValue="profile" className="gap-6">
+        <TabsList>
+          <TabsTrigger value="profile">
+            <User className="h-4 w-4 mr-1" /> Hồ sơ
+          </TabsTrigger>
+          <TabsTrigger value="security">
+            <Lock className="h-4 w-4 mr-1" /> Bảo mật
+          </TabsTrigger>
+        </TabsList>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Mã quốc gia
-                  </label>
-                  <select
-                    {...register("countryCode")}
-                    className={`border p-2 w-full rounded ${
-                      errors.countryCode ? "border-red-500" : ""
-                    }`}
-                    disabled={!isEditMode}
-                  >
-                    <option value="">Chọn mã quốc gia</option>
-                    {countryOptions.map((option) => (
-                      <option key={option.code} value={option.code}>
-                        {option.name} ({option.dialCode})
-                      </option>
-                    ))}
-                  </select>
-                  {errors.countryCode && isEditMode && (
-                    <p className="text-red-500 text-xs">
-                      {errors.countryCode.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Số điện thoại
-                  </label>
-                  <input
-                    {...register("phone", {
-                      validate: (value) => {
-                        if (value && countryCode) {
-                          const country = countryOptions.find(
-                            (c) => c.code === countryCode,
-                          );
-                          if (
-                            country &&
-                            !new RegExp(country.phonePattern).test(value)
-                          ) {
-                            return "Số điện thoại không đúng định dạng.";
-                          }
+        {/* ─── Profile Tab ─── */}
+        <TabsContent value="profile" className="mt-2 space-y-6">
+          {/* Avatar + basic info */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                {/* Avatar */}
+                <div className="relative group shrink-0">
+                  <Avatar className="h-24 w-24 border-2">
+                    <AvatarImage src={avatarSrc} alt="Avatar" className="object-cover" />
+                    <AvatarFallback className="text-xl font-semibold bg-primary/10 text-primary">
+                      {user?.firstName?.[0] || user?.lastName?.[0] || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isEditMode && (
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="h-5 w-5 text-white" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) =>
+                          handleFileChange({
+                            event: e,
+                            setError: setFileError,
+                            setFile: setAvatarFile,
+                            setPreview: setPreviewAvatar,
+                          })
                         }
-                        return true;
-                      },
-                    })}
-                    className={`border p-2 w-full rounded ${
-                      errors.phone ? "border-red-500" : ""
-                    }`}
-                    disabled={!isEditMode}
-                  />
-                  {errors.phone && isEditMode && (
-                    <p className="text-red-500 text-xs">
-                      {errors.phone.message}
-                    </p>
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Name + email + meta */}
+                <div className="flex-1 text-center sm:text-left">
+                  <h3 className="text-lg font-semibold">
+                    {fullName || "Chưa cập nhật tên"}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start mt-1">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Mail className="h-3.5 w-3.5" /> {user?.email}
+                    </span>
+                    <Badge
+                      className={`text-[10px] ${user?.verified ? "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100"}`}
+                    >
+                      <Shield className="h-2.5 w-2.5 mr-0.5" />
+                      {user?.verified ? "Đã xác thực" : "Chưa xác thực"}
+                    </Badge>
+                  </div>
+                  {fileError && isEditMode && (
+                    <p className="text-destructive text-xs mt-1">{fileError}</p>
+                  )}
+                </div>
+
+                {/* Edit toggle */}
+                <div className="shrink-0">
+                  {!isEditMode ? (
+                    <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
+                      <Pencil className="h-4 w-4 mr-1" /> Chỉnh sửa
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                      <X className="h-4 w-4 mr-1" /> Hủy
+                    </Button>
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Địa chỉ
-                </label>
-                <input
-                  {...register("address")}
-                  className={`border p-2 w-full rounded ${
-                    errors.address ? "border-red-500" : ""
-                  }`}
-                  disabled={!isEditMode}
-                />
-                {errors.address && isEditMode && (
-                  <p className="text-red-500 text-xs">
-                    {errors.address.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Thành phố
-                  </label>
-                  <input
-                    {...register("city")}
-                    className={`border p-2 w-full rounded ${
-                      errors.city ? "border-red-500" : ""
-                    }`}
-                    disabled={!isEditMode}
-                  />
-                  {errors.city && isEditMode && (
-                    <p className="text-red-500 text-xs">
-                      {errors.city.message}
-                    </p>
-                  )}
+          {/* Detail info card */}
+          <form onSubmit={handleSubmit(onProfileSubmit)}>
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-medium">Thông tin cá nhân</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Name row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <FieldWrapper label="Họ" error={errors.lastName}>
+                    {isEditMode ? (
+                      <Input
+                        {...register("lastName", {
+                          required: "Họ không được để trống.",
+                          maxLength: { value: 50, message: "Tối đa 50 ký tự." },
+                        })}
+                        placeholder="Nguyễn"
+                      />
+                    ) : (
+                      <FieldValue>{user?.lastName}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                  <FieldWrapper label="Tên đệm" error={errors.middleName}>
+                    {isEditMode ? (
+                      <Input
+                        {...register("middleName", {
+                          maxLength: { value: 50, message: "Tối đa 50 ký tự." },
+                        })}
+                        placeholder="Văn"
+                      />
+                    ) : (
+                      <FieldValue>{user?.middleName}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                  <FieldWrapper label="Tên" error={errors.firstName}>
+                    {isEditMode ? (
+                      <Input
+                        {...register("firstName", {
+                          required: "Tên không được để trống.",
+                          maxLength: { value: 50, message: "Tối đa 50 ký tự." },
+                        })}
+                        placeholder="An"
+                      />
+                    ) : (
+                      <FieldValue>{user?.firstName}</FieldValue>
+                    )}
+                  </FieldWrapper>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Bang/Tỉnh
-                  </label>
-                  <input
-                    {...register("state")}
-                    className={`border p-2 w-full rounded ${
-                      errors.state ? "border-red-500" : ""
-                    }`}
-                    disabled={!isEditMode}
-                  />
-                  {errors.state && isEditMode && (
-                    <p className="text-red-500 text-xs">
-                      {errors.state.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Mã bưu điện
-                  </label>
-                  <input
-                    {...register("zipCode", {
-                      maxLength: {
-                        value: 10,
-                        message: "Mã bưu điện không được vượt quá 10 ký tự.",
-                      },
-                    })}
-                    className={`border p-2 w-full rounded ${
-                      errors.zipCode ? "border-red-500" : ""
-                    }`}
-                    disabled={!isEditMode}
-                  />
-                  {errors.zipCode && isEditMode && (
-                    <p className="text-red-500 text-xs">
-                      {errors.zipCode.message}
-                    </p>
-                  )}
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Giới tính
-                </label>
-                <select
-                  {...register("gender")}
-                  className={`border p-2 w-full rounded ${
-                    errors.gender ? "border-red-500" : ""
-                  }`}
-                  disabled={!isEditMode}
-                >
-                  {genderOptions.map((g) => (
-                    <option key={g.value} value={g.value}>
-                      {g.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.gender && isEditMode && (
-                  <p className="text-red-500 text-xs">
-                    {errors.gender.message}
-                  </p>
-                )}
-              </div>
-            </div>
+                <Separator />
 
-            {/* Right Column: Avatar and Actions */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Ảnh đại diện
-                </label>
-                {previewAvatar || user.avatarUrl ? (
-                  <img
-                    src={previewAvatar || user.avatarUrl}
-                    alt="Avatar"
-                    className="w-24 h-24 rounded-full mx-auto mb-2"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto mb-2">
-                    <span className="text-gray-500">No Avatar</span>
+                {/* Contact */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FieldWrapper label="Quốc gia" icon={Globe}>
+                    {isEditMode ? (
+                      <Controller
+                        name="countryCode"
+                        control={control}
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Chọn quốc gia" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {countryOptions.map((c) => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.name} ({c.dialCode})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    ) : (
+                      <FieldValue>{country?.name || null}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                  <FieldWrapper label="Số điện thoại" icon={Phone} error={errors.phone}>
+                    {isEditMode ? (
+                      <Input
+                        {...register("phone", {
+                          validate: (value) => {
+                            if (value && countryCode) {
+                              const c = countryOptions.find((o) => o.code === countryCode);
+                              if (c && !new RegExp(c.phonePattern).test(value))
+                                return "Số điện thoại không đúng định dạng.";
+                            }
+                            return true;
+                          },
+                        })}
+                        placeholder="0912345678"
+                      />
+                    ) : (
+                      <FieldValue>{user?.phone}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                </div>
+
+                <Separator />
+
+                {/* Address */}
+                <FieldWrapper label="Địa chỉ" icon={MapPin} error={errors.address}>
+                  {isEditMode ? (
+                    <Input {...register("address")} placeholder="123 Đường ABC" />
+                  ) : (
+                    <FieldValue>{user?.address}</FieldValue>
+                  )}
+                </FieldWrapper>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <FieldWrapper label="Thành phố" error={errors.city}>
+                    {isEditMode ? (
+                      <Input {...register("city")} placeholder="TP. Hồ Chí Minh" />
+                    ) : (
+                      <FieldValue>{user?.city}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                  <FieldWrapper label="Tỉnh / Bang" error={errors.state}>
+                    {isEditMode ? (
+                      <Input {...register("state")} placeholder="" />
+                    ) : (
+                      <FieldValue>{user?.state}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                  <FieldWrapper label="Mã bưu điện" error={errors.zipCode}>
+                    {isEditMode ? (
+                      <Input
+                        {...register("zipCode", {
+                          maxLength: { value: 10, message: "Tối đa 10 ký tự." },
+                        })}
+                        placeholder="70000"
+                      />
+                    ) : (
+                      <FieldValue>{user?.zipCode}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                </div>
+
+                <Separator />
+
+                {/* Gender */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <FieldWrapper label="Giới tính">
+                    {isEditMode ? (
+                      <Controller
+                        name="gender"
+                        control={control}
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Chọn giới tính" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="MALE">Nam</SelectItem>
+                              <SelectItem value="FEMALE">Nữ</SelectItem>
+                              <SelectItem value="OTHER">Khác</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    ) : (
+                      <FieldValue>{GENDER_MAP[user?.gender] || null}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                </div>
+
+                {/* Actions */}
+                {isEditMode && (
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="outline" onClick={cancelEdit}>
+                      Hủy
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting || !hasDirtyFields}>
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-1" />
+                      )}
+                      {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+                    </Button>
                   </div>
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    handleFileChange({
-                      event: e,
-                      setError: setFileError,
-                      setFile: setAvatarFile,
-                      setPreview: setPreviewAvatar,
-                    })
-                  }
-                  className="border p-2 w-full rounded"
-                  disabled={!isEditMode}
-                />
-                {fileError && isEditMode && (
-                  <p className="text-red-500 text-xs">{fileError}</p>
-                )}
-              </div>
-              {isEditMode && (
-                <div className="flex gap-2 justify-center">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="bg-gray-400 text-white px-4 py-2 rounded"
-                  >
-                    Hủy
-                  </button>
-                  <button
+              </CardContent>
+            </Card>
+          </form>
+        </TabsContent>
+
+        {/* ─── Security Tab ─── */}
+        <TabsContent value="security" className="mt-2 space-y-6">
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-medium">Đổi mật khẩu</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={handlePasswordSubmit(onPasswordSubmit)}
+                className="max-w-md space-y-4"
+              >
+                <FieldWrapper
+                  label="Mật khẩu hiện tại"
+                  error={passwordErrors.currentPassword}
+                >
+                  <div className="relative">
+                    <Input
+                      type={showCurrentPw ? "text" : "password"}
+                      {...registerPassword("currentPassword", {
+                        required: "Không được để trống.",
+                      })}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowCurrentPw(!showCurrentPw)}
+                      tabIndex={-1}
+                    >
+                      {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </FieldWrapper>
+
+                <FieldWrapper
+                  label="Mật khẩu mới"
+                  error={passwordErrors.newPassword}
+                >
+                  <div className="relative">
+                    <Input
+                      type={showNewPw ? "text" : "password"}
+                      {...registerPassword("newPassword", {
+                        required: "Không được để trống.",
+                        minLength: { value: 6, message: "Ít nhất 6 ký tự." },
+                      })}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowNewPw(!showNewPw)}
+                      tabIndex={-1}
+                    >
+                      {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </FieldWrapper>
+
+                <FieldWrapper
+                  label="Xác nhận mật khẩu mới"
+                  error={passwordErrors.confirmNewPassword}
+                >
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPw ? "text" : "password"}
+                      {...registerPassword("confirmNewPassword", {
+                        validate: (value) => {
+                          const newPw = watchPassword("newPassword");
+                          return value === newPw || "Mật khẩu không khớp.";
+                        },
+                      })}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowConfirmPw(!showConfirmPw)}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </FieldWrapper>
+
+                <div className="pt-2">
+                  <Button
                     type="submit"
                     disabled={
-                      isSubmitting || Object.keys(dirtyFields).length === 0
+                      isSubmitting ||
+                      !watchPassword("currentPassword") ||
+                      !watchPassword("newPassword") ||
+                      !watchPassword("confirmNewPassword")
                     }
-                    className={`bg-green-500 text-white px-4 py-2 rounded ${
-                      isSubmitting || Object.keys(dirtyFields).length === 0
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                    }`}
                   >
-                    {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
-                  </button>
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Lock className="h-4 w-4 mr-1" />
+                    )}
+                    {isSubmitting ? "Đang xử lý..." : "Đổi mật khẩu"}
+                  </Button>
                 </div>
-              )}
-            </div>
-          </form>
-
-          {/* View Mode Display */}
-          {!isEditMode && tab === "profile" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="col-span-2 space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Họ</label>
-                    <p className="border p-2 rounded bg-gray-100">
-                      {user.lastName || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Tên
-                    </label>
-                    <p className="border p-2 rounded bg-gray-100">
-                      {user.firstName || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Tên đệm
-                    </label>
-                    <p className="border p-2 rounded bg-gray-100">
-                      {user.middleName || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Mã quốc gia
-                    </label>
-                    <p className="border p-2 rounded bg-gray-100">
-                      {countryOptions.find((c) => c.code === user.countryCode)
-                        ?.name || "Chưa cập nhật"}{" "}
-                      ({user.countryCode})
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Số điện thoại
-                    </label>
-                    <p className="border p-2 rounded bg-gray-100">
-                      {user.phone || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Địa chỉ
-                  </label>
-                  <p className="border p-2 rounded bg-gray-100">
-                    {user.address || "Chưa cập nhật"}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Thành phố
-                    </label>
-                    <p className="border p-2 rounded bg-gray-100">
-                      {user.city || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Bang/Tỉnh
-                    </label>
-                    <p className="border p-2 rounded bg-gray-100">
-                      {user.state || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Mã bưu điện
-                    </label>
-                    <p className="border p-2 rounded bg-gray-100">
-                      {user.zipCode || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Giới tính
-                  </label>
-                  <p className="border p-2 rounded bg-gray-100">
-                    {genderOptions.find((g) => g.value === user.gender)
-                      ?.label || "Chưa cập nhật"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Ảnh đại diện
-                  </label>
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt="Avatar"
-                      className="w-24 h-24 rounded-full mx-auto mb-2"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto mb-2">
-                      <span className="text-gray-500">No Avatar</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Password Form */}
-      {tab === "password" && (
-        <div>
-          {!isEditMode && (
-            <button
-              onClick={handleEditToggle}
-              className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
-            >
-              Chỉnh sửa
-            </button>
-          )}
-          <form
-            onSubmit={handlePasswordSubmit(onPasswordSubmit)}
-            className="space-y-3 max-w-md mx-auto"
-            style={{ display: isEditMode ? "block" : "none" }}
-          >
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Mật khẩu hiện tại
-              </label>
-              <input
-                type="password"
-                {...registerPassword("currentPassword", {
-                  required: "Mật khẩu hiện tại không được để trống.",
-                })}
-                className={`border p-2 w-full rounded ${
-                  passwordErrors.currentPassword ? "border-red-500" : ""
-                }`}
-                disabled={!isEditMode}
-              />
-              {passwordErrors.currentPassword && isEditMode && (
-                <p className="text-red-500 text-xs">
-                  {passwordErrors.currentPassword.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Mật khẩu mới
-              </label>
-              <input
-                type="password"
-                {...registerPassword("newPassword", {
-                  required: "Mật khẩu mới không được để trống.",
-                  minLength: {
-                    value: 6,
-                    message: "Mật khẩu mới phải có ít nhất 6 ký tự.",
-                  },
-                })}
-                className={`border p-2 w-full rounded ${
-                  passwordErrors.newPassword ? "border-red-500" : ""
-                }`}
-                disabled={!isEditMode}
-              />
-              {passwordErrors.newPassword && isEditMode && (
-                <p className="text-red-500 text-xs">
-                  {passwordErrors.newPassword.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Xác nhận mật khẩu mới
-              </label>
-              <input
-                type="password"
-                {...registerPassword("confirmNewPassword", {
-                  validate: (value, { newPassword }) =>
-                    value === newPassword ||
-                    "Mật khẩu mới và xác nhận mật khẩu không khớp.",
-                })}
-                className={`border p-2 w-full rounded ${
-                  passwordErrors.confirmNewPassword ? "border-red-500" : ""
-                }`}
-                disabled={!isEditMode}
-              />
-              {passwordErrors.confirmNewPassword && isEditMode && (
-                <p className="text-red-500 text-xs">
-                  {passwordErrors.confirmNewPassword.message}
-                </p>
-              )}
-            </div>
-            {isEditMode && (
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  !watch("currentPassword") ||
-                  !watch("newPassword") ||
-                  !watch("confirmNewPassword")
-                }
-                className={`bg-yellow-500 text-white px-4 py-2 rounded w-full ${
-                  isSubmitting ||
-                  !watch("currentPassword") ||
-                  !watch("newPassword") ||
-                  !watch("confirmNewPassword")
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                {isSubmitting ? "Đang đổi..." : "Đổi mật khẩu"}
-              </button>
-            )}
-          </form>
-
-          {!isEditMode && tab === "password" && (
-            <div className="max-w-md mx-auto space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Mật khẩu hiện tại
-                </label>
-                <p className="border p-2 rounded bg-gray-100">••••••••</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Mật khẩu mới
-                </label>
-                <p className="border p-2 rounded bg-gray-100">Chưa cập nhật</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Xác nhận mật khẩu mới
-                </label>
-                <p className="border p-2 rounded bg-gray-100">Chưa cập nhật</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
+
+function FieldWrapper({ label, icon: IconComp, error, children }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+        {IconComp && <IconComp className="h-3.5 w-3.5" />}
+        {label}
+      </Label>
+      {children}
+      {error && <p className="text-destructive text-xs">{error.message}</p>}
+    </div>
+  );
+}
+
+function FieldValue({ children }) {
+  return (
+    <p className="text-sm font-medium py-2 px-3 rounded-md bg-muted/50 min-h-9 flex items-center">
+      {children || <span className="text-muted-foreground">Chưa cập nhật</span>}
+    </p>
+  );
+}
 
 export default AccountPage;
