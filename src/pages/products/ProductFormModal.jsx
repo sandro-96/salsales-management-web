@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,10 +16,15 @@ import { lookupBarcode } from "@/utils/barcodeUtils.js";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+const EMPTY_PREFILL_DEFAULTS = {};
+
 /**
  * Modal tạo / chỉnh sửa sản phẩm.
  * Khi tạo mới: bước 1 = quét mã vạch (camera inline), bước 2 = form điền thông tin.
  * Khi sửa: mở thẳng form.
+ *
+ * @param {Object} [prefillDefaults] - Gộp vào prefill form tạo mới (VD: { trackInventory: true });
+ *                                   giá trị từ quét mã vạch ghi đè cùng key.
  */
 export default function ProductFormModal({
   open,
@@ -28,8 +33,16 @@ export default function ProductFormModal({
   shopId,
   onSuccess,
   startStep, // "scan" | "form" — overrides default for create mode
+  prefillDefaults,
 }) {
   const isEdit = !!product;
+
+  const effectivePrefillDefaults =
+    prefillDefaults &&
+    typeof prefillDefaults === "object" &&
+    Object.keys(prefillDefaults).length > 0
+      ? prefillDefaults
+      : EMPTY_PREFILL_DEFAULTS;
 
   // step: "scan" | "form"
   const [step, setStep] = useState(
@@ -49,6 +62,14 @@ export default function ProductFormModal({
   const [scanError, setScanError] = useState(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [scannedCode, setScannedCode] = useState(null);
+
+  const formPrefill = useMemo(
+    () =>
+      effectivePrefillDefaults === EMPTY_PREFILL_DEFAULTS
+        ? prefill
+        : { ...effectivePrefillDefaults, ...prefill },
+    [effectivePrefillDefaults, prefill],
+  );
 
   // Reset on open/product change
   useEffect(() => {
@@ -320,7 +341,7 @@ export default function ProductFormModal({
             <ProductForm
               mode={mode}
               product={product}
-              prefill={prefill}
+              prefill={formPrefill}
               onSubmit={handleSubmit}
               isLoading={loading}
               onModeChange={setMode}

@@ -22,8 +22,8 @@ export default function BranchPricesTab({
   focusBranchId,
   onSuccess,
 }) {
-  const { branches, selectedShop } = useShop();
-  const trackInventory = selectedShop?.trackInventory ?? false;
+  const { branches } = useShop();
+  const trackInventory = product?.trackInventory ?? false;
 
   const [rowsMap, setRowsMap] = useState({});
   const [drafts, setDrafts] = useState({});
@@ -300,44 +300,42 @@ export default function BranchPricesTab({
                   </div>
 
                   {/* Inventory */}
-                  <div className="border-t pt-3 grid grid-cols-2 gap-3">
-                    {trackInventory && (
-                      <>
-                        <Field
-                          label="Tồn kho"
-                          placeholder="0"
-                          value={draft.quantity}
-                          onChange={(v) =>
-                            setDraftField(branch.id, "quantity", v)
+                  {trackInventory && (
+                    <div className="border-t pt-3 grid grid-cols-2 gap-3">
+                      <Field
+                        label="Tồn kho"
+                        placeholder="0"
+                        value={draft.quantity}
+                        onChange={(v) =>
+                          setDraftField(branch.id, "quantity", v)
+                        }
+                      />
+                      <Field
+                        label="Ngưỡng cảnh báo tồn kho"
+                        placeholder="0"
+                        value={draft.minQuantity}
+                        onChange={(v) =>
+                          setDraftField(branch.id, "minQuantity", v)
+                        }
+                      />
+                      <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                        <label className="text-xs text-muted-foreground font-medium">
+                          Hạn sử dụng
+                        </label>
+                        <Input
+                          type="date"
+                          value={draft.expiryDate}
+                          onChange={(e) =>
+                            setDraftField(
+                              branch.id,
+                              "expiryDate",
+                              e.target.value,
+                            )
                           }
                         />
-                        <Field
-                          label="Ngưỡng cảnh báo tồn kho"
-                          placeholder="0"
-                          value={draft.minQuantity}
-                          onChange={(v) =>
-                            setDraftField(branch.id, "minQuantity", v)
-                          }
-                        />
-                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                          <label className="text-xs text-muted-foreground font-medium">
-                            Hạn sử dụng
-                          </label>
-                          <Input
-                            type="date"
-                            value={draft.expiryDate}
-                            onChange={(e) =>
-                              setDraftField(
-                                branch.id,
-                                "expiryDate",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Lý do thay đổi giá */}
                   <div className="flex flex-col gap-1">

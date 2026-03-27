@@ -118,6 +118,7 @@ const formSchema = z.object({
     .positive("Giá bán mặc định phải > 0"),
   costPrice: z.coerce.number().min(0).default(0),
   active: z.boolean().default(true),
+  trackInventory: z.boolean().default(false),
   reason: z.string().optional().nullable(),
   variants: z.array(variantSchema).default([]),
 });
@@ -442,6 +443,9 @@ export default function ProductForm({
   const savedActive = isCreate
     ? localStorage.getItem("lastProductActive") !== "false"
     : true;
+  const savedTrackInventory = isCreate
+    ? localStorage.getItem("lastProductTrackInventory") === "true"
+    : false;
 
   // Custom select state for unit / category
   const [unitMode, setUnitMode] = useState(() => {
@@ -474,6 +478,7 @@ export default function ProductForm({
           defaultPrice: product.defaultPrice ?? 0,
           costPrice: product.costPrice ?? 0,
           active: product.active ?? true,
+          trackInventory: product.trackInventory ?? false,
           reason: "",
           variants: (product.variants ?? []).map((v) => ({
             variantId: v.variantId ?? undefined,
@@ -500,6 +505,7 @@ export default function ProductForm({
           defaultPrice: 0,
           costPrice: 0,
           active: savedActive,
+          trackInventory: savedTrackInventory,
           reason: "",
           variants: [],
         },
@@ -517,6 +523,11 @@ export default function ProductForm({
     if (prefill.category) {
       form.setValue("category", prefill.category, { shouldDirty: true });
       setCategoryMode(isCustomCategory(prefill.category) ? "custom" : "select");
+    }
+    if (typeof prefill.trackInventory === "boolean") {
+      form.setValue("trackInventory", prefill.trackInventory, {
+        shouldDirty: true,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
@@ -621,15 +632,26 @@ export default function ProductForm({
   const watchedCategory = watch("category");
   const watchedUnit = watch("unit");
   const watchedActive = watch("active");
+  const watchedTrackInventory = watch("trackInventory");
 
-  // Persist last used category, unit & active for create mode
+  // Persist last used category, unit, active & trackInventory for create mode
   useEffect(() => {
     if (!isCreate) return;
     if (watchedCategory)
       localStorage.setItem("lastProductCategory", watchedCategory);
     if (watchedUnit) localStorage.setItem("lastProductUnit", watchedUnit);
     localStorage.setItem("lastProductActive", String(watchedActive));
-  }, [watchedCategory, watchedUnit, watchedActive, isCreate]);
+    localStorage.setItem(
+      "lastProductTrackInventory",
+      String(watchedTrackInventory),
+    );
+  }, [
+    watchedCategory,
+    watchedUnit,
+    watchedActive,
+    watchedTrackInventory,
+    isCreate,
+  ]);
 
   useEffect(() => {
     if (product) {
@@ -644,6 +666,7 @@ export default function ProductForm({
         defaultPrice: product.defaultPrice ?? 0,
         costPrice: product.costPrice ?? 0,
         active: product.active ?? true,
+        trackInventory: product.trackInventory ?? false,
         variants: (product.variants ?? []).map((v) => ({
           variantId: v.variantId ?? undefined,
           name: v.name ?? "",
@@ -1043,6 +1066,32 @@ export default function ProductForm({
                 disabled={isReadOnly}
               />
             </FormControl>
+          </FormItem>
+        )}
+      />
+
+      {/* Theo dõi tồn kho */}
+      <FormField
+        control={form.control}
+        name="trackInventory"
+        render={({ field }) => (
+          <FormItem className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <FormLabel className="mt-0">Theo dõi tồn kho</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={isReadOnly}
+                />
+              </FormControl>
+            </div>
+            {!isReadOnly && (
+              <p className="text-xs text-muted-foreground pl-0 max-w-xl">
+                Bật để nhập tồn kho, ngưỡng cảnh báo và hạn sử dụng theo chi
+                nhánh.
+              </p>
+            )}
           </FormItem>
         )}
       />

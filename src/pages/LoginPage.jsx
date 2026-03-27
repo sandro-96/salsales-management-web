@@ -5,12 +5,12 @@ import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../hooks/useAuth";
 import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
 import GoogleSignInButton from "../components/common/GoogleSignInButton.jsx";
+import { toast } from "sonner";
+import sothuchiLogo from "../assets/sothuchi_logo.png";
 
 const LoginPage = () => {
-  const { setUser, loadUser } = useAuth();
+  const { loadUser } = useAuth();
   const [formValue, setFormValue] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -20,9 +20,6 @@ const LoginPage = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-
     try {
       setLoading(true);
       const res = await axiosInstance.post("/auth/login", {
@@ -31,20 +28,18 @@ const LoginPage = () => {
       });
       if (res.data.success) {
         handleAfterLogin(res.data.data);
-        setSuccess("Đăng nhập thành công!");
+        toast.success("Đăng nhập thành công!");
       } else {
-        setError(res.data.message || "Đăng nhập thất bại.");
+        toast.error(res.data.message || "Đăng nhập thất bại.");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại.");
+      toast.error(err.response?.data?.message || "Đăng nhập thất bại.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async (response) => {
-    setError("");
-    setSuccess("");
     setLoading(true);
 
     try {
@@ -52,13 +47,13 @@ const LoginPage = () => {
         idToken: response.credential,
       });
       if (res.data.success) {
-        setSuccess("Đăng nhập bằng Google thành công!");
+        toast.success("Đăng nhập bằng Google thành công!");
         handleAfterLogin(res.data.data);
       } else {
-        setError(res.data.message || "Đăng nhập Google thất bại.");
+        toast.error(res.data.message || "Đăng nhập Google thất bại.");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Đăng nhập Google thất bại.");
+      toast.error(err.response?.data?.message || "Đăng nhập Google thất bại.");
     } finally {
       setLoading(false);
     }
@@ -86,7 +81,11 @@ const LoginPage = () => {
         <div className="grid w-full max-w-sm grid-cols-1 gap-4 mx-auto">
           {loading && <LoadingOverlay text="Đang xử lý..." />}
           <h1 className="text-xl font-bold font-serif text-blue-900">
-            VMANAGE
+            <img
+              src={sothuchiLogo}
+              alt="Sothuchi Logo"
+              className="w-full h-full object-contain"
+            />
           </h1>
           <div className="flex flex-col gap-3">
             <h2 className="text-xl font-bold text-gray-800">
@@ -102,8 +101,6 @@ const LoginPage = () => {
               </Link>
             </p>
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          {success && <p className="text-green-600 text-sm">{success}</p>}
           <form onSubmit={handleLogin} className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700">
@@ -179,7 +176,6 @@ const LoginPage = () => {
           </form>
         </div>
       </div>
-      <div className="hidden md:block flex-1 bg-[url(https://images.unsplash.com/photo-1496917756835-20cb06e75b4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1908&q=80)] bg-center bg-cover"></div>
     </div>
   );
 };

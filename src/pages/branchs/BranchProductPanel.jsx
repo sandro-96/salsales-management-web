@@ -41,7 +41,6 @@ import {
   getBranchProducts,
   toggleProductActiveInBranch,
 } from "@/api/productApi.js";
-import { useShop } from "@/hooks/useShop.js";
 import BranchPricesTab from "../products/BranchPricesTab.jsx";
 
 /**
@@ -58,9 +57,6 @@ export default function BranchProductPanel({
   branchId,
   onCountChange,
 }) {
-  const { selectedShop } = useShop();
-  const trackInventory = selectedShop?.trackInventory ?? false;
-
   const [products, setProducts] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -230,29 +226,31 @@ export default function BranchProductPanel({
         );
       },
     },
-    ...(trackInventory
-      ? [
-          {
-            accessorKey: "quantity",
-            header: ({ column }) => (
-              <DataTableColumnHeader column={column} title="Tồn kho" />
-            ),
-            cell: ({ row }) => {
-              const qty = row.getValue("quantity");
-              const min = row.original.minQuantity;
-              const low = min != null && qty != null && qty <= min;
-              return (
-                <div
-                  className={`font-medium tabular-nums ${low ? "text-red-500" : ""}`}
-                >
-                  {qty ?? "-"}
-                  {low && <span className="ml-1 text-xs">(thấp)</span>}
-                </div>
-              );
-            },
-          },
-        ]
-      : []),
+    {
+      accessorKey: "quantity",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Tồn kho" />
+      ),
+      cell: ({ row }) => {
+        const product = row.original;
+        if (!product.trackInventory) {
+          return (
+            <span className="text-xs text-muted-foreground">Không theo dõi</span>
+          );
+        }
+        const qty = row.getValue("quantity");
+        const min = product.minQuantity;
+        const low = min != null && qty != null && qty <= min;
+        return (
+          <div
+            className={`font-medium tabular-nums ${low ? "text-red-500" : ""}`}
+          >
+            {qty ?? "-"}
+            {low && <span className="ml-1 text-xs">(thấp)</span>}
+          </div>
+        );
+      },
+    },
     {
       accessorKey: "activeInBranch",
       header: ({ column }) => (

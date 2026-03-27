@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useShop } from "../../hooks/useShop.js";
 import { toast } from "sonner";
 import {
@@ -45,6 +45,7 @@ import {
   getProducts,
   deleteProduct,
   toggleProductActive,
+  updateProductTrackInventory,
 } from "../../api/productApi.js";
 import ProductFormModal from "./ProductFormModal.jsx";
 import ProductImportExportDialog from "./ProductImportExportDialog.jsx";
@@ -133,6 +134,33 @@ const ProductPage = () => {
       }
     } catch {
       toast.error("Không thể cập nhật trạng thái.");
+    }
+  };
+
+  const handleToggleTrackInventory = async (product, trackInventory) => {
+    try {
+      const res = await updateProductTrackInventory(
+        shopId,
+        product.productId,
+        trackInventory,
+      );
+      if (res.data?.success) {
+        const updated = res.data.data;
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.productId === product.productId ? { ...p, ...updated } : p,
+          ),
+        );
+        toast.success(
+          trackInventory
+            ? "Đã bật theo dõi tồn kho."
+            : "Đã tắt theo dõi tồn kho.",
+        );
+      } else {
+        toast.error(res.data?.message || "Không thể cập nhật.");
+      }
+    } catch {
+      toast.error("Không thể cập nhật theo dõi tồn kho.");
     }
   };
 
@@ -253,6 +281,26 @@ const ProductPage = () => {
             <Switch
               checked={checked}
               onCheckedChange={() => handleToggleActive(product)}
+            />
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "trackInventory",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Theo dõi tồn kho" />
+      ),
+      cell: ({ row }) => {
+        const product = row.original;
+        const checked = !!product.trackInventory;
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Switch
+              checked={checked}
+              onCheckedChange={(val) =>
+                handleToggleTrackInventory(product, val)
+              }
             />
           </div>
         );

@@ -140,6 +140,21 @@ export const toggleProductActive = (shopId, productId) =>
   axiosInstance.patch(`/shops/${shopId}/products/${productId}/toggle`);
 
 /**
+ * 🔄 Bật/tắt theo dõi tồn kho (theo sản phẩm)
+ * PATCH /api/shops/{shopId}/products/{productId}/track-inventory
+ * body: { trackInventory: boolean }
+ */
+export const updateProductTrackInventory = (
+  shopId,
+  productId,
+  trackInventory,
+) =>
+  axiosInstance.patch(
+    `/shops/${shopId}/products/${productId}/toggle-track-inventory`,
+    { trackInventory },
+  );
+
+/**
  * 🔄 Bật/tắt trạng thái activeInBranch
  * PATCH /api/shops/{shopId}/branches/{branchId}/products/{branchProductId}/toggle-active
  */
