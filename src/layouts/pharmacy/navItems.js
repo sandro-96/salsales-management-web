@@ -8,6 +8,7 @@ import {
   BarChart,
   ShoppingCart,
   Settings,
+  Tag,
 } from "lucide-react";
 
 export const pharmacyWebNav = {
@@ -17,6 +18,7 @@ export const pharmacyWebNav = {
     { to: "/customers", icon: User, label: "Khách hàng" },
     { to: "/branches", icon: Store, label: "Chi nhánh" },
     { to: "/inventory", icon: Pill, label: "Kho thuốc" },
+    { to: "/promotions", icon: Tag, label: "Khuyến mãi" },
   ],
   manager: [
     { to: "/overview", icon: Home, label: "Tổng quan" },
@@ -25,6 +27,7 @@ export const pharmacyWebNav = {
     { to: "/customers", icon: User, label: "Khách hàng" },
     { to: "/branches", icon: Store, label: "Chi nhánh" },
     { to: "/inventory", icon: Pill, label: "Kho thuốc" },
+    { to: "/promotions", icon: Tag, label: "Khuyến mãi" },
     { to: "/reports", icon: BarChart, label: "Báo cáo" },
     { to: "/staffs", icon: Users, label: "Nhân sự" },
   ],

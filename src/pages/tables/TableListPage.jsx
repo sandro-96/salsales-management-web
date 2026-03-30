@@ -142,7 +142,7 @@ const TableFormDialog = ({
         toast.success("Cập nhật bàn thành công.");
       } else {
         data.status = "AVAILABLE";
-        await createTable(data);
+        await createTable(shopId, data);
         toast.success("Tạo bàn thành công.");
       }
       onSuccess?.();

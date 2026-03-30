@@ -27,6 +27,7 @@ import {
   TrendingDown,
   TrendingUp,
   MoreHorizontal,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -115,7 +116,13 @@ const StatCard = ({ icon, label, value, sub, iconClassName, loading }) => {
 
 // ─── Stock Status Badge ──────────────────────────────────────────────────────
 
-const StockStatusBadge = ({ quantity, minQuantity }) => {
+const StockStatusBadge = ({ quantity, minQuantity, trackInventory }) => {
+  if (trackInventory === false)
+    return (
+      <Badge className="gap-1 text-[11px] bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100">
+        <EyeOff className="h-3 w-3" /> Không theo dõi
+      </Badge>
+    );
   if (quantity <= 0)
     return (
       <Badge variant="destructive" className="gap-1 text-[11px]">
@@ -261,7 +268,8 @@ const InventoryListPage = () => {
 
   // ── Fetch transactions ───────────────────────────────────────────────────
   const fetchTransactions = useCallback(async () => {
-    if (!selectedShopId || !selectedBranchId || txProductFilter === "ALL") return;
+    if (!selectedShopId || !selectedBranchId || txProductFilter === "ALL")
+      return;
     setTxLoading(true);
     try {
       const params = {
@@ -290,12 +298,7 @@ const InventoryListPage = () => {
     } finally {
       setTxLoading(false);
     }
-  }, [
-    selectedShopId,
-    selectedBranchId,
-    txPagination,
-    txProductFilter,
-  ]);
+  }, [selectedShopId, selectedBranchId, txPagination, txProductFilter]);
 
   useEffect(() => {
     if (activeTab === "history") fetchTransactions();
@@ -303,27 +306,32 @@ const InventoryListPage = () => {
 
   // ── Computed stats ───────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const totalProducts = products.length;
-    const totalStock = products.reduce((sum, p) => sum + (p.quantity ?? 0), 0);
-    const lowStock = products.filter(
+    const tracked = products.filter((p) => p.trackInventory !== false);
+    const totalProducts = tracked.length;
+    const totalStock = tracked.reduce((sum, p) => sum + (p.quantity ?? 0), 0);
+    const lowStock = tracked.filter(
       (p) => p.quantity > 0 && p.minQuantity > 0 && p.quantity <= p.minQuantity,
     ).length;
-    const outOfStock = products.filter((p) => (p.quantity ?? 0) <= 0).length;
-    return { totalProducts, totalStock, lowStock, outOfStock };
+    const outOfStock = tracked.filter((p) => (p.quantity ?? 0) <= 0).length;
+    const notTracked = products.length - tracked.length;
+    return { totalProducts, totalStock, lowStock, outOfStock, notTracked };
   }, [products]);
 
   // ── Filtered products ────────────────────────────────────────────────────
   const filteredProducts = useMemo(() => {
     if (stockFilter === "ALL") return products;
+    if (stockFilter === "NOT_TRACKED")
+      return products.filter((p) => p.trackInventory === false);
+    const tracked = products.filter((p) => p.trackInventory !== false);
     if (stockFilter === "LOW_STOCK")
-      return products.filter(
+      return tracked.filter(
         (p) =>
           p.quantity > 0 && p.minQuantity > 0 && p.quantity <= p.minQuantity,
       );
     if (stockFilter === "OUT_OF_STOCK")
-      return products.filter((p) => (p.quantity ?? 0) <= 0);
+      return tracked.filter((p) => (p.quantity ?? 0) <= 0);
     if (stockFilter === "IN_STOCK")
-      return products.filter(
+      return tracked.filter(
         (p) =>
           p.quantity > 0 && (p.minQuantity <= 0 || p.quantity > p.minQuantity),
       );
@@ -418,6 +426,8 @@ const InventoryListPage = () => {
           <DataTableColumnHeader column={column} title="Tồn kho" />
         ),
         cell: ({ row }) => {
+          if (row.original.trackInventory === false)
+            return <span className="text-sm text-muted-foreground">—</span>;
           const qty = row.original.quantity ?? 0;
           return (
             <span
@@ -434,6 +444,8 @@ const InventoryListPage = () => {
           <DataTableColumnHeader column={column} title="Tồn tối thiểu" />
         ),
         cell: ({ row }) => {
+          if (row.original.trackInventory === false)
+            return <span className="text-sm text-muted-foreground">—</span>;
           const min = row.original.minQuantity ?? 0;
           return (
             <span className="text-sm text-muted-foreground tabular-nums">
@@ -450,6 +462,7 @@ const InventoryListPage = () => {
           <StockStatusBadge
             quantity={row.original.quantity ?? 0}
             minQuantity={row.original.minQuantity ?? 0}
+            trackInventory={row.original.trackInventory}
           />
         ),
       },
@@ -458,6 +471,7 @@ const InventoryListPage = () => {
         enableHiding: false,
         cell: ({ row }) => {
           const product = row.original;
+          if (product.trackInventory === false) return null;
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -615,11 +629,11 @@ const InventoryListPage = () => {
         ),
       },
       {
-        accessorKey: "createdBy",
+        accessorKey: "createdByName",
         header: "Người thực hiện",
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
-            {row.original.createdBy || "—"}
+            {row.original.createdByName || "—"}
           </span>
         ),
       },
@@ -689,10 +703,12 @@ const InventoryListPage = () => {
         ) : (
           <>
             {/* ── Stat Cards ────────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div
+              className={`grid grid-cols-2 ${stats.notTracked > 0 ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-3`}
+            >
               <StatCard
                 icon={Package}
-                label="Tổng sản phẩm"
+                label="Theo dõi tồn kho"
                 value={stats.totalProducts.toLocaleString("vi-VN")}
                 iconClassName="bg-violet-100 text-violet-600"
                 loading={loading && products.length === 0}
@@ -718,6 +734,15 @@ const InventoryListPage = () => {
                 iconClassName="bg-red-100 text-red-600"
                 loading={loading && products.length === 0}
               />
+              {stats.notTracked > 0 && (
+                <StatCard
+                  icon={EyeOff}
+                  label="Không theo dõi"
+                  value={stats.notTracked}
+                  iconClassName="bg-gray-100 text-gray-500"
+                  loading={loading && products.length === 0}
+                />
+              )}
             </div>
 
             {/* ── Tabs ──────────────────────────────────────────────────── */}
@@ -763,6 +788,9 @@ const InventoryListPage = () => {
                             Sắp hết hàng
                           </SelectItem>
                           <SelectItem value="OUT_OF_STOCK">Hết hàng</SelectItem>
+                          <SelectItem value="NOT_TRACKED">
+                            Không theo dõi
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <DataTableViewOptions table={stockTable} />
@@ -858,13 +886,17 @@ const InventoryListPage = () => {
                           <SelectValue placeholder="Chọn sản phẩm để xem lịch sử" />
                         </SelectTrigger>
                         <SelectContent className="bg-background">
-                          <SelectItem value="ALL" disabled>Chọn sản phẩm</SelectItem>
-                          {products.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.productName || p.name}{" "}
-                              {p.sku ? `(${p.sku})` : ""}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="ALL" disabled>
+                            Chọn sản phẩm
+                          </SelectItem>
+                          {products
+                            .filter((p) => p.trackInventory !== false)
+                            .map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.productName || p.name}{" "}
+                                {p.sku ? `(${p.sku})` : ""}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     )}

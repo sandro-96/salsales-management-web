@@ -8,6 +8,7 @@ import {
   Users,
   BarChart,
   Settings,
+  Tag,
 } from "lucide-react";
 
 export const retailWebNav = {
@@ -17,6 +18,7 @@ export const retailWebNav = {
     { to: "/customers", icon: User, label: "Khách hàng" },
     { to: "/branches", icon: Store, label: "Chi nhánh" },
     { to: "/inventory", icon: Package, label: "Tồn kho" },
+    { to: "/promotions", icon: Tag, label: "Khuyến mãi" },
   ],
   manager: [
     { to: "/overview", icon: Home, label: "Tổng quan" },
@@ -25,6 +27,7 @@ export const retailWebNav = {
     { to: "/customers", icon: User, label: "Khách hàng" },
     { to: "/branches", icon: Store, label: "Chi nhánh" },
     { to: "/inventory", icon: Package, label: "Tồn kho" },
+    { to: "/promotions", icon: Tag, label: "Khuyến mãi" },
     { to: "/reports", icon: BarChart, label: "Báo cáo" },
     { to: "/staffs", icon: Users, label: "Nhân sự" },
   ],

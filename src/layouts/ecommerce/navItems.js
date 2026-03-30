@@ -7,6 +7,7 @@ import {
   BarChart3,
   Store,
   Settings,
+  Tag,
 } from "lucide-react";
 
 export const ecommerceWebNav = {
@@ -15,6 +16,7 @@ export const ecommerceWebNav = {
     { to: "/products", icon: Package, label: "Sản phẩm" },
     { to: "/customers", icon: Users, label: "Khách hàng" },
     { to: "/inventory", icon: Store, label: "Kho hàng" },
+    { to: "/promotions", icon: Tag, label: "Khuyến mãi" },
   ],
   manager: [
     { to: "/overview", icon: Home, label: "Tổng quan" },
@@ -22,6 +24,7 @@ export const ecommerceWebNav = {
     { to: "/products", icon: Package, label: "Sản phẩm" },
     { to: "/customers", icon: Users, label: "Khách hàng" },
     { to: "/inventory", icon: Store, label: "Kho hàng" },
+    { to: "/promotions", icon: Tag, label: "Khuyến mãi" },
     { to: "/reports", icon: BarChart3, label: "Báo cáo" },
   ],
   staff: [

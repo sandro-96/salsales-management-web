@@ -33,6 +33,9 @@ const InventoryListPage = lazy(
 );
 const ReportListPage = lazy(() => import("../pages/reports/ReportListPage"));
 const TableListPage = lazy(() => import("../pages/tables/TableListPage"));
+const PromotionListPage = lazy(
+  () => import("../pages/promotions/PromotionListPage"),
+);
 const AccountPage = lazy(() => import("../pages/AccountPage"));
 const MainPage = lazy(() => import("../pages/MainPage"));
 const HistoryPage = lazy(() => import("../pages/HistoryPage"));
@@ -135,6 +138,12 @@ export const routeConfig = [
         element: <TableListPage />,
         title: "Bàn",
         breadcrumb: "Bàn",
+      },
+      {
+        path: "promotions",
+        element: <PromotionListPage />,
+        title: "Khuyến mãi",
+        breadcrumb: "Khuyến mãi",
       },
       {
         path: "accounts",
