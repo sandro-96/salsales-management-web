@@ -20,6 +20,7 @@ import {
   Receipt,
   Search,
   Filter,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -71,6 +72,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
+import CreateOrderModal from "./CreateOrderModal";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -246,6 +248,7 @@ const OrderListPage = () => {
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [payingOrderId, setPayingOrderId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [createOrderOpen, setCreateOrderOpen] = useState(false);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
@@ -521,6 +524,12 @@ const OrderListPage = () => {
             <h2 className="text-2xl font-semibold tracking-tight">Quản lý đơn hàng</h2>
             <p className="text-sm text-muted-foreground mt-1">Theo dõi và xử lý đơn hàng</p>
           </div>
+          {canManage && (
+            <Button onClick={() => setCreateOrderOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Tạo đơn hàng
+            </Button>
+          )}
         </div>
 
         {/* ── Stat Cards ──────────────────────────────────────────── */}
@@ -687,6 +696,12 @@ const OrderListPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CreateOrderModal
+        open={createOrderOpen}
+        onClose={() => setCreateOrderOpen(false)}
+        onCreated={fetchOrders}
+      />
     </div>
   );
 };

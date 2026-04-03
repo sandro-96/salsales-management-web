@@ -1,10 +1,11 @@
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import Breadcrumbs from "./Breadcrumbs";
+import NotificationBell from "./common/NotificationBell";
 
 export function SiteHeader({ title }) {
   return (
-    <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
+    <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear relative z-20 bg-background">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator
@@ -12,6 +13,9 @@ export function SiteHeader({ title }) {
           className="mx-2 data-[orientation=vertical]:h-4"
         />
         <Breadcrumbs />
+        <div className="ml-auto flex items-center">
+          <NotificationBell />
+        </div>
       </div>
     </header>
   );

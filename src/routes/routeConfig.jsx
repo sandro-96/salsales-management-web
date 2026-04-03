@@ -40,6 +40,13 @@ const AccountPage = lazy(() => import("../pages/AccountPage"));
 const MainPage = lazy(() => import("../pages/MainPage"));
 const HistoryPage = lazy(() => import("../pages/HistoryPage"));
 const ErrorPage = lazy(() => import("../pages/ErrorPage"));
+const SupportListPage = lazy(
+  () => import("../pages/support/SupportListPage"),
+);
+const NotificationPage = lazy(
+  () => import("../pages/notifications/NotificationPage"),
+);
+const PosPage = lazy(() => import("../pages/pos/PosPage"));
 const ShopLayout = lazy(() => import("../layouts/common/ShopLayout.jsx"));
 const BranchLayout = lazy(() => import("../layouts/common/BranchLayout.jsx"));
 const ProductLayout = lazy(() => import("../layouts/common/ProductLayout.jsx"));
@@ -162,6 +169,24 @@ export const routeConfig = [
         element: <HistoryPage />,
         title: "Lịch sử",
         breadcrumb: "Lịch sử",
+      },
+      {
+        path: "support",
+        element: <SupportListPage />,
+        title: "Hỗ trợ",
+        breadcrumb: "Hỗ trợ",
+      },
+      {
+        path: "notifications",
+        element: <NotificationPage />,
+        title: "Thông báo",
+        breadcrumb: "Thông báo",
+      },
+      {
+        path: "pos",
+        element: <PosPage />,
+        title: "Bán hàng",
+        breadcrumb: "Bán hàng",
       },
       {
         path: "branches",

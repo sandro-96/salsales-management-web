@@ -26,8 +26,8 @@ export function AppSidebar({ navItems, ...props }) {
       icon: StoreIcon,
     },
     {
-      label: "Get Help",
-      to: "/supports",
+      label: "Hỗ trợ",
+      to: "/support",
       icon: HelpCircleIcon,
     },
   ];

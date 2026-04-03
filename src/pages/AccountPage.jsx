@@ -20,7 +20,10 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  CalendarIcon,
 } from "lucide-react";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +40,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const GENDER_MAP = {
   MALE: "Nam",
@@ -79,6 +89,7 @@ const AccountPage = () => {
       zipCode: "",
       countryCode: "",
       gender: "",
+      birthDate: null,
     },
   });
 
@@ -115,6 +126,7 @@ const AccountPage = () => {
         zipCode: data.zipCode || "",
         countryCode: data.countryCode || "",
         gender: data.gender || "",
+        birthDate: data.birthDate ? new Date(data.birthDate) : null,
       });
       setIsEditMode(false);
     } catch {
@@ -136,6 +148,9 @@ const AccountPage = () => {
       const formData = new FormData();
       const userData = { ...data };
       if (userData.gender === "") delete userData.gender;
+      if (userData.birthDate instanceof Date) {
+        userData.birthDate = userData.birthDate.toISOString().split("T")[0];
+      }
       formData.append(
         "user",
         new Blob([JSON.stringify(userData)], { type: "application/json" }),
@@ -436,8 +451,8 @@ const AccountPage = () => {
 
                 <Separator />
 
-                {/* Gender */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Gender & Birth date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FieldWrapper label="Giới tính">
                     {isEditMode ? (
                       <Controller
@@ -458,6 +473,50 @@ const AccountPage = () => {
                       />
                     ) : (
                       <FieldValue>{GENDER_MAP[user?.gender] || null}</FieldValue>
+                    )}
+                  </FieldWrapper>
+                  <FieldWrapper label="Ngày sinh">
+                    {isEditMode ? (
+                      <Controller
+                        name="birthDate"
+                        control={control}
+                        render={({ field }) => (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !field.value && "text-muted-foreground",
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value
+                                  ? format(field.value, "dd/MM/yyyy", { locale: vi })
+                                  : "Chọn ngày sinh"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                locale={vi}
+                                captionLayout="dropdown-buttons"
+                                fromYear={1940}
+                                toYear={new Date().getFullYear()}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                      />
+                    ) : (
+                      <FieldValue>
+                        {user?.birthDate
+                          ? format(new Date(user.birthDate), "dd/MM/yyyy", { locale: vi })
+                          : null}
+                      </FieldValue>
                     )}
                   </FieldWrapper>
                 </div>
