@@ -109,6 +109,57 @@ function formatDiscount(promo) {
   return `-${promo.discountValue.toLocaleString("vi-VN")}₫`;
 }
 
+function createEmptyTab(id) {
+  return { id, cart: [], tableId: "", note: "", customer: null, pointsToRedeem: 0 };
+}
+
+const OrderTabBar = ({ tabs, activeTabId, onSelect, onAdd, onClose, tables }) => (
+  <div className="border-b flex items-center gap-0.5 px-1.5 pt-1.5 overflow-x-auto bg-muted/30">
+    {tabs.map((tab) => {
+      const isActive = tab.id === activeTabId;
+      const itemCount = tab.cart.reduce((s, i) => s + i.quantity, 0);
+      const tableName = tab.tableId && tab.tableId !== "none"
+        ? tables.find((t) => t.id === tab.tableId)?.name
+        : null;
+      const label = tableName || `Đơn ${tab.id}`;
+      return (
+        <button
+          key={tab.id}
+          onClick={() => onSelect(tab.id)}
+          className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-t-md text-xs font-medium transition-colors shrink-0 ${
+            isActive
+              ? "bg-card border border-b-card text-foreground -mb-px z-10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <span className="truncate max-w-[80px]">{label}</span>
+          {itemCount > 0 && (
+            <Badge variant={isActive ? "default" : "secondary"} className="h-4 min-w-4 px-1 text-[10px] justify-center">
+              {itemCount}
+            </Badge>
+          )}
+          {tabs.length > 1 && (
+            <span
+              role="button"
+              className="ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
+            >
+              <X className="h-3 w-3 hover:text-destructive" />
+            </span>
+          )}
+        </button>
+      );
+    })}
+    <button
+      onClick={onAdd}
+      className="flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 ml-0.5"
+      title="Thêm đơn mới"
+    >
+      <Plus className="h-3.5 w-3.5" />
+    </button>
+  </div>
+);
+
 const CartPanel = ({
   cart,
   totalItems,
@@ -384,19 +435,98 @@ const PosPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
 
-  const [cart, setCart] = useState([]);
-  const [selectedTableId, setSelectedTableId] = useState("");
-  const [note, setNote] = useState("");
+  const [orderTabs, setOrderTabs] = useState([createEmptyTab(1)]);
+  const [activeTabId, setActiveTabId] = useState(1);
+  const nextTabIdRef = React.useRef(2);
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [submitting, setSubmitting] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerResults, setCustomerResults] = useState([]);
   const [customerSearching, setCustomerSearching] = useState(false);
-  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+
+  const activeTab = orderTabs.find((t) => t.id === activeTabId) || orderTabs[0];
+  const cart = useMemo(() => activeTab?.cart || [], [activeTab]);
+  const selectedTableId = activeTab?.tableId || "";
+  const note = activeTab?.note || "";
+  const selectedCustomer = activeTab?.customer || null;
+  const pointsToRedeem = activeTab?.pointsToRedeem || 0;
+
+  const updateActiveTab = useCallback(
+    (updates) => {
+      setOrderTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === activeTabId ? { ...tab, ...updates } : tab,
+        ),
+      );
+    },
+    [activeTabId],
+  );
+
+  const setCart = useCallback(
+    (updater) => {
+      setOrderTabs((prev) =>
+        prev.map((tab) => {
+          if (tab.id !== activeTabId) return tab;
+          const newCart = typeof updater === "function" ? updater(tab.cart) : updater;
+          return { ...tab, cart: newCart };
+        }),
+      );
+    },
+    [activeTabId],
+  );
+
+  const setSelectedTableId = useCallback(
+    (v) => updateActiveTab({ tableId: v }),
+    [updateActiveTab],
+  );
+  const setNote = useCallback(
+    (v) => updateActiveTab({ note: v }),
+    [updateActiveTab],
+  );
+  const setSelectedCustomer = useCallback(
+    (v) => updateActiveTab({ customer: v }),
+    [updateActiveTab],
+  );
+  const setPointsToRedeem = useCallback(
+    (v) => updateActiveTab({ pointsToRedeem: v }),
+    [updateActiveTab],
+  );
+
+  const addTab = useCallback(() => {
+    const id = nextTabIdRef.current++;
+    setOrderTabs((prev) => [...prev, createEmptyTab(id)]);
+    setActiveTabId(id);
+    setCustomerResults([]);
+  }, []);
+
+  const switchTab = useCallback(
+    (tabId) => {
+      if (tabId !== activeTabId) {
+        setActiveTabId(tabId);
+        setCustomerResults([]);
+      }
+    },
+    [activeTabId],
+  );
+
+  const closeTab = useCallback(
+    (tabId) => {
+      setOrderTabs((prev) => {
+        if (prev.length <= 1) return prev;
+        const filtered = prev.filter((t) => t.id !== tabId);
+        if (tabId === activeTabId) {
+          const idx = prev.findIndex((t) => t.id === tabId);
+          const next = filtered[Math.min(idx, filtered.length - 1)];
+          setActiveTabId(next.id);
+        }
+        return filtered;
+      });
+    },
+    [activeTabId],
+  );
 
   const effectiveBranchId =
     selectedBranchId || (branches.length === 1 ? branches[0]?.id : null);
@@ -474,14 +604,14 @@ const PosPage = () => {
         setSelectedCustomer(customer);
       }
     },
-    [selectedShopId],
+    [selectedShopId, setSelectedCustomer],
   );
 
   const handleClearCustomer = useCallback(() => {
     setSelectedCustomer(null);
     setCustomerResults([]);
     setPointsToRedeem(0);
-  }, []);
+  }, [setSelectedCustomer, setPointsToRedeem]);
 
   const { promoMap, activePromotions } = useMemo(
     () => buildPromotionMap(promotions, effectiveBranchId),
@@ -553,33 +683,41 @@ const PosPage = () => {
         ];
       });
     },
-    [promoMap],
+    [promoMap, setCart],
   );
 
-  const updateQuantity = useCallback((productId, delta) => {
-    setCart((prev) =>
-      prev
-        .map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item,
-        )
-        .filter((item) => item.quantity > 0),
-    );
-  }, []);
+  const updateQuantity = useCallback(
+    (productId, delta) => {
+      setCart((prev) =>
+        prev
+          .map((item) =>
+            item.productId === productId
+              ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+              : item,
+          )
+          .filter((item) => item.quantity > 0),
+      );
+    },
+    [setCart],
+  );
 
-  const removeFromCart = useCallback((productId) => {
-    setCart((prev) => prev.filter((item) => item.productId !== productId));
-  }, []);
+  const removeFromCart = useCallback(
+    (productId) => {
+      setCart((prev) => prev.filter((item) => item.productId !== productId));
+    },
+    [setCart],
+  );
 
   const clearCart = useCallback(() => {
-    setCart([]);
-    setSelectedTableId("");
-    setNote("");
-    setSelectedCustomer(null);
+    updateActiveTab({
+      cart: [],
+      tableId: "",
+      note: "",
+      customer: null,
+      pointsToRedeem: 0,
+    });
     setCustomerResults([]);
-    setPointsToRedeem(0);
-  }, []);
+  }, [updateActiveTab]);
 
   const subtotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -646,8 +784,12 @@ const PosPage = () => {
       }
 
       toast.success("Đơn hàng đã được tạo thành công!");
-      clearCart();
       setCheckoutOpen(false);
+      if (orderTabs.length > 1) {
+        closeTab(activeTabId);
+      } else {
+        clearCart();
+      }
       fetchData();
     } catch (err) {
       console.error("Order creation failed", err);
@@ -685,6 +827,15 @@ const PosPage = () => {
       </div>
     );
   }
+
+  const tabBarProps = {
+    tabs: orderTabs,
+    activeTabId,
+    onSelect: switchTab,
+    onAdd: addTab,
+    onClose: closeTab,
+    tables,
+  };
 
   const cartPanelProps = {
     cart,
@@ -899,12 +1050,18 @@ const PosPage = () => {
                 {totalItems > 99 ? "99+" : totalItems}
               </span>
             )}
+            {orderTabs.length > 1 && (
+              <span className="absolute -top-1 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {orderTabs.length}
+              </span>
+            )}
           </Button>
         </div>
       </div>
 
       {/* Desktop: Cart panel */}
       <aside className="hidden lg:flex w-80 xl:w-96 shrink-0 border-l bg-card flex-col">
+        <OrderTabBar {...tabBarProps} />
         <CartPanel
           {...cartPanelProps}
           onCheckout={() => setCheckoutOpen(true)}
@@ -928,6 +1085,7 @@ const PosPage = () => {
               )}
             </SheetTitle>
           </SheetHeader>
+          <OrderTabBar {...tabBarProps} />
           <CartPanel
             {...cartPanelProps}
             onCheckout={() => {
