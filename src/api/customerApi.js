@@ -48,3 +48,27 @@ export const exportCustomers = (shopId, params = {}) =>
     params: { shopId, ...params },
     responseType: "blob",
   });
+
+/**
+ * GET /api/customers/{id}/points?shopId=
+ */
+export const getCustomerPoints = (id, shopId) =>
+  axiosInstance.get(`/customers/${id}/points`, {
+    params: { shopId },
+  });
+
+/**
+ * GET /api/customers/{id}/points/history?shopId=&page=0&size=20
+ */
+export const getPointHistory = (id, shopId, params = {}) =>
+  axiosInstance.get(`/customers/${id}/points/history`, {
+    params: { shopId, ...params },
+  });
+
+/**
+ * POST /api/customers/{id}/points/adjust?shopId=
+ */
+export const adjustCustomerPoints = (id, shopId, data) =>
+  axiosInstance.post(`/customers/${id}/points/adjust`, data, {
+    params: { shopId },
+  });

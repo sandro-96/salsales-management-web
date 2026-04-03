@@ -20,6 +20,7 @@ import {
   Mail,
   Phone,
   MapPin,
+  Star,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -273,12 +274,30 @@ const CustomerListPage = () => {
       header: "Chi nhánh",
       cell: ({ row }) => {
         const bid = row.original.branchId;
-        if (!bid) return <span className="text-muted-foreground text-sm">-</span>;
+        if (!bid)
+          return <span className="text-muted-foreground text-sm">-</span>;
         return (
           <Badge variant="secondary" className="text-xs gap-1">
             <Warehouse className="h-3 w-3" />
             {branchMap[bid] || bid}
           </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "loyaltyPoints",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Điểm tích lũy" />
+      ),
+      cell: ({ row }) => {
+        const points = row.getValue("loyaltyPoints") ?? 0;
+        return (
+          <div className="flex items-center gap-1.5 text-sm">
+            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+            <span className="font-medium">
+              {points.toLocaleString("vi-VN")}
+            </span>
+          </div>
         );
       },
     },

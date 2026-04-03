@@ -3,7 +3,6 @@ import {
   Search,
   Plus,
   Minus,
-  Trash2,
   ShoppingCart,
   CreditCard,
   Banknote,
@@ -12,13 +11,20 @@ import {
   UtensilsCrossed,
   X,
   Receipt,
+  Tag,
+  Percent,
+  UserRound,
+  Star,
+  Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop";
 import { getBranchProducts } from "../../api/productApi";
 import { getTables } from "../../api/tableApi";
+import { getPromotions } from "../../api/promotionApi";
 import { createOrder, confirmPayment } from "../../api/orderApi";
+import { getCustomers, getCustomerPoints } from "../../api/customerApi";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,10 +62,58 @@ const PAYMENT_METHODS = [
 
 const ALL_CATEGORY = "__ALL__";
 
+function buildPromotionMap(promotions, branchId) {
+  const now = new Date();
+  const active = promotions.filter((p) => {
+    if (!p.active) return false;
+    if (p.startDate && new Date(p.startDate) > now) return false;
+    if (p.endDate && new Date(p.endDate) < now) return false;
+    if (p.branchId && p.branchId !== branchId) return false;
+    return true;
+  });
+
+  const map = new Map();
+  for (const promo of active) {
+    const ids = promo.applicableProductIds;
+    if (!ids || ids.length === 0) {
+      map.set("__SHOP_WIDE__", [...(map.get("__SHOP_WIDE__") || []), promo]);
+    } else {
+      for (const pid of ids) {
+        if (!map.has(pid)) map.set(pid, []);
+        map.get(pid).push(promo);
+      }
+    }
+  }
+  return { promoMap: map, activePromotions: active };
+}
+
+function getBestPromo(promoMap, productId) {
+  const specific = promoMap.get(productId) || [];
+  const shopWide = promoMap.get("__SHOP_WIDE__") || [];
+  const all = [...specific, ...shopWide];
+  if (all.length === 0) return null;
+  return all[0];
+}
+
+function calcDiscountedPrice(basePrice, promo) {
+  if (!promo) return basePrice;
+  if (promo.discountType === "PERCENT") {
+    return basePrice * (1 - promo.discountValue / 100);
+  }
+  return Math.max(0, basePrice - promo.discountValue);
+}
+
+function formatDiscount(promo) {
+  if (!promo) return "";
+  if (promo.discountType === "PERCENT") return `-${promo.discountValue}%`;
+  return `-${promo.discountValue.toLocaleString("vi-VN")}₫`;
+}
+
 const CartPanel = ({
   cart,
   totalItems,
   subtotal,
+  totalSavings,
   note,
   setNote,
   selectedTableId,
@@ -70,6 +124,12 @@ const CartPanel = ({
   clearCart,
   onCheckout,
   hideHeader,
+  selectedCustomer,
+  onCustomerSearch,
+  onSelectCustomer,
+  onClearCustomer,
+  customerResults,
+  customerSearching,
 }) => (
   <>
     {!hideHeader && (
@@ -96,8 +156,77 @@ const CartPanel = ({
       </div>
     )}
 
-    {/* Table selector */}
     <div className="p-3 border-b space-y-2">
+      {/* Customer selection */}
+      {selectedCustomer ? (
+        <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2.5 py-2">
+          <UserRound className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium truncate">
+              {selectedCustomer.name}
+            </p>
+            <div className="flex items-center gap-1.5">
+              {selectedCustomer.phone && (
+                <span className="text-[10px] text-muted-foreground">
+                  {selectedCustomer.phone}
+                </span>
+              )}
+              <span className="flex items-center gap-0.5 text-[10px] text-yellow-600 font-medium">
+                <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
+                {(selectedCustomer.loyaltyPoints ?? 0).toLocaleString(
+                  "vi-VN",
+                )}{" "}
+                điểm
+              </span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={onClearCustomer}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Tìm khách hàng (tên, SĐT)..."
+            className="h-8 text-xs pl-7"
+            onChange={(e) => onCustomerSearch(e.target.value)}
+          />
+          {customerSearching && (
+            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+          )}
+          {customerResults.length > 0 && (
+            <div className="absolute z-20 mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-40 overflow-y-auto">
+              {customerResults.map((c) => (
+                <button
+                  key={c.id}
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors flex items-center justify-between gap-2"
+                  onClick={() => onSelectCustomer(c)}
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{c.name}</p>
+                    {c.phone && (
+                      <p className="text-muted-foreground text-[10px]">
+                        {c.phone}
+                      </p>
+                    )}
+                  </div>
+                  <span className="flex items-center gap-0.5 text-[10px] text-yellow-600 shrink-0">
+                    <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
+                    {(c.loyaltyPoints ?? 0).toLocaleString("vi-VN")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <Select value={selectedTableId} onValueChange={setSelectedTableId}>
         <SelectTrigger className="h-8 text-xs">
           <SelectValue placeholder="Chọn bàn (tuỳ chọn)" />
@@ -115,7 +244,6 @@ const CartPanel = ({
       </Select>
     </div>
 
-    {/* Cart items */}
     <ScrollArea className="flex-1">
       {cart.length === 0 ? (
         <div className="flex items-center justify-center h-48 text-muted-foreground">
@@ -148,9 +276,22 @@ const CartPanel = ({
                 <p className="text-xs font-medium leading-tight truncate">
                   {item.productName}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {item.price.toLocaleString("vi-VN")} ₫
-                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {item.hasDiscount ? (
+                    <>
+                      <span className="text-[11px] line-through text-muted-foreground">
+                        {item.originalPrice.toLocaleString("vi-VN")}₫
+                      </span>
+                      <span className="text-[11px] font-semibold text-emerald-600">
+                        {item.price.toLocaleString("vi-VN")}₫
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">
+                      {item.price.toLocaleString("vi-VN")} ₫
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1.5 mt-1">
                   <Button
                     variant="outline"
@@ -192,7 +333,6 @@ const CartPanel = ({
       )}
     </ScrollArea>
 
-    {/* Note */}
     <div className="p-3 border-t">
       <Textarea
         placeholder="Ghi chú đơn hàng..."
@@ -203,8 +343,17 @@ const CartPanel = ({
       />
     </div>
 
-    {/* Total & Checkout */}
-    <div className="p-3 border-t space-y-3">
+    <div className="p-3 border-t space-y-2">
+      {totalSavings > 0 && (
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-emerald-600 flex items-center gap-1">
+            <Tag className="h-3 w-3" /> Tiết kiệm
+          </span>
+          <span className="text-emerald-600 font-semibold tabular-nums">
+            -{totalSavings.toLocaleString("vi-VN")} ₫
+          </span>
+        </div>
+      )}
       <div className="flex justify-between items-center">
         <span className="text-sm text-muted-foreground">Tạm tính</span>
         <span className="text-lg font-bold tabular-nums">
@@ -229,6 +378,7 @@ const PosPage = () => {
 
   const [products, setProducts] = useState([]);
   const [tables, setTables] = useState([]);
+  const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -243,6 +393,11 @@ const PosPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerResults, setCustomerResults] = useState([]);
+  const [customerSearching, setCustomerSearching] = useState(false);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+
   const effectiveBranchId =
     selectedBranchId || (branches.length === 1 ? branches[0]?.id : null);
 
@@ -250,18 +405,25 @@ const PosPage = () => {
     if (!selectedShopId || !effectiveBranchId) return;
     setLoading(true);
     try {
-      const [prodRes, tableRes] = await Promise.all([
+      const [prodRes, tableRes, promoRes] = await Promise.all([
         getBranchProducts(selectedShopId, effectiveBranchId, {
           size: 500,
           active: true,
         }),
         getTables(selectedShopId, effectiveBranchId),
+        getPromotions(selectedShopId, {
+          branchId: effectiveBranchId,
+          size: 200,
+        }),
       ]);
       const prodList = prodRes.data?.data?.content || prodRes.data?.data || [];
       setProducts(prodList.filter((p) => p.activeInBranch !== false));
       const tableList =
         tableRes.data?.data?.content || tableRes.data?.data || [];
       setTables(tableList);
+      const promoList =
+        promoRes.data?.data?.content || promoRes.data?.data || [];
+      setPromotions(promoList);
     } catch (err) {
       console.error("Failed to load POS data", err);
       toast.error("Không thể tải dữ liệu sản phẩm");
@@ -273,6 +435,58 @@ const PosPage = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const customerSearchTimer = React.useRef(null);
+  const handleCustomerSearch = useCallback(
+    (keyword) => {
+      setCustomerResults([]);
+      if (customerSearchTimer.current)
+        clearTimeout(customerSearchTimer.current);
+      if (!keyword || keyword.trim().length < 2) return;
+      customerSearchTimer.current = setTimeout(async () => {
+        setCustomerSearching(true);
+        try {
+          const res = await getCustomers(selectedShopId, {
+            keyword: keyword.trim(),
+            size: 8,
+          });
+          const data = res.data?.data;
+          const list = data?.content ?? (Array.isArray(data) ? data : []);
+          setCustomerResults(list);
+        } catch {
+          setCustomerResults([]);
+        } finally {
+          setCustomerSearching(false);
+        }
+      }, 350);
+    },
+    [selectedShopId],
+  );
+
+  const handleSelectCustomer = useCallback(
+    async (customer) => {
+      setCustomerResults([]);
+      try {
+        const res = await getCustomerPoints(customer.id, selectedShopId);
+        const points = res.data?.data ?? customer.loyaltyPoints ?? 0;
+        setSelectedCustomer({ ...customer, loyaltyPoints: points });
+      } catch {
+        setSelectedCustomer(customer);
+      }
+    },
+    [selectedShopId],
+  );
+
+  const handleClearCustomer = useCallback(() => {
+    setSelectedCustomer(null);
+    setCustomerResults([]);
+    setPointsToRedeem(0);
+  }, []);
+
+  const { promoMap, activePromotions } = useMemo(
+    () => buildPromotionMap(promotions, effectiveBranchId),
+    [promotions, effectiveBranchId],
+  );
 
   const categories = useMemo(() => {
     const cats = new Set();
@@ -303,31 +517,44 @@ const PosPage = () => {
     [tables],
   );
 
-  const addToCart = useCallback((product) => {
-    setCart((prev) => {
-      const existing = prev.find(
-        (item) => item.productId === product.productId,
-      );
-      if (existing) {
-        return prev.map((item) =>
-          item.productId === product.productId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
+  const addToCart = useCallback(
+    (product) => {
+      setCart((prev) => {
+        const existing = prev.find(
+          (item) => item.productId === product.productId,
         );
-      }
-      return [
-        ...prev,
-        {
-          productId: product.productId,
-          branchProductId: product.id,
-          productName: product.name,
-          price: product.price,
-          image: product.images?.[0] || null,
-          quantity: 1,
-        },
-      ];
-    });
-  }, []);
+        if (existing) {
+          return prev.map((item) =>
+            item.productId === product.productId
+              ? { ...item, quantity: item.quantity + 1 }
+              : item,
+          );
+        }
+
+        const promo = getBestPromo(promoMap, product.productId);
+        const basePrice = product.price;
+        const discountedPrice = calcDiscountedPrice(basePrice, promo);
+        const hasDiscount = promo && discountedPrice < basePrice;
+
+        return [
+          ...prev,
+          {
+            productId: product.productId,
+            branchProductId: product.id,
+            productName: product.name,
+            originalPrice: basePrice,
+            price: hasDiscount ? discountedPrice : basePrice,
+            hasDiscount: !!hasDiscount,
+            promoLabel: hasDiscount ? formatDiscount(promo) : null,
+            promoName: promo?.name || null,
+            image: product.images?.[0] || null,
+            quantity: 1,
+          },
+        ];
+      });
+    },
+    [promoMap],
+  );
 
   const updateQuantity = useCallback((productId, delta) => {
     setCart((prev) =>
@@ -349,10 +576,26 @@ const PosPage = () => {
     setCart([]);
     setSelectedTableId("");
     setNote("");
+    setSelectedCustomer(null);
+    setCustomerResults([]);
+    setPointsToRedeem(0);
   }, []);
 
   const subtotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [cart],
+  );
+
+  const totalSavings = useMemo(
+    () =>
+      cart.reduce(
+        (sum, item) =>
+          sum +
+          (item.hasDiscount
+            ? (item.originalPrice - item.price) * item.quantity
+            : 0),
+        0,
+      ),
     [cart],
   );
 
@@ -368,8 +611,14 @@ const PosPage = () => {
       const orderData = {
         shopId: selectedShopId,
         branchId: effectiveBranchId,
-        tableId: selectedTableId || null,
+        tableId:
+          selectedTableId && selectedTableId !== "none"
+            ? selectedTableId
+            : null,
         note: note || null,
+        customerId: selectedCustomer?.id || null,
+        pointsToRedeem:
+          selectedCustomer && pointsToRedeem > 0 ? pointsToRedeem : null,
         items: cart.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -437,6 +686,27 @@ const PosPage = () => {
     );
   }
 
+  const cartPanelProps = {
+    cart,
+    totalItems,
+    subtotal,
+    totalSavings,
+    note,
+    setNote,
+    selectedTableId,
+    setSelectedTableId,
+    availableTables,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    selectedCustomer,
+    onCustomerSearch: handleCustomerSearch,
+    onSelectCustomer: handleSelectCustomer,
+    onClearCustomer: handleClearCustomer,
+    customerResults,
+    customerSearching,
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-full">
       {/* Mobile: Category horizontal scroll */}
@@ -482,6 +752,32 @@ const PosPage = () => {
             ))}
           </div>
         </ScrollArea>
+
+        {activePromotions.length > 0 && (
+          <div className="border-t p-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Khuyến mãi
+            </p>
+            <div className="space-y-1.5">
+              {activePromotions.slice(0, 5).map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-start gap-1.5 text-[11px]"
+                >
+                  <Tag className="h-3 w-3 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium leading-tight truncate">
+                      {p.name}
+                    </p>
+                    <p className="text-emerald-600 font-semibold">
+                      {formatDiscount(p)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* Center: Product grid */}
@@ -499,6 +795,12 @@ const PosPage = () => {
           <Badge variant="secondary" className="shrink-0">
             {filteredProducts.length} sản phẩm
           </Badge>
+          {activePromotions.length > 0 && (
+            <Badge className="shrink-0 bg-emerald-100 text-emerald-800 border-emerald-200 gap-1">
+              <Tag className="h-3 w-3" />
+              {activePromotions.length} KM
+            </Badge>
+          )}
         </div>
 
         <ScrollArea className="flex-1">
@@ -521,6 +823,13 @@ const PosPage = () => {
                 const inCart = cart.find(
                   (c) => c.productId === product.productId,
                 );
+                const promo = getBestPromo(promoMap, product.productId);
+                const discountedPrice = calcDiscountedPrice(
+                  product.price,
+                  promo,
+                );
+                const hasPromo = promo && discountedPrice < product.price;
+
                 return (
                   <Card
                     key={product.id}
@@ -539,6 +848,12 @@ const PosPage = () => {
                           <UtensilsCrossed className="h-8 w-8 text-muted-foreground/40" />
                         </div>
                       )}
+                      {hasPromo && (
+                        <Badge className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 gap-0.5">
+                          <Percent className="h-2.5 w-2.5" />
+                          {formatDiscount(promo)}
+                        </Badge>
+                      )}
                       {inCart && (
                         <Badge className="absolute top-1.5 right-1.5 h-6 min-w-6 justify-center text-xs">
                           {inCart.quantity}
@@ -549,9 +864,20 @@ const PosPage = () => {
                       <p className="text-xs font-medium leading-tight line-clamp-2">
                         {product.name}
                       </p>
-                      <p className="text-sm font-bold text-primary mt-1">
-                        {product.price?.toLocaleString("vi-VN")} ₫
-                      </p>
+                      {hasPromo ? (
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                          <span className="text-sm font-bold text-emerald-600">
+                            {discountedPrice.toLocaleString("vi-VN")} ₫
+                          </span>
+                          <span className="text-[10px] line-through text-muted-foreground">
+                            {product.price.toLocaleString("vi-VN")}₫
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-bold text-primary mt-1">
+                          {product.price?.toLocaleString("vi-VN")} ₫
+                        </p>
+                      )}
                     </div>
                   </Card>
                 );
@@ -580,17 +906,7 @@ const PosPage = () => {
       {/* Desktop: Cart panel */}
       <aside className="hidden lg:flex w-80 xl:w-96 shrink-0 border-l bg-card flex-col">
         <CartPanel
-          cart={cart}
-          totalItems={totalItems}
-          subtotal={subtotal}
-          note={note}
-          setNote={setNote}
-          selectedTableId={selectedTableId}
-          setSelectedTableId={setSelectedTableId}
-          availableTables={availableTables}
-          updateQuantity={updateQuantity}
-          removeFromCart={removeFromCart}
-          clearCart={clearCart}
+          {...cartPanelProps}
           onCheckout={() => setCheckoutOpen(true)}
         />
       </aside>
@@ -613,17 +929,7 @@ const PosPage = () => {
             </SheetTitle>
           </SheetHeader>
           <CartPanel
-            cart={cart}
-            totalItems={totalItems}
-            subtotal={subtotal}
-            note={note}
-            setNote={setNote}
-            selectedTableId={selectedTableId}
-            setSelectedTableId={setSelectedTableId}
-            availableTables={availableTables}
-            updateQuantity={updateQuantity}
-            removeFromCart={removeFromCart}
-            clearCart={clearCart}
+            {...cartPanelProps}
             onCheckout={() => {
               setCartOpen(false);
               setCheckoutOpen(true);
@@ -650,31 +956,135 @@ const PosPage = () => {
                   key={item.productId}
                   className="flex justify-between px-3 py-2 text-sm"
                 >
-                  <span>
-                    {item.productName}{" "}
-                    <span className="text-muted-foreground">
-                      x{item.quantity}
+                  <div className="min-w-0 flex-1">
+                    <span>
+                      {item.productName}{" "}
+                      <span className="text-muted-foreground">
+                        x{item.quantity}
+                      </span>
                     </span>
-                  </span>
-                  <span className="font-medium tabular-nums">
-                    {(item.price * item.quantity).toLocaleString("vi-VN")} ₫
-                  </span>
+                    {item.hasDiscount && (
+                      <span className="ml-1.5 text-[10px] text-emerald-600 font-medium">
+                        {item.promoLabel}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0 ml-2">
+                    {item.hasDiscount && (
+                      <span className="text-xs line-through text-muted-foreground mr-1.5">
+                        {(item.originalPrice * item.quantity).toLocaleString(
+                          "vi-VN",
+                        )}
+                        ₫
+                      </span>
+                    )}
+                    <span className="font-medium tabular-nums">
+                      {(item.price * item.quantity).toLocaleString("vi-VN")} ₫
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
 
+            {totalSavings > 0 && (
+              <div className="flex justify-between items-center px-1 text-sm">
+                <span className="text-emerald-600 flex items-center gap-1">
+                  <Tag className="h-3.5 w-3.5" /> Tổng tiết kiệm
+                </span>
+                <span className="text-emerald-600 font-semibold tabular-nums">
+                  -{totalSavings.toLocaleString("vi-VN")} ₫
+                </span>
+              </div>
+            )}
+
             <div className="flex justify-between items-center px-1">
               <span className="font-semibold">Tổng cộng</span>
               <span className="text-xl font-bold text-primary tabular-nums">
-                {subtotal.toLocaleString("vi-VN")} ₫
+                {Math.max(0, subtotal - pointsToRedeem * 1000).toLocaleString(
+                  "vi-VN",
+                )}{" "}
+                ₫
               </span>
             </div>
+
+            {pointsToRedeem > 0 && (
+              <div className="flex justify-between items-center px-1 text-xs">
+                <span className="text-muted-foreground">
+                  (Trước giảm điểm: {subtotal.toLocaleString("vi-VN")}₫)
+                </span>
+              </div>
+            )}
 
             {selectedTableId && selectedTableId !== "none" && (
               <div className="text-sm text-muted-foreground px-1">
                 Bàn:{" "}
                 {tables.find((t) => t.id === selectedTableId)?.name ||
                   selectedTableId}
+              </div>
+            )}
+
+            {selectedCustomer && (
+              <div className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserRound className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">
+                      {selectedCustomer.name}
+                    </span>
+                  </div>
+                  <span className="flex items-center gap-1 text-xs text-yellow-600">
+                    <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                    {(selectedCustomer.loyaltyPoints ?? 0).toLocaleString(
+                      "vi-VN",
+                    )}{" "}
+                    điểm
+                  </span>
+                </div>
+                {(selectedCustomer.loyaltyPoints ?? 0) > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Coins className="h-3 w-3" /> Dùng điểm (1 điểm =
+                        1.000₫)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={selectedCustomer.loyaltyPoints}
+                        value={pointsToRedeem || ""}
+                        onChange={(e) => {
+                          const v = Math.max(
+                            0,
+                            Math.min(
+                              selectedCustomer.loyaltyPoints,
+                              parseInt(e.target.value) || 0,
+                            ),
+                          );
+                          setPointsToRedeem(v);
+                        }}
+                        placeholder="0"
+                        className="h-8 text-xs w-24"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs shrink-0"
+                        onClick={() =>
+                          setPointsToRedeem(selectedCustomer.loyaltyPoints)
+                        }
+                      >
+                        Dùng hết
+                      </Button>
+                      {pointsToRedeem > 0 && (
+                        <span className="text-xs text-emerald-600 font-medium shrink-0">
+                          -{(pointsToRedeem * 1000).toLocaleString("vi-VN")}₫
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -5,14 +5,16 @@ import {
   Minus,
   Trash2,
   Loader2,
-  UtensilsCrossed,
   ShoppingCart,
+  Tag,
+  Percent,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop";
 import { getBranchProducts } from "../../api/productApi";
 import { getTables } from "../../api/tableApi";
+import { getPromotions } from "../../api/promotionApi";
 import { createOrder } from "../../api/orderApi";
 
 import { Button } from "@/components/ui/button";
@@ -44,12 +46,59 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+function buildPromotionMap(promotions, branchId) {
+  const now = new Date();
+  const active = promotions.filter((p) => {
+    if (!p.active) return false;
+    if (p.startDate && new Date(p.startDate) > now) return false;
+    if (p.endDate && new Date(p.endDate) < now) return false;
+    if (p.branchId && p.branchId !== branchId) return false;
+    return true;
+  });
+
+  const map = new Map();
+  for (const promo of active) {
+    const ids = promo.applicableProductIds;
+    if (!ids || ids.length === 0) {
+      map.set("__SHOP_WIDE__", [...(map.get("__SHOP_WIDE__") || []), promo]);
+    } else {
+      for (const pid of ids) {
+        if (!map.has(pid)) map.set(pid, []);
+        map.get(pid).push(promo);
+      }
+    }
+  }
+  return map;
+}
+
+function getBestPromo(promoMap, productId) {
+  const specific = promoMap.get(productId) || [];
+  const shopWide = promoMap.get("__SHOP_WIDE__") || [];
+  const all = [...specific, ...shopWide];
+  return all.length > 0 ? all[0] : null;
+}
+
+function calcDiscountedPrice(basePrice, promo) {
+  if (!promo) return basePrice;
+  if (promo.discountType === "PERCENT") {
+    return basePrice * (1 - promo.discountValue / 100);
+  }
+  return Math.max(0, basePrice - promo.discountValue);
+}
+
+function formatDiscount(promo) {
+  if (!promo) return "";
+  if (promo.discountType === "PERCENT") return `-${promo.discountValue}%`;
+  return `-${promo.discountValue.toLocaleString("vi-VN")}₫`;
+}
+
 const CreateOrderModal = ({ open, onClose, onCreated }) => {
   const { selectedShopId, branches, selectedBranchId } = useShop();
 
   const [branchId, setBranchId] = useState(selectedBranchId || "");
   const [products, setProducts] = useState([]);
   const [tables, setTables] = useState([]);
+  const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,7 +109,9 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
 
   useEffect(() => {
     if (open) {
-      setBranchId(selectedBranchId || (branches.length === 1 ? branches[0]?.id : ""));
+      setBranchId(
+        selectedBranchId || (branches.length === 1 ? branches[0]?.id : ""),
+      );
       setCart([]);
       setNote("");
       setSelectedTableId("");
@@ -72,18 +123,27 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
     if (!selectedShopId || !branchId) {
       setProducts([]);
       setTables([]);
+      setPromotions([]);
       return;
     }
     setLoading(true);
     try {
-      const [prodRes, tableRes] = await Promise.all([
-        getBranchProducts(selectedShopId, branchId, { size: 500, active: true }),
+      const [prodRes, tableRes, promoRes] = await Promise.all([
+        getBranchProducts(selectedShopId, branchId, {
+          size: 500,
+          active: true,
+        }),
         getTables(selectedShopId, branchId),
+        getPromotions(selectedShopId, { branchId, size: 200 }),
       ]);
       const prodList = prodRes.data?.data?.content || prodRes.data?.data || [];
       setProducts(prodList.filter((p) => p.activeInBranch !== false));
-      const tableList = tableRes.data?.data?.content || tableRes.data?.data || [];
+      const tableList =
+        tableRes.data?.data?.content || tableRes.data?.data || [];
       setTables(tableList.filter((t) => t.status === "AVAILABLE"));
+      const promoList =
+        promoRes.data?.data?.content || promoRes.data?.data || [];
+      setPromotions(promoList);
     } catch {
       toast.error("Không thể tải dữ liệu chi nhánh");
     } finally {
@@ -96,6 +156,11 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
       fetchBranchData();
     }
   }, [open, branchId, fetchBranchData]);
+
+  const promoMap = useMemo(
+    () => buildPromotionMap(promotions, branchId),
+    [promotions, branchId],
+  );
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products.slice(0, 20);
@@ -112,7 +177,9 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
 
   const addToCart = (product) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.productId === product.productId);
+      const existing = prev.find(
+        (item) => item.productId === product.productId,
+      );
       if (existing) {
         return prev.map((item) =>
           item.productId === product.productId
@@ -120,12 +187,20 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             : item,
         );
       }
+      const promo = getBestPromo(promoMap, product.productId);
+      const basePrice = product.price;
+      const discountedPrice = calcDiscountedPrice(basePrice, promo);
+      const hasDiscount = promo && discountedPrice < basePrice;
+
       return [
         ...prev,
         {
           productId: product.productId,
           productName: product.name,
-          price: product.price,
+          originalPrice: basePrice,
+          price: hasDiscount ? discountedPrice : basePrice,
+          hasDiscount: !!hasDiscount,
+          promoLabel: hasDiscount ? formatDiscount(promo) : null,
           quantity: 1,
         },
       ];
@@ -153,6 +228,19 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
     [cart],
   );
 
+  const totalSavings = useMemo(
+    () =>
+      cart.reduce(
+        (sum, item) =>
+          sum +
+          (item.hasDiscount
+            ? (item.originalPrice - item.price) * item.quantity
+            : 0),
+        0,
+      ),
+    [cart],
+  );
+
   const handleSubmit = async () => {
     if (cart.length === 0 || !branchId) return;
     setSubmitting(true);
@@ -160,7 +248,10 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
       const orderData = {
         shopId: selectedShopId,
         branchId,
-        tableId: selectedTableId && selectedTableId !== "none" ? selectedTableId : null,
+        tableId:
+          selectedTableId && selectedTableId !== "none"
+            ? selectedTableId
+            : null,
         note: note || null,
         items: cart.map((item) => ({
           productId: item.productId,
@@ -187,7 +278,9 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             <ShoppingCart className="h-5 w-5" />
             Tạo đơn hàng mới
           </DialogTitle>
-          <DialogDescription>Chọn chi nhánh, sản phẩm và bàn để tạo đơn hàng</DialogDescription>
+          <DialogDescription>
+            Chọn chi nhánh, sản phẩm và bàn để tạo đơn hàng
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4">
@@ -195,20 +288,31 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium">Chi nhánh *</label>
-              <Select value={branchId} onValueChange={(v) => { setBranchId(v); setCart([]); }}>
+              <Select
+                value={branchId}
+                onValueChange={(v) => {
+                  setBranchId(v);
+                  setCart([]);
+                }}
+              >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Chọn chi nhánh" />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium">Bàn (tuỳ chọn)</label>
-              <Select value={selectedTableId} onValueChange={setSelectedTableId}>
+              <Select
+                value={selectedTableId}
+                onValueChange={setSelectedTableId}
+              >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Không chọn bàn" />
                 </SelectTrigger>
@@ -249,24 +353,53 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                         Không tìm thấy sản phẩm
                       </div>
                     ) : (
-                      filteredProducts.map((p) => (
-                        <div
-                          key={p.id}
-                          className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 cursor-pointer"
-                          onClick={() => addToCart(p)}
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{p.name}</p>
-                            <p className="text-xs text-muted-foreground">{p.sku}</p>
+                      filteredProducts.map((p) => {
+                        const promo = getBestPromo(promoMap, p.productId);
+                        const discounted = calcDiscountedPrice(p.price, promo);
+                        const hasPromo = promo && discounted < p.price;
+
+                        return (
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 cursor-pointer"
+                            onClick={() => addToCart(p)}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-medium truncate">
+                                  {p.name}
+                                </p>
+                                {hasPromo && (
+                                  <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1 py-0 h-4 gap-0.5 shrink-0">
+                                    <Percent className="h-2.5 w-2.5" />
+                                    {formatDiscount(promo)}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {p.sku}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {hasPromo ? (
+                                <div className="text-right">
+                                  <span className="text-sm font-semibold text-emerald-600 tabular-nums">
+                                    {discounted.toLocaleString("vi-VN")} ₫
+                                  </span>
+                                  <span className="text-[10px] line-through text-muted-foreground ml-1">
+                                    {p.price?.toLocaleString("vi-VN")}₫
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm font-semibold tabular-nums">
+                                  {p.price?.toLocaleString("vi-VN")} ₫
+                                </span>
+                              )}
+                              <Plus className="h-4 w-4 text-primary" />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-semibold tabular-nums">
-                              {p.price?.toLocaleString("vi-VN")} ₫
-                            </span>
-                            <Plus className="h-4 w-4 text-primary" />
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </ScrollArea>
@@ -287,23 +420,42 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Sản phẩm</TableHead>
-                      <TableHead className="w-[100px] text-center">Số lượng</TableHead>
-                      <TableHead className="w-[100px] text-right">Đơn giá</TableHead>
-                      <TableHead className="w-[100px] text-right">Thành tiền</TableHead>
+                      <TableHead className="w-[100px] text-center">
+                        Số lượng
+                      </TableHead>
+                      <TableHead className="w-[100px] text-right">
+                        Đơn giá
+                      </TableHead>
+                      <TableHead className="w-[100px] text-right">
+                        Thành tiền
+                      </TableHead>
                       <TableHead className="w-[40px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {cart.map((item) => (
                       <TableRow key={item.productId}>
-                        <TableCell className="text-sm font-medium">{item.productName}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium">
+                              {item.productName}
+                            </span>
+                            {item.hasDiscount && (
+                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1 py-0 h-4 shrink-0">
+                                {item.promoLabel}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">
                             <Button
                               variant="outline"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() => updateQuantity(item.productId, -1)}
+                              onClick={() =>
+                                updateQuantity(item.productId, -1)
+                              }
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
@@ -320,11 +472,26 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
-                          {item.price.toLocaleString("vi-VN")} ₫
+                        <TableCell className="text-right">
+                          {item.hasDiscount ? (
+                            <div>
+                              <span className="text-sm tabular-nums text-emerald-600 font-medium">
+                                {item.price.toLocaleString("vi-VN")} ₫
+                              </span>
+                              <br />
+                              <span className="text-[10px] line-through text-muted-foreground">
+                                {item.originalPrice.toLocaleString("vi-VN")}₫
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm tabular-nums">
+                              {item.price.toLocaleString("vi-VN")} ₫
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right text-sm font-semibold tabular-nums">
-                          {(item.price * item.quantity).toLocaleString("vi-VN")} ₫
+                          {(item.price * item.quantity).toLocaleString("vi-VN")}{" "}
+                          ₫
                         </TableCell>
                         <TableCell>
                           <Button
@@ -358,17 +525,28 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         </div>
 
         <DialogFooter className="flex items-center justify-between border-t pt-4">
-          <div className="text-sm">
-            Tổng:{" "}
-            <span className="text-lg font-bold text-primary tabular-nums">
-              {subtotal.toLocaleString("vi-VN")} ₫
-            </span>
+          <div className="text-sm space-y-0.5">
+            {totalSavings > 0 && (
+              <div className="text-xs text-emerald-600 flex items-center gap-1">
+                <Tag className="h-3 w-3" />
+                Tiết kiệm: {totalSavings.toLocaleString("vi-VN")} ₫
+              </div>
+            )}
+            <div>
+              Tổng:{" "}
+              <span className="text-lg font-bold text-primary tabular-nums">
+                {subtotal.toLocaleString("vi-VN")} ₫
+              </span>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={submitting}>
               Hủy
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting || cart.length === 0 || !branchId}>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || cart.length === 0 || !branchId}
+            >
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Tạo đơn hàng
             </Button>
