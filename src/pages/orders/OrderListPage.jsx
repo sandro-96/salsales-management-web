@@ -77,11 +77,31 @@ import CreateOrderModal from "./CreateOrderModal";
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const ORDER_STATUSES = {
-  PENDING:   { label: "Chờ xử lý",    icon: Clock,        cls: "bg-amber-100 text-amber-800 border-amber-200" },
-  CONFIRMED: { label: "Đã xác nhận",  icon: CheckCircle2, cls: "bg-blue-100 text-blue-800 border-blue-200" },
-  SHIPPING:  { label: "Đang giao",    icon: Truck,        cls: "bg-violet-100 text-violet-800 border-violet-200" },
-  COMPLETED: { label: "Hoàn tất",     icon: CheckCircle2, cls: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  CANCELLED: { label: "Đã hủy",       icon: Ban,          cls: "bg-red-100 text-red-800 border-red-200" },
+  PENDING: {
+    label: "Chờ xử lý",
+    icon: Clock,
+    cls: "bg-amber-100 text-amber-800 border-amber-200",
+  },
+  CONFIRMED: {
+    label: "Đã xác nhận",
+    icon: CheckCircle2,
+    cls: "bg-blue-100 text-blue-800 border-blue-200",
+  },
+  SHIPPING: {
+    label: "Đang giao",
+    icon: Truck,
+    cls: "bg-violet-100 text-violet-800 border-violet-200",
+  },
+  COMPLETED: {
+    label: "Hoàn tất",
+    icon: CheckCircle2,
+    cls: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  },
+  CANCELLED: {
+    label: "Đã hủy",
+    icon: Ban,
+    cls: "bg-red-100 text-red-800 border-red-200",
+  },
 };
 
 const PAYMENT_METHODS = [
@@ -109,7 +129,9 @@ const StatCard = ({ icon, label, value, iconClassName, loading }) => {
   return (
     <Card className="py-4 gap-3">
       <CardContent className="flex items-center gap-4">
-        <div className={`flex items-center justify-center h-11 w-11 rounded-xl shrink-0 ${iconClassName}`}>
+        <div
+          className={`flex items-center justify-center h-11 w-11 rounded-xl shrink-0 ${iconClassName}`}
+        >
           <IconComp className="h-5 w-5" />
         </div>
         <div className="min-w-0">
@@ -120,8 +142,12 @@ const StatCard = ({ icon, label, value, iconClassName, loading }) => {
             </>
           ) : (
             <>
-              <p className="text-2xl font-bold tracking-tight leading-none">{value}</p>
-              <p className="text-xs text-muted-foreground mt-1 truncate">{label}</p>
+              <p className="text-2xl font-bold tracking-tight leading-none">
+                {value}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {label}
+              </p>
             </>
           )}
         </div>
@@ -144,7 +170,8 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
             Chi tiết đơn hàng
           </DialogTitle>
           <DialogDescription>
-            Mã đơn: <span className="font-mono text-foreground">{order.id}</span>
+            Mã đơn:{" "}
+            <span className="font-mono text-foreground">{order.id}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -152,15 +179,20 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
           <div className="flex flex-wrap gap-2">
             <OrderStatusBadge status={order.status} />
             {order.paid ? (
-              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px]">Đã thanh toán</Badge>
+              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px]">
+                Đã thanh toán
+              </Badge>
             ) : (
-              <Badge variant="outline" className="text-[11px]">Chưa thanh toán</Badge>
+              <Badge variant="outline" className="text-[11px]">
+                Chưa thanh toán
+              </Badge>
             )}
           </div>
 
           {order.note && (
             <div className="text-sm">
-              <span className="text-muted-foreground">Ghi chú: </span>{order.note}
+              <span className="text-muted-foreground">Ghi chú: </span>
+              {order.note}
             </div>
           )}
 
@@ -177,13 +209,26 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
               <TableBody>
                 {order.items?.map((item, idx) => (
                   <TableRow key={idx}>
-                    <TableCell className="font-medium text-sm">{item.productName}</TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
+                    <TableCell className="font-medium text-sm">
+                      {item.productName}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {item.quantity}
+                    </TableCell>
                     <TableCell className="text-right text-sm tabular-nums">
-                      {(item.priceAfterDiscount ?? item.price ?? 0).toLocaleString("vi-VN")} ₫
+                      {(
+                        item.priceAfterDiscount ??
+                        item.price ??
+                        0
+                      ).toLocaleString("vi-VN")}{" "}
+                      ₫
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {((item.priceAfterDiscount ?? item.price ?? 0) * item.quantity).toLocaleString("vi-VN")} ₫
+                      {(
+                        (item.priceAfterDiscount ?? item.price ?? 0) *
+                        item.quantity
+                      ).toLocaleString("vi-VN")}{" "}
+                      ₫
                     </TableCell>
                   </TableRow>
                 ))}
@@ -193,16 +238,33 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
 
           {tax && (
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Tạm tính</span><span className="tabular-nums">{(tax.netAmount ?? 0).toLocaleString("vi-VN")} ₫</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tạm tính</span>
+                <span className="tabular-nums">
+                  {(tax.netAmount ?? 0).toLocaleString("vi-VN")} ₫
+                </span>
+              </div>
               {tax.taxes?.map((t, i) => (
-                <div key={i} className="flex justify-between text-muted-foreground">
-                  <span>{t.label} ({(t.rate * 100).toFixed(0)}%)</span>
-                  <span className="tabular-nums">{(t.amount ?? 0).toLocaleString("vi-VN")} ₫</span>
+                <div
+                  key={i}
+                  className="flex justify-between text-muted-foreground"
+                >
+                  <span>
+                    {t.label} ({(t.rate * 100).toFixed(0)}%)
+                  </span>
+                  <span className="tabular-nums">
+                    {(t.amount ?? 0).toLocaleString("vi-VN")} ₫
+                  </span>
                 </div>
               ))}
               <div className="flex justify-between font-semibold text-base pt-1 border-t mt-2">
                 <span>Tổng cộng</span>
-                <span className="tabular-nums">{(tax.grandTotal ?? order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫</span>
+                <span className="tabular-nums">
+                  {(tax.grandTotal ?? order.totalPrice ?? 0).toLocaleString(
+                    "vi-VN",
+                  )}{" "}
+                  ₫
+                </span>
               </div>
             </div>
           )}
@@ -210,14 +272,17 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
           {!tax && (
             <div className="flex justify-between font-semibold text-base">
               <span>Tổng cộng</span>
-              <span className="tabular-nums">{(order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫</span>
+              <span className="tabular-nums">
+                {(order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫
+              </span>
             </div>
           )}
 
           {order.paymentMethod && (
             <div className="text-sm text-muted-foreground">
               Thanh toán: {order.paymentMethod}
-              {order.paymentTime && ` — ${new Date(order.paymentTime).toLocaleString("vi-VN")}`}
+              {order.paymentTime &&
+                ` — ${new Date(order.paymentTime).toLocaleString("vi-VN")}`}
             </div>
           )}
         </div>
@@ -229,7 +294,14 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 const OrderListPage = () => {
-  const { selectedShopId, selectedBranchId, branches, setSelectedBranchId, isOwner, isStaff } = useShop();
+  const {
+    selectedShopId,
+    selectedBranchId,
+    branches,
+    setSelectedBranchId,
+    isOwner,
+    isStaff,
+  } = useShop();
   const { confirm } = useAlertDialog();
   const canManage = isOwner || isStaff;
 
@@ -262,9 +334,10 @@ const OrderListPage = () => {
       };
       if (selectedBranchId) params.branchId = selectedBranchId;
 
-      const res = statusFilter === "ALL"
-        ? await getOrders(selectedShopId, params)
-        : await filterOrders(selectedShopId, statusFilter, params);
+      const res =
+        statusFilter === "ALL"
+          ? await getOrders(selectedShopId, params)
+          : await filterOrders(selectedShopId, statusFilter, params);
 
       const data = res.data?.data;
       if (data && typeof data === "object" && "content" in data) {
@@ -293,41 +366,59 @@ const OrderListPage = () => {
     const completed = orders.filter((o) => o.status === "COMPLETED").length;
     const revenue = orders
       .filter((o) => o.paid)
-      .reduce((sum, o) => sum + (o.taxSnapshot?.grandTotal ?? o.totalPrice ?? 0), 0);
+      .reduce(
+        (sum, o) => sum + (o.taxSnapshot?.grandTotal ?? o.totalPrice ?? 0),
+        0,
+      );
     return { total, pending, completed, revenue };
   }, [orders]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
-  const handleCancel = useCallback(async (order) => {
-    const ok = await confirm(
-      `Bạn có chắc muốn hủy đơn hàng này? Tồn kho sẽ được hoàn lại.`,
-      { title: "Hủy đơn hàng", confirmText: "Hủy đơn", cancelText: "Đóng", variant: "destructive" },
-    );
-    if (!ok) return;
-    try {
-      setSubmitting(true);
-      await cancelOrder(order.id, selectedShopId);
-      toast.success("Đã hủy đơn hàng.");
-      fetchOrders();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Không thể hủy đơn hàng.");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [confirm, selectedShopId, fetchOrders]);
+  const handleCancel = useCallback(
+    async (order) => {
+      const ok = await confirm(
+        `Bạn có chắc muốn hủy đơn hàng này? Tồn kho sẽ được hoàn lại.`,
+        {
+          title: "Hủy đơn hàng",
+          confirmText: "Hủy đơn",
+          cancelText: "Đóng",
+          variant: "destructive",
+        },
+      );
+      if (!ok) return;
+      try {
+        setSubmitting(true);
+        await cancelOrder(order.id, selectedShopId);
+        toast.success("Đã hủy đơn hàng.");
+        fetchOrders();
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Không thể hủy đơn hàng.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [confirm, selectedShopId, fetchOrders],
+  );
 
-  const handleStatusChange = useCallback(async (order, newStatus) => {
-    try {
-      setSubmitting(true);
-      await updateOrderStatus(order.id, selectedShopId, newStatus);
-      toast.success(`Đã cập nhật trạng thái: ${ORDER_STATUSES[newStatus]?.label || newStatus}`);
-      fetchOrders();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Không thể cập nhật trạng thái.");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [selectedShopId, fetchOrders]);
+  const handleStatusChange = useCallback(
+    async (order, newStatus) => {
+      try {
+        setSubmitting(true);
+        await updateOrderStatus(order.id, selectedShopId, newStatus);
+        toast.success(
+          `Đã cập nhật trạng thái: ${ORDER_STATUSES[newStatus]?.label || newStatus}`,
+        );
+        fetchOrders();
+      } catch (err) {
+        toast.error(
+          err.response?.data?.message || "Không thể cập nhật trạng thái.",
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [selectedShopId, fetchOrders],
+  );
 
   const openPaymentDialog = (order) => {
     setPayingOrderId(order.id);
@@ -340,161 +431,207 @@ const OrderListPage = () => {
     try {
       setSubmitting(true);
       const paymentId = `PAY-${Date.now()}`;
-      await confirmPayment(payingOrderId, selectedShopId, paymentId, paymentMethod);
+      await confirmPayment(
+        payingOrderId,
+        selectedShopId,
+        paymentId,
+        paymentMethod,
+      );
       toast.success("Thanh toán thành công.");
       setPaymentDialogOpen(false);
       fetchOrders();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Không thể xác nhận thanh toán.");
+      toast.error(
+        err.response?.data?.message || "Không thể xác nhận thanh toán.",
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   // ── Columns ──────────────────────────────────────────────────────────────
-  const columns = useMemo(() => [
-    {
-      accessorKey: "id",
-      header: "Mã đơn",
-      cell: ({ row }) => (
-        <span className="text-sm font-mono text-muted-foreground">
-          {(row.original.id ?? "").slice(-8).toUpperCase()}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "createdAt",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Thời gian" />,
-      cell: ({ row }) => {
-        const d = row.original.createdAt;
-        if (!d) return "—";
-        const date = new Date(d);
-        return (
-          <div>
-            <p className="text-sm">{date.toLocaleDateString("vi-VN")}</p>
-            <p className="text-xs text-muted-foreground">{date.toLocaleTimeString("vi-VN")}</p>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "items",
-      header: "Sản phẩm",
-      enableSorting: false,
-      cell: ({ row }) => {
-        const items = row.original.items ?? [];
-        if (items.length === 0) return <span className="text-muted-foreground">—</span>;
-        return (
-          <div className="max-w-[200px]">
-            <p className="text-sm font-medium truncate">{items[0].productName}</p>
-            {items.length > 1 && (
-              <p className="text-xs text-muted-foreground">+{items.length - 1} sản phẩm khác</p>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "totalAmount",
-      header: "SL",
-      cell: ({ row }) => (
-        <span className="text-sm tabular-nums">{row.original.totalAmount ?? 0}</span>
-      ),
-    },
-    {
-      accessorKey: "totalPrice",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Tổng tiền" />,
-      cell: ({ row }) => {
-        const total = row.original.taxSnapshot?.grandTotal ?? row.original.totalPrice ?? 0;
-        return (
-          <span className="text-sm font-semibold tabular-nums">
-            {total.toLocaleString("vi-VN")} ₫
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "id",
+        header: "Mã đơn",
+        cell: ({ row }) => (
+          <span className="text-sm font-mono text-muted-foreground">
+            {(row.original.id ?? "").slice(-8).toUpperCase()}
           </span>
-        );
-      },
-    },
-    {
-      accessorKey: "status",
-      header: "Trạng thái",
-      cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
-    },
-    {
-      accessorKey: "paid",
-      header: "Thanh toán",
-      cell: ({ row }) =>
-        row.original.paid ? (
-          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1">
-            <CreditCard className="h-3 w-3" /> Đã TT
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="text-[11px] gap-1">
-            Chưa TT
-          </Badge>
         ),
-    },
-    {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const order = row.original;
-        const isTerminal = order.status === "CANCELLED" || order.status === "COMPLETED";
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Mở menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-background w-48">
-              <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { setSelectedOrder(order); setDetailOpen(true); }}>
-                <Eye className="h-4 w-4 mr-2" /> Xem chi tiết
-              </DropdownMenuItem>
-
-              {!order.paid && !isTerminal && canManage && (
-                <DropdownMenuItem onClick={() => openPaymentDialog(order)}>
-                  <CreditCard className="h-4 w-4 mr-2 text-emerald-600" /> Thanh toán
-                </DropdownMenuItem>
+      },
+      {
+        accessorKey: "createdAt",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Thời gian" />
+        ),
+        cell: ({ row }) => {
+          const d = row.original.createdAt;
+          if (!d) return "—";
+          const date = new Date(d);
+          return (
+            <div>
+              <p className="text-sm">{date.toLocaleDateString("vi-VN")}</p>
+              <p className="text-xs text-muted-foreground">
+                {date.toLocaleTimeString("vi-VN")}
+              </p>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "items",
+        header: "Sản phẩm",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const items = row.original.items ?? [];
+          if (items.length === 0)
+            return <span className="text-muted-foreground">—</span>;
+          return (
+            <div className="max-w-[200px]">
+              <p className="text-sm font-medium truncate">
+                {items[0].productName}
+              </p>
+              {items.length > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  +{items.length - 1} sản phẩm khác
+                </p>
               )}
-
-              {order.status === "PENDING" && canManage && (
-                <DropdownMenuItem onClick={() => handleStatusChange(order, "CONFIRMED")} disabled={submitting}>
-                  <CheckCircle2 className="h-4 w-4 mr-2 text-blue-600" /> Xác nhận
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "totalAmount",
+        header: "SL",
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums">
+            {row.original.totalAmount ?? 0}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "totalPrice",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Tổng tiền" />
+        ),
+        cell: ({ row }) => {
+          const total =
+            row.original.taxSnapshot?.grandTotal ??
+            row.original.totalPrice ??
+            0;
+          return (
+            <span className="text-sm font-semibold tabular-nums">
+              {total.toLocaleString("vi-VN")} ₫
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Trạng thái",
+        cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: "paid",
+        header: "Thanh toán",
+        cell: ({ row }) =>
+          row.original.paid ? (
+            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1">
+              <CreditCard className="h-3 w-3" /> Đã TT
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[11px] gap-1">
+              Chưa TT
+            </Badge>
+          ),
+      },
+      {
+        id: "actions",
+        enableHiding: false,
+        cell: ({ row }) => {
+          const order = row.original;
+          const isTerminal =
+            order.status === "CANCELLED" || order.status === "COMPLETED";
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Mở menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background w-48">
+                <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSelectedOrder(order);
+                    setDetailOpen(true);
+                  }}
+                >
+                  <Eye className="h-4 w-4 mr-2" /> Xem chi tiết
                 </DropdownMenuItem>
-              )}
 
-              {order.status === "CONFIRMED" && canManage && (
-                <DropdownMenuItem onClick={() => handleStatusChange(order, "SHIPPING")} disabled={submitting}>
-                  <Truck className="h-4 w-4 mr-2 text-violet-600" /> Giao hàng
-                </DropdownMenuItem>
-              )}
+                {!order.paid && !isTerminal && canManage && (
+                  <DropdownMenuItem onClick={() => openPaymentDialog(order)}>
+                    <CreditCard className="h-4 w-4 mr-2 text-emerald-600" />{" "}
+                    Thanh toán
+                  </DropdownMenuItem>
+                )}
 
-              {(order.status === "SHIPPING" || order.status === "CONFIRMED") && canManage && (
-                <DropdownMenuItem onClick={() => handleStatusChange(order, "COMPLETED")} disabled={submitting}>
-                  <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" /> Hoàn tất
-                </DropdownMenuItem>
-              )}
-
-              {!order.paid && !isTerminal && canManage && (
-                <>
-                  <DropdownMenuSeparator />
+                {order.status === "PENDING" && canManage && (
                   <DropdownMenuItem
-                    className="text-red-600 focus:bg-red-100 focus:text-red-700"
-                    onClick={() => handleCancel(order)}
+                    onClick={() => handleStatusChange(order, "CONFIRMED")}
                     disabled={submitting}
                   >
-                    <XCircle className="h-4 w-4 mr-2" /> Hủy đơn
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-600" /> Xác
+                    nhận
                   </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
+                )}
+
+                {order.status === "CONFIRMED" && canManage && (
+                  <DropdownMenuItem
+                    onClick={() => handleStatusChange(order, "SHIPPING")}
+                    disabled={submitting}
+                  >
+                    <Truck className="h-4 w-4 mr-2 text-violet-600" /> Giao hàng
+                  </DropdownMenuItem>
+                )}
+
+                {(order.status === "SHIPPING" ||
+                  order.status === "CONFIRMED") &&
+                  canManage && (
+                    <DropdownMenuItem
+                      onClick={() => handleStatusChange(order, "COMPLETED")}
+                      disabled={submitting}
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />{" "}
+                      Hoàn tất
+                    </DropdownMenuItem>
+                  )}
+
+                {!order.paid && !isTerminal && canManage && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                      onClick={() => handleCancel(order)}
+                      disabled={submitting}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" /> Hủy đơn
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
-    },
-  ], [canManage, submitting, handleCancel, handleStatusChange]);
+    ],
+    [canManage, submitting, handleCancel, handleStatusChange],
+  );
 
   const table = useReactTable({
     data: orders,
@@ -521,8 +658,12 @@ const OrderListPage = () => {
         {/* ── Header ──────────────────────────────────────────────── */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Quản lý đơn hàng</h2>
-            <p className="text-sm text-muted-foreground mt-1">Theo dõi và xử lý đơn hàng</p>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Quản lý đơn hàng
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Theo dõi và xử lý đơn hàng
+            </p>
           </div>
           {canManage && (
             <Button onClick={() => setCreateOrderOpen(true)} className="gap-2">
@@ -581,19 +722,28 @@ const OrderListPage = () => {
               <SelectContent className="bg-background">
                 <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
                 {Object.entries(ORDER_STATUSES).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {cfg.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {branches.length > 1 && (
-              <Select value={selectedBranchId ?? "ALL"} onValueChange={(v) => setSelectedBranchId(v === "ALL" ? null : v)}>
+              <Select
+                value={selectedBranchId ?? "ALL"}
+                onValueChange={(v) =>
+                  setSelectedBranchId(v === "ALL" ? null : v)
+                }
+              >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Tất cả chi nhánh" />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
                   <SelectItem value="ALL">Tất cả chi nhánh</SelectItem>
                   {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -615,7 +765,9 @@ const OrderListPage = () => {
                 <TableRow key={hg.id}>
                   {hg.headers.map((h) => (
                     <TableHead key={h.id}>
-                      {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                      {h.isPlaceholder
+                        ? null
+                        : flexRender(h.column.columnDef.header, h.getContext())}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -624,7 +776,10 @@ const OrderListPage = () => {
             <TableBody>
               {loading && orders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     Đang tải...
                   </TableCell>
                 </TableRow>
@@ -633,18 +788,27 @@ const OrderListPage = () => {
                   <TableRow
                     key={row.id}
                     className="cursor-pointer"
-                    onClick={() => { setSelectedOrder(row.original); setDetailOpen(true); }}
+                    onClick={() => {
+                      setSelectedOrder(row.original);
+                      setDetailOpen(true);
+                    }}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     <div className="flex flex-col items-center gap-2 py-4">
                       <ShoppingCart className="h-8 w-8 text-muted-foreground/40" />
                       <p>Chưa có đơn hàng nào.</p>
@@ -667,13 +831,19 @@ const OrderListPage = () => {
       />
 
       {/* ── Payment Confirmation Dialog ───────────────────────────── */}
-      <Dialog open={paymentDialogOpen} onOpenChange={(v) => !v && setPaymentDialogOpen(false)}>
+      <Dialog
+        open={paymentDialogOpen}
+        onOpenChange={(v) => !v && setPaymentDialogOpen(false)}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-emerald-600" /> Xác nhận thanh toán
+              <CreditCard className="h-5 w-5 text-emerald-600" /> Xác nhận thanh
+              toán
             </DialogTitle>
-            <DialogDescription>Chọn phương thức thanh toán cho đơn hàng.</DialogDescription>
+            <DialogDescription>
+              Chọn phương thức thanh toán cho đơn hàng.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -682,14 +852,24 @@ const OrderListPage = () => {
               </SelectTrigger>
               <SelectContent className="bg-background">
                 {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setPaymentDialogOpen(false)} disabled={submitting}>Hủy</Button>
+              <Button
+                variant="outline"
+                onClick={() => setPaymentDialogOpen(false)}
+                disabled={submitting}
+              >
+                Hủy
+              </Button>
               <Button onClick={handleConfirmPayment} disabled={submitting}>
-                {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+                {submitting && (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                )}
                 Xác nhận
               </Button>
             </div>

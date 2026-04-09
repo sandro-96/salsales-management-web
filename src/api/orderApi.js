@@ -12,7 +12,18 @@ export const getOrders = (shopId, params = {}) =>
  * GET /api/orders/filter?shopId={shopId}&status={status}
  */
 export const filterOrders = (shopId, status, params = {}) =>
-  axiosInstance.get("/orders/filter", { params: { shopId, status, ...params } });
+  axiosInstance.get("/orders/filter", {
+    params: { shopId, status, ...params },
+  });
+
+/**
+ * 📊 Xem trước thuế (theo chính sách thuế hiện tại)
+ * GET /api/orders/preview-tax?shopId=&branchId=&totalPrice=
+ */
+export const previewOrderTax = (shopId, branchId, totalPrice) =>
+  axiosInstance.get("/orders/preview-tax", {
+    params: { shopId, branchId, totalPrice },
+  });
 
 /**
  * ➕ Tạo đơn hàng mới
@@ -49,4 +60,6 @@ export const confirmPayment = (orderId, shopId, paymentId, paymentMethod) =>
  * PUT /api/orders/{id}/status?shopId={shopId}&status={status}
  */
 export const updateOrderStatus = (id, shopId, status) =>
-  axiosInstance.put(`/orders/${id}/status`, null, { params: { shopId, status } });
+  axiosInstance.put(`/orders/${id}/status`, null, {
+    params: { shopId, status },
+  });

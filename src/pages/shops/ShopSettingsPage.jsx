@@ -5,7 +5,7 @@ import axiosInstance from "../../api/axiosInstance";
 import { deleteShop } from "../../api/shopApi.js";
 import { toast } from "sonner";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import imageCompression from "browser-image-compression";
 import {
   Store,
@@ -25,6 +25,7 @@ import {
   Briefcase,
   Link2,
   Copy,
+  Percent,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,9 @@ const PLAN_COLORS = {
 const ShopSettingsPage = () => {
   const { confirm } = useAlertDialog();
   const { enums } = useAuth();
-  const { selectedShop, setSelectedShop, fetchShops, isOwner } = useShop();
+  const { selectedShop, setSelectedShop, fetchShops, isOwner, selectedRole } =
+    useShop();
+  const canManageTax = isOwner || selectedRole === "MANAGER";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const navigate = useNavigate();
@@ -236,6 +239,27 @@ const ShopSettingsPage = () => {
           Quản lý thông tin và cấu hình cửa hàng
         </p>
       </div>
+
+      {canManageTax && (
+        <Card className="mb-6 border-dashed">
+          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Percent className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Chính sách thuế</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Cấu hình VAT và thuế khác cho POS — chỉ Chủ cửa hàng và Quản lý.
+                </p>
+              </div>
+            </div>
+            <Button variant="secondary" size="sm" className="shrink-0" asChild>
+              <Link to="/tax-policies">Mở cài đặt thuế</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Shop identity card */}
       <Card className="mb-6">

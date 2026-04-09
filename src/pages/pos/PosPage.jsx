@@ -16,6 +16,8 @@ import {
   UserRound,
   Star,
   Coins,
+  Printer,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,7 +25,13 @@ import { useShop } from "../../hooks/useShop";
 import { getBranchProducts } from "../../api/productApi";
 import { getTables } from "../../api/tableApi";
 import { getPromotions } from "../../api/promotionApi";
-import { createOrder, confirmPayment } from "../../api/orderApi";
+import {
+  createOrder,
+  confirmPayment,
+  previewOrderTax,
+} from "../../api/orderApi";
+import { PosInvoiceReceipt } from "../../components/pos/PosInvoiceReceipt";
+import { printPosInvoiceReceipt } from "../../components/pos/printPosInvoiceReceipt";
 import { getCustomers, getCustomerPoints } from "../../api/customerApi";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +50,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -60,7 +69,99 @@ const PAYMENT_METHODS = [
   { value: "Transfer", label: "Chuyển khoản", icon: ArrowRightLeft },
 ];
 
+function getPaymentMethodLabel(value) {
+  if (!value) return null;
+  return PAYMENT_METHODS.find((p) => p.value === value)?.label || value;
+}
+
+function buildDraftOrderForInvoice({
+  cart,
+  subtotal,
+  taxPreview,
+  pointsToRedeem,
+  note,
+  paymentMethod,
+}) {
+  const pointsDiscount = pointsToRedeem * 1000;
+  const baseAfterPoints = Math.max(0, subtotal - pointsDiscount);
+  const items = cart.map((item) => ({
+    productId: item.productId,
+    productName: item.productName,
+    quantity: item.quantity,
+    price: item.hasDiscount ? item.originalPrice : item.price,
+    priceAfterDiscount: item.price,
+  }));
+  return {
+    items,
+    totalPrice: baseAfterPoints,
+    totalAmount: taxPreview?.grandTotal ?? baseAfterPoints,
+    taxSnapshot: taxPreview,
+    note: note || null,
+    paid: false,
+    paymentMethod,
+    paymentTime: null,
+    pointsRedeemed: pointsToRedeem > 0 ? pointsToRedeem : 0,
+    pointsDiscount: pointsToRedeem > 0 ? pointsDiscount : 0,
+  };
+}
+
 const ALL_CATEGORY = "__ALL__";
+
+function PosTaxBreakdown({ loading, taxPreview }) {
+  if (!loading && !taxPreview) return null;
+  if (loading) {
+    return (
+      <div className="flex justify-between items-center text-xs text-muted-foreground">
+        <span>Thuế</span>
+        <span className="flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+          Đang tính…
+        </span>
+      </div>
+    );
+  }
+  const lines = taxPreview.taxes || [];
+  return (
+    <div className="space-y-1.5">
+      {taxPreview.priceIncludesTax && (
+        <p className="text-[10px] text-muted-foreground leading-snug">
+          Giá món đang áp dạng đã bao gồm thuế (theo chính sách cửa hàng).
+        </p>
+      )}
+      {lines.map((line, idx) => (
+        <div
+          key={`${line.code}-${line.label}-${idx}`}
+          className="flex justify-between items-center text-xs"
+        >
+          <span className="text-muted-foreground">
+            {line.label || line.code || "Thuế"}
+            {line.rate > 0 && line.rate <= 1 ? (
+              <span className="opacity-80">
+                {" "}
+                ({(line.rate * 100).toLocaleString("vi-VN")}%)
+              </span>
+            ) : null}
+          </span>
+          <span className="tabular-nums font-medium">
+            {line.amount.toLocaleString("vi-VN")} ₫
+          </span>
+        </div>
+      ))}
+      {lines.length === 0 && taxPreview.taxTotal === 0 && (
+        <div className="flex justify-between items-center text-xs text-muted-foreground">
+          <span>Thuế</span>
+          <span className="tabular-nums">0 ₫</span>
+        </div>
+      )}
+      <div className="flex justify-between items-center pt-1 border-t border-border/70">
+        <span className="text-sm font-semibold">Tổng thanh toán</span>
+        <span className="text-base font-bold text-primary tabular-nums">
+          {taxPreview.grandTotal.toLocaleString("vi-VN")} ₫
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function buildPromotionMap(promotions, branchId) {
   const now = new Date();
@@ -110,17 +211,32 @@ function formatDiscount(promo) {
 }
 
 function createEmptyTab(id) {
-  return { id, cart: [], tableId: "", note: "", customer: null, pointsToRedeem: 0 };
+  return {
+    id,
+    cart: [],
+    tableId: "",
+    note: "",
+    customer: null,
+    pointsToRedeem: 0,
+  };
 }
 
-const OrderTabBar = ({ tabs, activeTabId, onSelect, onAdd, onClose, tables }) => (
+const OrderTabBar = ({
+  tabs,
+  activeTabId,
+  onSelect,
+  onAdd,
+  onClose,
+  tables,
+}) => (
   <div className="border-b flex items-center gap-0.5 px-1.5 pt-1.5 overflow-x-auto bg-muted/30">
     {tabs.map((tab) => {
       const isActive = tab.id === activeTabId;
       const itemCount = tab.cart.reduce((s, i) => s + i.quantity, 0);
-      const tableName = tab.tableId && tab.tableId !== "none"
-        ? tables.find((t) => t.id === tab.tableId)?.name
-        : null;
+      const tableName =
+        tab.tableId && tab.tableId !== "none"
+          ? tables.find((t) => t.id === tab.tableId)?.name
+          : null;
       const label = tableName || `Đơn ${tab.id}`;
       return (
         <button
@@ -134,7 +250,10 @@ const OrderTabBar = ({ tabs, activeTabId, onSelect, onAdd, onClose, tables }) =>
         >
           <span className="truncate max-w-[80px]">{label}</span>
           {itemCount > 0 && (
-            <Badge variant={isActive ? "default" : "secondary"} className="h-4 min-w-4 px-1 text-[10px] justify-center">
+            <Badge
+              variant={isActive ? "default" : "secondary"}
+              className="h-4 min-w-4 px-1 text-[10px] justify-center"
+            >
               {itemCount}
             </Badge>
           )}
@@ -142,7 +261,10 @@ const OrderTabBar = ({ tabs, activeTabId, onSelect, onAdd, onClose, tables }) =>
             <span
               role="button"
               className="ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose(tab.id);
+              }}
             >
               <X className="h-3 w-3 hover:text-destructive" />
             </span>
@@ -181,6 +303,9 @@ const CartPanel = ({
   onClearCustomer,
   customerResults,
   customerSearching,
+  pointsToRedeem,
+  taxPreview,
+  taxPreviewLoading,
 }) => (
   <>
     {!hideHeader && (
@@ -407,10 +532,25 @@ const CartPanel = ({
       )}
       <div className="flex justify-between items-center">
         <span className="text-sm text-muted-foreground">Tạm tính</span>
-        <span className="text-lg font-bold tabular-nums">
+        <span
+          className={`tabular-nums font-semibold ${
+            taxPreview || taxPreviewLoading ? "text-sm" : "text-lg font-bold"
+          }`}
+        >
           {subtotal.toLocaleString("vi-VN")} ₫
         </span>
       </div>
+      {pointsToRedeem > 0 && (
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-muted-foreground">Giảm điểm</span>
+          <span className="text-emerald-600 font-medium tabular-nums">
+            -{(pointsToRedeem * 1000).toLocaleString("vi-VN")} ₫
+          </span>
+        </div>
+      )}
+      {cart.length > 0 && (
+        <PosTaxBreakdown loading={taxPreviewLoading} taxPreview={taxPreview} />
+      )}
       <Button
         className="w-full h-11 text-sm font-semibold"
         disabled={cart.length === 0}
@@ -424,8 +564,13 @@ const CartPanel = ({
 );
 
 const PosPage = () => {
-  const { selectedShopId, selectedBranchId, branches, setSelectedBranchId } =
-    useShop();
+  const {
+    selectedShopId,
+    selectedBranchId,
+    branches,
+    setSelectedBranchId,
+    selectedShop,
+  } = useShop();
 
   const [products, setProducts] = useState([]);
   const [tables, setTables] = useState([]);
@@ -442,6 +587,10 @@ const PosPage = () => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [submitting, setSubmitting] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoicePayload, setInvoicePayload] = useState(null);
+  const [invoicePreviewOpen, setInvoicePreviewOpen] = useState(false);
+  const [previewPrintedAt, setPreviewPrintedAt] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
 
   const [customerResults, setCustomerResults] = useState([]);
@@ -470,7 +619,8 @@ const PosPage = () => {
       setOrderTabs((prev) =>
         prev.map((tab) => {
           if (tab.id !== activeTabId) return tab;
-          const newCart = typeof updater === "function" ? updater(tab.cart) : updater;
+          const newCart =
+            typeof updater === "function" ? updater(tab.cart) : updater;
           return { ...tab, cart: newCart };
         }),
       );
@@ -742,6 +892,94 @@ const PosPage = () => {
     [cart],
   );
 
+  const totalAfterPoints = useMemo(
+    () => Math.max(0, subtotal - pointsToRedeem * 1000),
+    [subtotal, pointsToRedeem],
+  );
+
+  const [taxPreview, setTaxPreview] = useState(null);
+  const [taxPreviewLoading, setTaxPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!effectiveBranchId || !selectedShopId || totalAfterPoints <= 0) {
+      setTaxPreview(null);
+      setTaxPreviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setTaxPreviewLoading(true);
+      previewOrderTax(selectedShopId, effectiveBranchId, totalAfterPoints)
+        .then((res) => {
+          if (!cancelled) {
+            setTaxPreview(res.data?.data ?? null);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setTaxPreview(null);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setTaxPreviewLoading(false);
+          }
+        });
+    }, 280);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [selectedShopId, effectiveBranchId, totalAfterPoints]);
+
+  const draftOrderForPreview = useMemo(
+    () =>
+      cart.length === 0
+        ? null
+        : buildDraftOrderForInvoice({
+            cart,
+            subtotal,
+            taxPreview,
+            pointsToRedeem,
+            note,
+            paymentMethod,
+          }),
+    [cart, subtotal, taxPreview, pointsToRedeem, note, paymentMethod],
+  );
+
+  const openCheckoutInvoicePreview = useCallback(() => {
+    setPreviewPrintedAt(new Date().toISOString());
+    setInvoicePreviewOpen(true);
+  }, []);
+
+  const draftInvoiceMeta = useMemo(() => {
+    const branchName =
+      branches.find((b) => b.id === effectiveBranchId)?.name || null;
+    const tableName =
+      selectedTableId && selectedTableId !== "none"
+        ? tables.find((t) => t.id === selectedTableId)?.name || null
+        : null;
+    return {
+      shopName: selectedShop?.name,
+      shopAddress: selectedShop?.address,
+      shopPhone: selectedShop?.phone,
+      branchName,
+      customerName: selectedCustomer?.name || null,
+      tableName,
+      paymentMethodLabel: getPaymentMethodLabel(paymentMethod),
+    };
+  }, [
+    branches,
+    effectiveBranchId,
+    selectedTableId,
+    tables,
+    selectedShop,
+    selectedCustomer,
+    paymentMethod,
+  ]);
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setSubmitting(true);
@@ -768,20 +1006,43 @@ const PosPage = () => {
         effectiveBranchId,
         orderData,
       );
-      const order = res.data?.data;
+      let finalOrder = res.data?.data;
 
-      if (paymentMethod && order?.id) {
+      if (paymentMethod && finalOrder?.id) {
         try {
-          await confirmPayment(
-            order.id,
+          const payRes = await confirmPayment(
+            finalOrder.id,
             selectedShopId,
             `POS-${Date.now()}`,
             paymentMethod,
           );
+          finalOrder = payRes.data?.data ?? finalOrder;
         } catch {
           toast.info("Đơn hàng đã tạo nhưng chưa thanh toán");
         }
       }
+
+      const branchName =
+        branches.find((b) => b.id === effectiveBranchId)?.name || null;
+      const tableName =
+        selectedTableId && selectedTableId !== "none"
+          ? tables.find((t) => t.id === selectedTableId)?.name || null
+          : null;
+
+      setInvoicePayload({
+        order: finalOrder,
+        printedAt: new Date().toISOString(),
+        shopName: selectedShop?.name,
+        shopAddress: selectedShop?.address,
+        shopPhone: selectedShop?.phone,
+        branchName,
+        customerName: selectedCustomer?.name || null,
+        tableName,
+        paymentMethodLabel: getPaymentMethodLabel(
+          finalOrder?.paymentMethod || paymentMethod,
+        ),
+      });
+      setInvoiceOpen(true);
 
       toast.success("Đơn hàng đã được tạo thành công!");
       setCheckoutOpen(false);
@@ -856,6 +1117,9 @@ const PosPage = () => {
     onClearCustomer: handleClearCustomer,
     customerResults,
     customerSearching,
+    pointsToRedeem,
+    taxPreview,
+    taxPreviewLoading,
   };
 
   return (
@@ -1156,22 +1420,35 @@ const PosPage = () => {
             )}
 
             <div className="flex justify-between items-center px-1">
-              <span className="font-semibold">Tổng cộng</span>
-              <span className="text-xl font-bold text-primary tabular-nums">
-                {Math.max(0, subtotal - pointsToRedeem * 1000).toLocaleString(
-                  "vi-VN",
-                )}{" "}
-                ₫
+              <span className="text-sm text-muted-foreground">Tạm tính</span>
+              <span className="text-sm font-semibold tabular-nums">
+                {subtotal.toLocaleString("vi-VN")} ₫
               </span>
             </div>
 
             {pointsToRedeem > 0 && (
-              <div className="flex justify-between items-center px-1 text-xs">
-                <span className="text-muted-foreground">
-                  (Trước giảm điểm: {subtotal.toLocaleString("vi-VN")}₫)
+              <div className="flex justify-between items-center px-1 text-sm">
+                <span className="text-muted-foreground">Giảm điểm</span>
+                <span className="text-emerald-600 font-semibold tabular-nums">
+                  -{(pointsToRedeem * 1000).toLocaleString("vi-VN")} ₫
                 </span>
               </div>
             )}
+
+            <div className="px-1 space-y-2">
+              <PosTaxBreakdown
+                loading={taxPreviewLoading}
+                taxPreview={taxPreview}
+              />
+              {!taxPreviewLoading && !taxPreview && totalAfterPoints > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Tổng cộng</span>
+                  <span className="text-xl font-bold text-primary tabular-nums">
+                    {totalAfterPoints.toLocaleString("vi-VN")} ₫
+                  </span>
+                </div>
+              )}
+            </div>
 
             {selectedTableId && selectedTableId !== "none" && (
               <div className="text-sm text-muted-foreground px-1">
@@ -1269,6 +1546,20 @@ const PosPage = () => {
             </div>
           </div>
 
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={cart.length === 0 || submitting}
+              onClick={openCheckoutInvoicePreview}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Xem trước hóa đơn
+            </Button>
+          </div>
+
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
@@ -1280,6 +1571,132 @@ const PosPage = () => {
             <Button onClick={handleCheckout} disabled={submitting}>
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Xem trước hóa đơn (dự thảo, trước khi xác nhận) */}
+      <Dialog open={invoicePreviewOpen} onOpenChange={setInvoicePreviewOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Xem trước hóa đơn
+            </DialogTitle>
+            <DialogDescription>
+              Bản dự thảo — mã đơn và thời gian thật sẽ có sau khi bạn xác nhận
+              thanh toán.
+            </DialogDescription>
+          </DialogHeader>
+          {taxPreviewLoading && totalAfterPoints > 0 ? (
+            <p className="text-xs text-amber-700 dark:text-amber-500 px-6 pb-1 shrink-0">
+              Đang cập nhật thuế — tổng thanh toán trên hóa đơn có thể thay đổi
+              vài giây.
+            </p>
+          ) : null}
+          <ScrollArea className="flex-1 min-h-0 max-h-[55vh] px-6">
+            <div className="pb-4">
+              {draftOrderForPreview && previewPrintedAt ? (
+                <PosInvoiceReceipt
+                  {...draftInvoiceMeta}
+                  order={draftOrderForPreview}
+                  printedAt={previewPrintedAt}
+                  isDraft
+                />
+              ) : null}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="px-6 py-4 border-t shrink-0 gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setInvoicePreviewOpen(false)}
+            >
+              Đóng
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (!draftOrderForPreview || !previewPrintedAt) return;
+                printPosInvoiceReceipt({
+                  ...draftInvoiceMeta,
+                  order: draftOrderForPreview,
+                  printedAt: previewPrintedAt,
+                  isDraft: true,
+                });
+              }}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              In bản xem trước
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hóa đơn sau thanh toán — xem trước khi in */}
+      <Dialog
+        open={invoiceOpen}
+        onOpenChange={(open) => {
+          setInvoiceOpen(open);
+          if (!open) setInvoicePayload(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Printer className="h-5 w-5" />
+              Xem trước hóa đơn
+            </DialogTitle>
+            <DialogDescription>
+              Kiểm tra nội dung, sau đó chọn In hóa đơn.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0 max-h-[55vh] px-6">
+            <div className="pb-4">
+              {invoicePayload?.order ? (
+                <PosInvoiceReceipt
+                  shopName={invoicePayload.shopName}
+                  shopAddress={invoicePayload.shopAddress}
+                  shopPhone={invoicePayload.shopPhone}
+                  branchName={invoicePayload.branchName}
+                  order={invoicePayload.order}
+                  customerName={invoicePayload.customerName}
+                  tableName={invoicePayload.tableName}
+                  paymentMethodLabel={invoicePayload.paymentMethodLabel}
+                  printedAt={invoicePayload.printedAt}
+                />
+              ) : null}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="px-6 py-4 border-t shrink-0 gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setInvoiceOpen(false);
+                setInvoicePayload(null);
+              }}
+            >
+              Đóng
+            </Button>
+            <Button
+              onClick={() => {
+                if (!invoicePayload?.order) return;
+                printPosInvoiceReceipt({
+                  shopName: invoicePayload.shopName,
+                  shopAddress: invoicePayload.shopAddress,
+                  shopPhone: invoicePayload.shopPhone,
+                  branchName: invoicePayload.branchName,
+                  order: invoicePayload.order,
+                  customerName: invoicePayload.customerName,
+                  tableName: invoicePayload.tableName,
+                  paymentMethodLabel: invoicePayload.paymentMethodLabel,
+                  printedAt: invoicePayload.printedAt,
+                  isDraft: false,
+                });
+              }}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              In hóa đơn
             </Button>
           </DialogFooter>
         </DialogContent>

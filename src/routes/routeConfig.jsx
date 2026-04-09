@@ -20,6 +20,7 @@ const DynamicDashboardLayout = lazy(
 );
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));
+const TaxPolicyPage = lazy(() => import("../pages/shops/TaxPolicyPage"));
 const OverviewPage = lazy(() => import("../pages/OverviewPage"));
 const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
 const ProductPage = lazy(() => import("../pages/products/ProductPage.jsx"));
@@ -151,6 +152,12 @@ export const routeConfig = [
         element: <PromotionListPage />,
         title: "Khuyến mãi",
         breadcrumb: "Khuyến mãi",
+      },
+      {
+        path: "tax-policies",
+        element: <TaxPolicyPage />,
+        title: "Chính sách thuế",
+        breadcrumb: "Thuế",
       },
       {
         path: "accounts",
