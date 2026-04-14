@@ -1,5 +1,6 @@
 // src/layouts/pharmacy/WebLayout.jsx
 import { Outlet, NavLink } from "react-router-dom";
+import { renderNavIcon } from "../../lib/renderNavIcon";
 
 const PharmacyWebLayout = ({ title, navItems }) => {
     return (
@@ -21,9 +22,7 @@ const PharmacyWebLayout = ({ title, navItems }) => {
                                 }`
                             }
                         >
-                            <span className="mr-2">
-                                {typeof icon === "function" ? icon() : icon}
-                            </span>
+                            <span className="mr-2">{renderNavIcon(icon)}</span>
                             {label}
                         </NavLink>
                     ))}

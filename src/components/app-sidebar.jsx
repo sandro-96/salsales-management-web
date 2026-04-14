@@ -1,5 +1,5 @@
 import * as React from "react";
-import { HelpCircleIcon, StoreIcon } from "lucide-react";
+import { HelpCircleIcon, StoreIcon, ShoppingCart } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
@@ -17,7 +17,17 @@ import { useShop } from "@/hooks/useShop";
 
 export function AppSidebar({ navItems, ...props }) {
   const { user } = useAuth();
-  const { shops } = useShop();
+  const { shops, selectedShopId } = useShop();
+
+  const mainNavItems = React.useMemo(() => {
+    if (!selectedShopId || !Array.isArray(navItems)) return navItems;
+    const alreadyHasPos = navItems.some((item) => item.to === "/pos");
+    if (alreadyHasPos) return navItems;
+    return [
+      { to: "/pos", icon: ShoppingCart, label: "Bán hàng" },
+      ...navItems,
+    ];
+  }, [selectedShopId, navItems]);
 
   const navSecondary = [
     {
@@ -46,7 +56,7 @@ export function AppSidebar({ navItems, ...props }) {
         </SidebarHeader>
       )}
       <SidebarContent>
-        <NavMain items={navItems} />
+        <NavMain items={mainNavItems} />
         {/* <NavDocuments items={data.documents} /> */}
         <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>

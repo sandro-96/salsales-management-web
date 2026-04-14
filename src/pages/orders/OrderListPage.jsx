@@ -32,6 +32,7 @@ import {
   cancelOrder,
   confirmPayment,
   updateOrderStatus,
+  patchOrderFulfillment,
 } from "../../api/orderApi.js";
 
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
@@ -109,6 +113,52 @@ const PAYMENT_METHODS = [
   { value: "Card", label: "Thẻ" },
   { value: "Transfer", label: "Chuyển khoản" },
 ];
+
+/** Mã đơn hàng hiển thị (API: orderCode); đơn cũ có thể chỉ có id. */
+function displayOrderCode(order) {
+  const code = order?.orderCode?.trim();
+  if (code) return code;
+  const id = order?.id;
+  if (!id) return "—";
+  return id.length > 10 ? `DH-${id.slice(-8).toUpperCase()}` : String(id).toUpperCase();
+}
+
+/** Biến thể: ưu tiên tên từ API; nếu chỉ có variantId vẫn hiển thị mã rút gọn. */
+function orderLineVariantLabel(item) {
+  const name = item?.variantName;
+  if (name && String(name).trim()) {
+    const t = String(name).trim();
+    if (t.startsWith("Biến thể")) return t;
+    return `Biến thể: ${t}`;
+  }
+  const vid = item?.variantId;
+  if (!vid || !String(vid).trim()) return null;
+  const id = String(vid).trim();
+  const short = id.length > 10 ? id.slice(-8).toUpperCase() : id;
+  return `Biến thể (mã): ${short}`;
+}
+
+function PaymentCollectionBadge({ paid, paymentStatus }) {
+  if (paid) {
+    return (
+      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1">
+        <CreditCard className="h-3 w-3" /> Đã thanh toán
+      </Badge>
+    );
+  }
+  if (paymentStatus === "PENDING_COLLECTION") {
+    return (
+      <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-900 border-amber-200">
+        <Truck className="h-3 w-3" /> Chờ thu COD
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="text-[11px] gap-1">
+      Chưa thanh toán
+    </Badge>
+  );
+}
 
 // ─── Status Badge ────────────────────────────────────────────────────────────
 
@@ -158,9 +208,81 @@ const StatCard = ({ icon, label, value, iconClassName, loading }) => {
 
 // ─── Order Detail Dialog ─────────────────────────────────────────────────────
 
-const OrderDetailDialog = ({ open, onClose, order }) => {
+const OrderDetailDialog = ({
+  open,
+  onClose,
+  order,
+  shopId,
+  canEdit,
+  onSaved,
+  onOrderPatched,
+}) => {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    note: "",
+    customerId: "",
+    shippingCarrier: "",
+    shippingMethod: "",
+    trackingNumber: "",
+    externalOrderRef: "",
+  });
+
+  useEffect(() => {
+    if (!order) return;
+    setForm({
+      note: order.note ?? "",
+      customerId: order.customerId ?? "",
+      shippingCarrier: order.shippingCarrier ?? "",
+      shippingMethod: order.shippingMethod ?? "",
+      trackingNumber: order.trackingNumber ?? "",
+      externalOrderRef: order.externalOrderRef ?? "",
+    });
+  }, [order]);
+
+  const handleSaveFulfillment = async () => {
+    if (!order || !shopId) return;
+    setSaving(true);
+    try {
+      // Backend: null = không đổi; chuỗi (kể cả rỗng) = cập nhật / xóa giá trị.
+      const payload = {
+        note: form.note.trim(),
+        customerId: form.customerId.trim(),
+        shippingCarrier: form.shippingCarrier.trim(),
+        shippingMethod: form.shippingMethod.trim(),
+        trackingNumber: form.trackingNumber.trim(),
+        externalOrderRef: form.externalOrderRef.trim(),
+      };
+      const res = await patchOrderFulfillment(order.id, shopId, payload);
+      const updated = res.data?.data;
+      toast.success("Đã cập nhật thông tin đơn hàng.");
+      if (updated && onOrderPatched) onOrderPatched(updated);
+      onSaved?.();
+    } catch (e) {
+      toast.error(
+        e.response?.data?.message || "Không thể cập nhật thông tin đơn hàng.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!order) return null;
+  const customerIdUnchanged =
+    (form.customerId || "").trim() === (order.customerId || "").trim();
+  const showCustomerSummary =
+    !!(
+      order.customerName ||
+      order.customerPhone ||
+      order.customerId
+    ) &&
+    (!canEdit || customerIdUnchanged);
   const tax = order.taxSnapshot;
+  const itemsSubtotal = (order.items ?? []).reduce(
+    (s, i) =>
+      s +
+      (i.priceAfterDiscount ?? i.price ?? 0) * (i.quantity ?? 0),
+    0,
+  );
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
@@ -170,29 +292,154 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
             Chi tiết đơn hàng
           </DialogTitle>
           <DialogDescription>
-            Mã đơn:{" "}
-            <span className="font-mono text-foreground">{order.id}</span>
+            Mã đơn hàng:{" "}
+            <span className="font-mono text-foreground">
+              {displayOrderCode(order)}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             <OrderStatusBadge status={order.status} />
-            {order.paid ? (
-              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px]">
-                Đã thanh toán
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-[11px]">
-                Chưa thanh toán
-              </Badge>
-            )}
+            <PaymentCollectionBadge
+              paid={order.paid}
+              paymentStatus={order.paymentStatus}
+            />
           </div>
 
-          {order.note && (
-            <div className="text-sm">
-              <span className="text-muted-foreground">Ghi chú: </span>
-              {order.note}
+          {showCustomerSummary && (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Khách hàng: </span>
+              <span className="font-medium">
+                {order.customerName?.trim() || "—"}
+              </span>
+              {order.customerPhone && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {order.customerPhone}
+                </span>
+              )}
+              {order.customerId && (
+                <span className="block text-[11px] font-mono text-muted-foreground mt-0.5">
+                  ID: {order.customerId}
+                </span>
+              )}
+            </div>
+          )}
+
+          {!canEdit &&
+            (order.note ||
+              order.shippingCarrier ||
+              order.shippingMethod ||
+              order.trackingNumber ||
+              order.externalOrderRef) && (
+            <div className="rounded-md border p-3 space-y-1 text-sm">
+              {order.note && (
+                <p>
+                  <span className="text-muted-foreground">Ghi chú: </span>
+                  {order.note}
+                </p>
+              )}
+              {order.externalOrderRef && (
+                <p>
+                  <span className="text-muted-foreground">Tham chiếu ngoài: </span>
+                  <span className="font-mono">{order.externalOrderRef}</span>
+                </p>
+              )}
+              {order.shippingMethod && (
+                <p>
+                  <span className="text-muted-foreground">Hình thức giao: </span>
+                  {order.shippingMethod}
+                </p>
+              )}
+              {order.shippingCarrier && (
+                <p>
+                  <span className="text-muted-foreground">Đơn vị VC: </span>
+                  {order.shippingCarrier}
+                </p>
+              )}
+              {order.trackingNumber && (
+                <p>
+                  <span className="text-muted-foreground">Vận đơn: </span>
+                  <span className="font-mono">{order.trackingNumber}</span>
+                </p>
+              )}
+            </div>
+          )}
+
+          {canEdit && (
+            <div className="rounded-md border p-3 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Giao hàng & tham chiếu (lưu được cả đơn đã thanh toán)
+              </p>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Ghi chú</Label>
+                <Textarea
+                  className="text-sm min-h-[56px]"
+                  value={form.note}
+                  onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Khách hàng (ID hệ thống)</Label>
+                <Input
+                  className="h-8 text-sm font-mono"
+                  value={form.customerId}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, customerId: e.target.value }))
+                  }
+                  placeholder="Dán ID khách hàng; để trống nếu không gắn"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Tên và SĐT hiển thị ở trên theo ID đã lưu; đổi ID rồi bấm Lưu để cập nhật.
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tham chiếu ngoài (Shopee, …)</Label>
+                  <Input
+                    className="h-8 text-sm"
+                    value={form.externalOrderRef}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, externalOrderRef: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Hình thức giao / kênh</Label>
+                  <Input
+                    className="h-8 text-sm"
+                    value={form.shippingMethod}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, shippingMethod: e.target.value }))
+                    }
+                    placeholder="VD: Shopee, Ship COD ngoài"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Đơn vị vận chuyển</Label>
+                  <Input
+                    className="h-8 text-sm"
+                    value={form.shippingCarrier}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, shippingCarrier: e.target.value }))
+                    }
+                    placeholder="GHN, GHTK, …"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Mã vận đơn</Label>
+                  <Input
+                    className="h-8 text-sm font-mono"
+                    value={form.trackingNumber}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, trackingNumber: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
           )}
 
@@ -207,37 +454,108 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {order.items?.map((item, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium text-sm">
-                      {item.productName}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {item.quantity}
-                    </TableCell>
-                    <TableCell className="text-right text-sm tabular-nums">
-                      {(
-                        item.priceAfterDiscount ??
-                        item.price ??
-                        0
-                      ).toLocaleString("vi-VN")}{" "}
-                      ₫
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {(
-                        (item.priceAfterDiscount ?? item.price ?? 0) *
-                        item.quantity
-                      ).toLocaleString("vi-VN")}{" "}
-                      ₫
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {order.items?.map((item, idx) => {
+                  const basePrice = item.price ?? 0;
+                  const unitAfter =
+                    item.priceAfterDiscount ?? item.price ?? 0;
+                  const showOrig =
+                    Math.abs(basePrice - unitAfter) > 0.009;
+                  const lineTotal = unitAfter * item.quantity;
+                  const promoBits = [
+                    item.promotionName,
+                    item.promotionDiscountLabel,
+                  ].filter(Boolean);
+                  const variantLabel = orderLineVariantLabel(item);
+                  return (
+                    <TableRow key={idx} className="align-top">
+                      <TableCell className="text-sm max-w-[220px]">
+                        <p className="font-medium leading-snug">
+                          {item.productName}
+                        </p>
+                        {variantLabel && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {variantLabel}
+                          </p>
+                        )}
+                        {item.sku && (
+                          <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                            SKU: {item.sku}
+                          </p>
+                        )}
+                        {promoBits.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1 items-center">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs font-normal"
+                            >
+                              KM: {promoBits.join(" · ")}
+                            </Badge>
+                          </div>
+                        )}
+                        {!item.promotionName &&
+                          !item.promotionDiscountLabel &&
+                          item.appliedPromotionId &&
+                          promoBits.length === 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              CTKM (không tìm thấy tên):{" "}
+                              <span className="font-mono">
+                                {item.appliedPromotionId.length > 10
+                                  ? item.appliedPromotionId.slice(-8)
+                                  : item.appliedPromotionId}
+                              </span>
+                            </p>
+                          )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums align-top">
+                        {item.quantity}
+                      </TableCell>
+                      <TableCell className="text-right text-sm tabular-nums align-top">
+                        {showOrig && (
+                          <span className="line-through text-muted-foreground text-xs block">
+                            {basePrice.toLocaleString("vi-VN")} ₫
+                          </span>
+                        )}
+                        <span>{unitAfter.toLocaleString("vi-VN")} ₫</span>
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums align-top">
+                        {lineTotal.toLocaleString("vi-VN")} ₫
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
 
+          {order.pointsDiscount > 0 && (
+            <div className="rounded-md border border-dashed px-3 py-2 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tổng tiền hàng</span>
+                <span className="tabular-nums">
+                  {itemsSubtotal.toLocaleString("vi-VN")} ₫
+                </span>
+              </div>
+              <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                <span>
+                  Giảm đổi điểm
+                  {order.pointsRedeemed
+                    ? ` (${order.pointsRedeemed} điểm)`
+                    : ""}
+                </span>
+                <span className="tabular-nums">
+                  −{order.pointsDiscount.toLocaleString("vi-VN")} ₫
+                </span>
+              </div>
+            </div>
+          )}
+
           {tax && (
             <div className="space-y-1 text-sm">
+              <p className="text-xs text-muted-foreground pb-1">
+                {tax.priceIncludesTax
+                  ? "Chính sách thuế: giá tính theo mức đã gồm thuế (NET được tách từ tổng)."
+                  : "Chính sách thuế: tạm tính chưa gồm thuế; thuế cộng thêm theo từng dòng thuế."}
+              </p>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Tạm tính</span>
                 <span className="tabular-nums">
@@ -286,6 +604,22 @@ const OrderDetailDialog = ({ open, onClose, order }) => {
             </div>
           )}
         </div>
+
+        {canEdit && order.status !== "CANCELLED" && (
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Đóng
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveFulfillment}
+              disabled={saving}
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+              Lưu thông tin đơn
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -319,6 +653,7 @@ const OrderListPage = () => {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [payingOrderId, setPayingOrderId] = useState(null);
+  const [payingOrderSnapshot, setPayingOrderSnapshot] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [createOrderOpen, setCreateOrderOpen] = useState(false);
 
@@ -420,11 +755,12 @@ const OrderListPage = () => {
     [selectedShopId, fetchOrders],
   );
 
-  const openPaymentDialog = (order) => {
+  const openPaymentDialog = useCallback((order) => {
+    setPayingOrderSnapshot(order);
     setPayingOrderId(order.id);
     setPaymentMethod("Cash");
     setPaymentDialogOpen(true);
-  };
+  }, []);
 
   const handleConfirmPayment = async () => {
     if (!payingOrderId) return;
@@ -439,6 +775,8 @@ const OrderListPage = () => {
       );
       toast.success("Thanh toán thành công.");
       setPaymentDialogOpen(false);
+      setPayingOrderSnapshot(null);
+      setPayingOrderId(null);
       fetchOrders();
     } catch (err) {
       toast.error(
@@ -453,11 +791,11 @@ const OrderListPage = () => {
   const columns = useMemo(
     () => [
       {
-        accessorKey: "id",
-        header: "Mã đơn",
+        accessorKey: "orderCode",
+        header: "Mã đơn hàng",
         cell: ({ row }) => (
           <span className="text-sm font-mono text-muted-foreground">
-            {(row.original.id ?? "").slice(-8).toUpperCase()}
+            {displayOrderCode(row.original)}
           </span>
         ),
       },
@@ -488,11 +826,17 @@ const OrderListPage = () => {
           const items = row.original.items ?? [];
           if (items.length === 0)
             return <span className="text-muted-foreground">—</span>;
+          const variant0 = orderLineVariantLabel(items[0]);
           return (
             <div className="max-w-[200px]">
               <p className="text-sm font-medium truncate">
                 {items[0].productName}
               </p>
+              {variant0 && (
+                <p className="text-xs text-muted-foreground truncate">
+                  {variant0}
+                </p>
+              )}
               {items.length > 1 && (
                 <p className="text-xs text-muted-foreground">
                   +{items.length - 1} sản phẩm khác
@@ -536,16 +880,22 @@ const OrderListPage = () => {
       {
         accessorKey: "paid",
         header: "Thanh toán",
-        cell: ({ row }) =>
-          row.original.paid ? (
-            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1">
-              <CreditCard className="h-3 w-3" /> Đã TT
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-[11px] gap-1">
-              Chưa TT
-            </Badge>
-          ),
+        cell: ({ row }) => {
+          const o = row.original;
+          return (
+            <div className="flex flex-col gap-1 items-start">
+              <PaymentCollectionBadge
+                paid={o.paid}
+                paymentStatus={o.paymentStatus}
+              />
+              {o.paymentMethod && (
+                <span className="text-[10px] text-muted-foreground max-w-[140px] truncate">
+                  {o.paymentMethod}
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: "actions",
@@ -630,7 +980,7 @@ const OrderListPage = () => {
         },
       },
     ],
-    [canManage, submitting, handleCancel, handleStatusChange],
+    [canManage, submitting, handleCancel, handleStatusChange, openPaymentDialog],
   );
 
   const table = useReactTable({
@@ -828,12 +1178,22 @@ const OrderListPage = () => {
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
         order={selectedOrder}
+        shopId={selectedShopId}
+        canEdit={canManage}
+        onSaved={fetchOrders}
+        onOrderPatched={(o) => setSelectedOrder(o)}
       />
 
       {/* ── Payment Confirmation Dialog ───────────────────────────── */}
       <Dialog
         open={paymentDialogOpen}
-        onOpenChange={(v) => !v && setPaymentDialogOpen(false)}
+        onOpenChange={(v) => {
+          if (!v) {
+            setPaymentDialogOpen(false);
+            setPayingOrderSnapshot(null);
+            setPayingOrderId(null);
+          }
+        }}
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -842,7 +1202,9 @@ const OrderListPage = () => {
               toán
             </DialogTitle>
             <DialogDescription>
-              Chọn phương thức thanh toán cho đơn hàng.
+              {payingOrderSnapshot?.paymentStatus === "PENDING_COLLECTION"
+                ? "Đơn Ship COD — chọn phương thức tiền đã thu thực tế (thường là Tiền mặt), rồi xác nhận để đánh dấu đã thanh toán."
+                : "Chọn phương thức thanh toán cho đơn hàng."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

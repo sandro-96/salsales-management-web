@@ -14,6 +14,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +54,12 @@ const formSchema = z
 
     description: z.string().optional().nullable(),
 
+    taxRegistrationNumber: z
+      .string()
+      .max(32, "MST tối đa 32 ký tự.")
+      .optional()
+      .nullable(),
+
     isDefault: z.boolean().default(false),
     active: z.boolean().default(true),
   })
@@ -87,6 +94,7 @@ export default function BranchForm({
       address: "",
       phone: "",
       countryCode: shop?.countryCode ?? "VN",
+      taxRegistrationNumber: "",
       isDefault: false,
       active: true,
     },
@@ -106,6 +114,7 @@ export default function BranchForm({
           : undefined,
         capacity: branch.capacity ?? undefined,
         countryCode: shop?.countryCode || "VN",
+        taxRegistrationNumber: branch.taxRegistrationNumber ?? "",
       });
     }
   }, [branch, reset, shop]);
@@ -149,12 +158,13 @@ export default function BranchForm({
   };
 
   const handleSubmit = (data) => {
-    // Chuyển openingDate về string ISO nếu cần (tùy backend)
+    const trimmedMst = data.taxRegistrationNumber?.trim?.() ?? "";
     const submitData = {
       ...data,
       openingDate: data.openingDate
         ? data.openingDate.toISOString().split("T")[0]
         : undefined,
+      taxRegistrationNumber: trimmedMst || null,
     };
     onSubmit(submitData);
   };
@@ -270,6 +280,38 @@ export default function BranchForm({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="taxRegistrationNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mã số thuế (MST) — tùy chọn</FormLabel>
+                  {isReadOnly ? (
+                    <FormControl>
+                      <ReadOnlyValue value={field.value || "-"} />
+                    </FormControl>
+                  ) : (
+                    <FormControl>
+                      <Input
+                        placeholder="Để trống = dùng MST của cửa hàng"
+                        maxLength={32}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  )}
+                  {!isReadOnly && (
+                    <FormDescription>
+                      Chỉ nhập khi chi nhánh đăng ký MST riêng tại địa điểm kinh
+                      doanh.
+                    </FormDescription>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               {/* Ngày khai trương */}
               <FormField

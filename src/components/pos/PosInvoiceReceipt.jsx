@@ -117,7 +117,7 @@ export function PosInvoiceReceipt({
       ) : null}
 
       <div style={{ ...rowStyle, fontSize: "10px" }}>
-        <span style={labelMuted}>Mã đơn</span>
+        <span style={labelMuted}>Mã đơn hàng</span>
         <span
           style={{
             fontWeight: 600,
@@ -125,7 +125,9 @@ export function PosInvoiceReceipt({
             wordBreak: "break-all",
           }}
         >
-          {isDraft ? "Sẽ tạo khi xác nhận" : order?.id || "—"}
+          {isDraft
+            ? "Sẽ tạo khi xác nhận"
+            : order?.orderCode?.trim() || order?.id || "—"}
         </span>
       </div>
       <div style={{ ...rowStyle, fontSize: "10px" }}>

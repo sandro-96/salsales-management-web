@@ -40,6 +40,13 @@ export const updateOrder = (id, shopId, data) =>
   axiosInstance.put(`/orders/${id}`, data, { params: { shopId } });
 
 /**
+ * Cập nhật giao hàng / tham chiếu / ghi chú / khách — cho phép cả đơn đã thanh toán
+ * PATCH /api/orders/{id}/fulfillment?shopId=
+ */
+export const patchOrderFulfillment = (id, shopId, data) =>
+  axiosInstance.patch(`/orders/${id}/fulfillment`, data, { params: { shopId } });
+
+/**
  * ❌ Hủy đơn hàng
  * PUT /api/orders/{id}/cancel?shopId={shopId}
  */

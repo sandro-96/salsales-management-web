@@ -530,7 +530,9 @@ const OverviewPage = () => {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
                               {order.customerName ||
-                                `Đơn #${order.id?.slice(-6)}`}
+                                (order.orderCode?.trim()
+                                  ? `Đơn ${order.orderCode.trim()}`
+                                  : `Đơn #${order.id?.slice(-6)}`)}
                             </p>
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Clock className="h-3 w-3" />

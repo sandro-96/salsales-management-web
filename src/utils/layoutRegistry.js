@@ -1,8 +1,5 @@
 // Import layouts and navItems
-import FnbWebLayout from "../layouts/fnb/FnbWebLayout";
-import FnbPosLayout from "../layouts/fnb/FnbPosLayout";
-import RetailWebLayout from "../layouts/retail/RetailWebLayout";
-import RetailPosLayout from "../layouts/retail/RetailPosLayout";
+import PosChromeLayout from "../layouts/common/PosChromeLayout";
 import PharmacyWebLayout from "../layouts/pharmacy/WebLayout";
 import PharmacyPosLayout from "../layouts/pharmacy/PosLayout";
 import HealthcareWebLayout from "../layouts/healthcare/WebLayout";
@@ -16,7 +13,7 @@ import ServicePosLayout from "../layouts/service/PosLayout";
 import BaseWebLayout from "../layouts/common/BaseWebLayout";
 
 import { fnbWebNav, fnbPosNav } from "../layouts/fnb/navItems";
-import { retailWebNav } from "../layouts/retail/navItems";
+import { retailWebNav, retailPosNav } from "../layouts/retail/navItems";
 import { pharmacyWebNav, pharmacyPosNav } from "../layouts/pharmacy/navItems";
 import { healthcareWebNav, healthcarePosNav } from "../layouts/healthcare/navItems";
 import { educationWebNav, educationPosNav } from "../layouts/education/navItems";
@@ -33,10 +30,10 @@ export const layoutRegistry = {
             STAFF: { layout: BaseWebLayout, props: { title: "FNB Staff", navItems: fnbWebNav.staff } },
         },
         pos: {
-            OWNER: { layout: FnbPosLayout, props: { title: "FNB POS Admin", navItems: fnbPosNav.admin } },
-            MANAGER: { layout: FnbPosLayout, props: { title: "FNB POS Manager", navItems: fnbPosNav.admin } },
-            ADMIN: { layout: FnbPosLayout, props: { title: "FNB POS Admin", navItems: fnbPosNav.admin } },
-            STAFF: { layout: FnbPosLayout, props: { title: "FNB POS Staff", navItems: fnbPosNav.staff } },
+            OWNER: { layout: PosChromeLayout, props: { title: "FNB POS Admin", navItems: fnbPosNav.admin } },
+            MANAGER: { layout: PosChromeLayout, props: { title: "FNB POS Manager", navItems: fnbPosNav.admin } },
+            ADMIN: { layout: PosChromeLayout, props: { title: "FNB POS Admin", navItems: fnbPosNav.admin } },
+            STAFF: { layout: PosChromeLayout, props: { title: "FNB POS Staff", navItems: fnbPosNav.staff } },
         },
     },
 
@@ -48,10 +45,10 @@ export const layoutRegistry = {
             STAFF: { layout: BaseWebLayout, props: { title: "Retail Staff", navItems: retailWebNav.staff } },
         },
         pos: {
-            OWNER: { layout: RetailPosLayout, props: { title: "Retail POS Manager" } },
-            MANAGER: { layout: RetailPosLayout, props: { title: "Retail POS Manager" } },
-            ADMIN: { layout: RetailPosLayout, props: { title: "Retail POS Admin" } },
-            STAFF: { layout: RetailPosLayout, props: { title: "Retail POS Staff" } },
+            OWNER: { layout: PosChromeLayout, props: { title: "Retail POS Manager", navItems: retailPosNav.admin } },
+            MANAGER: { layout: PosChromeLayout, props: { title: "Retail POS Manager", navItems: retailPosNav.admin } },
+            ADMIN: { layout: PosChromeLayout, props: { title: "Retail POS Admin", navItems: retailPosNav.admin } },
+            STAFF: { layout: PosChromeLayout, props: { title: "Retail POS Staff", navItems: retailPosNav.staff } },
         },
     },
 

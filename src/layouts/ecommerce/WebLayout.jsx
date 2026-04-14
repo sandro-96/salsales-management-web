@@ -1,5 +1,6 @@
 // src/layouts/ecommerce/WebLayout.jsx
 import { Outlet, NavLink } from "react-router-dom";
+import { renderNavIcon } from "../../lib/renderNavIcon";
 
 const EcommerceWebLayout = ({ title, navItems }) => {
     return (
@@ -21,7 +22,7 @@ const EcommerceWebLayout = ({ title, navItems }) => {
                             }
                         >
                             <span className="mr-2">
-                                {typeof icon === "function" ? icon() : icon}
+                                {renderNavIcon(icon)}
                             </span>
                             {label}
                         </NavLink>

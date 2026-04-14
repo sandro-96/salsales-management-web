@@ -40,11 +40,13 @@ export const retailWebNav = {
 
 export const retailPosNav = {
   admin: [
+    { to: "/pos", icon: ShoppingCart, label: "Bán hàng" },
     { to: "/overview", icon: Home, label: "Tổng quan" },
     { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
     { to: "/customers", icon: User, label: "Khách hàng" },
   ],
   staff: [
+    { to: "/pos", icon: ShoppingCart, label: "Bán hàng" },
     { to: "/overview", icon: Home, label: "Tổng quan" },
     { to: "/products", icon: Package, label: "Sản phẩm" },
     { to: "/settings", icon: Settings, label: "Cài đặt" },

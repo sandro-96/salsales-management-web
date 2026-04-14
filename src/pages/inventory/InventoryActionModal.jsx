@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   PackagePlus,
   PackageMinus,
   SlidersHorizontal,
@@ -26,6 +33,11 @@ import {
   exportProductQuantity,
   adjustProductQuantity,
 } from "../../api/inventoryApi.js";
+
+function variantLabel(product, variantId) {
+  const v = (product?.variants || []).find((x) => x.variantId === variantId);
+  return v?.name || variantId || "—";
+}
 
 const ACTION_CONFIG = {
   IMPORT: {
@@ -69,13 +81,43 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState("");
+
+  const branchVariantList = product?.branchVariants?.length
+    ? product.branchVariants
+    : [];
 
   useEffect(() => {
     if (open) {
       setQuantity("");
       setNote("");
+      const pre = product?.__preselectVariantId;
+      const canPre =
+        pre &&
+        (product?.branchVariants || []).some((v) => v.variantId === pre);
+      if (canPre) {
+        setSelectedVariantId(pre);
+      } else if (product?.branchVariants?.length === 1) {
+        setSelectedVariantId(product.branchVariants[0].variantId);
+      } else {
+        setSelectedVariantId("");
+      }
     }
-  }, [open, actionType]);
+  }, [open, actionType, product?.id, product?.__preselectVariantId]);
+
+  const effectiveVariantId = useMemo(() => {
+    if (branchVariantList.length === 0) return "";
+    if (branchVariantList.length === 1) return branchVariantList[0].variantId;
+    return selectedVariantId;
+  }, [branchVariantList, selectedVariantId]);
+
+  const currentStock = useMemo(() => {
+    if (!product) return 0;
+    if (!branchVariantList.length) return product.quantity ?? 0;
+    if (branchVariantList.length > 1 && !effectiveVariantId) return null;
+    const bv = branchVariantList.find((v) => v.variantId === effectiveVariantId);
+    return bv?.quantity ?? 0;
+  }, [product, branchVariantList, effectiveVariantId]);
 
   const config = ACTION_CONFIG[actionType] || ACTION_CONFIG.IMPORT;
   const IconComp = config.icon;
@@ -90,7 +132,12 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
       toast.error("Số lượng mới phải >= 0.");
       return;
     }
-    if (actionType === "EXPORT" && qty > (product?.quantity ?? 0)) {
+    if (branchVariantList.length > 1 && !effectiveVariantId) {
+      toast.error("Vui lòng chọn biến thể.");
+      return;
+    }
+
+    if (actionType === "EXPORT" && currentStock != null && qty > currentStock) {
       toast.error("Số lượng xuất không được vượt quá tồn kho hiện tại.");
       return;
     }
@@ -100,6 +147,7 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
       const payload = {
         branchId: selectedBranchId,
         branchProductId: product?.id,
+        variantId: branchVariantList.length ? effectiveVariantId : undefined,
         quantity: qty,
         note,
       };
@@ -135,7 +183,6 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
 
   if (!product) return null;
 
-  const currentStock = product?.quantity ?? 0;
   const previewStock =
     quantity !== ""
       ? actionType === "IMPORT"
@@ -172,9 +219,31 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
               <p className="text-xs text-muted-foreground font-mono">{product.sku || "—"}</p>
             </div>
             <Badge variant="outline" className="shrink-0">
-              Tồn: {currentStock.toLocaleString("vi-VN")}
+              Tồn:{" "}
+              {currentStock === null
+                ? "—"
+                : Number(currentStock).toLocaleString("vi-VN")}
             </Badge>
           </div>
+
+          {branchVariantList.length > 1 && (
+            <div className="space-y-2">
+              <Label>Biến thể</Label>
+              <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Chọn biến thể" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branchVariantList.map((bv) => (
+                    <SelectItem key={bv.variantId} value={bv.variantId}>
+                      {variantLabel(product, bv.variantId)} — Tồn:{" "}
+                      {(bv.quantity ?? 0).toLocaleString("vi-VN")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="inv-quantity">{config.quantityLabel}</Label>
@@ -184,7 +253,11 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
               onChange={setQuantity}
               formatted={false}
               placeholder={config.quantityPlaceholder}
-              max={actionType === "EXPORT" ? currentStock : undefined}
+              max={
+                actionType === "EXPORT" && currentStock != null
+                  ? currentStock
+                  : undefined
+              }
               autoFocus
             />
           </div>

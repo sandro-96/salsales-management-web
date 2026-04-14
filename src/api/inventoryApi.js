@@ -5,10 +5,11 @@ import axiosInstance from "./axiosInstance";
  * POST /api/shops/{shopId}/inventory/import
  * userId tự động từ JWT, không cần truyền.
  */
-export const importProductQuantity = (shopId, { branchId, branchProductId, quantity, note }) =>
+export const importProductQuantity = (shopId, { branchId, branchProductId, variantId, quantity, note }) =>
   axiosInstance.post(`/shops/${shopId}/inventory/import`, {
     branchId,
     branchProductId,
+    variantId: variantId || undefined,
     type: "IMPORT",
     quantity,
     note,
@@ -18,10 +19,11 @@ export const importProductQuantity = (shopId, { branchId, branchProductId, quant
  * 📦 Xuất kho — giảm số lượng tồn kho
  * POST /api/shops/{shopId}/inventory/export
  */
-export const exportProductQuantity = (shopId, { branchId, branchProductId, quantity, note, referenceId }) =>
+export const exportProductQuantity = (shopId, { branchId, branchProductId, variantId, quantity, note, referenceId }) =>
   axiosInstance.post(`/shops/${shopId}/inventory/export`, {
     branchId,
     branchProductId,
+    variantId: variantId || undefined,
     type: "EXPORT",
     quantity,
     note,
@@ -33,10 +35,11 @@ export const exportProductQuantity = (shopId, { branchId, branchProductId, quant
  * POST /api/shops/{shopId}/inventory/adjust
  * Field `quantity` trong body = newQuantity (số lượng mới).
  */
-export const adjustProductQuantity = (shopId, { branchId, branchProductId, quantity, note }) =>
+export const adjustProductQuantity = (shopId, { branchId, branchProductId, variantId, quantity, note }) =>
   axiosInstance.post(`/shops/${shopId}/inventory/adjust`, {
     branchId,
     branchProductId,
+    variantId: variantId || undefined,
     type: "ADJUSTMENT",
     quantity,
     note,

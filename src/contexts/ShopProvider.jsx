@@ -78,19 +78,27 @@ const ShopProvider = ({ children }) => {
     [selectedShopId],
   );
 
-  const fetchShops = useCallback(async () => {
+  const fetchShops = useCallback(async (preferredShopId) => {
     try {
       const res = await axiosInstance.get("/shop/my?page=0&size=1000");
       const shopList = res.data.data.content;
       setShops(shopList);
 
-      const savedShopId = localStorage.getItem("selectedShopId");
-      const validSavedShop = shopList.find((s) => s.id === savedShopId);
+      const fromStorage = localStorage.getItem("selectedShopId");
+      const targetId =
+        typeof preferredShopId === "string" &&
+        preferredShopId &&
+        shopList.some((s) => s.id === preferredShopId)
+          ? preferredShopId
+          : fromStorage;
+
+      const validSavedShop = shopList.find((s) => s.id === targetId);
       if (validSavedShop) {
-        setSelectedShopIdState(savedShopId);
+        setSelectedShopIdState(validSavedShop.id);
         setSelectedShopState(validSavedShop);
         setSelectedRole(validSavedShop.role);
         setSelectedIndustry(validSavedShop.industry);
+        localStorage.setItem("selectedShopId", validSavedShop.id);
       } else {
         if (shopList.length > 0 && !selectedShop) {
           const firstShop = shopList[0];

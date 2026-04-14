@@ -26,6 +26,7 @@ import {
   Link2,
   Copy,
   Percent,
+  IdCard,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ const ShopSettingsPage = () => {
   const [businessModel, setBusinessModel] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
+  const [taxRegistrationNumber, setTaxRegistrationNumber] = useState("");
   const [countryCode, setCountryCode] = useState("VN");
   const [active, setActive] = useState(true);
   const [logoFile, setLogoFile] = useState(null);
@@ -96,6 +98,7 @@ const ShopSettingsPage = () => {
     setBusinessModel(selectedShop.businessModel || "");
     setAddress(selectedShop.address || "");
     setPhone(selectedShop.phone || "");
+    setTaxRegistrationNumber(selectedShop.taxRegistrationNumber || "");
     setCountryCode(selectedShop.countryCode || "VN");
     setActive(selectedShop.active !== false);
     setLogoFile(null);
@@ -146,6 +149,7 @@ const ShopSettingsPage = () => {
         businessModel,
         address: address.trim(),
         phone: phone.trim(),
+        taxRegistrationNumber: taxRegistrationNumber.trim() || null,
         countryCode,
         active,
       };
@@ -508,6 +512,27 @@ const ShopSettingsPage = () => {
               <FieldValue>{selectedShop.address}</FieldValue>
             )}
           </FieldWrapper>
+
+          <Separator />
+
+          <FieldWrapper label="Mã số thuế (MST)" icon={IdCard}>
+            {isEditMode ? (
+              <Input
+                value={taxRegistrationNumber}
+                onChange={(e) => setTaxRegistrationNumber(e.target.value)}
+                placeholder="Ví dụ: 0123456789"
+                maxLength={32}
+              />
+            ) : (
+              <FieldValue>{selectedShop.taxRegistrationNumber}</FieldValue>
+            )}
+          </FieldWrapper>
+          {isEditMode && (
+            <p className="text-xs text-muted-foreground -mt-2">
+              MST mặc định của cửa hàng. Chi nhánh có thể nhập MST riêng trong
+              cài đặt chi nhánh; để trống ở chi nhánh thì dùng MST này.
+            </p>
+          )}
 
           {/* Status toggle in edit mode */}
           {isEditMode && (

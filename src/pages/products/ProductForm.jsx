@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useForm, useFieldArray, useWatch, useFormContext } from "react-hook-form";
 import { format } from "date-fns";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import { useShop } from "@/hooks/useShop.js";
-import { getSuggestedSku, getSuggestedBarcode } from "@/api/productApi.js";
+import {
+  getSuggestedSku,
+  getSuggestedBarcode,
+  uploadStagedVariantImages,
+} from "@/api/productApi.js";
 import BarcodeScanner from "@/components/products/BarcodeScanner.jsx";
 import { lookupBarcode } from "@/utils/barcodeUtils.js";
 import {
@@ -97,6 +101,7 @@ const variantSchema = z.object({
   sku: z.string().optional().nullable(),
   price: z.coerce.number().min(0).default(0),
   costPrice: z.coerce.number().min(0).default(0),
+  images: z.array(z.string()).optional().default([]),
   attributes: z.array(variantAttributeSchema).default([]),
 });
 
@@ -124,12 +129,103 @@ const formSchema = z.object({
 });
 
 // ── Variant Card ─────────────────────────────────────────────────────────────
-function VariantCard({ nestIndex, control, isReadOnly, onRemove }) {
+function VariantCard({
+  nestIndex,
+  fieldId,
+  control,
+  isReadOnly,
+  onRemove,
+  variantMedia,
+  setVariantMedia,
+  maxVariantImages,
+  allowedImageTypes,
+}) {
+  const { setValue, getValues } = useFormContext();
+  const [variantFileInputKey, setVariantFileInputKey] = useState(0);
+  const imageUrls = useWatch({ control, name: `variants.${nestIndex}.images` }) ?? [];
+  const pending = variantMedia[fieldId] ?? { files: [], previews: [] };
+  const pendingCount = pending.files?.length ?? 0;
+  const urlCount = Array.isArray(imageUrls) ? imageUrls.length : 0;
+  const canAddMore = urlCount + pendingCount < maxVariantImages;
+
   const {
     fields: attrFields,
     append: appendAttr,
     remove: removeAttr,
   } = useFieldArray({ control, name: `variants.${nestIndex}.attributes` });
+
+  const removeSavedVariantImage = (urlIdx) => {
+    const list = [...(getValues(`variants.${nestIndex}.images`) ?? [])];
+    list.splice(urlIdx, 1);
+    setValue(`variants.${nestIndex}.images`, list, { shouldDirty: true });
+  };
+
+  const removePendingVariantImage = (pIdx) => {
+    setVariantMedia((prev) => {
+      const cur = prev[fieldId] ?? { files: [], previews: [] };
+      const previews = [...(cur.previews ?? [])];
+      const files = [...(cur.files ?? [])];
+      if (previews[pIdx]) URL.revokeObjectURL(previews[pIdx]);
+      previews.splice(pIdx, 1);
+      files.splice(pIdx, 1);
+      const next = { ...prev };
+      if (files.length === 0 && previews.length === 0) delete next[fieldId];
+      else next[fieldId] = { files, previews };
+      return next;
+    });
+  };
+
+  const handleVariantImageChange = async (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+    const urlsNow = getValues(`variants.${nestIndex}.images`) ?? [];
+    const pend = variantMedia[fieldId] ?? { files: [], previews: [] };
+    const remaining = maxVariantImages - urlsNow.length - pend.files.length;
+    if (remaining <= 0) {
+      toast.error(`Tối đa ${maxVariantImages} ảnh / biến thể.`);
+      return;
+    }
+    const toProcess = selected.slice(0, remaining);
+    if (selected.length > remaining) {
+      toast.warning(`Chỉ thêm ${remaining} ảnh cho biến thể này.`);
+    }
+    const invalid = toProcess.filter((f) => !allowedImageTypes.includes(f.type));
+    if (invalid.length) {
+      toast.error("Chỉ hỗ trợ JPG, PNG hoặc WEBP.");
+      return;
+    }
+    const processed = await Promise.all(
+      toProcess.map(async (f) => {
+        if (f.size > 2 * 1024 * 1024) {
+          try {
+            const compressed = await imageCompression(f, {
+              maxSizeMB: 1.5,
+              maxWidthOrHeight: 1920,
+              useWebWorker: true,
+            });
+            return new File([compressed], f.name, { type: compressed.type });
+          } catch {
+            return f;
+          }
+        }
+        return f;
+      }),
+    );
+    setVariantMedia((prev) => {
+      const cur = prev[fieldId] ?? { files: [], previews: [] };
+      return {
+        ...prev,
+        [fieldId]: {
+          files: [...cur.files, ...processed],
+          previews: [
+            ...cur.previews,
+            ...processed.map((f) => URL.createObjectURL(f)),
+          ],
+        },
+      };
+    });
+    setVariantFileInputKey((k) => k + 1);
+  };
 
   return (
     <div className="border border-border rounded-lg p-4 flex flex-col gap-3 bg-muted/20">
@@ -243,6 +339,80 @@ function VariantCard({ nestIndex, control, isReadOnly, onRemove }) {
             </FormItem>
           )}
         />
+      </div>
+
+      {/* Ảnh biến thể */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
+            Hình ảnh biến thể ({urlCount + pendingCount}/{maxVariantImages})
+          </span>
+          {!isReadOnly && canAddMore && (
+            <label className="cursor-pointer">
+              <input
+                key={variantFileInputKey}
+                type="file"
+                multiple
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                className="hidden"
+                onChange={handleVariantImageChange}
+              />
+              <span className="inline-flex items-center gap-1 text-xs text-primary border border-primary rounded px-2 py-0.5 hover:bg-primary/10 transition-colors">
+                <ImagePlus className="w-3 h-3" />
+                Thêm ảnh
+              </span>
+            </label>
+          )}
+        </div>
+        {(urlCount > 0 || pendingCount > 0) && (
+          <div className="flex flex-wrap gap-2">
+            {(imageUrls ?? []).map((url, i) => (
+              <div
+                key={`u-${i}-${url}`}
+                className="relative size-16 rounded-md overflow-hidden border bg-muted"
+              >
+                <img
+                  src={url}
+                  alt=""
+                  className="size-full object-cover"
+                />
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => removeSavedVariantImage(i)}
+                    className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white p-0.5 hover:bg-black/80"
+                    aria-label="Xóa ảnh"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {(pending.previews ?? []).map((src, i) => (
+              <div
+                key={`p-${fieldId}-${i}`}
+                className="relative size-16 rounded-md overflow-hidden border border-dashed border-primary/50"
+              >
+                <img src={src} alt="" className="size-full object-cover" />
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => removePendingVariantImage(i)}
+                    className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white p-0.5 hover:bg-black/80"
+                    aria-label="Bỏ ảnh mới"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {!isReadOnly && urlCount === 0 && pendingCount === 0 && (
+          <p className="text-xs text-muted-foreground italic">
+            Chưa có ảnh riêng cho biến thể này.
+          </p>
+        )}
       </div>
 
       {/* Attributes */}
@@ -486,6 +656,7 @@ export default function ProductForm({
             sku: v.sku ?? "",
             price: v.price ?? 0,
             costPrice: v.costPrice ?? 0,
+            images: Array.isArray(v.images) ? [...v.images] : [],
             attributes: v.attributes
               ? Object.entries(v.attributes).map(([key, value]) => ({
                   key,
@@ -546,6 +717,7 @@ export default function ProductForm({
 
   // ── Image upload state ───────────────────────────────────────────────────
   const MAX_IMAGES = 10;
+  const MAX_VARIANT_IMAGES = 5;
   const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
   // Existing image URLs to keep (user can remove individual ones)
@@ -555,6 +727,8 @@ export default function ProductForm({
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [fileInputKey, setFileInputKey] = useState(Date.now());
+  /** fieldId (useFieldArray) → ảnh mới chưa upload staging */
+  const [variantMedia, setVariantMedia] = useState({});
 
   // Reset images when product changes
   useEffect(() => {
@@ -564,6 +738,7 @@ export default function ProductForm({
     setFiles([]);
     setPreviews([]);
     setFileInputKey(Date.now());
+    setVariantMedia({});
   }, [product, prefill, isCreate]);
 
   const removeExistingImage = (index) => {
@@ -629,6 +804,11 @@ export default function ProductForm({
     keptImages.length !== (product?.images?.length ?? 0) ||
     keptImages.some((url, i) => url !== (product?.images ?? [])[i]);
 
+  const variantImageDirty = useMemo(
+    () => Object.values(variantMedia).some((v) => (v?.files?.length ?? 0) > 0),
+    [variantMedia],
+  );
+
   const watchedCategory = watch("category");
   const watchedUnit = watch("unit");
   const watchedActive = watch("active");
@@ -673,6 +853,7 @@ export default function ProductForm({
           sku: v.sku ?? "",
           price: v.price ?? 0,
           costPrice: v.costPrice ?? 0,
+          images: Array.isArray(v.images) ? [...v.images] : [],
           attributes: v.attributes
             ? Object.entries(v.attributes).map(([key, value]) => ({
                 key,
@@ -681,25 +862,52 @@ export default function ProductForm({
             : [],
         })),
       });
+      setVariantMedia({});
       setUnitMode(isCustomUnit(product.unit) ? "custom" : "select");
       setCategoryMode(isCustomCategory(product.category) ? "custom" : "select");
     }
   }, [product, reset]);
 
-  const handleSubmit = (data) => {
-    const transformedVariants = (data.variants ?? []).map(
-      ({ attributes, ...rest }) => ({
-        ...rest,
-        attributes: (attributes ?? []).reduce((acc, { key, value }) => {
+  const handleSubmit = async (data) => {
+    if (!selectedShopId) {
+      toast.error("Chưa chọn cửa hàng.");
+      return;
+    }
+    try {
+      const mergedVariants = [];
+      for (let i = 0; i < (data.variants ?? []).length; i++) {
+        const v = data.variants[i];
+        const { attributes, images = [], ...rest } = v;
+        const attrObj = (attributes ?? []).reduce((acc, { key, value }) => {
           if (key?.trim()) acc[key.trim()] = value ?? "";
           return acc;
-        }, {}),
-      }),
-    );
-    onSubmit(
-      { ...data, images: keptImages, variants: transformedVariants },
-      files,
-    );
+        }, {});
+        const fieldId = variantFields[i]?.id;
+        const pending = fieldId ? variantMedia[fieldId]?.files ?? [] : [];
+        let imgList = [...(Array.isArray(images) ? images : []).filter(Boolean)];
+        if (pending.length > 0) {
+          const res = await uploadStagedVariantImages(selectedShopId, pending);
+          const newUrls = res.data?.data ?? [];
+          imgList = [...imgList, ...newUrls];
+        }
+        mergedVariants.push({
+          ...rest,
+          attributes: attrObj,
+          images: imgList,
+        });
+      }
+      await onSubmit(
+        { ...data, images: keptImages, variants: mergedVariants },
+        files,
+      );
+      setVariantMedia({});
+    } catch (e) {
+      console.error(e);
+      toast.error(
+        e.response?.data?.message ||
+          "Không lưu được sản phẩm hoặc ảnh biến thể. Vui lòng thử lại.",
+      );
+    }
   };
 
   // ── Unit select field ──────────────────────────────────────────────────────
@@ -1208,6 +1416,7 @@ export default function ProductForm({
                 sku: "",
                 price: form.getValues("defaultPrice") ?? 0,
                 costPrice: form.getValues("costPrice") ?? 0,
+                images: [],
                 attributes: [],
               })
             }
@@ -1230,10 +1439,26 @@ export default function ProductForm({
           {variantFields.map((variant, index) => (
             <VariantCard
               key={variant.id}
+              fieldId={variant.id}
               nestIndex={index}
               control={form.control}
               isReadOnly={isReadOnly}
-              onRemove={() => removeVariant(index)}
+              onRemove={() => {
+                setVariantMedia((prev) => {
+                  const next = { ...prev };
+                  const pend = next[variant.id];
+                  if (pend?.previews?.length) {
+                    pend.previews.forEach((u) => URL.revokeObjectURL(u));
+                  }
+                  delete next[variant.id];
+                  return next;
+                });
+                removeVariant(index);
+              }}
+              variantMedia={variantMedia}
+              setVariantMedia={setVariantMedia}
+              maxVariantImages={MAX_VARIANT_IMAGES}
+              allowedImageTypes={ALLOWED_TYPES}
             />
           ))}
         </div>
@@ -1377,7 +1602,11 @@ export default function ProductForm({
             variant={mode === "edit" ? "warning" : "success"}
             type="submit"
             disabled={
-              isLoading || (mode !== "create" && !isDirty && !imageDirty)
+              isLoading ||
+              (mode !== "create" &&
+                !isDirty &&
+                !imageDirty &&
+                !variantImageDirty)
             }
           >
             {isLoading

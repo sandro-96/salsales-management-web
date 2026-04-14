@@ -37,6 +37,9 @@ const formSchema = z
     phone: z.string().min(1, "Số điện thoại không được để trống."),
     countryCode: z.string(),
     businessModel: z.string(),
+    taxRegistrationNumber: z
+      .string()
+      .max(32, "MST tối đa 32 ký tự."),
   })
   .superRefine((data, ctx) => {
     const countryInfo = COUNTRIES.find((c) => c.code === data.countryCode);
@@ -67,6 +70,7 @@ export default function ShopForm({
       phone: "",
       countryCode: "VN",
       businessModel: "DINE_IN",
+      taxRegistrationNumber: "",
     },
   });
   const {
@@ -142,7 +146,11 @@ export default function ShopForm({
 
   // --- Submit handler ---
   const handleSubmit = (data) => {
-    if (onSubmit) onSubmit(data, file);
+    const payload = {
+      ...data,
+      taxRegistrationNumber: data.taxRegistrationNumber?.trim() || null,
+    };
+    if (onSubmit) onSubmit(payload, file);
   };
 
   // -----------------------
@@ -554,6 +562,40 @@ export default function ShopForm({
                         aria-invalid={!!fieldState.error}
                         {...field}
                       ></Textarea>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
+            />
+
+            <FormField
+              control={form.control}
+              name="taxRegistrationNumber"
+              render={({ field, fieldState }) => {
+                if (isReadOnly) {
+                  return (
+                    <FormItem>
+                      <FormLabel>Mã số thuế (MST)</FormLabel>
+                      <FormControl>
+                        <ReadOnlyValue
+                          value={form.getValues("taxRegistrationNumber")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }
+                return (
+                  <FormItem>
+                    <FormLabel>Mã số thuế (MST) — tùy chọn</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ví dụ: 0123456789"
+                        maxLength={32}
+                        aria-invalid={!!fieldState.error}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

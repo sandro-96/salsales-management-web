@@ -83,6 +83,20 @@ export const createProduct = (shopId, data, files = []) => {
 };
 
 /**
+ * Upload ảnh biến thể (staging) — trả về URL để gắn vào variants[].images
+ * POST /api/shops/{shopId}/products/variant-images/staged
+ */
+export const uploadStagedVariantImages = (shopId, files = []) => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  return axiosInstance.post(
+    `/shops/${shopId}/products/variant-images/staged`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+};
+
+/**
  * ➕ Tạo sản phẩm từ chi nhánh
  * POST /api/shops/{shopId}/branches/{branchId}/products
  */

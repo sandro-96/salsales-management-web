@@ -92,12 +92,22 @@ function formatDiscount(promo) {
   return `-${promo.discountValue.toLocaleString("vi-VN")}₫`;
 }
 
+function hasBranchVariants(product) {
+  return Array.isArray(product?.branchVariants) && product.branchVariants.length > 0;
+}
+
+function variantCatalogName(product, variantId) {
+  const v = (product?.variants || []).find((x) => x.variantId === variantId);
+  return v?.name || variantId || "";
+}
+
 const CreateOrderModal = ({ open, onClose, onCreated }) => {
   const { selectedShopId, branches, selectedBranchId } = useShop();
 
   const [branchId, setBranchId] = useState(selectedBranchId || "");
   const [products, setProducts] = useState([]);
   const [tables, setTables] = useState([]);
+  const [branchHasTables, setBranchHasTables] = useState(false);
   const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -106,6 +116,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
   const [selectedTableId, setSelectedTableId] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [variantPickerProduct, setVariantPickerProduct] = useState(null);
 
   useEffect(() => {
     if (open) {
@@ -123,6 +134,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
     if (!selectedShopId || !branchId) {
       setProducts([]);
       setTables([]);
+      setBranchHasTables(false);
       setPromotions([]);
       return;
     }
@@ -140,7 +152,9 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
       setProducts(prodList.filter((p) => p.activeInBranch !== false));
       const tableList =
         tableRes.data?.data?.content || tableRes.data?.data || [];
-      setTables(tableList.filter((t) => t.status === "AVAILABLE"));
+      const rawTables = Array.isArray(tableList) ? tableList : [];
+      setBranchHasTables(rawTables.length > 0);
+      setTables(rawTables.filter((t) => t.status === "AVAILABLE"));
       const promoList =
         promoRes.data?.data?.content || promoRes.data?.data || [];
       setPromotions(promoList);
@@ -175,52 +189,101 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
       .slice(0, 20);
   }, [products, searchTerm]);
 
-  const addToCart = (product) => {
-    setCart((prev) => {
-      const existing = prev.find(
-        (item) => item.productId === product.productId,
-      );
-      if (existing) {
-        return prev.map((item) =>
-          item.productId === product.productId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        );
+  const addToCart = useCallback(
+    (product, variantId) => {
+      const hasVars = hasBranchVariants(product);
+      const branchVariant =
+        hasVars && variantId
+          ? product.branchVariants.find((v) => v.variantId === variantId)
+          : null;
+      if (hasVars && (!variantId || !branchVariant)) {
+        toast.error("Chọn biến thể hợp lệ.");
+        return;
       }
-      const promo = getBestPromo(promoMap, product.productId);
-      const basePrice = product.price;
-      const discountedPrice = calcDiscountedPrice(basePrice, promo);
-      const hasDiscount = promo && discountedPrice < basePrice;
 
-      return [
-        ...prev,
-        {
-          productId: product.productId,
-          productName: product.name,
-          originalPrice: basePrice,
-          price: hasDiscount ? discountedPrice : basePrice,
-          hasDiscount: !!hasDiscount,
-          promoLabel: hasDiscount ? formatDiscount(promo) : null,
-          quantity: 1,
-        },
-      ];
-    });
-  };
+      const basePrice = hasVars
+        ? branchVariant.price > 0
+          ? branchVariant.price
+          : product.price
+        : product.price;
+      const maxStock = product.trackInventory
+        ? hasVars
+          ? branchVariant.quantity
+          : product.quantity ?? 0
+        : null;
 
-  const updateQuantity = (productId, delta) => {
+      setCart((prev) => {
+        const lineMatch = (item) =>
+          hasVars
+            ? item.productId === product.productId && item.variantId === variantId
+            : item.productId === product.productId && !item.variantId;
+
+        const existing = prev.find(lineMatch);
+        if (existing) {
+          if (maxStock != null && existing.quantity >= maxStock) {
+            toast.error("Không đủ tồn kho.");
+            return prev;
+          }
+          return prev.map((item) =>
+            lineMatch(item) ? { ...item, quantity: item.quantity + 1 } : item,
+          );
+        }
+
+        if (maxStock != null && maxStock < 1) {
+          toast.error("Hết hàng.");
+          return prev;
+        }
+
+        const promo = getBestPromo(promoMap, product.productId);
+        const discountedPrice = calcDiscountedPrice(basePrice, promo);
+        const hasDiscount = promo && discountedPrice < basePrice;
+        const vName = hasVars ? variantCatalogName(product, variantId) : "";
+        const lineKey = hasVars ? `${product.productId}__${variantId}` : product.productId;
+
+        return [
+          ...prev,
+          {
+            lineKey,
+            productId: product.productId,
+            variantId: hasVars ? variantId : null,
+            productName: vName ? `${product.name} — ${vName}` : product.name,
+            originalPrice: basePrice,
+            price: hasDiscount ? discountedPrice : basePrice,
+            hasDiscount: !!hasDiscount,
+            promoLabel: hasDiscount ? formatDiscount(promo) : null,
+            quantity: 1,
+            trackInventory: !!product.trackInventory,
+            maxStock,
+          },
+        ];
+      });
+    },
+    [promoMap],
+  );
+
+  const updateQuantity = (lineKey, delta) => {
     setCart((prev) =>
       prev
-        .map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item,
-        )
+        .map((item) => {
+          if (item.lineKey !== lineKey) return item;
+          const nextQty = item.quantity + delta;
+          if (
+            delta > 0 &&
+            item.trackInventory &&
+            item.maxStock != null &&
+            nextQty > item.maxStock
+          ) {
+            toast.error("Không đủ tồn kho.");
+            return item;
+          }
+          return { ...item, quantity: Math.max(0, nextQty) };
+        })
         .filter((item) => item.quantity > 0),
     );
   };
 
-  const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((item) => item.productId !== productId));
+  const removeFromCart = (lineKey) => {
+    setCart((prev) => prev.filter((item) => item.lineKey !== lineKey));
   };
 
   const subtotal = useMemo(
@@ -255,6 +318,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         note: note || null,
         items: cart.map((item) => ({
           productId: item.productId,
+          ...(item.variantId ? { variantId: item.variantId } : {}),
           quantity: item.quantity,
         })),
       };
@@ -271,6 +335,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
@@ -279,13 +344,16 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             Tạo đơn hàng mới
           </DialogTitle>
           <DialogDescription>
-            Chọn chi nhánh, sản phẩm và bàn để tạo đơn hàng
+            Chọn chi nhánh và sản phẩm để tạo đơn hàng
+            {branchHasTables ? " (có thể gắn bàn nếu cần)" : ""}.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4">
           {/* Branch + Table selectors */}
-          <div className="grid grid-cols-2 gap-3">
+          <div
+            className={`grid gap-3 ${branchHasTables ? "grid-cols-2" : "grid-cols-1"}`}
+          >
             <div className="space-y-1.5">
               <label className="text-xs font-medium">Chi nhánh *</label>
               <Select
@@ -307,25 +375,27 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">Bàn (tuỳ chọn)</label>
-              <Select
-                value={selectedTableId}
-                onValueChange={setSelectedTableId}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Không chọn bàn" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Không chọn bàn</SelectItem>
-                  {tables.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {branchHasTables && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">Bàn (tuỳ chọn)</label>
+                <Select
+                  value={selectedTableId || "none"}
+                  onValueChange={setSelectedTableId}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Không chọn bàn" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Không chọn bàn</SelectItem>
+                    {tables.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Product search */}
@@ -362,7 +432,17 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                           <div
                             key={p.id}
                             className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 cursor-pointer"
-                            onClick={() => addToCart(p)}
+                            onClick={() => {
+                              if (hasBranchVariants(p)) {
+                                if (p.branchVariants.length === 1) {
+                                  addToCart(p, p.branchVariants[0].variantId);
+                                } else {
+                                  setVariantPickerProduct(p);
+                                }
+                              } else {
+                                addToCart(p, null);
+                              }
+                            }}
                           >
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
@@ -434,7 +514,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                   </TableHeader>
                   <TableBody>
                     {cart.map((item) => (
-                      <TableRow key={item.productId}>
+                      <TableRow key={item.lineKey}>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm font-medium">
@@ -454,7 +534,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                               size="icon"
                               className="h-6 w-6"
                               onClick={() =>
-                                updateQuantity(item.productId, -1)
+                                updateQuantity(item.lineKey, -1)
                               }
                             >
                               <Minus className="h-3 w-3" />
@@ -466,7 +546,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                               variant="outline"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() => updateQuantity(item.productId, 1)}
+                              onClick={() => updateQuantity(item.lineKey, 1)}
                             >
                               <Plus className="h-3 w-3" />
                             </Button>
@@ -498,7 +578,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeFromCart(item.productId)}
+                            onClick={() => removeFromCart(item.lineKey)}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -554,6 +634,57 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog
+      open={!!variantPickerProduct}
+      onOpenChange={(v) => {
+        if (!v) setVariantPickerProduct(null);
+      }}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Chọn biến thể</DialogTitle>
+          <DialogDescription className="line-clamp-2">
+            {variantPickerProduct?.name}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 max-h-72 overflow-y-auto">
+          {variantPickerProduct?.branchVariants?.map((bv) => {
+            const label = variantCatalogName(variantPickerProduct, bv.variantId);
+            const stockLabel =
+              variantPickerProduct.trackInventory === false
+                ? ""
+                : `Tồn: ${(bv.quantity ?? 0).toLocaleString("vi-VN")}`;
+            const price =
+              bv.price > 0 ? bv.price : variantPickerProduct.price ?? 0;
+            return (
+              <button
+                key={bv.variantId}
+                type="button"
+                className="w-full flex items-center justify-between gap-2 rounded-md border px-3 py-2.5 text-left text-sm hover:bg-muted transition-colors"
+                onClick={() => {
+                  addToCart(variantPickerProduct, bv.variantId);
+                  setVariantPickerProduct(null);
+                }}
+              >
+                <span className="font-medium truncate min-w-0">{label}</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums shrink-0">
+                  {stockLabel}
+                  {stockLabel ? " · " : ""}
+                  {price.toLocaleString("vi-VN")}₫
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setVariantPickerProduct(null)}>
+            Hủy
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

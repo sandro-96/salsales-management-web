@@ -11,6 +11,7 @@ import {
   FaChartBar,
   FaTachometerAlt,
   FaUsers,
+  FaShoppingCart,
 } from "react-icons/fa";
 import {
   Sidebar,
@@ -36,9 +37,7 @@ import { ShopSwitcher } from "../shop-switcher";
 
 export function AppSidebar({ navItems, ...props }) {
   const { logout, user } = useAuth();
-  const { selectedShop, shops } = useShop();
-
-  console.log("selectedShop", selectedShop);
+  const { selectedShop, shops, selectedShopId } = useShop();
 
   const userData = {
     name: user?.fullName || "Người dùng",
@@ -66,6 +65,16 @@ export function AppSidebar({ navItems, ...props }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          {selectedShopId && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <NavLink to="/pos" className="flex items-center gap-2">
+                  <FaShoppingCart className="h-4 w-4" />
+                  Bán hàng
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
         <SidebarMenu className="mt-auto">
           <SidebarMenuItem>

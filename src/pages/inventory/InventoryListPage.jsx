@@ -8,6 +8,7 @@ import React, {
 import {
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
@@ -28,6 +29,8 @@ import {
   TrendingUp,
   MoreHorizontal,
   EyeOff,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -143,6 +146,48 @@ const StockStatusBadge = ({ quantity, minQuantity, trackInventory }) => {
 };
 
 // ─── Transaction Type Badge ──────────────────────────────────────────────────
+
+/**
+ * Cây tồn kho: 1 dòng sản phẩm (cha) + subRows = từng biến thể (tồn/SKU/giá theo biến thể).
+ */
+function buildStockTreeRows(products) {
+  if (!Array.isArray(products)) return [];
+  return products.map((p) => {
+    const bvs = (p.branchVariants || []).filter((bv) => bv?.variantId);
+    if (p.trackInventory === false || bvs.length === 0) {
+      return {
+        ...p,
+        _rowKey: p.id,
+        _isVariantRow: false,
+        subRows: undefined,
+      };
+    }
+    const subRows = bvs.map((bv) => {
+      const variantMeta = (p.variants || []).find(
+        (v) => v.variantId === bv.variantId,
+      );
+      const price =
+        bv.price > 0 ? bv.price : p.price ?? p.defaultPrice ?? 0;
+      return {
+        ...p,
+        _rowKey: `${p.id}::${bv.variantId}`,
+        _isVariantRow: true,
+        _variantId: bv.variantId,
+        _variantLabel: variantMeta?.name || null,
+        _displaySku: variantMeta?.sku || p.sku,
+        _displayQty: bv.quantity ?? 0,
+        _displayPrice: price,
+        subRows: undefined,
+      };
+    });
+    return {
+      ...p,
+      _rowKey: p.id,
+      _isVariantRow: false,
+      subRows,
+    };
+  });
+}
 
 const TxTypeBadge = ({ type }) => {
   const map = {
@@ -344,12 +389,24 @@ const InventoryListPage = () => {
     return transactions.filter((tx) => tx.type === txTypeFilter);
   }, [transactions, txTypeFilter]);
 
+  const stockTreeData = useMemo(
+    () => buildStockTreeRows(filteredProducts),
+    [filteredProducts],
+  );
+
+  /** Mặc định mở nhóm biến thể; `true` = expand all (TanStack Table). */
+  const [stockExpanded, setStockExpanded] = useState(true);
+
   // ── Action handlers ──────────────────────────────────────────────────────
-  const openAction = (product, type) => {
-    setActionProduct(product);
+  const openAction = useCallback((product, type, preselectVariantId = null) => {
+    setActionProduct(
+      preselectVariantId
+        ? { ...product, __preselectVariantId: preselectVariantId }
+        : product,
+    );
     setActionType(type);
     setActionOpen(true);
-  };
+  }, []);
 
   // ── Stock table columns ──────────────────────────────────────────────────
   const stockColumns = useMemo(
@@ -361,18 +418,44 @@ const InventoryListPage = () => {
         enableHiding: false,
         size: 56,
         cell: ({ row }) => {
+          const isSub = row.original._isVariantRow;
           const images = row.original.images ?? row.original.productImages;
           const firstImg = Array.isArray(images) ? images[0] : null;
+          const canExpand = row.getCanExpand?.() ?? false;
           return (
-            <div className="w-10 h-10 rounded-md border overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
-              {firstImg ? (
-                <img
-                  src={firstImg}
-                  alt={row.original.productName || row.original.name}
-                  className="w-full h-full object-cover"
-                />
+            <div className="flex items-center gap-0.5 shrink-0">
+              {!isSub && canExpand && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  aria-label={row.getIsExpanded() ? "Thu gọn biến thể" : "Mở biến thể"}
+                  onClick={row.getToggleExpandedHandler()}
+                >
+                  {row.getIsExpanded() ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              )}
+              {!isSub && !canExpand && <span className="w-8 shrink-0" />}
+              {isSub && <span className="w-8 shrink-0" />}
+              {!isSub ? (
+                <div className="w-10 h-10 rounded-md border overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
+                  {firstImg ? (
+                    <img
+                      src={firstImg}
+                      alt={row.original.productName || row.original.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Package className="w-5 h-5 text-gray-400" />
+                  )}
+                </div>
               ) : (
-                <Package className="w-5 h-5 text-gray-400" />
+                <span className="w-10 h-10 shrink-0 block" aria-hidden />
               )}
             </div>
           );
@@ -385,6 +468,17 @@ const InventoryListPage = () => {
         ),
         cell: ({ row }) => {
           const name = row.original.productName || row.original.name;
+          const isSub = row.original._isVariantRow;
+          const vlabel = row.original._variantLabel;
+          if (isSub) {
+            return (
+              <div className="pl-2 border-l-2 border-primary/25 ml-1 py-0.5">
+                <p className="text-sm font-medium leading-tight">
+                  {vlabel || "Biến thể"}
+                </p>
+              </div>
+            );
+          }
           return (
             <div>
               <p className="font-medium text-sm leading-tight">{name}</p>
@@ -400,11 +494,17 @@ const InventoryListPage = () => {
       {
         accessorKey: "sku",
         header: "SKU",
-        cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground font-mono">
-            {row.original.sku || "—"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const isSub = row.original._isVariantRow;
+          const sku = isSub
+            ? row.original._displaySku || row.original.sku
+            : row.original.sku;
+          return (
+            <span className="text-sm text-muted-foreground font-mono">
+              {sku || "—"}
+            </span>
+          );
+        },
       },
       {
         accessorKey: "price",
@@ -412,7 +512,21 @@ const InventoryListPage = () => {
           <DataTableColumnHeader column={column} title="Giá bán" />
         ),
         cell: ({ row }) => {
-          const price = row.original.price ?? row.original.defaultPrice;
+          const isSub = row.original._isVariantRow;
+          const hasVariants =
+            (row.original.branchVariants || []).filter((x) => x?.variantId)
+              .length > 0;
+          if (!isSub && hasVariants) {
+            return (
+              <span className="text-xs text-muted-foreground italic">
+                Theo biến thể
+              </span>
+            );
+          }
+          const price =
+            row.original._displayPrice ??
+            row.original.price ??
+            row.original.defaultPrice;
           return (
             <span className="text-sm font-medium">
               {price ? Number(price).toLocaleString("vi-VN") + " ₫" : "—"}
@@ -428,7 +542,10 @@ const InventoryListPage = () => {
         cell: ({ row }) => {
           if (row.original.trackInventory === false)
             return <span className="text-sm text-muted-foreground">—</span>;
-          const qty = row.original.quantity ?? 0;
+          const isSub = row.original._isVariantRow;
+          const qty = isSub
+            ? row.original._displayQty ?? 0
+            : row.original.quantity ?? 0;
           return (
             <span
               className={`text-sm font-semibold tabular-nums ${qty <= 0 ? "text-red-600" : ""}`}
@@ -446,6 +563,8 @@ const InventoryListPage = () => {
         cell: ({ row }) => {
           if (row.original.trackInventory === false)
             return <span className="text-sm text-muted-foreground">—</span>;
+          if (row.original._isVariantRow)
+            return <span className="text-sm text-muted-foreground">—</span>;
           const min = row.original.minQuantity ?? 0;
           return (
             <span className="text-sm text-muted-foreground tabular-nums">
@@ -458,13 +577,19 @@ const InventoryListPage = () => {
         id: "status",
         header: "Trạng thái",
         enableSorting: false,
-        cell: ({ row }) => (
-          <StockStatusBadge
-            quantity={row.original.quantity ?? 0}
-            minQuantity={row.original.minQuantity ?? 0}
-            trackInventory={row.original.trackInventory}
-          />
-        ),
+        cell: ({ row }) => {
+          const isSub = row.original._isVariantRow;
+          const qty = isSub
+            ? row.original._displayQty ?? 0
+            : row.original.quantity ?? 0;
+          return (
+            <StockStatusBadge
+              quantity={qty}
+              minQuantity={row.original.minQuantity ?? 0}
+              trackInventory={row.original.trackInventory}
+            />
+          );
+        },
       },
       {
         id: "actions",
@@ -472,6 +597,11 @@ const InventoryListPage = () => {
         cell: ({ row }) => {
           const product = row.original;
           if (product.trackInventory === false) return null;
+          const isSub = product._isVariantRow;
+          const lineQty = isSub
+            ? product._displayQty ?? 0
+            : product.quantity ?? 0;
+          const pre = isSub ? product._variantId || null : null;
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -486,7 +616,7 @@ const InventoryListPage = () => {
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    openAction(product, "IMPORT");
+                    openAction(product, "IMPORT", pre);
                   }}
                   disabled={!canManage}
                 >
@@ -496,9 +626,9 @@ const InventoryListPage = () => {
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    openAction(product, "EXPORT");
+                    openAction(product, "EXPORT", pre);
                   }}
-                  disabled={!canManage || (product.quantity ?? 0) <= 0}
+                  disabled={!canManage || lineQty <= 0}
                 >
                   <PackageMinus className="h-4 w-4 mr-2 text-orange-600" />
                   Xuất hàng
@@ -506,7 +636,7 @@ const InventoryListPage = () => {
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    openAction(product, "ADJUSTMENT");
+                    openAction(product, "ADJUSTMENT", pre);
                   }}
                   disabled={!canManage}
                 >
@@ -519,12 +649,16 @@ const InventoryListPage = () => {
         },
       },
     ],
-    [canManage],
+    [canManage, openAction],
   );
 
   const stockTable = useReactTable({
-    data: filteredProducts,
+    data: stockTreeData,
     columns: stockColumns,
+    getRowId: (row) => row._rowKey ?? row.id,
+    getSubRows: (row) => row.subRows,
+    getExpandedRowModel: getExpandedRowModel(),
+    onExpandedChange: setStockExpanded,
     manualPagination: true,
     manualSorting: true,
     pageCount: Math.ceil(totalCount / pagination.pageSize),
@@ -538,7 +672,13 @@ const InventoryListPage = () => {
     getSortedRowModel: getSortedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    state: { sorting, pagination, columnVisibility, rowSelection },
+    state: {
+      sorting,
+      pagination,
+      columnVisibility,
+      rowSelection,
+      expanded: stockExpanded,
+    },
   });
 
   // ── Transaction table columns ────────────────────────────────────────────
@@ -574,6 +714,18 @@ const InventoryListPage = () => {
             <p className="text-xs text-muted-foreground font-mono">
               {row.original.sku || ""}
             </p>
+            {row.original.variantId && (
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Biến thể:{" "}
+                <span
+                  className={
+                    row.original.variantName ? "" : "font-mono break-all"
+                  }
+                >
+                  {row.original.variantName || row.original.variantId}
+                </span>
+              </p>
+            )}
           </div>
         ),
       },
@@ -836,6 +988,11 @@ const InventoryListPage = () => {
                             <TableRow
                               key={row.id}
                               data-state={row.getIsSelected() && "selected"}
+                              className={
+                                row.depth > 0
+                                  ? "bg-muted/20 hover:bg-muted/30"
+                                  : undefined
+                              }
                             >
                               {row.getVisibleCells().map((cell) => (
                                 <TableCell key={cell.id}>

@@ -20,7 +20,7 @@ export default function CreateShopPage() {
       const formData = new FormData();
       formData.append(
         "shop",
-        new Blob([JSON.stringify(data)], { type: "application/json" })
+        new Blob([JSON.stringify(data)], { type: "application/json" }),
       );
       if (file) formData.append("file", file);
 
@@ -31,7 +31,8 @@ export default function CreateShopPage() {
 
       if (res.data.success) {
         toast.success("Tạo cửa hàng thành công.");
-        await fetchShops();
+        const createdId = res.data.data?.id;
+        await fetchShops(createdId);
         navigate(-1);
       } else {
         toast.error(res.data.message || "Đã xảy ra lỗi khi tạo cửa hàng.");

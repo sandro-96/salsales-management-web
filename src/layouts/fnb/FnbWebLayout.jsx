@@ -1,6 +1,7 @@
 // src/layouts/fnb/FnbWebLayout.jsx
 import { Outlet, NavLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { renderNavIcon } from "../../lib/renderNavIcon";
 import { FaSignOutAlt } from "react-icons/fa";
 
 const FnbWebLayout = ({ title, navItems }) => {
@@ -23,9 +24,7 @@ const FnbWebLayout = ({ title, navItems }) => {
                                 }`
                             }
                         >
-                            <span className="mr-2">
-                                {typeof icon === "function" ? icon() : icon}
-                            </span>
+                            <span className="mr-2">{renderNavIcon(icon)}</span>
                             {label}
                         </NavLink>
                     ))}
