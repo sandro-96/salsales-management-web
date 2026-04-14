@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useShop } from "../../hooks/useShop";
+import { useAuth } from "../../hooks/useAuth";
 import {
   Store,
   Plus,
@@ -20,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getFlagUrl } from "../../utils/commonUtils";
 import { COUNTRIES } from "../../constants/countries";
+import { SHOP_INDUSTRY } from "../../constants/ShopIndustry.js";
 
 const PLAN_COLORS = {
   FREE: "bg-gray-100 text-gray-600 border-gray-200",
@@ -28,10 +30,47 @@ const PLAN_COLORS = {
   ENTERPRISE: "bg-amber-100 text-amber-700 border-amber-200",
 };
 
+const SHOP_ROLE_LABELS = {
+  OWNER: "Chủ cửa hàng",
+  MANAGER: "Quản lý",
+  ADMIN: "Admin",
+  STAFF: "Nhân viên",
+};
+
+const INDUSTRY_LABELS = {
+  [SHOP_INDUSTRY.FNB]: "Nhà hàng / F&B",
+  [SHOP_INDUSTRY.RETAIL]: "Bán lẻ",
+  [SHOP_INDUSTRY.HEALTHCARE]: "Y tế / dược",
+  [SHOP_INDUSTRY.SERVICE]: "Dịch vụ",
+  [SHOP_INDUSTRY.EDUCATION]: "Giáo dục",
+  [SHOP_INDUSTRY.OTHER]: "Khác",
+};
+
+const PLAN_LABELS = {
+  FREE: "Miễn phí",
+  BASIC: "Cơ bản",
+  PRO: "Pro",
+  ENTERPRISE: "Enterprise",
+};
+
+function pickOptionLabel(options, value) {
+  if (!value || !Array.isArray(options)) return null;
+  const hit = options.find((o) => o.value === value);
+  return hit?.label || null;
+}
+
 const ShopPage = () => {
   const { shops, setSelectedShop } = useShop();
+  const { enums, fetchEnums } = useAuth();
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
+
+  useEffect(() => {
+    if (!enums && typeof fetchEnums === "function") fetchEnums();
+  }, [enums, fetchEnums]);
+
+  const shopTypes = enums?.shopTypes || [];
+  const businessModels = enums?.businessModels || [];
 
   const filteredShops = useMemo(() => {
     if (!keyword.trim()) return shops;
@@ -103,6 +142,20 @@ const ShopPage = () => {
           {filteredShops.map((shop) => {
             const country = COUNTRIES.find((c) => c.code === shop.countryCode);
             const planCls = PLAN_COLORS[shop.plan] || PLAN_COLORS.FREE;
+            const typeLabel =
+              pickOptionLabel(shopTypes, shop.type) ||
+              (shop.type ? String(shop.type).replace(/_/g, " ") : null);
+            const bizLabel =
+              pickOptionLabel(businessModels, shop.businessModel) ||
+              (shop.businessModel
+                ? String(shop.businessModel).replace(/_/g, " ")
+                : null);
+            const industryLabel =
+              (shop.industry && INDUSTRY_LABELS[shop.industry]) || shop.industry;
+            const roleLabel =
+              (shop.role && SHOP_ROLE_LABELS[shop.role]) || shop.role;
+            const planLabel =
+              (shop.plan && PLAN_LABELS[shop.plan]) || shop.plan;
 
             return (
               <Card
@@ -122,9 +175,11 @@ const ShopPage = () => {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-sm truncate">{shop.name}</h3>
-                        <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                          {shop.type?.toLowerCase().replace(/_/g, " ") || "—"}
-                        </p>
+                        {typeLabel && (
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                            {typeLabel}
+                          </p>
+                        )}
                       </div>
                       {shop.active ? (
                         <Badge className="shrink-0 text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
@@ -151,16 +206,16 @@ const ShopPage = () => {
                           {country ? `${country.dialCode} ` : ""}{shop.phone}
                         </span>
                       )}
-                      {shop.industry && (
+                      {industryLabel && (
                         <span className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                          {shop.industry}
+                          {industryLabel}
                         </span>
                       )}
-                      {shop.businessModel && (
+                      {bizLabel && (
                         <span className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Briefcase className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                          {shop.businessModel}
+                          {bizLabel}
                         </span>
                       )}
                     </div>
@@ -179,12 +234,12 @@ const ShopPage = () => {
                       )}
                       {shop.plan && (
                         <Badge className={`text-[10px] px-1.5 py-0 font-normal ${planCls}`}>
-                          <Crown className="h-2.5 w-2.5 mr-0.5" /> {shop.plan}
+                          <Crown className="h-2.5 w-2.5 mr-0.5" /> {planLabel}
                         </Badge>
                       )}
-                      {shop.role && (
+                      {roleLabel && (
                         <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 font-normal">
-                          {shop.role}
+                          {roleLabel}
                         </Badge>
                       )}
                     </div>

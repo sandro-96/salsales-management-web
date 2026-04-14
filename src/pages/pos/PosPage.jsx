@@ -220,7 +220,9 @@ function formatDiscount(promo) {
 }
 
 function hasBranchVariants(product) {
-  return Array.isArray(product?.branchVariants) && product.branchVariants.length > 0;
+  return (
+    Array.isArray(product?.branchVariants) && product.branchVariants.length > 0
+  );
 }
 
 function variantCatalogName(product, variantId) {
@@ -432,7 +434,10 @@ const CartPanel = ({
       )}
 
       {showTableSelect && (
-        <Select value={selectedTableId || "none"} onValueChange={setSelectedTableId}>
+        <Select
+          value={selectedTableId || "none"}
+          onValueChange={setSelectedTableId}
+        >
           <SelectTrigger className="h-8 text-xs">
             <SelectValue placeholder="Chọn bàn (tuỳ chọn)" />
           </SelectTrigger>
@@ -635,6 +640,10 @@ const PosPage = () => {
 
   const activeTab = orderTabs.find((t) => t.id === activeTabId) || orderTabs[0];
   const cart = useMemo(() => activeTab?.cart || [], [activeTab]);
+  const cartRef = React.useRef(cart);
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
   const selectedTableId = activeTab?.tableId || "";
   const note = activeTab?.note || "";
   const selectedCustomer = activeTab?.customer || null;
@@ -858,80 +867,87 @@ const PosPage = () => {
       const maxStock = product.trackInventory
         ? hasVars
           ? branchVariant.quantity
-          : product.quantity ?? 0
+          : (product.quantity ?? 0)
         : null;
 
-      setCart((prev) => {
-        const lineMatch = (item) =>
-          hasVars
-            ? item.productId === product.productId && item.variantId === variantId
-            : item.productId === product.productId && !item.variantId;
+      const prev = cartRef.current;
+      const lineMatch = (item) =>
+        hasVars
+          ? item.productId === product.productId && item.variantId === variantId
+          : item.productId === product.productId && !item.variantId;
 
-        const existing = prev.find(lineMatch);
-        if (existing) {
-          if (maxStock != null && existing.quantity >= maxStock) {
-            toast.error("Không đủ tồn kho.");
-            return prev;
-          }
-          return prev.map((item) =>
+      const existing = prev.find(lineMatch);
+      if (existing) {
+        if (maxStock != null && existing.quantity >= maxStock) {
+          toast.error("Không đủ tồn kho.");
+          return;
+        }
+        setCart(
+          prev.map((item) =>
             lineMatch(item) ? { ...item, quantity: item.quantity + 1 } : item,
-          );
-        }
+          ),
+        );
+        return;
+      }
 
-        if (maxStock != null && maxStock < 1) {
-          toast.error("Hết hàng.");
-          return prev;
-        }
+      if (maxStock != null && maxStock < 1) {
+        toast.error("Hết hàng.");
+        return;
+      }
 
-        const promo = getBestPromo(promoMap, product.productId);
-        const discountedPrice = calcDiscountedPrice(basePrice, promo);
-        const hasDiscount = promo && discountedPrice < basePrice;
-        const vName = hasVars ? variantCatalogName(product, variantId) : "";
-        const lineKey = hasVars ? `${product.productId}__${variantId}` : product.productId;
+      const promo = getBestPromo(promoMap, product.productId);
+      const discountedPrice = calcDiscountedPrice(basePrice, promo);
+      const hasDiscount = promo && discountedPrice < basePrice;
+      const vName = hasVars ? variantCatalogName(product, variantId) : "";
+      const lineKey = hasVars
+        ? `${product.productId}__${variantId}`
+        : product.productId;
 
-        return [
-          ...prev,
-          {
-            lineKey,
-            productId: product.productId,
-            variantId: hasVars ? variantId : null,
-            branchProductId: product.id,
-            productName: vName ? `${product.name} — ${vName}` : product.name,
-            originalPrice: basePrice,
-            price: hasDiscount ? discountedPrice : basePrice,
-            hasDiscount: !!hasDiscount,
-            promoLabel: hasDiscount ? formatDiscount(promo) : null,
-            promoName: promo?.name || null,
-            image: product.images?.[0] || null,
-            quantity: 1,
-            trackInventory: !!product.trackInventory,
-            maxStock,
-          },
-        ];
-      });
+      setCart([
+        ...prev,
+        {
+          lineKey,
+          productId: product.productId,
+          variantId: hasVars ? variantId : null,
+          branchProductId: product.id,
+          productName: vName ? `${product.name} — ${vName}` : product.name,
+          originalPrice: basePrice,
+          price: hasDiscount ? discountedPrice : basePrice,
+          hasDiscount: !!hasDiscount,
+          promoLabel: hasDiscount ? formatDiscount(promo) : null,
+          promoName: promo?.name || null,
+          image: product.images?.[0] || null,
+          quantity: 1,
+          trackInventory: !!product.trackInventory,
+          maxStock,
+        },
+      ]);
     },
     [promoMap, setCart],
   );
 
   const updateQuantity = useCallback(
     (lineKey, delta) => {
-      setCart((prev) =>
+      const prev = cartRef.current;
+      const item = prev.find((i) => i.lineKey === lineKey);
+      if (!item) return;
+      const nextQty = item.quantity + delta;
+      if (
+        delta > 0 &&
+        item.trackInventory &&
+        item.maxStock != null &&
+        nextQty > item.maxStock
+      ) {
+        toast.error("Không đủ tồn kho.");
+        return;
+      }
+      setCart(
         prev
-          .map((item) => {
-            if (item.lineKey !== lineKey) return item;
-            const nextQty = item.quantity + delta;
-            if (
-              delta > 0 &&
-              item.trackInventory &&
-              item.maxStock != null &&
-              nextQty > item.maxStock
-            ) {
-              toast.error("Không đủ tồn kho.");
-              return item;
-            }
-            return { ...item, quantity: Math.max(0, nextQty) };
+          .map((it) => {
+            if (it.lineKey !== lineKey) return it;
+            return { ...it, quantity: Math.max(0, nextQty) };
           })
-          .filter((item) => item.quantity > 0),
+          .filter((it) => it.quantity > 0),
       );
     },
     [setCart],
@@ -1397,7 +1413,10 @@ const PosPage = () => {
                     onClick={() => {
                       if (hasBranchVariants(product)) {
                         if (product.branchVariants.length === 1) {
-                          addToCart(product, product.branchVariants[0].variantId);
+                          addToCart(
+                            product,
+                            product.branchVariants[0].variantId,
+                          );
                         } else {
                           setVariantPickerProduct(product);
                         }
@@ -1747,8 +1766,8 @@ const PosPage = () => {
               Xem trước hóa đơn
             </DialogTitle>
             <DialogDescription>
-              Bản dự thảo — mã đơn hàng và thời gian thật sẽ có sau khi bạn xác nhận
-              thanh toán.
+              Bản dự thảo — mã đơn hàng và thời gian thật sẽ có sau khi bạn xác
+              nhận thanh toán.
             </DialogDescription>
           </DialogHeader>
           {taxPreviewLoading && totalAfterPoints > 0 ? (
@@ -1944,13 +1963,16 @@ const PosPage = () => {
           </DialogHeader>
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {variantPickerProduct?.branchVariants?.map((bv) => {
-              const label = variantCatalogName(variantPickerProduct, bv.variantId);
+              const label = variantCatalogName(
+                variantPickerProduct,
+                bv.variantId,
+              );
               const stockLabel =
                 variantPickerProduct.trackInventory === false
                   ? ""
                   : `Tồn: ${(bv.quantity ?? 0).toLocaleString("vi-VN")}`;
               const price =
-                bv.price > 0 ? bv.price : variantPickerProduct.price ?? 0;
+                bv.price > 0 ? bv.price : (variantPickerProduct.price ?? 0);
               return (
                 <button
                   key={bv.variantId}
@@ -1972,7 +1994,10 @@ const PosPage = () => {
             })}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setVariantPickerProduct(null)}>
+            <Button
+              variant="outline"
+              onClick={() => setVariantPickerProduct(null)}
+            >
               Hủy
             </Button>
           </DialogFooter>

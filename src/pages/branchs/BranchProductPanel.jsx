@@ -45,7 +45,7 @@ import BranchPricesTab from "../products/BranchPricesTab.jsx";
 
 /**
  * Full branch product management panel.
- * Shows a table of BranchProducts with price, quantity, discount, toggle.
+ * Shows a table of BranchProducts with price, discount, toggle.
  * Click a row (or "Cập nhật") to open BranchPricesTab for editing.
  *
  * @param {string}   shopId         - ID cửa hàng
@@ -227,31 +227,6 @@ export default function BranchProductPanel({
       },
     },
     {
-      accessorKey: "quantity",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Tồn kho" />
-      ),
-      cell: ({ row }) => {
-        const product = row.original;
-        if (!product.trackInventory) {
-          return (
-            <span className="text-xs text-muted-foreground">Không theo dõi</span>
-          );
-        }
-        const qty = row.getValue("quantity");
-        const min = product.minQuantity;
-        const low = min != null && qty != null && qty <= min;
-        return (
-          <div
-            className={`font-medium tabular-nums ${low ? "text-red-500" : ""}`}
-          >
-            {qty ?? "-"}
-            {low && <span className="ml-1 text-xs">(thấp)</span>}
-          </div>
-        );
-      },
-    },
-    {
       accessorKey: "activeInBranch",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Đang bán" />
@@ -290,7 +265,7 @@ export default function BranchProductPanel({
                   handleOpenEdit(product);
                 }}
               >
-                Cập nhật giá / tồn kho
+                Cập nhật giá
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -406,8 +381,8 @@ export default function BranchProductPanel({
           <DialogHeader>
             <DialogTitle>Cập nhật sản phẩm tại chi nhánh</DialogTitle>
             <DialogDescription>
-              {editingProduct?.name} — Điều chỉnh giá, tồn kho và trạng thái tại
-              chi nhánh này.
+              {editingProduct?.name} — Điều chỉnh giá và trạng thái bán tại chi
+              nhánh này.
             </DialogDescription>
           </DialogHeader>
           {editingProduct && (

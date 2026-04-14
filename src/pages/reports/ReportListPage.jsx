@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { toast } from "sonner";
 import { format, subDays } from "date-fns";
@@ -127,6 +128,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 const ReportListPage = () => {
+  const [searchParams] = useSearchParams();
   const { selectedShopId, branches } = useShop();
   const shopId = selectedShopId;
 
@@ -175,6 +177,18 @@ const ReportListPage = () => {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  // Branch deeplink: /reports?branchId=...
+  useEffect(() => {
+    const bid = searchParams.get("branchId");
+    if (!bid) return;
+    if (!Array.isArray(branches) || branches.length === 0) return;
+    const ok = branches.some((b) => b.id === bid);
+    if (!ok) return;
+    if (branchFilter === bid) return;
+    setBranchFilter(bid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, branches]);
 
   const handleExportDaily = async () => {
     setExporting(true);
@@ -359,7 +373,7 @@ const ReportListPage = () => {
             title="Doanh thu"
             value={formatCurrency(summary?.totalRevenue)}
             icon={DollarSign}
-            description="Chưa bao gồm thuế"
+            description="Tổng tiền hàng trên đơn (totalPrice); với giá đã gồm VAT thường bằng tổng thu"
           />
           <StatCard
             title="Tổng tiền thu"

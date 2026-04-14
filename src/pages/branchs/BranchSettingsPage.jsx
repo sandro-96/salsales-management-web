@@ -186,7 +186,7 @@ const BranchSettingsPage = () => {
       id: "products",
       icon: Package,
       title: "Sản phẩm",
-      description: "Giá bán, tồn kho, trạng thái tại chi nhánh",
+      description: "Giá bán, biến thể, trạng thái tại chi nhánh",
       count: productCount,
       available: true,
     },
@@ -196,7 +196,7 @@ const BranchSettingsPage = () => {
       title: "Đơn hàng",
       description: "Quản lý đơn hàng tại chi nhánh",
       count: null,
-      available: false,
+      available: true,
     },
     {
       id: "staffs",
@@ -204,7 +204,7 @@ const BranchSettingsPage = () => {
       title: "Nhân viên",
       description: "Phân quyền và quản lý nhân viên",
       count: null,
-      available: false,
+      available: true,
     },
     {
       id: "reports",
@@ -212,7 +212,7 @@ const BranchSettingsPage = () => {
       title: "Báo cáo",
       description: "Doanh thu, thống kê chi nhánh",
       count: null,
-      available: false,
+      available: true,
     },
   ];
 
@@ -288,9 +288,17 @@ const BranchSettingsPage = () => {
           return (
             <div
               key={svc.id}
-              onClick={() =>
-                svc.available && setActiveService(isActive ? null : svc.id)
-              }
+              onClick={() => {
+                if (!svc.available) return;
+                if (svc.id === "products") {
+                  setActiveService(isActive ? null : svc.id);
+                  return;
+                }
+                const qp = `?branchId=${encodeURIComponent(branch.id)}`;
+                if (svc.id === "orders") navigate(`/orders${qp}`);
+                if (svc.id === "reports") navigate(`/reports${qp}`);
+                if (svc.id === "staffs") navigate(`/staffs${qp}`);
+              }}
               className={[
                 "relative rounded-xl border p-4 flex flex-col gap-3 transition-all select-none",
                 svc.available

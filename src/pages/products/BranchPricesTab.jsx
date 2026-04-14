@@ -23,7 +23,6 @@ export default function BranchPricesTab({
   onSuccess,
 }) {
   const { branches } = useShop();
-  const trackInventory = product?.trackInventory ?? false;
 
   const [rowsMap, setRowsMap] = useState({});
   const [drafts, setDrafts] = useState({});
@@ -41,6 +40,12 @@ export default function BranchPricesTab({
     // When a branch is focused, product already contains all BranchProduct fields
     if (focusBranchId) {
       const bp = product;
+      const variantDrafts = {};
+      (bp?.branchVariants || []).forEach((bv) => {
+        if (bv?.variantId) {
+          variantDrafts[bv.variantId] = bv.price ?? 0;
+        }
+      });
       setRowsMap({ [focusBranchId]: bp });
       setDrafts({
         [focusBranchId]: {
@@ -48,10 +53,8 @@ export default function BranchPricesTab({
           branchCostPrice: bp.branchCostPrice ?? bp.costPrice ?? "",
           discountPrice: bp.discountPrice ?? "",
           discountPercentage: bp.discountPercentage ?? "",
-          quantity: bp.quantity ?? "",
-          minQuantity: bp.minQuantity ?? "",
-          expiryDate: bp.expiryDate ?? "",
           activeInBranch: bp.activeInBranch ?? bp.active ?? true,
+          variantPrices: variantDrafts,
           reason: "",
         },
       });
@@ -83,15 +86,19 @@ export default function BranchPricesTab({
       const initDrafts = {};
       list.forEach((bp) => {
         if (bp.branchId) {
+          const variantDrafts = {};
+          (bp?.branchVariants || []).forEach((bv) => {
+            if (bv?.variantId) {
+              variantDrafts[bv.variantId] = bv.price ?? 0;
+            }
+          });
           initDrafts[bp.branchId] = {
             price: bp.price ?? bp.defaultPrice ?? "",
             branchCostPrice: bp.branchCostPrice ?? bp.costPrice ?? "",
             discountPrice: bp.discountPrice ?? "",
             discountPercentage: bp.discountPercentage ?? "",
-            quantity: bp.quantity ?? "",
-            minQuantity: bp.minQuantity ?? "",
-            expiryDate: bp.expiryDate ?? "",
             activeInBranch: bp.activeInBranch ?? bp.active ?? true,
+            variantPrices: variantDrafts,
             reason: "",
           };
         }
@@ -123,6 +130,24 @@ export default function BranchPricesTab({
     const draft = drafts[branchId];
     setSaving((prev) => ({ ...prev, [branchId]: true }));
     try {
+      const hasVariantCatalog = Array.isArray(product?.variants);
+      const hasBranchVariants =
+        Array.isArray(row?.branchVariants) && row.branchVariants.length > 0;
+      const shouldSendVariants = hasVariantCatalog && hasBranchVariants;
+
+      const updatedVariants = shouldSendVariants
+        ? row.branchVariants.map((bv) => {
+            const nextPrice = draft?.variantPrices?.[bv.variantId];
+            const parsed =
+              nextPrice === "" || nextPrice == null ? 0 : Number(nextPrice);
+            return {
+              ...bv,
+              // price-only editor: 0 means "fallback to branch/base price"
+              price: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
+            };
+          })
+        : row?.branchVariants ?? null;
+
       const payload = {
         price: draft.price !== "" ? Number(draft.price) : null,
         branchCostPrice:
@@ -133,11 +158,12 @@ export default function BranchPricesTab({
           draft.discountPercentage !== ""
             ? Number(draft.discountPercentage)
             : null,
-        quantity: draft.quantity !== "" ? Number(draft.quantity) : null,
-        minQuantity:
-          draft.minQuantity !== "" ? Number(draft.minQuantity) : null,
-        expiryDate: draft.expiryDate || null,
+        // Inventory is managed on Inventory pages; preserve existing values here.
+        quantity: row.quantity ?? 0,
+        minQuantity: row.minQuantity ?? 0,
+        expiryDate: row.expiryDate || null,
         activeInBranch: draft.activeInBranch,
+        branchVariants: updatedVariants,
         reason: draft.reason || null,
       };
       const res = await updateBranchProduct(shopId, branchId, row.id, payload);
@@ -168,6 +194,20 @@ export default function BranchPricesTab({
     const row = rowsMap[branchId];
     const draft = drafts[branchId];
     if (!row || !draft) return false;
+
+    const rowVariantMap = {};
+    (row.branchVariants || []).forEach((bv) => {
+      if (bv?.variantId) rowVariantMap[bv.variantId] = bv.price ?? 0;
+    });
+    const draftVariantMap = draft.variantPrices || {};
+    const hasVariantChanges =
+      Array.isArray(product?.variants) &&
+      Array.isArray(row?.branchVariants) &&
+      row.branchVariants.length > 0 &&
+      Object.keys(rowVariantMap).some(
+        (vid) => String(draftVariantMap?.[vid] ?? 0) !== String(rowVariantMap[vid] ?? 0),
+      );
+
     return (
       String(draft.price) !== String(row.price ?? row.defaultPrice ?? "") ||
       String(draft.branchCostPrice) !==
@@ -175,9 +215,7 @@ export default function BranchPricesTab({
       String(draft.discountPrice) !== String(row.discountPrice ?? "") ||
       String(draft.discountPercentage) !==
         String(row.discountPercentage ?? "") ||
-      String(draft.quantity) !== String(row.quantity ?? "") ||
-      String(draft.minQuantity) !== String(row.minQuantity ?? "") ||
-      String(draft.expiryDate) !== String(row.expiryDate ?? "") ||
+      hasVariantChanges ||
       draft.activeInBranch !== (row.activeInBranch ?? row.active ?? true)
     );
   };
@@ -299,43 +337,47 @@ export default function BranchPricesTab({
                     />
                   </div>
 
-                  {/* Inventory */}
-                  {trackInventory && (
-                    <div className="border-t pt-3 grid grid-cols-2 gap-3">
-                      <Field
-                        label="Tồn kho"
-                        placeholder="0"
-                        value={draft.quantity}
-                        onChange={(v) =>
-                          setDraftField(branch.id, "quantity", v)
-                        }
-                      />
-                      <Field
-                        label="Ngưỡng cảnh báo tồn kho"
-                        placeholder="0"
-                        value={draft.minQuantity}
-                        onChange={(v) =>
-                          setDraftField(branch.id, "minQuantity", v)
-                        }
-                      />
-                      <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                        <label className="text-xs text-muted-foreground font-medium">
-                          Hạn sử dụng
-                        </label>
-                        <Input
-                          type="date"
-                          value={draft.expiryDate}
-                          onChange={(e) =>
-                            setDraftField(
-                              branch.id,
-                              "expiryDate",
-                              e.target.value,
-                            )
-                          }
-                        />
+                  {/* Variant pricing */}
+                  {Array.isArray(product?.variants) &&
+                    Array.isArray(row?.branchVariants) &&
+                    row.branchVariants.length > 0 && (
+                      <div className="border-t pt-3 flex flex-col gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Giá biến thể tại chi nhánh (0 = dùng giá chi nhánh)
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {row.branchVariants.map((bv) => {
+                            const meta = (product.variants || []).find(
+                              (v) => v.variantId === bv.variantId,
+                            );
+                            const label = meta?.name || bv.variantId || "—";
+                            const current =
+                              draft.variantPrices?.[bv.variantId] ?? bv.price ?? 0;
+                            return (
+                              <Field
+                                key={bv.variantId}
+                                label={label}
+                                placeholder="0"
+                                value={current}
+                                onChange={(v) => {
+                                  setDrafts((prev) => ({
+                                    ...prev,
+                                    [branch.id]: {
+                                      ...prev[branch.id],
+                                      variantPrices: {
+                                        ...(prev[branch.id]?.variantPrices || {}),
+                                        [bv.variantId]: v,
+                                      },
+                                    },
+                                  }));
+                                }}
+                                suffix=" ₫"
+                              />
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Lý do thay đổi giá */}
                   <div className="flex flex-col gap-1">

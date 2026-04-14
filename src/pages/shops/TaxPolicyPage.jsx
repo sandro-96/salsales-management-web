@@ -457,7 +457,9 @@ export default function TaxPolicyPage() {
               <div>
                 <p className="text-sm font-medium">Giá bán đã gồm thuế</p>
                 <p className="text-xs text-muted-foreground">
-                  Bật nếu giá món đã bao gồm VAT (thông dụng tại VN).
+                  Bật nếu giá món đã bao gồm VAT (thông dụng tại VN). Khi bật, tổng
+                  thanh toán thường không tăng thêm so với tổng giá niêm yết — hệ
+                  thống chỉ tách phần VAT để hiển thị NET và thuế trên đơn.
                 </p>
               </div>
               <Switch
@@ -475,9 +477,8 @@ export default function TaxPolicyPage() {
                   onChange={(e) => setEffectiveFrom(e.target.value)}
                 />
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                  Thời điểm bắt đầu áp dụng bản chính sách này khi tính thuế (so
-                  với thời điểm đặt hàng / xem trước thuế). Để trống = coi như
-                  đã áp dụng từ trước (phù hợp chính sách “mặc định” duy nhất).
+                  So với thời điểm tạo đơn / xem trước thuế. Để trống = áp dụng
+                  ngay (mặc định duy nhất cho shop / chi nhánh).
                 </p>
               </div>
               <div className="space-y-2">

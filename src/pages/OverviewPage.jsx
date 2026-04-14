@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useShop } from "../hooks/useShop";
 import { useAuth } from "../hooks/useAuth";
@@ -112,6 +112,13 @@ const OverviewPage = () => {
   const canViewReport =
     isOwner || shopRole === "MANAGER" || shopRole === "ADMIN";
 
+  /** Đơn gần đây: 1 chi nhánh → luôn theo chi nhánh đó; nhiều chi nhánh → theo bộ lọc báo cáo. */
+  const recentOrdersBranchId = useMemo(() => {
+    if (branches?.length === 1) return branches[0]?.id;
+    if (branchFilter !== "__all__") return branchFilter;
+    return undefined;
+  }, [branches, branchFilter]);
+
   const buildDateRange = useCallback(() => {
     const now = new Date();
     let startDate;
@@ -156,6 +163,7 @@ const OverviewPage = () => {
         page: 0,
         size: 5,
         sort: "createdAt,desc",
+        ...(recentOrdersBranchId ? { branchId: recentOrdersBranchId } : {}),
       }).catch(() => null),
     );
 
@@ -202,7 +210,13 @@ const OverviewPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, buildDateRange, branchFilter, canViewReport]);
+  }, [
+    selectedShopId,
+    buildDateRange,
+    branchFilter,
+    recentOrdersBranchId,
+    canViewReport,
+  ]);
 
   useEffect(() => {
     fetchData();
@@ -212,12 +226,22 @@ const OverviewPage = () => {
 
   const rangeLabel = range === "month" ? "tháng này" : `${range} ngày qua`;
 
+  const rankBadgeClass = (idx) => {
+    if (idx === 0)
+      return "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-sm";
+    if (idx === 1)
+      return "bg-gradient-to-br from-slate-400 to-slate-600 text-white shadow-sm";
+    if (idx === 2)
+      return "bg-gradient-to-br from-amber-700 to-orange-900 text-amber-50 shadow-sm";
+    return "bg-muted text-muted-foreground";
+  };
+
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 min-h-full bg-gradient-to-br from-sky-50/50 via-background to-violet-50/40 dark:from-sky-950/20 dark:via-background dark:to-violet-950/20">
       {/* ── Header ────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-sky-700 via-violet-600 to-violet-700 bg-clip-text text-transparent dark:from-sky-300 dark:via-violet-400 dark:to-fuchsia-400">
             Xin chào, {user?.fullName || "bạn"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -249,14 +273,14 @@ const OverviewPage = () => {
               </SelectContent>
             </Select>
           )}
-          <div className="flex rounded-lg border bg-muted p-0.5">
+          <div className="flex rounded-lg border border-sky-200/70 dark:border-sky-800/40 bg-gradient-to-r from-sky-50/90 to-violet-50/70 dark:from-sky-950/40 dark:to-violet-950/30 p-0.5">
             {RANGE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setRange(opt.value)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   range === opt.value
-                    ? "bg-background shadow-sm text-foreground"
+                    ? "bg-background shadow-sm text-foreground ring-1 ring-sky-200/80 dark:ring-sky-700/50"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -276,12 +300,14 @@ const OverviewPage = () => {
           {/* ── KPI Cards ───────────────────────────────────────────── */}
           {summary && (
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-              <Card>
+              <Card className="border-emerald-200/70 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/80 to-card dark:from-emerald-950/25 dark:to-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     Doanh thu
                   </CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <div className="rounded-lg bg-emerald-500/15 p-2 ring-1 ring-emerald-500/20">
+                    <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -293,12 +319,14 @@ const OverviewPage = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-sky-200/70 dark:border-sky-900/40 bg-gradient-to-br from-sky-50/80 to-card dark:from-sky-950/25 dark:to-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     Đơn hàng
                   </CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                  <div className="rounded-lg bg-sky-500/15 p-2 ring-1 ring-sky-500/20">
+                    <ShoppingCart className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -310,12 +338,14 @@ const OverviewPage = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-violet-200/70 dark:border-violet-900/40 bg-gradient-to-br from-violet-50/80 to-card dark:from-violet-950/25 dark:to-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     Sản phẩm đã bán
                   </CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <div className="rounded-lg bg-violet-500/15 p-2 ring-1 ring-violet-500/20">
+                    <Package className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -327,12 +357,14 @@ const OverviewPage = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-amber-200/70 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/80 to-card dark:from-amber-950/20 dark:to-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     Giá trị TB/đơn
                   </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <div className="rounded-lg bg-amber-500/15 p-2 ring-1 ring-amber-500/20">
+                    <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -347,7 +379,7 @@ const OverviewPage = () => {
           )}
 
           {reportError && !summary && (
-            <Card className="py-10 text-center">
+            <Card className="py-10 text-center border-amber-200/60 bg-amber-50/40 dark:border-amber-900/30 dark:bg-amber-950/15">
               <p className="text-muted-foreground text-sm">
                 Không thể tải dữ liệu báo cáo. Bạn có thể không có quyền xem báo
                 cáo.
@@ -357,7 +389,7 @@ const OverviewPage = () => {
 
           {/* ── Revenue Chart ───────────────────────────────────────── */}
           {chartData.length > 0 && (
-            <Card>
+            <Card className="border-sky-200/50 dark:border-sky-900/35 shadow-md bg-gradient-to-b from-sky-50/50 to-card dark:from-sky-950/20 dark:to-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-base">Xu hướng doanh thu</CardTitle>
                 <CardDescription>
@@ -444,7 +476,7 @@ const OverviewPage = () => {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Top Products */}
             {topProducts.length > 0 && (
-              <Card>
+              <Card className="border-violet-200/40 dark:border-violet-900/30 shadow-sm bg-gradient-to-br from-violet-50/30 to-card dark:from-violet-950/15 dark:to-card">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-base">
@@ -467,9 +499,11 @@ const OverviewPage = () => {
                     {topProducts.map((p, idx) => (
                       <div
                         key={p.productId || idx}
-                        className="flex items-center gap-3 px-6 py-3"
+                        className="flex items-center gap-3 px-6 py-3 hover:bg-violet-50/50 dark:hover:bg-violet-950/20 transition-colors"
                       >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${rankBadgeClass(idx)}`}
+                        >
                           {idx + 1}
                         </span>
                         <div className="flex-1 min-w-0">
@@ -491,7 +525,7 @@ const OverviewPage = () => {
             )}
 
             {/* Recent Orders */}
-            <Card>
+            <Card className="border-sky-200/40 dark:border-sky-900/30 shadow-sm bg-gradient-to-br from-sky-50/25 to-card dark:from-sky-950/15 dark:to-card">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-base">Đơn hàng gần đây</CardTitle>
@@ -522,10 +556,10 @@ const OverviewPage = () => {
                       return (
                         <div
                           key={order.id}
-                          className="flex items-center gap-3 px-6 py-3"
+                          className="flex items-center gap-3 px-6 py-3 hover:bg-sky-50/60 dark:hover:bg-sky-950/25 transition-colors"
                         >
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/15 to-violet-500/15 ring-1 ring-sky-200/60 dark:ring-sky-800/50">
+                            <ShoppingCart className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
@@ -550,7 +584,9 @@ const OverviewPage = () => {
                           <div className="text-right">
                             <p className="text-sm font-medium">
                               {formatCurrency(
-                                order.totalAmount || order.totalPrice,
+                                order.taxSnapshot?.grandTotal ??
+                                  order.totalPrice ??
+                                  0,
                               )}
                             </p>
                             <Badge

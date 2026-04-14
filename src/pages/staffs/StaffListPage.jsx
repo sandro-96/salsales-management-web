@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { toast } from "sonner";
@@ -87,6 +88,7 @@ const formatDate = (dateStr) => {
 };
 
 const StaffListPage = () => {
+  const [searchParams] = useSearchParams();
   const { selectedShopId, branches } = useShop();
   const shopId = selectedShopId;
   const branchMap = Object.fromEntries(
@@ -111,6 +113,29 @@ const StaffListPage = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  // Init from deeplink to avoid double-fetch/flicker on first render
+  const [branchFilter, setBranchFilter] = useState(() => {
+    const bid = searchParams.get("branchId");
+    return bid && String(bid).trim() ? String(bid).trim() : "__all__";
+  });
+
+  // Branch deeplink: /staffs?branchId=...
+  useEffect(() => {
+    const bid = searchParams.get("branchId");
+    if (!bid) return;
+    if (branchFilter === bid) return;
+    setBranchFilter(bid);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, branches]);
+
+  // If deeplink branchId is invalid for current shop, fall back to all
+  useEffect(() => {
+    if (branchFilter === "__all__") return;
+    if (!Array.isArray(branches) || branches.length === 0) return;
+    const ok = branches.some((b) => b.id === branchFilter);
+    if (!ok) setBranchFilter("__all__");
+  }, [branches, branchFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -131,6 +156,9 @@ const StaffListPage = () => {
       if (debouncedKeyword.trim()) {
         params.keyword = debouncedKeyword.trim();
       }
+      if (branchFilter !== "__all__") {
+        params.branchId = branchFilter;
+      }
       const res = await getAllStaff(shopId, params);
       const data = res.data?.data;
       if (data && typeof data === "object" && "content" in data) {
@@ -147,7 +175,7 @@ const StaffListPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [shopId, pagination, debouncedKeyword]);
+  }, [shopId, pagination, debouncedKeyword, branchFilter]);
 
   useEffect(() => {
     fetchStaff();
@@ -445,6 +473,27 @@ const StaffListPage = () => {
               onChange={(e) => setKeyword(e.target.value)}
               className="flex-1 min-w-0 sm:max-w-xs"
             />
+            {branches?.length > 1 && (
+              <Select
+                value={branchFilter}
+                onValueChange={(v) => {
+                  setBranchFilter(v);
+                  setPagination((p) => ({ ...p, pageIndex: 0 }));
+                }}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tất cả chi nhánh" />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  <SelectItem value="__all__">Tất cả chi nhánh</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <DataTableViewOptions table={table} />
           </div>
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">

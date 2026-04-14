@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   flexRender,
   getCoreRowModel,
@@ -21,6 +22,7 @@ import {
   Search,
   Filter,
   Plus,
+  Percent,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -136,6 +138,76 @@ function orderLineVariantLabel(item) {
   const id = String(vid).trim();
   const short = id.length > 10 ? id.slice(-8).toUpperCase() : id;
   return `Biến thể (mã): ${short}`;
+}
+
+/** Có dòng thuế / tổng thuế > 0 trên snapshot đơn. */
+function orderHasPositiveTax(tax) {
+  if (!tax) return false;
+  const total = tax.taxTotal ?? 0;
+  if (total > 0.005) return true;
+  return (tax.taxes || []).some((l) => (l.amount ?? 0) > 0.005);
+}
+
+function orderTaxSummaryTooltip(order) {
+  const t = order.taxSnapshot;
+  if (!t) {
+    return "Đơn không có snapshot thuế (đơn rất cũ hoặc dữ liệu thiếu). Chỉ xem được tổng tiền hàng.";
+  }
+  const lines = [
+    t.priceIncludesTax
+      ? "Chính sách: giá bán đã gồm thuế — «Tạm tính» là NET (đã tách VAT)."
+      : "Chính sách: giá chưa gồm thuế — thuế cộng thêm vào tạm tính.",
+    `Tạm tính (cơ sở thuế): ${(t.netAmount ?? 0).toLocaleString("vi-VN")} ₫`,
+  ];
+  if (orderHasPositiveTax(t)) {
+    lines.push(`Tổng thuế: ${(t.taxTotal ?? 0).toLocaleString("vi-VN")} ₫`);
+    (t.taxes || []).forEach((x) => {
+      if ((x.amount ?? 0) > 0.005) {
+        lines.push(
+          `${x.label}: ${(x.amount ?? 0).toLocaleString("vi-VN")} ₫`,
+        );
+      }
+    });
+  } else {
+    lines.push("Không phát sinh tiền thuế (0 ₫) trên đơn này.");
+  }
+  lines.push(
+    `Tổng thanh toán: ${(t.grandTotal ?? order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫`,
+  );
+  return lines.join("\n");
+}
+
+function OrderTaxBadge({ order }) {
+  const t = order.taxSnapshot;
+  if (!t) {
+    return (
+      <span
+        className="text-[11px] text-muted-foreground tabular-nums"
+        title="Không có snapshot thuế"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        —
+      </span>
+    );
+  }
+  const has = orderHasPositiveTax(t);
+  return (
+    <Badge
+      variant={has ? "default" : "secondary"}
+      className={
+        has
+          ? "text-[10px] gap-0.5 font-normal bg-sky-600 text-white hover:bg-sky-600/90 border-0 cursor-help"
+          : "text-[10px] font-normal cursor-help"
+      }
+      title={orderTaxSummaryTooltip(order)}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <Percent className="h-3 w-3 opacity-90" />
+      {has ? "Có thuế" : "0 thuế"}
+    </Badge>
+  );
 }
 
 function PaymentCollectionBadge({ paid, paymentStatus }) {
@@ -549,52 +621,91 @@ const OrderDetailDialog = ({
             </div>
           )}
 
-          {tax && (
-            <div className="space-y-1 text-sm">
-              <p className="text-xs text-muted-foreground pb-1">
-                {tax.priceIncludesTax
-                  ? "Chính sách thuế: giá tính theo mức đã gồm thuế (NET được tách từ tổng)."
-                  : "Chính sách thuế: tạm tính chưa gồm thuế; thuế cộng thêm theo từng dòng thuế."}
-              </p>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tạm tính</span>
-                <span className="tabular-nums">
-                  {(tax.netAmount ?? 0).toLocaleString("vi-VN")} ₫
-                </span>
-              </div>
-              {tax.taxes?.map((t, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between text-muted-foreground"
+          <div className="rounded-lg border border-sky-200/80 dark:border-sky-900/50 bg-sky-50/70 dark:bg-sky-950/30 px-3 py-3 space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-foreground">
+                Thanh toán & thuế
+              </span>
+              {tax && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] shrink-0 font-normal border-sky-300/80 dark:border-sky-700"
                 >
-                  <span>
-                    {t.label} ({(t.rate * 100).toFixed(0)}%)
+                  Snapshot lúc tạo đơn
+                </Badge>
+              )}
+            </div>
+
+            {tax ? (
+              <>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {tax.priceIncludesTax
+                    ? "Giá bán đang cấu hình đã gồm thuế: «Tạm tính» là phần chưa thuế (NET) — VAT đã được tách ra khỏi giá để hiển thị đúng dòng thuế."
+                    : "Giá chưa gồm thuế: «Tạm tính» là tổng hàng; các dòng thuế cộng thêm; «Tổng thanh toán» là số khách phải trả."}
+                </p>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {tax.priceIncludesTax
+                      ? "Tạm tính (NET — đã trừ VAT khỏi giá bán)"
+                      : "Tạm tính (chưa gồm thuế)"}
                   </span>
-                  <span className="tabular-nums">
-                    {(t.amount ?? 0).toLocaleString("vi-VN")} ₫
+                  <span className="tabular-nums font-medium">
+                    {(tax.netAmount ?? 0).toLocaleString("vi-VN")} ₫
                   </span>
                 </div>
-              ))}
-              <div className="flex justify-between font-semibold text-base pt-1 border-t mt-2">
-                <span>Tổng cộng</span>
-                <span className="tabular-nums">
-                  {(tax.grandTotal ?? order.totalPrice ?? 0).toLocaleString(
-                    "vi-VN",
-                  )}{" "}
-                  ₫
-                </span>
-              </div>
-            </div>
-          )}
-
-          {!tax && (
-            <div className="flex justify-between font-semibold text-base">
-              <span>Tổng cộng</span>
-              <span className="tabular-nums">
-                {(order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫
-              </span>
-            </div>
-          )}
+                {(tax.taxes || []).map((taxLine, i) => (
+                  <div
+                    key={i}
+                    className="flex justify-between text-muted-foreground"
+                  >
+                    <span>
+                      {taxLine.label}
+                      {(taxLine.rate ?? 0) > 0
+                        ? ` (${(taxLine.rate * 100).toFixed(0)}%)`
+                        : ""}
+                    </span>
+                    <span className="tabular-nums">
+                      {(taxLine.amount ?? 0).toLocaleString("vi-VN")} ₫
+                    </span>
+                  </div>
+                ))}
+                {!orderHasPositiveTax(tax) && (
+                  <p className="text-xs text-muted-foreground italic">
+                    Không phát sinh tiền thuế trên đơn (tổng thuế = 0 ₫).
+                  </p>
+                )}
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Tổng thuế</span>
+                  <span className="tabular-nums">
+                    {(tax.taxTotal ?? 0).toLocaleString("vi-VN")} ₫
+                  </span>
+                </div>
+                <div className="flex justify-between font-semibold text-base pt-2 border-t border-sky-200/90 dark:border-sky-800/60">
+                  <span>Tổng thanh toán</span>
+                  <span className="tabular-nums text-sky-900 dark:text-sky-100">
+                    {(tax.grandTotal ?? order.totalPrice ?? 0).toLocaleString(
+                      "vi-VN",
+                    )}{" "}
+                    ₫
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Không có snapshot thuế trên đơn — thường gặp ở đơn tạo trước khi
+                  hệ thống lưu thuế. Xem tổng tiền hàng; cấu hình thuế tại mục
+                  chính sách thuế theo chi nhánh.
+                </p>
+                <div className="flex justify-between font-semibold text-base pt-1">
+                  <span>Tổng cộng</span>
+                  <span className="tabular-nums">
+                    {(order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
 
           {order.paymentMethod && (
             <div className="text-sm text-muted-foreground">
@@ -628,6 +739,7 @@ const OrderDetailDialog = ({
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 const OrderListPage = () => {
+  const [searchParams] = useSearchParams();
   const {
     selectedShopId,
     selectedBranchId,
@@ -657,6 +769,18 @@ const OrderListPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [createOrderOpen, setCreateOrderOpen] = useState(false);
 
+  // Branch deeplink: /orders?branchId=...
+  useEffect(() => {
+    const bid = searchParams.get("branchId");
+    if (!bid) return;
+    if (!Array.isArray(branches) || branches.length === 0) return;
+    const ok = branches.some((b) => b.id === bid);
+    if (!ok) return;
+    if (selectedBranchId === bid) return;
+    setSelectedBranchId(bid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, branches]);
+
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
     if (!selectedShopId) return;
@@ -667,7 +791,10 @@ const OrderListPage = () => {
         size: pagination.pageSize,
         sort: "createdAt,desc",
       };
-      if (selectedBranchId) params.branchId = selectedBranchId;
+      const effectiveBranchId =
+        selectedBranchId ??
+        (branches.length === 1 ? branches[0]?.id : null);
+      if (effectiveBranchId) params.branchId = effectiveBranchId;
 
       const res =
         statusFilter === "ALL"
@@ -688,7 +815,7 @@ const OrderListPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, selectedBranchId, pagination, statusFilter]);
+  }, [selectedShopId, selectedBranchId, branches, pagination, statusFilter]);
 
   useEffect(() => {
     fetchOrders();
@@ -854,6 +981,12 @@ const OrderListPage = () => {
             {row.original.totalAmount ?? 0}
           </span>
         ),
+      },
+      {
+        id: "taxSnapshot",
+        header: "Thuế",
+        enableSorting: false,
+        cell: ({ row }) => <OrderTaxBadge order={row.original} />,
       },
       {
         accessorKey: "totalPrice",
@@ -1144,7 +1277,15 @@ const OrderListPage = () => {
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        onClick={(e) => {
+                          const cid = cell.column.id;
+                          if (cid === "actions" || cid === "taxSnapshot") {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),

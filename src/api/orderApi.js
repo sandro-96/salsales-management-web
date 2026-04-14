@@ -2,7 +2,8 @@ import axiosInstance from "./axiosInstance";
 
 /**
  * 📋 Lấy danh sách đơn hàng (phân trang)
- * GET /api/orders?shopId={shopId}
+ * GET /api/orders?shopId=&branchId=&page=&size=&sort=
+ * branchId: tùy chọn — có thì chỉ đơn của chi nhánh đó; không có thì mọi chi nhánh.
  */
 export const getOrders = (shopId, params = {}) =>
   axiosInstance.get("/orders", { params: { shopId, ...params } });
