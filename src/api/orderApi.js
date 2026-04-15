@@ -71,3 +71,21 @@ export const updateOrderStatus = (id, shopId, status) =>
   axiosInstance.put(`/orders/${id}/status`, null, {
     params: { shopId, status },
   });
+
+/**
+ * 🪑 Đổi bàn cho đơn đang mở
+ * POST /api/orders/{orderId}/move-table?shopId=
+ */
+export const moveOrderTable = (orderId, shopId, toTableId) =>
+  axiosInstance.post(
+    `/orders/${orderId}/move-table`,
+    { toTableId },
+    { params: { shopId } },
+  );
+
+/**
+ * ✂️ Tách món sang đơn mới
+ * POST /api/orders/{orderId}/split?shopId=
+ */
+export const splitOrder = (orderId, shopId, payload) =>
+  axiosInstance.post(`/orders/${orderId}/split`, payload, { params: { shopId } });

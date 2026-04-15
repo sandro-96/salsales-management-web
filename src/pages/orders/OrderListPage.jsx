@@ -14,6 +14,7 @@ import {
   CreditCard,
   XCircle,
   Eye,
+  Printer,
   CheckCircle2,
   Clock,
   Truck,
@@ -28,6 +29,9 @@ import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
+import { getTables } from "../../api/tableApi.js";
+import { PosInvoiceReceipt } from "../../components/pos/PosInvoiceReceipt.jsx";
+import { printPosInvoiceReceipt } from "../../components/pos/printPosInvoiceReceipt.jsx";
 import {
   getOrders,
   filterOrders,
@@ -74,6 +78,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
@@ -175,6 +180,12 @@ function orderTaxSummaryTooltip(order) {
     `Tổng thanh toán: ${(t.grandTotal ?? order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫`,
   );
   return lines.join("\n");
+}
+
+function shortId(id) {
+  if (!id) return "";
+  const s = String(id);
+  return s.length > 10 ? s.slice(-8).toUpperCase() : s.toUpperCase();
 }
 
 function OrderTaxBadge({ order }) {
@@ -742,7 +753,9 @@ const OrderListPage = () => {
   const [searchParams] = useSearchParams();
   const {
     selectedShopId,
+    selectedShop,
     selectedBranchId,
+    selectedBranch,
     branches,
     setSelectedBranchId,
     isOwner,
@@ -768,6 +781,9 @@ const OrderListPage = () => {
   const [payingOrderSnapshot, setPayingOrderSnapshot] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [createOrderOpen, setCreateOrderOpen] = useState(false);
+  const [tables, setTables] = useState([]);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoicePayload, setInvoicePayload] = useState(null);
 
   // Branch deeplink: /orders?branchId=...
   useEffect(() => {
@@ -781,6 +797,79 @@ const OrderListPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, branches]);
 
+  const effectiveBranchId = useMemo(
+    () => selectedBranchId ?? (branches.length === 1 ? branches[0]?.id : null),
+    [selectedBranchId, branches],
+  );
+
+  // Load tables to display table name in order list (when branch is selected)
+  useEffect(() => {
+    if (!selectedShopId || !effectiveBranchId) {
+      setTables([]);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const res = await getTables(selectedShopId, effectiveBranchId, {
+          size: 1000,
+        });
+        const data = res.data?.data;
+        const list =
+          data?.content ?? (Array.isArray(data) ? data : data ? [data] : []);
+        if (alive) setTables(Array.isArray(list) ? list : []);
+      } catch {
+        if (alive) setTables([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [selectedShopId, effectiveBranchId]);
+
+  const tableNameById = useMemo(() => {
+    const map = new Map();
+    (tables || []).forEach((t) => {
+      if (t?.id) map.set(t.id, t.name || t.code || t.label || null);
+    });
+    return map;
+  }, [tables]);
+
+  const openInvoiceDialog = useCallback(
+    (order) => {
+      if (!order) return;
+      const branchName =
+        selectedBranch?.name ||
+        branches.find((b) => b.id === (order.branchId || effectiveBranchId))
+          ?.name ||
+        null;
+      const tableName = order.tableId ? tableNameById.get(order.tableId) : null;
+      const pmLabel =
+        PAYMENT_METHODS.find((x) => x.value === order.paymentMethod)?.label ||
+        order.paymentMethod ||
+        null;
+      setInvoicePayload({
+        shopName: selectedShop?.name || selectedShop?.shopName || null,
+        shopAddress: selectedShop?.address || null,
+        shopPhone: selectedShop?.phone || null,
+        branchName,
+        order,
+        customerName: order.customerName || null,
+        tableName,
+        paymentMethodLabel: pmLabel,
+        printedAt: new Date().toISOString(),
+      });
+      setInvoiceOpen(true);
+    },
+    [
+      selectedShop,
+      selectedBranch,
+      branches,
+      effectiveBranchId,
+      tableNameById,
+    ],
+  );
+
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
     if (!selectedShopId) return;
@@ -791,9 +880,6 @@ const OrderListPage = () => {
         size: pagination.pageSize,
         sort: "createdAt,desc",
       };
-      const effectiveBranchId =
-        selectedBranchId ??
-        (branches.length === 1 ? branches[0]?.id : null);
       if (effectiveBranchId) params.branchId = effectiveBranchId;
 
       const res =
@@ -815,7 +901,7 @@ const OrderListPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, selectedBranchId, branches, pagination, statusFilter]);
+  }, [selectedShopId, effectiveBranchId, pagination, statusFilter]);
 
   useEffect(() => {
     fetchOrders();
@@ -946,6 +1032,28 @@ const OrderListPage = () => {
         },
       },
       {
+        id: "table",
+        header: "Bàn",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const tableId = row.original?.tableId;
+          if (!tableId) return <span className="text-muted-foreground">—</span>;
+          const name = tableNameById.get(tableId);
+          return (
+            <div className="max-w-[140px]">
+              <p className="text-sm font-medium truncate">
+                {name || `Bàn #${shortId(tableId)}`}
+              </p>
+              {name && (
+                <p className="text-[10px] text-muted-foreground font-mono truncate">
+                  {shortId(tableId)}
+                </p>
+              )}
+            </div>
+          );
+        },
+      },
+      {
         accessorKey: "items",
         header: "Sản phẩm",
         enableSorting: false,
@@ -1057,6 +1165,13 @@ const OrderListPage = () => {
                   <Eye className="h-4 w-4 mr-2" /> Xem chi tiết
                 </DropdownMenuItem>
 
+                <DropdownMenuItem
+                  onClick={() => openInvoiceDialog(order)}
+                  disabled={!order?.items || order.items.length === 0}
+                >
+                  <Printer className="h-4 w-4 mr-2" /> In lại bill
+                </DropdownMenuItem>
+
                 {!order.paid && !isTerminal && canManage && (
                   <DropdownMenuItem onClick={() => openPaymentDialog(order)}>
                     <CreditCard className="h-4 w-4 mr-2 text-emerald-600" />{" "}
@@ -1113,7 +1228,15 @@ const OrderListPage = () => {
         },
       },
     ],
-    [canManage, submitting, handleCancel, handleStatusChange, openPaymentDialog],
+    [
+      canManage,
+      submitting,
+      handleCancel,
+      handleStatusChange,
+      openPaymentDialog,
+      tableNameById,
+      openInvoiceDialog,
+    ],
   );
 
   const table = useReactTable({
@@ -1377,6 +1500,75 @@ const OrderListPage = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reprint Invoice Dialog ─────────────────────────────────── */}
+      <Dialog
+        open={invoiceOpen}
+        onOpenChange={(open) => {
+          setInvoiceOpen(open);
+          if (!open) setInvoicePayload(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Printer className="h-5 w-5" />
+              In lại bill
+            </DialogTitle>
+            <DialogDescription>
+              Kiểm tra nội dung, sau đó chọn In hóa đơn.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0 max-h-[55vh] px-6">
+            <div className="pb-4">
+              {invoicePayload?.order ? (
+                <PosInvoiceReceipt
+                  shopName={invoicePayload.shopName}
+                  shopAddress={invoicePayload.shopAddress}
+                  shopPhone={invoicePayload.shopPhone}
+                  branchName={invoicePayload.branchName}
+                  order={invoicePayload.order}
+                  customerName={invoicePayload.customerName}
+                  tableName={invoicePayload.tableName}
+                  paymentMethodLabel={invoicePayload.paymentMethodLabel}
+                  printedAt={invoicePayload.printedAt}
+                />
+              ) : null}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="px-6 py-4 border-t shrink-0 gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setInvoiceOpen(false);
+                setInvoicePayload(null);
+              }}
+            >
+              Đóng
+            </Button>
+            <Button
+              onClick={() => {
+                if (!invoicePayload?.order) return;
+                printPosInvoiceReceipt({
+                  shopName: invoicePayload.shopName,
+                  shopAddress: invoicePayload.shopAddress,
+                  shopPhone: invoicePayload.shopPhone,
+                  branchName: invoicePayload.branchName,
+                  order: invoicePayload.order,
+                  customerName: invoicePayload.customerName,
+                  tableName: invoicePayload.tableName,
+                  paymentMethodLabel: invoicePayload.paymentMethodLabel,
+                  printedAt: invoicePayload.printedAt,
+                  isDraft: false,
+                });
+              }}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              In hóa đơn
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

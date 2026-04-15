@@ -24,13 +24,22 @@ import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop";
 import { getBranchProducts } from "../../api/productApi";
-import { getTables } from "../../api/tableApi";
+import { getCurrentOrderByTable, getTables } from "../../api/tableApi";
 import { getPromotions } from "../../api/promotionApi";
+import {
+  createTableGroup,
+  deleteTableGroup,
+  getTableGroups,
+} from "../../api/tableGroupApi";
 import {
   createOrder,
   confirmPayment,
   previewOrderTax,
   patchOrderFulfillment,
+  updateOrder,
+  updateOrderStatus,
+  moveOrderTable,
+  splitOrder,
 } from "../../api/orderApi";
 import { PosInvoiceReceipt } from "../../components/pos/PosInvoiceReceipt";
 import { printPosInvoiceReceipt } from "../../components/pos/printPosInvoiceReceipt";
@@ -230,9 +239,36 @@ function variantCatalogName(product, variantId) {
   return v?.name || variantId || "";
 }
 
+function cartFromOrderItems(items) {
+  const list = Array.isArray(items) ? items : [];
+  return list.map((it, idx) => {
+    const unit = it?.priceAfterDiscount ?? it?.price ?? 0;
+    const base = it?.price ?? unit;
+    const hasDiscount = base != null && unit < base;
+    const label = it?.variantName ? ` — ${it.variantName}` : "";
+    const name = `${it?.productName || "Sản phẩm"}${label}`;
+    const productId = it?.productId || "";
+    const variantId = it?.variantId || null;
+    return {
+      lineKey: variantId ? `${productId}__${variantId}` : `${productId}__${idx}`,
+      productId,
+      variantId,
+      productName: name,
+      originalPrice: base,
+      price: unit,
+      hasDiscount,
+      promoLabel: it?.promotionDiscountLabel || null,
+      quantity: it?.quantity ?? 0,
+      trackInventory: null,
+      maxStock: null,
+    };
+  });
+}
+
 function createEmptyTab(id) {
   return {
     id,
+    orderId: null,
     cart: [],
     tableId: "",
     note: "",
@@ -336,6 +372,16 @@ const CartPanel = ({
   taxPreview,
   taxPreviewLoading,
   showTableSelect,
+  onHoldOrder,
+  onSendKitchen,
+  holdDisabled,
+  sendKitchenDisabled,
+  onOpenGroupDialog,
+  onOpenSplitDialog,
+  splitDisabled,
+  activeGroup,
+  tables,
+  onQuickSwitchTable,
 }) => (
   <>
     {!hideHeader && (
@@ -434,24 +480,72 @@ const CartPanel = ({
       )}
 
       {showTableSelect && (
-        <Select
-          value={selectedTableId || "none"}
-          onValueChange={setSelectedTableId}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Chọn bàn (tuỳ chọn)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none" className="text-xs">
-              Không chọn bàn
-            </SelectItem>
-            {availableTables.map((t) => (
-              <SelectItem key={t.id} value={t.id} className="text-xs">
-                {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+        <div className="space-y-2">
+          <Select
+            value={selectedTableId || "none"}
+            onValueChange={setSelectedTableId}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Chọn bàn (tuỳ chọn)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none" className="text-xs">
+                Không chọn bàn
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              {availableTables.map((t) => (
+                <SelectItem key={t.id} value={t.id} className="text-xs">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate">
+                      {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+                    </span>
+                    {activeGroup?.tableIds?.includes?.(t.id) ? (
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        {activeGroup.name ? activeGroup.name : "Nhóm"}
+                      </span>
+                    ) : null}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {activeGroup?.tableIds?.length > 1 && (
+            <div className="flex flex-wrap gap-1">
+              {activeGroup.tableIds
+                .filter((id) => id && id !== selectedTableId)
+                .map((id) => (
+                  <Button
+                    key={id}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={() => onQuickSwitchTable(id)}
+                  >
+                    {tables.find((t) => t.id === id)?.name || id}
+                  </Button>
+                ))}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={onOpenGroupDialog}
+            >
+              Ghép bàn
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={onOpenSplitDialog}
+              disabled={splitDisabled}
+            >
+              Tách món
+            </Button>
+          </div>
+        </div>
       )}
     </div>
 
@@ -586,6 +680,26 @@ const CartPanel = ({
       {cart.length > 0 && (
         <PosTaxBreakdown loading={taxPreviewLoading} taxPreview={taxPreview} />
       )}
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="secondary"
+          className="h-10 text-xs font-semibold"
+          disabled={holdDisabled}
+          onClick={onHoldOrder}
+        >
+          <Receipt className="h-4 w-4 mr-2" />
+          Treo / Lưu
+        </Button>
+        <Button
+          variant="outline"
+          className="h-10 text-xs font-semibold"
+          disabled={sendKitchenDisabled}
+          onClick={onSendKitchen}
+        >
+          <UtensilsCrossed className="h-4 w-4 mr-2" />
+          Gửi bếp
+        </Button>
+      </div>
       <Button
         className="w-full h-11 text-sm font-semibold"
         disabled={cart.length === 0}
@@ -638,6 +752,23 @@ const PosPage = () => {
   const [customerResults, setCustomerResults] = useState([]);
   const [customerSearching, setCustomerSearching] = useState(false);
 
+  const [tableGroups, setTableGroups] = useState([]);
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  const [groupSelectedIds, setGroupSelectedIds] = useState([]);
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [splitToTableId, setSplitToTableId] = useState("none");
+  const [splitQtyByLineKey, setSplitQtyByLineKey] = useState({});
+
+  const tableGroupByTableId = useMemo(() => {
+    const map = new Map();
+    (tableGroups || []).forEach((g) => {
+      (g.tableIds || []).forEach((tid) => {
+        if (tid) map.set(tid, g);
+      });
+    });
+    return map;
+  }, [tableGroups]);
+
   const activeTab = orderTabs.find((t) => t.id === activeTabId) || orderTabs[0];
   const cart = useMemo(() => activeTab?.cart || [], [activeTab]);
   const cartRef = React.useRef(cart);
@@ -648,6 +779,12 @@ const PosPage = () => {
   const note = activeTab?.note || "";
   const selectedCustomer = activeTab?.customer || null;
   const pointsToRedeem = activeTab?.pointsToRedeem || 0;
+  const activeOrderId = activeTab?.orderId || null;
+
+  const activeGroup = useMemo(() => {
+    if (!selectedTableId || selectedTableId === "none") return null;
+    return tableGroupByTableId.get(selectedTableId) || null;
+  }, [selectedTableId, tableGroupByTableId]);
 
   const updateActiveTab = useCallback(
     (updates) => {
@@ -675,8 +812,22 @@ const PosPage = () => {
   );
 
   const setSelectedTableId = useCallback(
-    (v) => updateActiveTab({ tableId: v }),
-    [updateActiveTab],
+    async (v) => {
+      // When order already exists on server, change table via API to keep currentOrderId consistent.
+      if (activeOrderId && v && v !== "none" && v !== selectedTableId) {
+        try {
+          await moveOrderTable(activeOrderId, selectedShopId, v);
+          updateActiveTab({ tableId: v });
+          toast.success("Đã đổi bàn.");
+          return;
+        } catch (err) {
+          toast.error(err.response?.data?.message || "Không thể đổi bàn.");
+          return;
+        }
+      }
+      updateActiveTab({ tableId: v });
+    },
+    [activeOrderId, selectedShopId, selectedTableId, updateActiveTab],
   );
   const setNote = useCallback(
     (v) => updateActiveTab({ note: v }),
@@ -731,6 +882,48 @@ const PosPage = () => {
   const effectiveBranchId =
     selectedBranchId || (branches.length === 1 ? branches[0]?.id : null);
 
+  // Resume open order by table (multi-device)
+  useEffect(() => {
+    if (!selectedShopId) return;
+    if (!selectedTableId || selectedTableId === "none") return;
+    if (!effectiveBranchId) return;
+
+    let alive = true;
+    (async () => {
+      try {
+        const res = await getCurrentOrderByTable(selectedShopId, selectedTableId);
+        const order = res.data?.data;
+        if (!alive) return;
+        if (!order?.id) return;
+        // If already loaded, skip
+        if (activeOrderId && activeOrderId === order.id) return;
+
+        updateActiveTab({
+          orderId: order.id,
+          cart: cartFromOrderItems(order.items),
+          note: order.note || "",
+          customer: order.customerId
+            ? { id: order.customerId, name: order.customerName, phone: order.customerPhone }
+            : null,
+          pointsToRedeem: order.pointsRedeemed ?? 0,
+        });
+        toast.info("Đã tải đơn đang mở của bàn.");
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [
+    selectedShopId,
+    selectedTableId,
+    effectiveBranchId,
+    activeOrderId,
+    updateActiveTab,
+  ]);
+
   const fetchData = useCallback(async () => {
     if (!selectedShopId || !effectiveBranchId) return;
     setLoading(true);
@@ -765,6 +958,255 @@ const PosPage = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const fetchGroups = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    try {
+      const res = await getTableGroups(selectedShopId, effectiveBranchId);
+      setTableGroups(res.data?.data || []);
+    } catch {
+      setTableGroups([]);
+    }
+  }, [selectedShopId, effectiveBranchId]);
+
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
+
+  const handleCreateGroup = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (!Array.isArray(groupSelectedIds) || groupSelectedIds.length < 2) {
+      toast.error("Chọn ít nhất 2 bàn để ghép.");
+      return;
+    }
+    try {
+      await createTableGroup(selectedShopId, effectiveBranchId, {
+        shopId: selectedShopId,
+        branchId: effectiveBranchId,
+        tableIds: groupSelectedIds,
+      });
+      toast.success("Đã ghép bàn.");
+      setGroupDialogOpen(false);
+      setGroupSelectedIds([]);
+      fetchGroups();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Không thể ghép bàn.");
+    }
+  }, [selectedShopId, effectiveBranchId, groupSelectedIds, fetchGroups]);
+
+  const handleUngroup = useCallback(
+    async (groupId) => {
+      if (!selectedShopId || !effectiveBranchId) return;
+      try {
+        await deleteTableGroup(groupId, selectedShopId, effectiveBranchId);
+        toast.success("Đã giải nhóm bàn.");
+        fetchGroups();
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Không thể giải nhóm.");
+      }
+    },
+    [selectedShopId, effectiveBranchId, fetchGroups],
+  );
+
+  const handleSplit = useCallback(async () => {
+    if (!selectedShopId || !activeOrderId) return;
+    const itemsToMove = cart
+      .map((it) => {
+        const q = Number(splitQtyByLineKey[it.lineKey] ?? 0);
+        if (!q || q <= 0) return null;
+        return {
+          productId: it.productId,
+          ...(it.variantId ? { variantId: it.variantId } : {}),
+          quantity: q,
+        };
+      })
+      .filter(Boolean);
+    if (itemsToMove.length === 0) {
+      toast.error("Chọn số lượng món cần tách.");
+      return;
+    }
+    try {
+      const payload = {
+        toTableId:
+          splitToTableId && splitToTableId !== "none" ? splitToTableId : null,
+        itemsToMove,
+      };
+      const res = await splitOrder(activeOrderId, selectedShopId, payload);
+      const data = res.data?.data;
+      const src = data?.source;
+      updateActiveTab({
+        orderId: src?.id || activeOrderId,
+        cart: cartFromOrderItems(src?.items),
+        note: src?.note || "",
+        tableId: src?.tableId || selectedTableId,
+      });
+      toast.success("Đã tách món sang đơn mới.");
+      setSplitDialogOpen(false);
+      setSplitToTableId("none");
+      setSplitQtyByLineKey({});
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Không thể tách món.");
+    }
+  }, [
+    selectedShopId,
+    activeOrderId,
+    cart,
+    splitQtyByLineKey,
+    splitToTableId,
+    updateActiveTab,
+    selectedTableId,
+    fetchData,
+  ]);
+
+  const creatingOrderRef = React.useRef(false);
+
+  // Auto-create server order when table selected + first items appear
+  useEffect(() => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (activeOrderId) return;
+    if (creatingOrderRef.current) return;
+    if (!selectedTableId || selectedTableId === "none") return;
+    if (!Array.isArray(cart) || cart.length === 0) return;
+
+    creatingOrderRef.current = true;
+    (async () => {
+      try {
+        const orderData = {
+          shopId: selectedShopId,
+          branchId: effectiveBranchId,
+          tableId: selectedTableId,
+          note: note || null,
+          customerId: selectedCustomer?.id || null,
+          pointsToRedeem:
+            selectedCustomer && pointsToRedeem > 0 ? pointsToRedeem : null,
+          items: cart.map((item) => ({
+            productId: item.productId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            quantity: item.quantity,
+          })),
+        };
+        const res = await createOrder(selectedShopId, effectiveBranchId, orderData);
+        const created = res.data?.data;
+        if (created?.id) {
+          updateActiveTab({ orderId: created.id });
+        }
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Không thể tạo đơn đang mở.");
+      } finally {
+        creatingOrderRef.current = false;
+      }
+    })();
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    activeOrderId,
+    selectedTableId,
+    cart,
+    note,
+    selectedCustomer,
+    pointsToRedeem,
+    updateActiveTab,
+  ]);
+
+  const syncTimerRef = React.useRef(null);
+
+  // Debounced sync updates for open server order (edit items before payment)
+  useEffect(() => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (!activeOrderId) return;
+
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(async () => {
+      try {
+        const payload = {
+          tableId:
+            selectedTableId && selectedTableId !== "none" ? selectedTableId : null,
+          note: note || null,
+          items: cart.map((item) => ({
+            productId: item.productId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            quantity: item.quantity,
+          })),
+        };
+        await updateOrder(activeOrderId, selectedShopId, payload);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Không thể cập nhật đơn.");
+      }
+    }, 650);
+
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, [activeOrderId, selectedShopId, effectiveBranchId, selectedTableId, note, cart]);
+
+  const handleHoldOrder = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (!Array.isArray(cart) || cart.length === 0) return;
+
+    try {
+      if (!activeOrderId) {
+        const orderData = {
+          shopId: selectedShopId,
+          branchId: effectiveBranchId,
+          tableId:
+            selectedTableId && selectedTableId !== "none" ? selectedTableId : null,
+          note: note || null,
+          customerId: selectedCustomer?.id || null,
+          pointsToRedeem:
+            selectedCustomer && pointsToRedeem > 0 ? pointsToRedeem : null,
+          items: cart.map((item) => ({
+            productId: item.productId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            quantity: item.quantity,
+          })),
+        };
+        const res = await createOrder(selectedShopId, effectiveBranchId, orderData);
+        const created = res.data?.data;
+        if (created?.id) {
+          updateActiveTab({ orderId: created.id });
+          toast.success("Đã lưu đơn (đang mở).");
+        }
+        return;
+      }
+
+      // Force immediate sync
+      const payload = {
+        tableId:
+          selectedTableId && selectedTableId !== "none" ? selectedTableId : null,
+        note: note || null,
+        items: cart.map((item) => ({
+          productId: item.productId,
+          ...(item.variantId ? { variantId: item.variantId } : {}),
+          quantity: item.quantity,
+        })),
+      };
+      await updateOrder(activeOrderId, selectedShopId, payload);
+      toast.success("Đã lưu thay đổi đơn.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Không thể lưu đơn.");
+    }
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    cart,
+    activeOrderId,
+    selectedTableId,
+    note,
+    selectedCustomer,
+    pointsToRedeem,
+    updateActiveTab,
+  ]);
+
+  const handleSendKitchen = useCallback(async () => {
+    if (!selectedShopId || !activeOrderId) return;
+    try {
+      await updateOrderStatus(activeOrderId, selectedShopId, "CONFIRMED");
+      toast.success("Đã gửi bếp (xác nhận đơn).");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Không thể gửi bếp.");
+    }
+  }, [selectedShopId, activeOrderId]);
 
   const customerSearchTimer = React.useRef(null);
   const handleCustomerSearch = useCallback(
@@ -846,6 +1288,70 @@ const PosPage = () => {
     () => tables.filter((t) => t.status === "AVAILABLE"),
     [tables],
   );
+
+  // Auto-load other tables in the same group (preload open orders into tabs)
+  const loadedGroupRef = React.useRef("");
+  useEffect(() => {
+    if (!selectedShopId) return;
+    if (!effectiveBranchId) return;
+    if (!activeGroup?.id) return;
+    if (!selectedTableId || selectedTableId === "none") return;
+    const key = `${activeGroup.id}__${selectedTableId}__${activeTabId}`;
+    if (loadedGroupRef.current === key) return;
+    loadedGroupRef.current = key;
+
+    const otherTableIds = (activeGroup.tableIds || []).filter(
+      (id) => id && id !== selectedTableId,
+    );
+    if (otherTableIds.length === 0) return;
+
+    let alive = true;
+    (async () => {
+      for (const tid of otherTableIds) {
+        if (!alive) return;
+        try {
+          const res = await getCurrentOrderByTable(selectedShopId, tid);
+          const order = res.data?.data;
+          if (!order?.id) continue;
+          const exists = orderTabs.some((t) => t.orderId === order.id);
+          if (exists) continue;
+
+          const newTabId = nextTabIdRef.current++;
+          setOrderTabs((prev) => [
+            ...prev,
+            {
+              ...createEmptyTab(newTabId),
+              orderId: order.id,
+              tableId: tid,
+              cart: cartFromOrderItems(order.items),
+              note: order.note || "",
+              customer: order.customerId
+                ? {
+                    id: order.customerId,
+                    name: order.customerName,
+                    phone: order.customerPhone,
+                  }
+                : null,
+              pointsToRedeem: order.pointsRedeemed ?? 0,
+            },
+          ]);
+        } catch {
+          // ignore per-table failure
+        }
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    activeGroup,
+    selectedTableId,
+    orderTabs,
+    activeTabId,
+  ]);
 
   const addToCart = useCallback(
     (product, variantId) => {
@@ -1281,6 +1787,23 @@ const PosPage = () => {
     taxPreview,
     taxPreviewLoading,
     showTableSelect: tables.length > 0,
+    onHoldOrder: handleHoldOrder,
+    onSendKitchen: handleSendKitchen,
+    holdDisabled: !effectiveBranchId || cart.length === 0 || submitting,
+    sendKitchenDisabled: !activeOrderId || cart.length === 0 || submitting,
+    onOpenGroupDialog: () => {
+      setGroupDialogOpen(true);
+      setGroupSelectedIds([]);
+    },
+    onOpenSplitDialog: () => {
+      setSplitDialogOpen(true);
+      setSplitToTableId("none");
+      setSplitQtyByLineKey({});
+    },
+    splitDisabled: !activeOrderId || cart.length === 0 || submitting,
+    activeGroup,
+    tables,
+    onQuickSwitchTable: (tid) => setSelectedTableId(tid),
   };
 
   return (
@@ -1944,6 +2467,154 @@ const PosPage = () => {
               )}
               Tạo khách & gắn đơn
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ghép bàn (TableGroup) */}
+      <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ghép bàn</DialogTitle>
+            <DialogDescription>
+              Ghép nhiều bàn thành một nhóm để dễ quản lý (không gộp đơn).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border p-2 max-h-64 overflow-y-auto">
+              {tables.map((t) => {
+                const checked = groupSelectedIds.includes(t.id);
+                return (
+                  <label
+                    key={t.id}
+                    className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-md cursor-pointer"
+                  >
+                    <span className="truncate">
+                      {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setGroupSelectedIds((prev) =>
+                          on ? [...prev, t.id] : prev.filter((x) => x !== t.id),
+                        );
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+
+            {tableGroups.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Nhóm hiện có</p>
+                <div className="space-y-2">
+                  {tableGroups.map((g) => (
+                    <div
+                      key={g.id}
+                      className="flex items-center justify-between gap-2 rounded-md border px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {g.name || `Nhóm ${g.id?.slice?.(-6) || ""}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {(g.tableIds || [])
+                            .map((id) => tables.find((t) => t.id === id)?.name || id)
+                            .join(", ")}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUngroup(g.id)}
+                      >
+                        Giải nhóm
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setGroupDialogOpen(false)}>
+              Đóng
+            </Button>
+            <Button onClick={handleCreateGroup}>Tạo nhóm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tách món sang đơn mới */}
+      <Dialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tách món</DialogTitle>
+            <DialogDescription>
+              Chọn số lượng cần tách sang đơn mới (có thể gắn bàn đích).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs">Bàn đích (tuỳ chọn)</Label>
+              <Select value={splitToTableId} onValueChange={setSplitToTableId}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Chọn bàn" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Không chọn bàn</SelectItem>
+                  {tables
+                    .filter((t) => t.id !== selectedTableId)
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-md border p-2 max-h-64 overflow-y-auto space-y-2">
+              {cart.map((it) => {
+                const max = it.quantity ?? 0;
+                const val = splitQtyByLineKey[it.lineKey] ?? "";
+                return (
+                  <div
+                    key={it.lineKey}
+                    className="flex items-center justify-between gap-2 px-2 py-1.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm truncate">{it.productName}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Tối đa: {max}
+                      </p>
+                    </div>
+                    <Input
+                      className="h-8 w-20 text-right"
+                      value={val}
+                      placeholder="0"
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const n = raw === "" ? "" : Math.max(0, Number(raw));
+                        setSplitQtyByLineKey((prev) => ({
+                          ...prev,
+                          [it.lineKey]: n === "" ? "" : Math.min(max, n),
+                        }));
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setSplitDialogOpen(false)}>
+              Đóng
+            </Button>
+            <Button onClick={handleSplit}>Tách</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

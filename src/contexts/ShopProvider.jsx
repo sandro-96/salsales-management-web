@@ -15,11 +15,32 @@ const ShopProvider = ({ children }) => {
   const [selectedBranchId, setSelectedBranchIdState] = useState(null);
   const [selectedBranch, setSelectedBranchState] = useState(null);
   const didInitRef = useRef(false);
+  const lastUserIdRef = useRef(null);
+
+  const storageKeys = useCallback(() => {
+    const userId = user?.id ? String(user.id) : null;
+    return {
+      userId,
+      shopIdKey: userId ? `selectedShopId:${userId}` : "selectedShopId",
+      branchIdKey: userId ? `selectedBranchId:${userId}` : "selectedBranchId",
+    };
+  }, [user?.id]);
+
+  const clearLegacyAndCurrentSelection = useCallback(() => {
+    // legacy shared keys
+    localStorage.removeItem("selectedShopId");
+    localStorage.removeItem("selectedBranchId");
+
+    const { shopIdKey, branchIdKey } = storageKeys();
+    localStorage.removeItem(shopIdKey);
+    localStorage.removeItem(branchIdKey);
+  }, [storageKeys]);
 
   const setSelectedShopId = useCallback(
     (id) => {
       setSelectedShopIdState(id);
-      localStorage.setItem("selectedShopId", id);
+      const { shopIdKey } = storageKeys();
+      localStorage.setItem(shopIdKey, id);
 
       const shop = shops.find((s) => s.id === id);
       if (shop) {
@@ -32,22 +53,24 @@ const ShopProvider = ({ children }) => {
         setSelectedIndustry(null);
       }
     },
-    [shops],
+    [shops, storageKeys],
   );
 
   const setSelectedBranchId = useCallback(
     (id) => {
       setSelectedBranchIdState(id);
       if (id) {
-        localStorage.setItem("selectedBranchId", id);
+        const { branchIdKey } = storageKeys();
+        localStorage.setItem(branchIdKey, id);
         const branch = branches.find((b) => b.id === id);
         setSelectedBranchState(branch ?? null);
       } else {
-        localStorage.removeItem("selectedBranchId");
+        const { branchIdKey } = storageKeys();
+        localStorage.removeItem(branchIdKey);
         setSelectedBranchState(null);
       }
     },
-    [branches],
+    [branches, storageKeys],
   );
 
   const setSelectedShop = useCallback(
@@ -61,8 +84,9 @@ const ShopProvider = ({ children }) => {
         setBranches([]);
         setSelectedBranchIdState(null);
         setSelectedBranchState(null);
-        localStorage.removeItem("selectedShopId");
-        localStorage.removeItem("selectedBranchId");
+        const { shopIdKey, branchIdKey } = storageKeys();
+        localStorage.removeItem(shopIdKey);
+        localStorage.removeItem(branchIdKey);
       } else {
         setSelectedShopIdState(shop.id);
         setSelectedShopState(shop);
@@ -72,11 +96,12 @@ const ShopProvider = ({ children }) => {
         // Reset branch when switching shops
         setSelectedBranchIdState(null);
         setSelectedBranchState(null);
-        localStorage.removeItem("selectedBranchId");
-        localStorage.setItem("selectedShopId", shop.id);
+        const { shopIdKey, branchIdKey } = storageKeys();
+        localStorage.removeItem(branchIdKey);
+        localStorage.setItem(shopIdKey, shop.id);
       }
     },
-    [selectedShopId],
+    [selectedShopId, storageKeys],
   );
 
   const fetchShops = useCallback(async (preferredShopId) => {
@@ -85,7 +110,8 @@ const ShopProvider = ({ children }) => {
       const shopList = res.data.data.content;
       setShops(shopList);
 
-      const fromStorage = localStorage.getItem("selectedShopId");
+      const { shopIdKey } = storageKeys();
+      const fromStorage = localStorage.getItem(shopIdKey);
       const targetId =
         typeof preferredShopId === "string" &&
         preferredShopId &&
@@ -99,7 +125,7 @@ const ShopProvider = ({ children }) => {
         setSelectedShopState(validSavedShop);
         setSelectedRole(validSavedShop.role);
         setSelectedIndustry(validSavedShop.industry);
-        localStorage.setItem("selectedShopId", validSavedShop.id);
+        localStorage.setItem(shopIdKey, validSavedShop.id);
       } else {
         if (shopList.length > 0 && !selectedShopId) {
           const firstShop = shopList[0];
@@ -107,7 +133,7 @@ const ShopProvider = ({ children }) => {
           setSelectedShopState(firstShop);
           setSelectedRole(firstShop.role);
           setSelectedIndustry(firstShop.industry);
-          localStorage.setItem("selectedShopId", firstShop.id);
+          localStorage.setItem(shopIdKey, firstShop.id);
           console.log(
             "Cửa hàng đã chọn không hợp lệ, chuyển sang cửa hàng đầu tiên.",
           );
@@ -116,7 +142,7 @@ const ShopProvider = ({ children }) => {
           setSelectedShopState(null);
           setSelectedRole(null);
           setSelectedIndustry(null);
-          localStorage.removeItem("selectedShopId");
+          localStorage.removeItem(shopIdKey);
           console.log("Người dùng không có cửa hàng nào.");
         }
       }
@@ -126,7 +152,7 @@ const ShopProvider = ({ children }) => {
     } finally {
       setIsShopContextReady(true);
     }
-  }, [selectedShopId]);
+  }, [selectedShopId, storageKeys]);
 
   const fetchBranches = useCallback(
     async (shopIdParam) => {
@@ -141,7 +167,8 @@ const ShopProvider = ({ children }) => {
         setBranches(list);
 
         // Restore saved branch selection for this shop
-        const savedBranchId = localStorage.getItem("selectedBranchId");
+        const { branchIdKey } = storageKeys();
+        const savedBranchId = localStorage.getItem(branchIdKey);
         const validBranch = list.find((b) => b.id === savedBranchId);
         if (validBranch) {
           setSelectedBranchIdState(savedBranchId);
@@ -150,7 +177,7 @@ const ShopProvider = ({ children }) => {
           // Auto-select if only one branch
           setSelectedBranchIdState(list[0].id);
           setSelectedBranchState(list[0]);
-          localStorage.setItem("selectedBranchId", list[0].id);
+          localStorage.setItem(branchIdKey, list[0].id);
         } else {
           setSelectedBranchIdState(null);
           setSelectedBranchState(null);
@@ -160,15 +187,33 @@ const ShopProvider = ({ children }) => {
         setBranches([]);
       }
     },
-    [selectedShopId],
+    [selectedShopId, storageKeys],
   );
 
   useEffect(() => {
     if (!isUserContextReady) return;
 
+    // If user changes (login another account), force reset & refetch
+    const currentUserId = user?.id ? String(user.id) : null;
+    if (currentUserId && lastUserIdRef.current && lastUserIdRef.current !== currentUserId) {
+      didInitRef.current = false;
+      clearLegacyAndCurrentSelection();
+      setIsShopContextReady(false);
+      setShops([]);
+      setSelectedShopIdState(null);
+      setSelectedShopState(null);
+      setSelectedRole(null);
+      setSelectedIndustry(null);
+      setBranches([]);
+      setSelectedBranchIdState(null);
+      setSelectedBranchState(null);
+    }
+    lastUserIdRef.current = currentUserId;
+
     // Reset when user logs out / context clears
     if (!user) {
       didInitRef.current = false;
+      lastUserIdRef.current = null;
       setShops([]);
       setSelectedShopIdState(null);
       setSelectedShopState(null);
@@ -187,7 +232,7 @@ const ShopProvider = ({ children }) => {
 
     fetchShops();
     fetchEnums();
-  }, [isUserContextReady, user, fetchShops, fetchEnums]);
+  }, [isUserContextReady, user, fetchShops, fetchEnums, clearLegacyAndCurrentSelection]);
 
   // Tự động load branches khi selectedShopId thay đổi
   useEffect(() => {

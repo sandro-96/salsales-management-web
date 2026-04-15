@@ -16,6 +16,7 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("selectedShopId");
+    localStorage.removeItem("selectedBranchId");
     setUser(null);
     navigate("/login");
   }, [navigate]);

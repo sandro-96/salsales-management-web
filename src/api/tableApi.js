@@ -10,6 +10,13 @@ export const getTables = (shopId, branchId, params = {}) =>
   });
 
 /**
+ * 📌 Lấy đơn hiện tại của bàn (nếu có)
+ * GET /api/shops/{shopId}/tables/{tableId}/current-order
+ */
+export const getCurrentOrderByTable = (shopId, tableId) =>
+  axiosInstance.get(`shops/${shopId}/tables/${tableId}/current-order`);
+
+/**
  * ➕ Tạo bàn mới (OWNER only)
  * POST /api/tables
  */
