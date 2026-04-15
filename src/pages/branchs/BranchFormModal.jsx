@@ -8,13 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import BranchForm from "./BranchForm.jsx";
 import axiosInstance from "../../api/axiosInstance.js";
-import { useShop } from "@/hooks/useShop.js";
-import { ALERT_TYPES } from "@/constants/alertTypes.js";
 
 export default function BranchFormModal() {
   const navigate = useNavigate();
-  const { selectedShopId } = useShop();
-  const shopId = selectedShopId;
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (formData) => {

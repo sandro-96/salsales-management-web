@@ -203,7 +203,7 @@ export default function BranchForm({
               <FormField
                 control={form.control}
                 name="countryCode"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Quốc gia</FormLabel>
                     <FormControl>

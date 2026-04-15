@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useShop } from "../../hooks/useShop.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import axiosInstance from "../../api/axiosInstance";
@@ -85,13 +85,7 @@ const ShopSettingsPage = () => {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
 
-  useEffect(() => {
-    if (selectedShop) {
-      resetForm();
-    }
-  }, [selectedShop]);
-
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     if (!selectedShop) return;
     setName(selectedShop.name || "");
     setType(selectedShop.type || "");
@@ -103,7 +97,13 @@ const ShopSettingsPage = () => {
     setActive(selectedShop.active !== false);
     setLogoFile(null);
     setLogoPreview(null);
-  };
+  }, [selectedShop]);
+
+  useEffect(() => {
+    if (selectedShop) {
+      resetForm();
+    }
+  }, [selectedShop, resetForm]);
 
   const cancelEdit = () => {
     setIsEditMode(false);

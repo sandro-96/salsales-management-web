@@ -1,5 +1,5 @@
 // src/contexts/AuthProvider.jsx
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import axiosInstance from "../api/axiosInstance";
@@ -12,16 +12,24 @@ const AuthProvider = ({ children }) => {
   const [enums, setEnums] = useState(null);
   const [isUserContextReady, setIsUserContextReady] = useState(false);
 
-  const fetchEnums = async () => {
+  const logout = useCallback(() => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("selectedShopId");
+    setUser(null);
+    navigate("/login");
+  }, [navigate]);
+
+  const fetchEnums = useCallback(async () => {
     try {
       const res = await axiosInstance.get("/enums/all");
       setEnums(res.data.data);
     } catch (err) {
       console.error("Lỗi khi tải enums:", err);
     }
-  };
+  }, []);
 
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
       setUser(null);
@@ -49,17 +57,9 @@ const AuthProvider = ({ children }) => {
     } finally {
       setIsUserContextReady(true);
     }
-  };
+  }, [logout]);
 
-  const logout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("selectedShopId");
-    setUser(null);
-    navigate("/login");
-  };
-
-  const refreshToken = async () => {
+  const refreshToken = useCallback(async () => {
     const refreshToken = localStorage.getItem("refreshToken");
     if (!refreshToken) return logout();
 
@@ -72,11 +72,11 @@ const AuthProvider = ({ children }) => {
     } catch {
       logout();
     }
-  };
+  }, [loadUser, logout]);
 
   useEffect(() => {
     loadUser();
-  }, []);
+  }, [loadUser]);
 
   return (
     <AuthContext.Provider

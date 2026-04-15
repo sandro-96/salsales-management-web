@@ -1,7 +1,7 @@
 // src/components/common/Alert.jsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, Info, AlertTriangle, XCircle } from "lucide-react";
 
 const alertStyles = {
@@ -50,13 +50,13 @@ const Alert = ({
   return (
     <AnimatePresence>
       {variant === "modal" ? (
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
         >
-          <motion.div
+          <Motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
@@ -95,10 +95,10 @@ const Alert = ({
                 </button>
               )}
             </div>
-          </motion.div>
-        </motion.div>
+          </Motion.div>
+        </Motion.div>
       ) : (
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 50 }}
@@ -142,7 +142,7 @@ const Alert = ({
               ))}
             </div>
           )}
-        </motion.div>
+        </Motion.div>
       )}
     </AnimatePresence>
   );

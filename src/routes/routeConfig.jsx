@@ -1,5 +1,4 @@
 // src/routes/routeConfig.jsx
-import path from "path";
 import { lazy } from "react";
 const BranchPage = lazy(() => import("../pages/branchs/BranchPage.jsx"));
 const BranchSettingsPage = lazy(
@@ -19,6 +18,7 @@ const DynamicDashboardLayout = lazy(
   () => import("../layouts/DynamicDashboardLayout"),
 );
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
+const UnauthorizedPage = lazy(() => import("../pages/UnauthorizedPage"));
 const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));
 const TaxPolicyPage = lazy(() => import("../pages/shops/TaxPolicyPage"));
 const OverviewPage = lazy(() => import("../pages/OverviewPage"));
@@ -86,6 +86,12 @@ export const routeConfig = [
     roles: ["ROLE_ADMIN"],
     title: "Trang quản trị",
     breadcrumb: "Quản trị",
+  },
+  {
+    path: "/unauthorized",
+    element: <UnauthorizedPage />,
+    title: "Không có quyền truy cập",
+    breadcrumb: "Không có quyền",
   },
   {
     path: "/",

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
   CalendarIcon,
@@ -80,7 +80,6 @@ export default function PromotionFormModal({
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productKeyword, setProductKeyword] = useState("");
-  const debounceRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;

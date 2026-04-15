@@ -8,6 +8,11 @@ const GoogleSignInButton = ({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const initializedRef = useRef(false);
+  const callbackRef = useRef(callback);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
 
   const label =
     text === "signin_with" ? "Sign in with Google" : "Sign up with Google";
@@ -27,7 +32,7 @@ const GoogleSignInButton = ({
         client_id: clientId,
         callback: (response) => {
           setLoading(false);
-          callback(response);
+          callbackRef.current?.(response);
         },
         cancel_on_tap_outside: true,
       });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -47,7 +47,7 @@ const CATEGORY_MAP = {
   OTHER: "Khác",
 };
 
-export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId, isManager, currentUserId, onUpdated }) {
+export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId, isManager, onUpdated }) {
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -55,17 +55,8 @@ export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId
   const [statusUpdating, setStatusUpdating] = useState(false);
   const messagesEndRef = useRef(null);
 
-  useEffect(() => {
-    if (open && ticketId) {
-      fetchTicket();
-    }
-  }, [open, ticketId]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [ticket?.replies]);
-
-  const fetchTicket = async () => {
+  const fetchTicket = useCallback(async () => {
+    if (!shopId || !ticketId) return;
     setLoading(true);
     try {
       const res = await getTicket(shopId, ticketId);
@@ -78,7 +69,17 @@ export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId
     } finally {
       setLoading(false);
     }
-  };
+  }, [shopId, ticketId]);
+
+  useEffect(() => {
+    if (open && ticketId) {
+      fetchTicket();
+    }
+  }, [open, ticketId, fetchTicket]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [ticket?.replies]);
 
   const handleReply = async () => {
     if (!replyText.trim()) return;

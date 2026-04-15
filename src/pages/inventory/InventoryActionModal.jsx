@@ -83,9 +83,9 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
   const [submitting, setSubmitting] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState("");
 
-  const branchVariantList = product?.branchVariants?.length
-    ? product.branchVariants
-    : [];
+  const branchVariantList = useMemo(() => {
+    return product?.branchVariants?.length ? product.branchVariants : [];
+  }, [product?.branchVariants]);
 
   useEffect(() => {
     if (open) {
@@ -94,7 +94,7 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
       const pre = product?.__preselectVariantId;
       const canPre =
         pre &&
-        (product?.branchVariants || []).some((v) => v.variantId === pre);
+        branchVariantList.some((v) => v.variantId === pre);
       if (canPre) {
         setSelectedVariantId(pre);
       } else if (product?.branchVariants?.length === 1) {
@@ -103,7 +103,7 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
         setSelectedVariantId("");
       }
     }
-  }, [open, actionType, product?.id, product?.__preselectVariantId]);
+  }, [open, actionType, product?.__preselectVariantId, branchVariantList, product?.branchVariants]);
 
   const effectiveVariantId = useMemo(() => {
     if (branchVariantList.length === 0) return "";

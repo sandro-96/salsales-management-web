@@ -52,7 +52,6 @@ const ProductImportExportDialog = ({
   const [isExporting, setIsExporting] = useState(false);
 
   /* ── Import state ─────────────────────────────────────────────────────── */
-  const [importBranchId, setImportBranchId] = useState("");
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef(null);

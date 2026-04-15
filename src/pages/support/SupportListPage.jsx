@@ -74,7 +74,7 @@ const formatDate = (d) => {
 };
 
 const SupportListPage = () => {
-  const { selectedShopId, isOwner, isStaff, shopRole } = useShop();
+  const { selectedShopId, isOwner, shopRole } = useShop();
   const shopId = selectedShopId;
   const isManager = isOwner || shopRole === "MANAGER" || shopRole === "ADMIN";
   const { confirm } = useAlertDialog();
@@ -125,7 +125,7 @@ const SupportListPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [shopId, pagination, sorting, statusFilter, categoryFilter, keyword, viewMode, isManager]);
+  }, [shopId, pagination, statusFilter, categoryFilter, keyword, viewMode, isManager]);
 
   useEffect(() => {
     fetchTickets();

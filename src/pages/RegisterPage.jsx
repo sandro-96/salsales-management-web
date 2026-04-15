@@ -153,7 +153,7 @@ const RegisterPage = () => {
         return () => {
             if (typeof unsubscribe === "function") unsubscribe();
         };
-    }, [connected, form.email, navigate]);
+    }, [connected, form.email, navigate, subscribe]);
 
     return (
         <div className="min-h-screen flex justify-center p-6">

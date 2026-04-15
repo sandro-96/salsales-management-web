@@ -125,7 +125,7 @@ const ShopProvider = ({ children }) => {
     } finally {
       setIsShopContextReady(true);
     }
-  }, []);
+  }, [selectedShop]);
 
   const fetchBranches = useCallback(
     async (shopIdParam) => {
@@ -167,7 +167,7 @@ const ShopProvider = ({ children }) => {
       fetchShops();
       fetchEnums();
     }
-  }, [isUserContextReady, user, fetchShops]);
+  }, [isUserContextReady, user, fetchShops, fetchEnums]);
 
   // Tự động load branches khi selectedShopId thay đổi
   useEffect(() => {
