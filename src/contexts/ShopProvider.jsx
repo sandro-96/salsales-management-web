@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { ShopContext } from "./ShopContext";
 import { useAuth } from "../hooks/useAuth.js";
@@ -14,6 +14,7 @@ const ShopProvider = ({ children }) => {
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchIdState] = useState(null);
   const [selectedBranch, setSelectedBranchState] = useState(null);
+  const didInitRef = useRef(false);
 
   const setSelectedShopId = useCallback(
     (id) => {
@@ -100,7 +101,7 @@ const ShopProvider = ({ children }) => {
         setSelectedIndustry(validSavedShop.industry);
         localStorage.setItem("selectedShopId", validSavedShop.id);
       } else {
-        if (shopList.length > 0 && !selectedShop) {
+        if (shopList.length > 0 && !selectedShopId) {
           const firstShop = shopList[0];
           setSelectedShopIdState(firstShop.id);
           setSelectedShopState(firstShop);
@@ -125,7 +126,7 @@ const ShopProvider = ({ children }) => {
     } finally {
       setIsShopContextReady(true);
     }
-  }, [selectedShop]);
+  }, [selectedShopId]);
 
   const fetchBranches = useCallback(
     async (shopIdParam) => {
@@ -163,10 +164,29 @@ const ShopProvider = ({ children }) => {
   );
 
   useEffect(() => {
-    if (isUserContextReady && user) {
-      fetchShops();
-      fetchEnums();
+    if (!isUserContextReady) return;
+
+    // Reset when user logs out / context clears
+    if (!user) {
+      didInitRef.current = false;
+      setShops([]);
+      setSelectedShopIdState(null);
+      setSelectedShopState(null);
+      setSelectedRole(null);
+      setSelectedIndustry(null);
+      setBranches([]);
+      setSelectedBranchIdState(null);
+      setSelectedBranchState(null);
+      setIsShopContextReady(false);
+      return;
     }
+
+    // Prevent repeated fetching (StrictMode + re-renders)
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+
+    fetchShops();
+    fetchEnums();
   }, [isUserContextReady, user, fetchShops, fetchEnums]);
 
   // Tự động load branches khi selectedShopId thay đổi
