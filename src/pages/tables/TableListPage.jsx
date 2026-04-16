@@ -14,6 +14,7 @@ import {
   Warehouse,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
@@ -106,6 +107,7 @@ const TableFormDialog = ({
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState("");
   const [note, setNote] = useState("");
+  const [alwaysAvailable, setAlwaysAvailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -114,10 +116,12 @@ const TableFormDialog = ({
         setName(editTable.name || "");
         setCapacity(editTable.capacity ? String(editTable.capacity) : "");
         setNote(editTable.note || "");
+        setAlwaysAvailable(!!editTable.alwaysAvailable);
       } else {
         setName("");
         setCapacity("");
         setNote("");
+        setAlwaysAvailable(false);
       }
     }
   }, [open, editTable]);
@@ -135,6 +139,7 @@ const TableFormDialog = ({
         branchId,
         capacity: capacity ? Number(capacity) : null,
         note: note.trim() || null,
+        alwaysAvailable,
       };
       if (isEdit) {
         data.status = editTable.status;
@@ -197,6 +202,26 @@ const TableFormDialog = ({
               rows={2}
             />
           </div>
+
+          <label className="flex items-start gap-2 rounded-md border p-3 cursor-pointer hover:bg-muted/40">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={alwaysAvailable}
+              onChange={(e) => setAlwaysAvailable(e.target.checked)}
+            />
+            <div className="space-y-1">
+              <p className="text-sm font-medium leading-none">
+                Bàn luôn trống (không chuyển sang “Đang phục vụ”)
+              </p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                Dùng cho các “bàn ảo” như{" "}
+                <span className="font-medium">Mang đi</span>: trạng thái bàn
+                luôn hiển thị trống, không gắn một đơn lên bàn — có thể có nhiều
+                đơn mở cùng lúc (POS quản lý theo tab/đơn).
+              </p>
+            </div>
+          </label>
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
@@ -221,13 +246,31 @@ const TableCard = ({
   onEdit,
   onDelete,
   onStatusChange,
+  onOpenPos,
 }) => {
   const cfg = TABLE_STATUSES[table.status] || TABLE_STATUSES.AVAILABLE;
   const isOccupied = table.status === "OCCUPIED";
+  const isAlwaysAvailable = !!table.alwaysAvailable;
+  const isClosed = table.status === "CLOSED";
 
   return (
     <Card
-      className={`relative py-0 gap-0 transition-shadow hover:shadow-md ${isOccupied ? "ring-2 " + cfg.ring : ""}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        if (isClosed) return;
+        onOpenPos?.(table);
+      }}
+      onKeyDown={(e) => {
+        if (isClosed) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenPos?.(table);
+        }
+      }}
+      className={`relative py-0 gap-0 transition-shadow hover:shadow-md cursor-pointer ${
+        isClosed ? "opacity-80 cursor-not-allowed" : ""
+      } ${isOccupied ? "ring-2 " + cfg.ring : ""}`}
     >
       <CardContent className="p-4 flex flex-col gap-3">
         <div className="flex items-start justify-between">
@@ -246,10 +289,17 @@ const TableCard = ({
               )}
             </div>
           </div>
-          {canManage && (
+          {canManage && !isOccupied && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0 shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 shrink-0"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -295,8 +345,15 @@ const TableCard = ({
         </div>
 
         <div className="flex items-center justify-between">
-          <TableStatusBadge status={table.status} />
-          {table.currentOrderId && (
+          <div className="flex items-center gap-2 min-w-0">
+            <TableStatusBadge status={table.status} />
+            {isAlwaysAvailable && (
+              <Badge className="text-[10px] bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100">
+                Luôn trống
+              </Badge>
+            )}
+          </div>
+          {!isAlwaysAvailable && table.currentOrderId && (
             <span className="text-[10px] font-mono text-muted-foreground">
               #{table.currentOrderId.slice(-6)}
             </span>
@@ -314,6 +371,7 @@ const TableCard = ({
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 const TableListPage = () => {
+  const navigate = useNavigate();
   const {
     selectedShopId,
     selectedBranchId,
@@ -610,6 +668,10 @@ const TableListPage = () => {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onStatusChange={handleStatusChange}
+                    onOpenPos={(t) => {
+                      // Go straight to POS to take orders for this table.
+                      navigate(`/pos?tableId=${encodeURIComponent(t.id)}`);
+                    }}
                   />
                 ))}
               </div>

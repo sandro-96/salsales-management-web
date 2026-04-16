@@ -7,6 +7,7 @@ import {
   CreditCard,
   Banknote,
   ArrowRightLeft,
+  CheckCircle2,
   Loader2,
   UtensilsCrossed,
   X,
@@ -21,6 +22,7 @@ import {
   Truck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useShop } from "../../hooks/useShop";
 import { getBranchProducts } from "../../api/productApi";
@@ -37,9 +39,9 @@ import {
   previewOrderTax,
   patchOrderFulfillment,
   updateOrder,
-  updateOrderStatus,
   moveOrderTable,
   splitOrder,
+  mergeTableGroupOrders,
 } from "../../api/orderApi";
 import { PosInvoiceReceipt } from "../../components/pos/PosInvoiceReceipt";
 import { printPosInvoiceReceipt } from "../../components/pos/printPosInvoiceReceipt";
@@ -250,7 +252,9 @@ function cartFromOrderItems(items) {
     const productId = it?.productId || "";
     const variantId = it?.variantId || null;
     return {
-      lineKey: variantId ? `${productId}__${variantId}` : `${productId}__${idx}`,
+      lineKey: variantId
+        ? `${productId}__${variantId}`
+        : `${productId}__${idx}`,
       productId,
       variantId,
       productName: name,
@@ -373,12 +377,15 @@ const CartPanel = ({
   taxPreviewLoading,
   showTableSelect,
   onHoldOrder,
-  onSendKitchen,
   holdDisabled,
-  sendKitchenDisabled,
+  canMoveTable,
+  onOpenMoveTableDialog,
   onOpenGroupDialog,
   onOpenSplitDialog,
   splitDisabled,
+  onMergeGroupBills,
+  mergeGroupDisabled,
+  mergeGroupBusy,
   activeGroup,
   tables,
   onQuickSwitchTable,
@@ -493,21 +500,79 @@ const CartPanel = ({
                 Không chọn bàn
               </SelectItem>
               {availableTables.map((t) => (
-                <SelectItem key={t.id} value={t.id} className="text-xs">
-                  <span className="flex items-center justify-between gap-2">
+                <SelectItem
+                  key={t.id}
+                  value={t.id}
+                  disabled={t.status === "CLOSED"}
+                  className={[
+                    "text-xs rounded-sm my-0.5",
+                    t.alwaysAvailable &&
+                      t.status !== "CLOSED" &&
+                      "bg-sky-50 text-sky-900 focus:bg-sky-100",
+                    !t.alwaysAvailable &&
+                      t.status === "AVAILABLE" &&
+                      "bg-emerald-50 text-emerald-900 focus:bg-emerald-100",
+                    !t.alwaysAvailable &&
+                      t.status === "OCCUPIED" &&
+                      "bg-amber-50 text-amber-950 focus:bg-amber-100",
+                    t.status === "CLOSED" &&
+                      "bg-slate-100 text-slate-500 line-through opacity-80",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <span className="flex items-center justify-between gap-2 w-full">
                     <span className="truncate">
                       {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
                     </span>
-                    {activeGroup?.tableIds?.includes?.(t.id) ? (
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {activeGroup.name ? activeGroup.name : "Nhóm"}
+                    <span className="flex items-center gap-1 shrink-0">
+                      <span
+                        className={[
+                          "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                          t.alwaysAvailable &&
+                            t.status !== "CLOSED" &&
+                            "bg-sky-100 text-sky-900",
+                          !t.alwaysAvailable &&
+                            t.status === "AVAILABLE" &&
+                            "bg-emerald-100 text-emerald-800",
+                          !t.alwaysAvailable &&
+                            t.status === "OCCUPIED" &&
+                            "bg-amber-100 text-amber-900",
+                          t.status === "CLOSED" &&
+                            "bg-slate-200 text-slate-700",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {t.status === "CLOSED"
+                          ? "Đóng"
+                          : t.alwaysAvailable
+                            ? "Luôn trống"
+                            : t.status === "AVAILABLE"
+                              ? "Trống"
+                              : "Đang phục vụ"}
                       </span>
-                    ) : null}
+                      {activeGroup?.tableIds?.includes?.(t.id) ? (
+                        <span className="text-[10px] text-muted-foreground">
+                          {activeGroup.name ? activeGroup.name : "Nhóm"}
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {canMoveTable && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 text-xs w-full"
+              onClick={onOpenMoveTableDialog}
+            >
+              Đổi bàn
+            </Button>
+          )}
           {activeGroup?.tableIds?.length > 1 && (
             <div className="flex flex-wrap gap-1">
               {activeGroup.tableIds
@@ -525,6 +590,30 @@ const CartPanel = ({
                   </Button>
                 ))}
             </div>
+          )}
+          {activeGroup?.tableIds?.length > 1 && (
+            <p className="text-[10px] text-muted-foreground leading-snug">
+              Ghép bàn giúp mở nhanh các đơn theo từng bàn trong nhóm. Mặc định
+              vẫn thanh toán <span className="font-medium">theo từng đơn</span>{" "}
+              (chọn tab/bàn → <span className="font-medium">Thanh toán</span>).
+              Nếu muốn 1 hoá đơn chung, dùng{" "}
+              <span className="font-medium">Gộp bill nhóm</span> (đơn khác sẽ bị
+              huỷ).
+            </p>
+          )}
+          {activeGroup?.tableIds?.length > 1 && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-8 text-xs w-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-800"
+              disabled={mergeGroupDisabled || mergeGroupBusy}
+              onClick={onMergeGroupBills}
+            >
+              {mergeGroupBusy && (
+                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              )}
+              Gộp bill nhóm
+            </Button>
           )}
           <div className="grid grid-cols-2 gap-2">
             <Button
@@ -683,14 +772,14 @@ const CartPanel = ({
       <div className="grid grid-cols-2 gap-2">
         <Button
           variant="secondary"
-          className="h-10 text-xs font-semibold"
+          className="h-10 text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 disabled:bg-amber-200 disabled:text-amber-800"
           disabled={holdDisabled}
           onClick={onHoldOrder}
         >
           <Receipt className="h-4 w-4 mr-2" />
           Treo / Lưu
         </Button>
-        <Button
+        {/* <Button
           variant="outline"
           className="h-10 text-xs font-semibold"
           disabled={sendKitchenDisabled}
@@ -698,10 +787,10 @@ const CartPanel = ({
         >
           <UtensilsCrossed className="h-4 w-4 mr-2" />
           Gửi bếp
-        </Button>
+        </Button> */}
       </div>
       <Button
-        className="w-full h-11 text-sm font-semibold"
+        className="w-full h-11 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-200 disabled:text-emerald-900"
         disabled={cart.length === 0}
         onClick={onCheckout}
       >
@@ -713,6 +802,8 @@ const CartPanel = ({
 );
 
 const PosPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     selectedShopId,
     selectedBranchId,
@@ -731,11 +822,20 @@ const PosPage = () => {
 
   const [orderTabs, setOrderTabs] = useState([createEmptyTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
+  const activeTabIdRef = React.useRef(activeTabId);
   const nextTabIdRef = React.useRef(2);
+
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [submitting, setSubmitting] = useState(false);
+  const [holdSuccessOpen, setHoldSuccessOpen] = useState(false);
+  const [holdSuccessMessage, setHoldSuccessMessage] = useState("");
+  const [moveTableOpen, setMoveTableOpen] = useState(false);
+  const [moveToTableId, setMoveToTableId] = useState("none");
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [invoicePayload, setInvoicePayload] = useState(null);
   const [invoicePreviewOpen, setInvoicePreviewOpen] = useState(false);
@@ -758,6 +858,7 @@ const PosPage = () => {
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
   const [splitToTableId, setSplitToTableId] = useState("none");
   const [splitQtyByLineKey, setSplitQtyByLineKey] = useState({});
+  const [mergeGroupSubmitting, setMergeGroupSubmitting] = useState(false);
 
   const tableGroupByTableId = useMemo(() => {
     const map = new Map();
@@ -786,48 +887,66 @@ const PosPage = () => {
     return tableGroupByTableId.get(selectedTableId) || null;
   }, [selectedTableId, tableGroupByTableId]);
 
-  const updateActiveTab = useCallback(
-    (updates) => {
-      setOrderTabs((prev) =>
-        prev.map((tab) =>
-          tab.id === activeTabId ? { ...tab, ...updates } : tab,
-        ),
-      );
-    },
-    [activeTabId],
-  );
+  const updateActiveTab = useCallback((updates) => {
+    const aid = activeTabIdRef.current;
+    setOrderTabs((prev) =>
+      prev.map((tab) => (tab.id === aid ? { ...tab, ...updates } : tab)),
+    );
+  }, []);
 
-  const setCart = useCallback(
-    (updater) => {
-      setOrderTabs((prev) =>
-        prev.map((tab) => {
-          if (tab.id !== activeTabId) return tab;
-          const newCart =
-            typeof updater === "function" ? updater(tab.cart) : updater;
-          return { ...tab, cart: newCart };
-        }),
-      );
+  const setCart = useCallback((updater) => {
+    const aid = activeTabIdRef.current;
+    setOrderTabs((prev) =>
+      prev.map((tab) => {
+        if (tab.id !== aid) return tab;
+        const newCart =
+          typeof updater === "function" ? updater(tab.cart) : updater;
+        return { ...tab, cart: newCart };
+      }),
+    );
+  }, []);
+
+  const activateTableTab = useCallback(
+    (tableId) => {
+      if (!tableId || tableId === "none") {
+        updateActiveTab({ tableId });
+        return;
+      }
+
+      let nextActiveId = null;
+      setOrderTabs((prev) => {
+        const existing = prev.find((t) => t.tableId === tableId);
+        if (existing) {
+          nextActiveId = existing.id;
+          return prev;
+        }
+        const id = nextTabIdRef.current++;
+        const nextTab = { ...createEmptyTab(id), tableId };
+        nextActiveId = nextTab.id;
+        return [...prev, nextTab];
+      });
+
+      if (nextActiveId != null) {
+        activeTabIdRef.current = nextActiveId;
+        setActiveTabId(nextActiveId);
+        setCustomerResults([]);
+      }
     },
-    [activeTabId],
+    [updateActiveTab],
   );
 
   const setSelectedTableId = useCallback(
     async (v) => {
-      // When order already exists on server, change table via API to keep currentOrderId consistent.
-      if (activeOrderId && v && v !== "none" && v !== selectedTableId) {
-        try {
-          await moveOrderTable(activeOrderId, selectedShopId, v);
-          updateActiveTab({ tableId: v });
-          toast.success("Đã đổi bàn.");
-          return;
-        } catch (err) {
-          toast.error(err.response?.data?.message || "Không thể đổi bàn.");
-          return;
-        }
+      if (!v || v === "none") {
+        updateActiveTab({ tableId: v });
+        return;
       }
-      updateActiveTab({ tableId: v });
+
+      // Selecting another table should open/switch to an order tab for that table,
+      // not move the currently loaded order.
+      activateTableTab(v);
     },
-    [activeOrderId, selectedShopId, selectedTableId, updateActiveTab],
+    [activateTableTab, updateActiveTab],
   );
   const setNote = useCallback(
     (v) => updateActiveTab({ note: v }),
@@ -844,6 +963,7 @@ const PosPage = () => {
 
   const addTab = useCallback(() => {
     const id = nextTabIdRef.current++;
+    activeTabIdRef.current = id;
     setOrderTabs((prev) => [...prev, createEmptyTab(id)]);
     setActiveTabId(id);
     setCustomerResults([]);
@@ -852,6 +972,7 @@ const PosPage = () => {
   const switchTab = useCallback(
     (tabId) => {
       if (tabId !== activeTabId) {
+        activeTabIdRef.current = tabId;
         setActiveTabId(tabId);
         setCustomerResults([]);
       }
@@ -871,6 +992,7 @@ const PosPage = () => {
         if (tabId === activeTabId) {
           const idx = prev.findIndex((t) => t.id === tabId);
           const next = filtered[Math.min(idx, filtered.length - 1)];
+          activeTabIdRef.current = next.id;
           setActiveTabId(next.id);
         }
         return filtered;
@@ -882,6 +1004,34 @@ const PosPage = () => {
   const effectiveBranchId =
     selectedBranchId || (branches.length === 1 ? branches[0]?.id : null);
 
+  const groupOrderTabs = useMemo(() => {
+    if (!activeGroup?.tableIds?.length) return [];
+    const set = new Set((activeGroup.tableIds || []).filter(Boolean));
+    return orderTabs.filter(
+      (t) => t.tableId && t.tableId !== "none" && set.has(t.tableId),
+    );
+  }, [activeGroup, orderTabs]);
+
+  const mergeGroupBillDisabled = useMemo(() => {
+    if (!selectedShopId) return true;
+    if (!effectiveBranchId) return true;
+    if (!activeGroup?.id) return true;
+    if (groupOrderTabs.length < 2) return true;
+    if (!groupOrderTabs.every((t) => !!t.orderId)) return true;
+    if (!activeOrderId) return true;
+    const targetTab = groupOrderTabs.find((t) => t.id === activeTabId);
+    if (!targetTab?.orderId) return true;
+    const ids = new Set(groupOrderTabs.map((t) => t.orderId));
+    return ids.size < 2;
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    activeGroup,
+    groupOrderTabs,
+    activeOrderId,
+    activeTabId,
+  ]);
+
   // Resume open order by table (multi-device)
   useEffect(() => {
     if (!selectedShopId) return;
@@ -891,7 +1041,10 @@ const PosPage = () => {
     let alive = true;
     (async () => {
       try {
-        const res = await getCurrentOrderByTable(selectedShopId, selectedTableId);
+        const res = await getCurrentOrderByTable(
+          selectedShopId,
+          selectedTableId,
+        );
         const order = res.data?.data;
         if (!alive) return;
         if (!order?.id) return;
@@ -903,7 +1056,11 @@ const PosPage = () => {
           cart: cartFromOrderItems(order.items),
           note: order.note || "",
           customer: order.customerId
-            ? { id: order.customerId, name: order.customerName, phone: order.customerPhone }
+            ? {
+                id: order.customerId,
+                name: order.customerName,
+                phone: order.customerPhone,
+              }
             : null,
           pointsToRedeem: order.pointsRedeemed ?? 0,
         });
@@ -1008,6 +1165,92 @@ const PosPage = () => {
     [selectedShopId, effectiveBranchId, fetchGroups],
   );
 
+  const handleMergeGroupBills = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (mergeGroupSubmitting) return;
+
+    const targetOrderId = activeOrderId;
+    const sourceOrderIds = Array.from(
+      new Set(groupOrderTabs.map((t) => t.orderId).filter(Boolean)),
+    );
+    if (!targetOrderId || sourceOrderIds.length < 2) return;
+    if (!sourceOrderIds.includes(targetOrderId)) return;
+
+    const ok = window.confirm(
+      "Gộp bill nhóm: các đơn khác trong nhóm sẽ bị huỷ và toàn bộ món được gộp về đơn hiện tại. Bạn chắc chắn?",
+    );
+    if (!ok) return;
+
+    setMergeGroupSubmitting(true);
+    try {
+      const res = await mergeTableGroupOrders(selectedShopId, {
+        targetOrderId,
+        sourceOrderIds,
+      });
+      const merged = res.data?.data;
+      if (!merged?.id) {
+        throw new Error("MISSING_MERGED_ORDER");
+      }
+
+      const cancelledIds = sourceOrderIds.filter((id) => id !== merged.id);
+
+      let nextActiveId = activeTabId;
+      setOrderTabs((prev) => {
+        const kept = prev.filter(
+          (t) => !t.orderId || !cancelledIds.includes(t.orderId),
+        );
+        const nextTabs = kept.length > 0 ? kept : [createEmptyTab(1)];
+
+        const existsActive = nextTabs.some((t) => t.id === activeTabId);
+        if (!existsActive) {
+          const preferred =
+            nextTabs.find((t) => t.orderId === merged.id) || nextTabs[0];
+          nextActiveId = preferred.id;
+        }
+
+        return nextTabs.map((t) => {
+          if (t.orderId !== merged.id) return t;
+          return {
+            ...t,
+            orderId: merged.id,
+            cart: cartFromOrderItems(merged.items),
+            note: merged.note || "",
+            tableId: merged.tableId || t.tableId,
+            customer: merged.customerId
+              ? {
+                  id: merged.customerId,
+                  name: merged.customerName,
+                  phone: merged.customerPhone,
+                }
+              : null,
+            pointsToRedeem: merged.pointsRedeemed ?? 0,
+          };
+        });
+      });
+
+      activeTabIdRef.current = nextActiveId;
+      setActiveTabId(nextActiveId);
+      setCustomerResults([]);
+
+      toast.success("Đã gộp bill nhóm.");
+      fetchData();
+      fetchGroups();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Không thể gộp bill nhóm.");
+    } finally {
+      setMergeGroupSubmitting(false);
+    }
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    mergeGroupSubmitting,
+    activeOrderId,
+    groupOrderTabs,
+    activeTabId,
+    fetchData,
+    fetchGroups,
+  ]);
+
   const handleSplit = useCallback(async () => {
     if (!selectedShopId || !activeOrderId) return;
     const itemsToMove = cart
@@ -1059,56 +1302,6 @@ const PosPage = () => {
     fetchData,
   ]);
 
-  const creatingOrderRef = React.useRef(false);
-
-  // Auto-create server order when table selected + first items appear
-  useEffect(() => {
-    if (!selectedShopId || !effectiveBranchId) return;
-    if (activeOrderId) return;
-    if (creatingOrderRef.current) return;
-    if (!selectedTableId || selectedTableId === "none") return;
-    if (!Array.isArray(cart) || cart.length === 0) return;
-
-    creatingOrderRef.current = true;
-    (async () => {
-      try {
-        const orderData = {
-          shopId: selectedShopId,
-          branchId: effectiveBranchId,
-          tableId: selectedTableId,
-          note: note || null,
-          customerId: selectedCustomer?.id || null,
-          pointsToRedeem:
-            selectedCustomer && pointsToRedeem > 0 ? pointsToRedeem : null,
-          items: cart.map((item) => ({
-            productId: item.productId,
-            ...(item.variantId ? { variantId: item.variantId } : {}),
-            quantity: item.quantity,
-          })),
-        };
-        const res = await createOrder(selectedShopId, effectiveBranchId, orderData);
-        const created = res.data?.data;
-        if (created?.id) {
-          updateActiveTab({ orderId: created.id });
-        }
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Không thể tạo đơn đang mở.");
-      } finally {
-        creatingOrderRef.current = false;
-      }
-    })();
-  }, [
-    selectedShopId,
-    effectiveBranchId,
-    activeOrderId,
-    selectedTableId,
-    cart,
-    note,
-    selectedCustomer,
-    pointsToRedeem,
-    updateActiveTab,
-  ]);
-
   const syncTimerRef = React.useRef(null);
 
   // Debounced sync updates for open server order (edit items before payment)
@@ -1121,7 +1314,9 @@ const PosPage = () => {
       try {
         const payload = {
           tableId:
-            selectedTableId && selectedTableId !== "none" ? selectedTableId : null,
+            selectedTableId && selectedTableId !== "none"
+              ? selectedTableId
+              : null,
           note: note || null,
           items: cart.map((item) => ({
             productId: item.productId,
@@ -1138,7 +1333,14 @@ const PosPage = () => {
     return () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     };
-  }, [activeOrderId, selectedShopId, effectiveBranchId, selectedTableId, note, cart]);
+  }, [
+    activeOrderId,
+    selectedShopId,
+    effectiveBranchId,
+    selectedTableId,
+    note,
+    cart,
+  ]);
 
   const handleHoldOrder = useCallback(async () => {
     if (!selectedShopId || !effectiveBranchId) return;
@@ -1150,7 +1352,9 @@ const PosPage = () => {
           shopId: selectedShopId,
           branchId: effectiveBranchId,
           tableId:
-            selectedTableId && selectedTableId !== "none" ? selectedTableId : null,
+            selectedTableId && selectedTableId !== "none"
+              ? selectedTableId
+              : null,
           note: note || null,
           customerId: selectedCustomer?.id || null,
           pointsToRedeem:
@@ -1161,11 +1365,22 @@ const PosPage = () => {
             quantity: item.quantity,
           })),
         };
-        const res = await createOrder(selectedShopId, effectiveBranchId, orderData);
+        const res = await createOrder(
+          selectedShopId,
+          effectiveBranchId,
+          orderData,
+        );
         const created = res.data?.data;
         if (created?.id) {
+          fetchData();
+          // After creating a new order, keep current data to continue selling on this order.
           updateActiveTab({ orderId: created.id });
-          toast.success("Đã lưu đơn (đang mở).");
+          setHoldSuccessMessage(
+            created?.orderCode
+              ? `Đã tạo đơn ${created.orderCode} thành công.`
+              : "Đã tạo đơn thành công.",
+          );
+          setHoldSuccessOpen(true);
         }
         return;
       }
@@ -1173,7 +1388,9 @@ const PosPage = () => {
       // Force immediate sync
       const payload = {
         tableId:
-          selectedTableId && selectedTableId !== "none" ? selectedTableId : null,
+          selectedTableId && selectedTableId !== "none"
+            ? selectedTableId
+            : null,
         note: note || null,
         items: cart.map((item) => ({
           productId: item.productId,
@@ -1196,17 +1413,8 @@ const PosPage = () => {
     selectedCustomer,
     pointsToRedeem,
     updateActiveTab,
+    fetchData,
   ]);
-
-  const handleSendKitchen = useCallback(async () => {
-    if (!selectedShopId || !activeOrderId) return;
-    try {
-      await updateOrderStatus(activeOrderId, selectedShopId, "CONFIRMED");
-      toast.success("Đã gửi bếp (xác nhận đơn).");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Không thể gửi bếp.");
-    }
-  }, [selectedShopId, activeOrderId]);
 
   const customerSearchTimer = React.useRef(null);
   const handleCustomerSearch = useCallback(
@@ -1284,10 +1492,24 @@ const PosPage = () => {
     });
   }, [products, selectedCategory, searchTerm]);
 
-  const availableTables = useMemo(
-    () => tables.filter((t) => t.status === "AVAILABLE"),
-    [tables],
-  );
+  const availableTables = useMemo(() => {
+    const list = Array.isArray(tables) ? [...tables] : [];
+    const rank = (s) => {
+      if (s === "AVAILABLE") return 0;
+      if (s === "OCCUPIED") return 1;
+      if (s === "CLOSED") return 2;
+      return 3;
+    };
+    list.sort((a, b) => {
+      const ra = rank(a.status);
+      const rb = rank(b.status);
+      if (ra !== rb) return ra - rb;
+      const an = (a.name || "").toLowerCase();
+      const bn = (b.name || "").toLowerCase();
+      return an.localeCompare(bn, "vi");
+    });
+    return list;
+  }, [tables]);
 
   // Auto-load other tables in the same group (preload open orders into tabs)
   const loadedGroupRef = React.useRef("");
@@ -1477,6 +1699,27 @@ const PosPage = () => {
     setCustomerResults([]);
   }, [updateActiveTab]);
 
+  const handleConfirmMoveTable = useCallback(async () => {
+    if (!selectedShopId || !activeOrderId) return;
+    if (!moveToTableId || moveToTableId === "none") return;
+    try {
+      await moveOrderTable(activeOrderId, selectedShopId, moveToTableId);
+      updateActiveTab({ tableId: moveToTableId });
+      toast.success("Đã đổi bàn.");
+      fetchData();
+      setMoveTableOpen(false);
+      setMoveToTableId("none");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Không thể đổi bàn.");
+    }
+  }, [
+    selectedShopId,
+    activeOrderId,
+    moveToTableId,
+    updateActiveTab,
+    fetchData,
+  ]);
+
   const subtotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cart],
@@ -1629,6 +1872,29 @@ const PosPage = () => {
     postSalePhone,
   ]);
 
+  const lastTableParamRef = React.useRef("");
+  const prevSearchRef = React.useRef(location.search || "");
+
+  // Deeplink: /pos?tableId=... — switch/create the correct tab, then strip the query
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search || "");
+    const tid = sp.get("tableId");
+    const prevSearch = prevSearchRef.current;
+    prevSearchRef.current = location.search || "";
+
+    if (!tid) {
+      lastTableParamRef.current = "";
+      return;
+    }
+
+    const searchChanged = prevSearch !== (location.search || "");
+    if (tid === lastTableParamRef.current && !searchChanged) return;
+
+    activateTableTab(tid);
+    lastTableParamRef.current = tid;
+    navigate("/pos", { replace: true });
+  }, [location.search, activateTableTab, navigate]);
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setSubmitting(true);
@@ -1708,9 +1974,22 @@ const PosPage = () => {
       if (orderTabs.length > 1) {
         closeTab(activeTabId);
       } else {
-        clearCart();
+        // Giữ bàn trên tab sau thanh toán; nhóm bàn được server cập nhật (fetchGroups bên dưới).
+        updateActiveTab({
+          orderId: null,
+          cart: [],
+          note: "",
+          customer: null,
+          pointsToRedeem: 0,
+          tableId:
+            selectedTableId && selectedTableId !== "none"
+              ? selectedTableId
+              : "",
+        });
+        setCustomerResults([]);
       }
       fetchData();
+      fetchGroups();
 
       if (hadNoCustomer && finalOrder?.id) {
         setPostSaleOrderId(finalOrder.id);
@@ -1788,9 +2067,13 @@ const PosPage = () => {
     taxPreviewLoading,
     showTableSelect: tables.length > 0,
     onHoldOrder: handleHoldOrder,
-    onSendKitchen: handleSendKitchen,
     holdDisabled: !effectiveBranchId || cart.length === 0 || submitting,
-    sendKitchenDisabled: !activeOrderId || cart.length === 0 || submitting,
+    canMoveTable:
+      !!activeOrderId && !!selectedTableId && selectedTableId !== "none",
+    onOpenMoveTableDialog: () => {
+      setMoveToTableId("none");
+      setMoveTableOpen(true);
+    },
     onOpenGroupDialog: () => {
       setGroupDialogOpen(true);
       setGroupSelectedIds([]);
@@ -1801,6 +2084,9 @@ const PosPage = () => {
       setSplitQtyByLineKey({});
     },
     splitDisabled: !activeOrderId || cart.length === 0 || submitting,
+    onMergeGroupBills: handleMergeGroupBills,
+    mergeGroupDisabled: mergeGroupBillDisabled,
+    mergeGroupBusy: mergeGroupSubmitting,
     activeGroup,
     tables,
     onQuickSwitchTable: (tid) => setSelectedTableId(tid),
@@ -1932,7 +2218,7 @@ const PosPage = () => {
                 return (
                   <Card
                     key={product.id}
-                    className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all overflow-hidden relative group"
+                    className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all overflow-hidden relative group h-full flex flex-col gap-0 p-0 py-0 shadow-sm"
                     onClick={() => {
                       if (hasBranchVariants(product)) {
                         if (product.branchVariants.length === 1) {
@@ -1948,12 +2234,12 @@ const PosPage = () => {
                       }
                     }}
                   >
-                    <div className="aspect-square bg-muted/50 relative">
+                    <div className="aspect-square w-full shrink-0 bg-muted/50 relative overflow-hidden">
                       {product.images?.[0] ? (
                         <img
                           src={product.images[0]}
                           alt={product.name}
-                          className="w-full h-full object-cover"
+                          className="h-full w-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -1972,12 +2258,12 @@ const PosPage = () => {
                         </Badge>
                       )}
                     </div>
-                    <div className="p-2">
-                      <p className="text-xs font-medium leading-tight line-clamp-2">
+                    <div className="flex flex-1 flex-col gap-1 p-2 pt-2">
+                      <p className="line-clamp-2 min-h-[2.625rem] text-xs font-medium leading-snug text-foreground">
                         {product.name}
                       </p>
                       {hasPromo ? (
-                        <div className="flex items-baseline gap-1.5 mt-1">
+                        <div className="mt-auto flex items-baseline gap-1.5">
                           <span className="text-sm font-bold text-emerald-600">
                             {discountedPrice.toLocaleString("vi-VN")} ₫
                           </span>
@@ -1986,7 +2272,7 @@ const PosPage = () => {
                           </span>
                         </div>
                       ) : (
-                        <p className="text-sm font-bold text-primary mt-1">
+                        <p className="mt-auto text-sm font-bold text-primary">
                           {product.price?.toLocaleString("vi-VN")} ₫
                         </p>
                       )}
@@ -2057,6 +2343,100 @@ const PosPage = () => {
           />
         </SheetContent>
       </Sheet>
+
+      {/* Hold/Save success dialog */}
+      <Dialog open={holdSuccessOpen} onOpenChange={setHoldSuccessOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 text-emerald-700">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+              Tạo đơn thành công
+            </DialogTitle>
+            <DialogDescription>
+              {holdSuccessMessage || "Đã tạo đơn thành công."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setHoldSuccessOpen(false)}
+            >
+              Tiếp tục bán hàng
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                updateActiveTab({
+                  orderId: null,
+                  cart: [],
+                  tableId: "",
+                  note: "",
+                  customer: null,
+                  pointsToRedeem: 0,
+                });
+                setCustomerResults([]);
+                setHoldSuccessOpen(false);
+              }}
+            >
+              Tạo đơn mới
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move table dialog (explicit action) */}
+      <Dialog open={moveTableOpen} onOpenChange={setMoveTableOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Đổi bàn</DialogTitle>
+            <DialogDescription>
+              Chọn bàn đích để chuyển đơn hiện tại sang bàn khác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-xs">Bàn đích *</Label>
+            <Select value={moveToTableId} onValueChange={setMoveToTableId}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Chọn bàn" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Chọn bàn</SelectItem>
+                {tables
+                  .filter(
+                    (t) => t.status === "AVAILABLE" && t.id !== selectedTableId,
+                  )
+                  .map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setMoveTableOpen(false);
+                setMoveToTableId("none");
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmMoveTable}
+              disabled={!moveToTableId || moveToTableId === "none"}
+            >
+              Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Checkout dialog */}
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
@@ -2477,7 +2857,9 @@ const PosPage = () => {
           <DialogHeader>
             <DialogTitle>Ghép bàn</DialogTitle>
             <DialogDescription>
-              Ghép nhiều bàn thành một nhóm để dễ quản lý (không gộp đơn).
+              Ghép nhiều bàn thành một nhóm để quản lý nhanh trên POS. Gộp hoá
+              đơn chung (nếu cần) thực hiện ở nút{" "}
+              <span className="font-medium">Gộp bill nhóm</span> trong giỏ hàng.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -2522,7 +2904,10 @@ const PosPage = () => {
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
                           {(g.tableIds || [])
-                            .map((id) => tables.find((t) => t.id === id)?.name || id)
+                            .map(
+                              (id) =>
+                                tables.find((t) => t.id === id)?.name || id,
+                            )
                             .join(", ")}
                         </p>
                       </div>

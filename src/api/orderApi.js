@@ -89,3 +89,10 @@ export const moveOrderTable = (orderId, shopId, toTableId) =>
  */
 export const splitOrder = (orderId, shopId, payload) =>
   axiosInstance.post(`/orders/${orderId}/split`, payload, { params: { shopId } });
+
+/**
+ * Gộp bill theo nhóm bàn (server sẽ huỷ các đơn nguồn và cập nhật đơn đích)
+ * POST /api/orders/merge-table-group?shopId=
+ */
+export const mergeTableGroupOrders = (shopId, payload) =>
+  axiosInstance.post(`/orders/merge-table-group`, payload, { params: { shopId } });
