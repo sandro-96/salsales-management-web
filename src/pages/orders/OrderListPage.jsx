@@ -86,6 +86,11 @@ import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
 import CreateOrderModal from "./CreateOrderModal";
+import {
+  orderLineAttributesLabel,
+  orderLineToppings,
+  orderLineVariantLabel,
+} from "../../utils/orderItemDisplay.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -144,21 +149,6 @@ function orderHasCrmCustomerInfo(order) {
     order?.customerPhone?.trim() ||
     order?.customerId
   );
-}
-
-/** Biến thể: ưu tiên tên từ API; nếu chỉ có variantId vẫn hiển thị mã rút gọn. */
-function orderLineVariantLabel(item) {
-  const name = item?.variantName;
-  if (name && String(name).trim()) {
-    const t = String(name).trim();
-    if (t.startsWith("Biến thể")) return t;
-    return `Biến thể: ${t}`;
-  }
-  const vid = item?.variantId;
-  if (!vid || !String(vid).trim()) return null;
-  const id = String(vid).trim();
-  const short = id.length > 10 ? id.slice(-8).toUpperCase() : id;
-  return `Biến thể (mã): ${short}`;
 }
 
 /** Có dòng thuế / tổng thuế > 0 trên snapshot đơn. */
@@ -622,6 +612,10 @@ const OrderDetailDialog = ({
                     item.promotionDiscountLabel,
                   ].filter(Boolean);
                   const variantLabel = orderLineVariantLabel(item);
+                  const attrLabel = orderLineAttributesLabel(item);
+                  const tops = orderLineToppings(item);
+                  const showAttr =
+                    attrLabel && attrLabel !== (item.variantName || "").trim();
                   return (
                     <TableRow key={idx} className="align-top">
                       <TableCell className="text-sm max-w-[220px]">
@@ -633,10 +627,22 @@ const OrderDetailDialog = ({
                             {variantLabel}
                           </p>
                         )}
-                        {item.sku && (
-                          <p className="text-xs font-mono text-muted-foreground mt-0.5">
-                            SKU: {item.sku}
+                        {showAttr && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Thuộc tính: {attrLabel}
                           </p>
+                        )}
+                        {tops.length > 0 && (
+                          <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                            {tops.map((t, ti) => (
+                              <p key={t?.toppingId ?? ti}>
+                                + {t?.name || t?.toppingId}
+                                {Number(t?.extraPrice) > 0
+                                  ? ` (${Number(t.extraPrice).toLocaleString("vi-VN")} ₫)`
+                                  : ""}
+                              </p>
+                            ))}
+                          </div>
                         )}
                         {promoBits.length > 0 && (
                           <div className="mt-1.5 flex flex-wrap gap-1 items-center">
@@ -915,11 +921,11 @@ const OrderListPage = () => {
   const openInvoiceDialog = useCallback(
     (order) => {
       if (!order) return;
-      const branchName =
-        selectedBranch?.name ||
-        branches.find((b) => b.id === (order.branchId || effectiveBranchId))
-          ?.name ||
-        null;
+      const bid = order.branchId || effectiveBranchId;
+      const br =
+        (bid ? branches.find((b) => b.id === bid) : null) ||
+        (selectedBranch?.id === bid ? selectedBranch : null);
+      const branchName = br?.name || selectedBranch?.name || null;
       const tableName = order.tableId ? tableNameById.get(order.tableId) : null;
       const pmLabel =
         PAYMENT_METHODS.find((x) => x.value === order.paymentMethod)?.label ||
@@ -930,6 +936,8 @@ const OrderListPage = () => {
         shopAddress: selectedShop?.address || null,
         shopPhone: selectedShop?.phone || null,
         branchName,
+        branchWifiSsid: br?.wifiSsid || null,
+        branchWifiPassword: br?.wifiPassword || null,
         order,
         customerName: order.customerName || null,
         tableName,
@@ -1182,17 +1190,11 @@ const OrderListPage = () => {
           const items = row.original.items ?? [];
           if (items.length === 0)
             return <span className="text-muted-foreground">—</span>;
-          const variant0 = orderLineVariantLabel(items[0]);
           return (
             <div className="max-w-[200px]">
               <p className="text-sm font-medium truncate">
                 {items[0].productName}
               </p>
-              {variant0 && (
-                <p className="text-xs text-muted-foreground truncate">
-                  {variant0}
-                </p>
-              )}
               {items.length > 1 && (
                 <p className="text-xs text-muted-foreground">
                   +{items.length - 1} sản phẩm khác
@@ -1653,17 +1655,7 @@ const OrderListPage = () => {
           <ScrollArea className="flex-1 min-h-0 max-h-[55vh] px-6">
             <div className="pb-4">
               {invoicePayload?.order ? (
-                <PosInvoiceReceipt
-                  shopName={invoicePayload.shopName}
-                  shopAddress={invoicePayload.shopAddress}
-                  shopPhone={invoicePayload.shopPhone}
-                  branchName={invoicePayload.branchName}
-                  order={invoicePayload.order}
-                  customerName={invoicePayload.customerName}
-                  tableName={invoicePayload.tableName}
-                  paymentMethodLabel={invoicePayload.paymentMethodLabel}
-                  printedAt={invoicePayload.printedAt}
-                />
+                <PosInvoiceReceipt {...invoicePayload} />
               ) : null}
             </div>
           </ScrollArea>
@@ -1681,15 +1673,7 @@ const OrderListPage = () => {
               onClick={() => {
                 if (!invoicePayload?.order) return;
                 printPosInvoiceReceipt({
-                  shopName: invoicePayload.shopName,
-                  shopAddress: invoicePayload.shopAddress,
-                  shopPhone: invoicePayload.shopPhone,
-                  branchName: invoicePayload.branchName,
-                  order: invoicePayload.order,
-                  customerName: invoicePayload.customerName,
-                  tableName: invoicePayload.tableName,
-                  paymentMethodLabel: invoicePayload.paymentMethodLabel,
-                  printedAt: invoicePayload.printedAt,
+                  ...invoicePayload,
                   isDraft: false,
                 });
               }}

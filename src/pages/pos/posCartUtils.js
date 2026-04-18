@@ -5,15 +5,33 @@ export function cartFromOrderItems(items) {
     const base = it?.price ?? unit;
     const hasDiscount = base != null && unit < base;
     const label = it?.variantName ? ` — ${it.variantName}` : "";
-    const name = `${it?.productName || "Sản phẩm"}${label}`;
+    const tops = Array.isArray(it.toppings) ? it.toppings : [];
+    const toppingIds = tops
+      .map((t) => t?.toppingId)
+      .filter(Boolean)
+      .map((id) => String(id).trim())
+      .sort((a, b) => a.localeCompare(b));
+    const toppingLabel =
+      tops.length > 0
+        ? tops
+            .map((t) => t?.name || t?.toppingId)
+            .filter(Boolean)
+            .join(", ")
+        : "";
+    const nameExtra =
+      toppingLabel && tops.length > 0 ? ` + ${toppingLabel}` : "";
+    const name = `${it?.productName || "Sản phẩm"}${label}${nameExtra}`;
     const productId = it?.productId || "";
     const variantId = it?.variantId || null;
+    const tKey = toppingIds.length ? toppingIds.join(",") : "not";
+    const lineKey = variantId
+      ? `${productId}__${variantId}__t:${tKey}`
+      : `${productId}__t:${tKey}__i:${idx}`;
     return {
-      lineKey: variantId
-        ? `${productId}__${variantId}`
-        : `${productId}__${idx}`,
+      lineKey,
       productId,
       variantId,
+      toppingIds,
       productName: name,
       originalPrice: base,
       price: unit,

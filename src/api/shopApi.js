@@ -54,3 +54,13 @@ export const deleteShop = (shopId) => {
 export const getShopBySlug = (slug) => {
   return axiosInstance.get(`${SHOP_API}/by-slug/${slug}`);
 };
+
+/** Danh mục topping dùng chung của shop */
+export const getShopToppings = (shopId) => {
+  return axiosInstance.get(`${SHOP_API}/${shopId}/toppings`);
+};
+
+/** Thay toàn bộ danh mục topping shop */
+export const putShopToppings = (shopId, toppings) => {
+  return axiosInstance.put(`${SHOP_API}/${shopId}/toppings`, toppings);
+};

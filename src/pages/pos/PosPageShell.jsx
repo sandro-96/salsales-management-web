@@ -59,7 +59,56 @@ import {
   getBestPromo,
   calcDiscountedPrice,
 } from "./posPromotionUtils";
-import { hasBranchVariants, variantCatalogName } from "./posProductUtils";
+import {
+  activeToppings,
+  hasBranchVariants,
+  variantCatalogName,
+} from "./posProductUtils";
+
+function ToppingPickerBody({ product, onCancel, onConfirm }) {
+  const tops = activeToppings(product);
+  const [sel, setSel] = React.useState([]);
+  const toggle = (id) => {
+    setSel((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+  return (
+    <>
+      <div className="space-y-2 max-h-72 overflow-y-auto py-1">
+        {tops.map((t) => (
+          <label
+            key={t.toppingId}
+            className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-muted transition-colors"
+          >
+            <span className="flex items-center gap-2 min-w-0">
+              <input
+                type="checkbox"
+                className="h-4 w-4 shrink-0 accent-primary"
+                checked={sel.includes(t.toppingId)}
+                onChange={() => toggle(t.toppingId)}
+              />
+              <span className="font-medium truncate">{t.name}</span>
+            </span>
+            <span className="tabular-nums text-muted-foreground text-xs shrink-0">
+              +
+              {Number(t.extraPrice ?? 0).toLocaleString("vi-VN")}
+              ₫
+            </span>
+          </label>
+        ))}
+      </div>
+      <DialogFooter className="gap-2 sm:gap-0">
+        <Button variant="outline" type="button" onClick={onCancel}>
+          Bỏ qua
+        </Button>
+        <Button type="button" onClick={() => onConfirm(sel)}>
+          Thêm vào giỏ
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
 import { cn } from "@/lib/utils";
 
 export function PosPageShell(props) {
@@ -68,7 +117,9 @@ export function PosPageShell(props) {
   const {
     activePromotions,
     addToCart,
+    cancelToppingPicker,
     cart,
+    confirmToppingPickerSelection,
     cartOpen,
     cartPanelProps,
     categories,
@@ -106,6 +157,7 @@ export function PosPageShell(props) {
     postSaleSaving,
     previewPrintedAt,
     promoMap,
+    queueAddProductWithToppings,
     searchTerm,
     selectedCategory,
     selectedCustomer,
@@ -144,6 +196,7 @@ export function PosPageShell(props) {
     tables,
     taxPreview,
     taxPreviewLoading,
+    toppingPicker,
     totalAfterPoints,
     totalItems,
     totalSavings,
@@ -319,7 +372,7 @@ export function PosPageShell(props) {
                     onClick={() => {
                       if (hasBranchVariants(product)) {
                         if (product.branchVariants.length === 1) {
-                          addToCart(
+                          queueAddProductWithToppings(
                             product,
                             product.branchVariants[0].variantId,
                           );
@@ -327,7 +380,7 @@ export function PosPageShell(props) {
                           setVariantPickerProduct(product);
                         }
                       } else {
-                        addToCart(product, null);
+                        queueAddProductWithToppings(product, null);
                       }
                     }}
                   >
@@ -857,17 +910,7 @@ export function PosPageShell(props) {
           <ScrollArea className="flex-1 min-h-0 max-h-[55vh] px-6">
             <div className="pb-4">
               {invoicePayload?.order ? (
-                <PosInvoiceReceipt
-                  shopName={invoicePayload.shopName}
-                  shopAddress={invoicePayload.shopAddress}
-                  shopPhone={invoicePayload.shopPhone}
-                  branchName={invoicePayload.branchName}
-                  order={invoicePayload.order}
-                  customerName={invoicePayload.customerName}
-                  tableName={invoicePayload.tableName}
-                  paymentMethodLabel={invoicePayload.paymentMethodLabel}
-                  printedAt={invoicePayload.printedAt}
-                />
+                <PosInvoiceReceipt {...invoicePayload} />
               ) : null}
             </div>
           </ScrollArea>
@@ -885,15 +928,7 @@ export function PosPageShell(props) {
               onClick={() => {
                 if (!invoicePayload?.order) return;
                 printPosInvoiceReceipt({
-                  shopName: invoicePayload.shopName,
-                  shopAddress: invoicePayload.shopAddress,
-                  shopPhone: invoicePayload.shopPhone,
-                  branchName: invoicePayload.branchName,
-                  order: invoicePayload.order,
-                  customerName: invoicePayload.customerName,
-                  tableName: invoicePayload.tableName,
-                  paymentMethodLabel: invoicePayload.paymentMethodLabel,
-                  printedAt: invoicePayload.printedAt,
+                  ...invoicePayload,
                   isDraft: false,
                 });
               }}
@@ -1154,7 +1189,10 @@ export function PosPageShell(props) {
                   type="button"
                   className="w-full flex items-center justify-between gap-2 rounded-md border px-3 py-2.5 text-left text-sm hover:bg-muted transition-colors"
                   onClick={() => {
-                    addToCart(variantPickerProduct, bv.variantId);
+                    queueAddProductWithToppings(
+                      variantPickerProduct,
+                      bv.variantId,
+                    );
                     setVariantPickerProduct(null);
                   }}
                 >
@@ -1176,6 +1214,33 @@ export function PosPageShell(props) {
               Hủy
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!toppingPicker}
+        onOpenChange={(v) => {
+          if (!v) cancelToppingPicker();
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Chọn topping</DialogTitle>
+            <DialogDescription className="line-clamp-2">
+              {toppingPicker?.product?.name}
+              {toppingPicker?.variantId
+                ? ` — ${variantCatalogName(toppingPicker.product, toppingPicker.variantId)}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {toppingPicker?.product ? (
+            <ToppingPickerBody
+              key={`${toppingPicker.product.productId}-${toppingPicker.variantId ?? ""}`}
+              product={toppingPicker.product}
+              onCancel={cancelToppingPicker}
+              onConfirm={confirmToppingPickerSelection}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>

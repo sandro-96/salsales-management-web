@@ -6,7 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Copy, Calendar as CalendarIcon } from "lucide-react";
+import { Copy, Calendar as CalendarIcon, Wifi } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -60,6 +60,17 @@ const formSchema = z
       .optional()
       .nullable(),
 
+    wifiSsid: z
+      .string()
+      .max(64, "Tên Wi‑Fi tối đa 64 ký tự.")
+      .optional()
+      .nullable(),
+    wifiPassword: z
+      .string()
+      .max(128, "Mật khẩu Wi‑Fi tối đa 128 ký tự.")
+      .optional()
+      .nullable(),
+
     isDefault: z.boolean().default(false),
     active: z.boolean().default(true),
   })
@@ -95,6 +106,8 @@ export default function BranchForm({
       phone: "",
       countryCode: shop?.countryCode ?? "VN",
       taxRegistrationNumber: "",
+      wifiSsid: "",
+      wifiPassword: "",
       isDefault: false,
       active: true,
     },
@@ -115,6 +128,8 @@ export default function BranchForm({
         capacity: branch.capacity ?? undefined,
         countryCode: shop?.countryCode || "VN",
         taxRegistrationNumber: branch.taxRegistrationNumber ?? "",
+        wifiSsid: branch.wifiSsid ?? "",
+        wifiPassword: branch.wifiPassword ?? "",
       });
     }
   }, [branch, reset, shop]);
@@ -159,12 +174,16 @@ export default function BranchForm({
 
   const handleSubmit = (data) => {
     const trimmedMst = data.taxRegistrationNumber?.trim?.() ?? "";
+    const wifiSsid = data.wifiSsid?.trim?.() ?? "";
+    const wifiPassword = data.wifiPassword?.trim?.() ?? "";
     const submitData = {
       ...data,
       openingDate: data.openingDate
         ? data.openingDate.toISOString().split("T")[0]
         : undefined,
       taxRegistrationNumber: trimmedMst || null,
+      wifiSsid: wifiSsid || null,
+      wifiPassword: wifiPassword || null,
     };
     onSubmit(submitData);
   };
@@ -459,6 +478,69 @@ export default function BranchForm({
                 )}
               />
             </div>
+            <div className="rounded-lg border border-dashed border-muted-foreground/25 p-4 space-y-4 bg-muted/20">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <Wifi className="h-4 w-4" />
+                Wi‑Fi khách (in trên hóa đơn)
+              </p>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Nếu nhập, tên mạng và mật khẩu sẽ xuất hiện trên bill in từ POS
+                hoặc mục in lại đơn.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="wifiSsid"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tên Wi‑Fi (SSID)</FormLabel>
+                      {isReadOnly ? (
+                        <FormControl>
+                          <ReadOnlyValue value={field.value} />
+                        </FormControl>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            placeholder="Ví dụ: MilkTea_Guest"
+                            maxLength={64}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="wifiPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mật khẩu Wi‑Fi</FormLabel>
+                      {isReadOnly ? (
+                        <FormControl>
+                          <ReadOnlyValue value={field.value} />
+                        </FormControl>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="Để trống nếu không có"
+                            maxLength={128}
+                            autoComplete="new-password"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
             {/* Mô tả */}
             <FormField
               control={form.control}

@@ -36,7 +36,14 @@ import {
   calcDiscountedPrice,
   formatDiscount,
 } from "./posPromotionUtils";
-import { hasBranchVariants, variantCatalogName } from "./posProductUtils";
+import {
+  hasBranchVariants,
+  variantCatalogName,
+  activeToppings,
+  normalizeToppingIdList,
+  toppingExtrasForSelection,
+  formatToppingSelectionLabel,
+} from "./posProductUtils";
 import { buildDraftOrderForInvoice } from "./posInvoiceDraft";
 import { getPaymentMethodLabel } from "./posPayment";
 
@@ -81,6 +88,7 @@ export function usePosPage() {
   const [previewPrintedAt, setPreviewPrintedAt] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [variantPickerProduct, setVariantPickerProduct] = useState(null);
+  const [toppingPicker, setToppingPicker] = useState(null);
 
   const [postSaleOpen, setPostSaleOpen] = useState(false);
   const [postSaleOrderId, setPostSaleOrderId] = useState(null);
@@ -516,9 +524,11 @@ export function usePosPage() {
       .map((it) => {
         const q = Number(splitQtyByLineKey[it.lineKey] ?? 0);
         if (!q || q <= 0) return null;
+        const tid = normalizeToppingIdList(it.toppingIds);
         return {
           productId: it.productId,
           ...(it.variantId ? { variantId: it.variantId } : {}),
+          ...(tid.length ? { toppingIds: tid } : {}),
           quantity: q,
         };
       })
@@ -579,11 +589,15 @@ export function usePosPage() {
           note: note || null,
           guestName: guestName != null ? String(guestName) : "",
           guestPhone: guestPhone != null ? String(guestPhone) : "",
-          items: cart.map((item) => ({
-            productId: item.productId,
-            ...(item.variantId ? { variantId: item.variantId } : {}),
-            quantity: item.quantity,
-          })),
+          items: cart.map((item) => {
+            const tid = normalizeToppingIdList(item.toppingIds);
+            return {
+              productId: item.productId,
+              ...(item.variantId ? { variantId: item.variantId } : {}),
+              ...(tid.length ? { toppingIds: tid } : {}),
+              quantity: item.quantity,
+            };
+          }),
         };
         await updateOrder(activeOrderId, selectedShopId, payload);
       } catch (err) {
@@ -624,11 +638,15 @@ export function usePosPage() {
           guestPhone: guestPhone?.trim() || null,
           pointsToRedeem:
             selectedCustomer && pointsToRedeem > 0 ? pointsToRedeem : null,
-          items: cart.map((item) => ({
-            productId: item.productId,
-            ...(item.variantId ? { variantId: item.variantId } : {}),
-            quantity: item.quantity,
-          })),
+          items: cart.map((item) => {
+            const tid = normalizeToppingIdList(item.toppingIds);
+            return {
+              productId: item.productId,
+              ...(item.variantId ? { variantId: item.variantId } : {}),
+              ...(tid.length ? { toppingIds: tid } : {}),
+              quantity: item.quantity,
+            };
+          }),
         };
         const res = await createOrder(
           selectedShopId,
@@ -662,11 +680,15 @@ export function usePosPage() {
         note: note || null,
         guestName: guestName != null ? String(guestName) : "",
         guestPhone: guestPhone != null ? String(guestPhone) : "",
-        items: cart.map((item) => ({
-          productId: item.productId,
-          ...(item.variantId ? { variantId: item.variantId } : {}),
-          quantity: item.quantity,
-        })),
+        items: cart.map((item) => {
+          const tid = normalizeToppingIdList(item.toppingIds);
+          return {
+            productId: item.productId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            ...(tid.length ? { toppingIds: tid } : {}),
+            quantity: item.quantity,
+          };
+        }),
       };
       await updateOrder(activeOrderId, selectedShopId, payload);
       toast.success("Đã lưu thay đổi đơn.");
@@ -851,14 +873,20 @@ export function usePosPage() {
   ]);
 
   const addToCart = useCallback(
-    (product, variantId) => {
+    (product, variantId, toppingIdsIn = []) => {
+      const toppingIds = normalizeToppingIdList(toppingIdsIn);
       const hasVars = hasBranchVariants(product);
       const branchVariant =
         hasVars && variantId
           ? product.branchVariants.find((v) => v.variantId === variantId)
           : null;
       if (hasVars && (!variantId || !branchVariant)) {
-        toast.error("Chá»n biáº¿n thá»ƒ há»£p lá»‡.");
+        toast.error("Chọn biến thể hợp lệ.");
+        return;
+      }
+
+      if (toppingIds.length > 0 && activeToppings(product).length === 0) {
+        toast.error("Sản phẩm không có topping.");
         return;
       }
 
@@ -867,6 +895,9 @@ export function usePosPage() {
           ? branchVariant.price
           : product.price
         : product.price;
+      const toppingExtra = toppingExtrasForSelection(product, toppingIds);
+      const combinedBase = basePrice + toppingExtra;
+
       const maxStock = product.trackInventory
         ? hasVars
           ? branchVariant.quantity
@@ -874,15 +905,17 @@ export function usePosPage() {
         : null;
 
       const prev = cartRef.current;
+      const effectiveVariant = hasVars ? variantId : null;
+      const tidKey = toppingIds.join(",");
       const lineMatch = (item) =>
-        hasVars
-          ? item.productId === product.productId && item.variantId === variantId
-          : item.productId === product.productId && !item.variantId;
+        item.productId === product.productId &&
+        (item.variantId ?? null) === (effectiveVariant ?? null) &&
+        normalizeToppingIdList(item.toppingIds || []).join(",") === tidKey;
 
       const existing = prev.find(lineMatch);
       if (existing) {
         if (maxStock != null && existing.quantity >= maxStock) {
-          toast.error("KhÃ´ng Ä‘á»§ tá»“n kho.");
+          toast.error("Không đủ tồn kho.");
           return;
         }
         setCart(
@@ -894,28 +927,33 @@ export function usePosPage() {
       }
 
       if (maxStock != null && maxStock < 1) {
-        toast.error("Háº¿t hÃ ng.");
+        toast.error("Hết hàng.");
         return;
       }
 
       const promo = getBestPromo(promoMap, product.productId);
-      const discountedPrice = calcDiscountedPrice(basePrice, promo);
-      const hasDiscount = promo && discountedPrice < basePrice;
+      const discountedPrice = calcDiscountedPrice(combinedBase, promo);
+      const hasDiscount = promo && discountedPrice < combinedBase;
       const vName = hasVars ? variantCatalogName(product, variantId) : "";
+      const topLabel = formatToppingSelectionLabel(product, toppingIds);
+      const displayBase = vName ? `${product.name} — ${vName}` : product.name;
+      const productName = topLabel ? `${displayBase} + ${topLabel}` : displayBase;
+      const tKey = toppingIds.length ? tidKey : "not";
       const lineKey = hasVars
-        ? `${product.productId}__${variantId}`
-        : product.productId;
+        ? `${product.productId}__${variantId}__t:${tKey}`
+        : `${product.productId}__t:${tKey}`;
 
       setCart([
         ...prev,
         {
           lineKey,
           productId: product.productId,
-          variantId: hasVars ? variantId : null,
+          variantId: effectiveVariant,
+          toppingIds,
           branchProductId: product.id,
-          productName: vName ? `${product.name} â€” ${vName}` : product.name,
-          originalPrice: basePrice,
-          price: hasDiscount ? discountedPrice : basePrice,
+          productName,
+          originalPrice: combinedBase,
+          price: hasDiscount ? discountedPrice : combinedBase,
           hasDiscount: !!hasDiscount,
           promoLabel: hasDiscount ? formatDiscount(promo) : null,
           promoName: promo?.name || null,
@@ -928,6 +966,28 @@ export function usePosPage() {
     },
     [promoMap, setCart],
   );
+
+  const queueAddProductWithToppings = useCallback(
+    (product, variantId) => {
+      if (activeToppings(product).length > 0) {
+        setToppingPicker({ product, variantId: variantId ?? null });
+        return;
+      }
+      addToCart(product, variantId, []);
+    },
+    [addToCart],
+  );
+
+  const confirmToppingPickerSelection = useCallback(
+    (ids) => {
+      if (!toppingPicker) return;
+      addToCart(toppingPicker.product, toppingPicker.variantId, ids);
+      setToppingPicker(null);
+    },
+    [toppingPicker, addToCart],
+  );
+
+  const cancelToppingPicker = useCallback(() => setToppingPicker(null), []);
 
   const updateQuantity = useCallback(
     (lineKey, delta) => {
@@ -1085,8 +1145,8 @@ export function usePosPage() {
   }, []);
 
   const draftInvoiceMeta = useMemo(() => {
-    const branchName =
-      branches.find((b) => b.id === effectiveBranchId)?.name || null;
+    const br = branches.find((b) => b.id === effectiveBranchId);
+    const branchName = br?.name || null;
     const tableName =
       selectedTableId && selectedTableId !== "none"
         ? tables.find((t) => t.id === selectedTableId)?.name || null
@@ -1096,6 +1156,8 @@ export function usePosPage() {
       shopAddress: selectedShop?.address,
       shopPhone: selectedShop?.phone,
       branchName,
+      branchWifiSsid: br?.wifiSsid || null,
+      branchWifiPassword: br?.wifiPassword || null,
       customerName:
         selectedCustomer?.name ||
         (guestName?.trim() ? guestName.trim() : null) ||
@@ -1326,11 +1388,15 @@ export function usePosPage() {
         guestPhone: guestPhone?.trim() || null,
         pointsToRedeem:
           selectedCustomer && pointsToRedeem > 0 ? pointsToRedeem : null,
-        items: cart.map((item) => ({
-          productId: item.productId,
-          ...(item.variantId ? { variantId: item.variantId } : {}),
-          quantity: item.quantity,
-        })),
+        items: cart.map((item) => {
+          const tid = normalizeToppingIdList(item.toppingIds);
+          return {
+            productId: item.productId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            ...(tid.length ? { toppingIds: tid } : {}),
+            quantity: item.quantity,
+          };
+        }),
         ...(paymentMethod === "ShipCOD"
           ? { checkoutPaymentMethod: "ShipCOD" }
           : {}),
@@ -1358,12 +1424,12 @@ export function usePosPage() {
         }
       }
 
-      const branchName =
-        branches.find((b) => b.id === effectiveBranchId)?.name || null;
+      const br = branches.find((b) => b.id === effectiveBranchId);
+      const branchName = br?.name || null;
       const tableName =
         selectedTableId && selectedTableId !== "none"
           ? tables.find((t) => t.id === selectedTableId)?.name || null
-          : null;
+        : null;
 
       setInvoicePayload({
         order: finalOrder,
@@ -1372,6 +1438,8 @@ export function usePosPage() {
         shopAddress: selectedShop?.address,
         shopPhone: selectedShop?.phone,
         branchName,
+        branchWifiSsid: br?.wifiSsid || null,
+        branchWifiPassword: br?.wifiPassword || null,
         customerName:
           selectedCustomer?.name ||
           (guestName?.trim() ? guestName.trim() : null) ||
@@ -1499,6 +1567,10 @@ export function usePosPage() {
     activeTabIdRef,
     addTab,
     addToCart,
+    queueAddProductWithToppings,
+    confirmToppingPickerSelection,
+    cancelToppingPicker,
+    toppingPicker,
     availableTables,
     branches,
     cart,

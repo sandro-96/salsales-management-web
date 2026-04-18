@@ -16,6 +16,7 @@ import { getBranchProducts } from "../../api/productApi";
 import { getTables } from "../../api/tableApi";
 import { getPromotions } from "../../api/promotionApi";
 import { createOrder } from "../../api/orderApi";
+import { normalizeToppingIdList } from "../pos/posProductUtils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -316,11 +317,15 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             ? selectedTableId
             : null,
         note: note || null,
-        items: cart.map((item) => ({
-          productId: item.productId,
-          ...(item.variantId ? { variantId: item.variantId } : {}),
-          quantity: item.quantity,
-        })),
+        items: cart.map((item) => {
+          const tid = normalizeToppingIdList(item.toppingIds);
+          return {
+            productId: item.productId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            ...(tid.length ? { toppingIds: tid } : {}),
+            quantity: item.quantity,
+          };
+        }),
       };
       await createOrder(selectedShopId, branchId, orderData);
       toast.success("Đơn hàng đã được tạo thành công!");

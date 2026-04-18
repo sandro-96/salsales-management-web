@@ -75,7 +75,6 @@ const ShopProvider = ({ children }) => {
 
   const setSelectedShop = useCallback(
     (shop) => {
-      if (shop?.id === selectedShopId) return;
       if (!shop) {
         setSelectedShopIdState(null);
         setSelectedShopState(null);
@@ -87,19 +86,25 @@ const ShopProvider = ({ children }) => {
         const { shopIdKey, branchIdKey } = storageKeys();
         localStorage.removeItem(shopIdKey);
         localStorage.removeItem(branchIdKey);
-      } else {
-        setSelectedShopIdState(shop.id);
-        setSelectedShopState(shop);
-        setSelectedRole(shop.role);
-        setSelectedIndustry(shop.industry);
-        setBranches([]);
-        // Reset branch when switching shops
-        setSelectedBranchIdState(null);
-        setSelectedBranchState(null);
-        const { shopIdKey, branchIdKey } = storageKeys();
-        localStorage.removeItem(branchIdKey);
-        localStorage.setItem(shopIdKey, shop.id);
+        return;
       }
+      // Cùng shop (VD sau lưu cài đặt): chỉ merge state, không xóa chi nhánh đang chọn
+      if (shop.id === selectedShopId) {
+        setSelectedShopState(shop);
+        if (shop.role) setSelectedRole(shop.role);
+        if (shop.industry) setSelectedIndustry(shop.industry);
+        return;
+      }
+      setSelectedShopIdState(shop.id);
+      setSelectedShopState(shop);
+      setSelectedRole(shop.role);
+      setSelectedIndustry(shop.industry);
+      setBranches([]);
+      setSelectedBranchIdState(null);
+      setSelectedBranchState(null);
+      const { shopIdKey, branchIdKey } = storageKeys();
+      localStorage.removeItem(branchIdKey);
+      localStorage.setItem(shopIdKey, shop.id);
     },
     [selectedShopId, storageKeys],
   );

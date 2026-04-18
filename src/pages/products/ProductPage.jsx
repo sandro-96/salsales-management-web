@@ -15,6 +15,7 @@ import {
   Loader2,
   ScanLine,
   FileSpreadsheet,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,11 +50,23 @@ import {
 } from "../../api/productApi.js";
 import ProductFormModal from "./ProductFormModal.jsx";
 import ProductImportExportDialog from "./ProductImportExportDialog.jsx";
+import ShopToppingsModal from "./ShopToppingsModal.jsx";
 
 const ProductPage = () => {
-  const { selectedShopId, branches, isOwner, isStaff } = useShop();
+  const {
+    selectedShopId,
+    branches,
+    isOwner,
+    isStaff,
+    selectedShop,
+    fetchShops,
+    selectedRole,
+  } = useShop();
   const shopId = selectedShopId;
   const canImportExport = isOwner || isStaff;
+  /** Lưu danh mục topping cần quyền SHOP_UPDATE (OWNER / MANAGER) */
+  const canManageShopToppings =
+    isOwner || selectedRole === "MANAGER";
   const { confirm } = useAlertDialog();
 
   const [products, setProducts] = useState([]);
@@ -64,6 +77,7 @@ const ProductPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [importExportOpen, setImportExportOpen] = useState(false);
+  const [toppingsSettingsOpen, setToppingsSettingsOpen] = useState(false);
   const [createStep, setCreateStep] = useState("scan"); // "scan" | "form"
 
   const [sorting, setSorting] = useState([]);
@@ -396,6 +410,17 @@ const ProductPage = () => {
             <DataTableViewOptions table={table} />
           </div>
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            {selectedShop?.toppingsEnabled && canManageShopToppings && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+                onClick={() => setToppingsSettingsOpen(true)}
+              >
+                <Layers className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Cài đặt topping</span>
+              </Button>
+            )}
             {canImportExport && (
               <Button
                 variant="outline"
@@ -520,6 +545,16 @@ const ProductPage = () => {
         shopId={shopId}
         branches={branches}
         onImportSuccess={fetchProducts}
+      />
+
+      <ShopToppingsModal
+        open={toppingsSettingsOpen}
+        onClose={() => setToppingsSettingsOpen(false)}
+        shopId={shopId}
+        onSaved={() => {
+          fetchProducts();
+          fetchShops(shopId);
+        }}
       />
     </div>
   );

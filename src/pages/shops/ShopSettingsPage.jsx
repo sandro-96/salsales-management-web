@@ -37,6 +37,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -80,8 +81,13 @@ const ShopSettingsPage = () => {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [taxRegistrationNumber, setTaxRegistrationNumber] = useState("");
+  const [zaloPageUrl, setZaloPageUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [tiktokUrl, setTiktokUrl] = useState("");
+  const [shopeeUrl, setShopeeUrl] = useState("");
   const [countryCode, setCountryCode] = useState("VN");
   const [active, setActive] = useState(true);
+  const [toppingsEnabled, setToppingsEnabled] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
 
@@ -93,8 +99,13 @@ const ShopSettingsPage = () => {
     setAddress(selectedShop.address || "");
     setPhone(selectedShop.phone || "");
     setTaxRegistrationNumber(selectedShop.taxRegistrationNumber || "");
+    setZaloPageUrl(selectedShop.zaloPageUrl || "");
+    setFacebookUrl(selectedShop.facebookUrl || "");
+    setTiktokUrl(selectedShop.tiktokUrl || "");
+    setShopeeUrl(selectedShop.shopeeUrl || "");
     setCountryCode(selectedShop.countryCode || "VN");
     setActive(selectedShop.active !== false);
+    setToppingsEnabled(selectedShop.toppingsEnabled === true);
     setLogoFile(null);
     setLogoPreview(null);
   }, [selectedShop]);
@@ -150,8 +161,13 @@ const ShopSettingsPage = () => {
         address: address.trim(),
         phone: phone.trim(),
         taxRegistrationNumber: taxRegistrationNumber.trim() || null,
+        zaloPageUrl: zaloPageUrl.trim() || null,
+        facebookUrl: facebookUrl.trim() || null,
+        tiktokUrl: tiktokUrl.trim() || null,
+        shopeeUrl: shopeeUrl.trim() || null,
         countryCode,
         active,
+        toppingsEnabled,
       };
       const formData = new FormData();
       formData.append(
@@ -533,6 +549,123 @@ const ShopSettingsPage = () => {
               cài đặt chi nhánh; để trống ở chi nhánh thì dùng MST này.
             </p>
           )}
+
+          <Separator />
+
+          <div className="space-y-1">
+            <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <Link2 className="h-3.5 w-3.5" />
+              Liên kết Zalo, Facebook, TikTok, Shopee
+            </Label>
+            <p className="text-xs text-muted-foreground pb-2">
+              Dán URL đầy đủ (ví dụ https://zalo.me/...) để hiển thị trên cài đặt
+              và kênh marketing.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FieldWrapper label="Zalo Page / OA">
+              {isEditMode ? (
+                <Input
+                  value={zaloPageUrl}
+                  onChange={(e) => setZaloPageUrl(e.target.value)}
+                  placeholder="https://zalo.me/..."
+                />
+              ) : selectedShop.zaloPageUrl ? (
+                <a
+                  href={selectedShop.zaloPageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline py-2 px-3 rounded-md bg-muted/50 inline-block max-w-full truncate"
+                >
+                  {selectedShop.zaloPageUrl}
+                </a>
+              ) : (
+                <FieldValue />
+              )}
+            </FieldWrapper>
+            <FieldWrapper label="Facebook">
+              {isEditMode ? (
+                <Input
+                  value={facebookUrl}
+                  onChange={(e) => setFacebookUrl(e.target.value)}
+                  placeholder="https://www.facebook.com/..."
+                />
+              ) : selectedShop.facebookUrl ? (
+                <a
+                  href={selectedShop.facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline py-2 px-3 rounded-md bg-muted/50 inline-block max-w-full truncate"
+                >
+                  {selectedShop.facebookUrl}
+                </a>
+              ) : (
+                <FieldValue />
+              )}
+            </FieldWrapper>
+            <FieldWrapper label="TikTok">
+              {isEditMode ? (
+                <Input
+                  value={tiktokUrl}
+                  onChange={(e) => setTiktokUrl(e.target.value)}
+                  placeholder="https://www.tiktok.com/@..."
+                />
+              ) : selectedShop.tiktokUrl ? (
+                <a
+                  href={selectedShop.tiktokUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline py-2 px-3 rounded-md bg-muted/50 inline-block max-w-full truncate"
+                >
+                  {selectedShop.tiktokUrl}
+                </a>
+              ) : (
+                <FieldValue />
+              )}
+            </FieldWrapper>
+            <FieldWrapper label="Shopee">
+              {isEditMode ? (
+                <Input
+                  value={shopeeUrl}
+                  onChange={(e) => setShopeeUrl(e.target.value)}
+                  placeholder="https://shopee.vn/..."
+                />
+              ) : selectedShop.shopeeUrl ? (
+                <a
+                  href={selectedShop.shopeeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline py-2 px-3 rounded-md bg-muted/50 inline-block max-w-full truncate"
+                >
+                  {selectedShop.shopeeUrl}
+                </a>
+              ) : (
+                <FieldValue />
+              )}
+            </FieldWrapper>
+          </div>
+
+          {/* Tính năng topping — mặc định tắt; bật để cấu hình & POS */}
+          <Separator />
+          <FieldWrapper label="Topping (POS / sản phẩm)">
+            {isEditMode ? (
+              <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-2">
+                <p className="text-sm text-muted-foreground pr-2">
+                  Khi bật: POS có thể chọn topping; trang sản phẩm hiện nút &quot;Cài
+                  đặt topping&quot; và form sản phẩm cho phép gán topping.
+                </p>
+                <Switch
+                  checked={toppingsEnabled}
+                  onCheckedChange={setToppingsEnabled}
+                  className="shrink-0"
+                />
+              </div>
+            ) : (
+              <FieldValue>
+                {selectedShop.toppingsEnabled ? "Đang bật" : "Đang tắt"}
+              </FieldValue>
+            )}
+          </FieldWrapper>
 
           {/* Status toggle in edit mode */}
           {isEditMode && (

@@ -22,6 +22,7 @@ import {
   searchProductCatalog,
   uploadStagedVariantImages,
 } from "@/api/productApi.js";
+import { getShopToppings } from "../../api/shopApi.js";
 import BarcodeScanner from "@/components/products/BarcodeScanner.jsx";
 import { lookupBarcode } from "@/utils/barcodeUtils.js";
 import {
@@ -132,6 +133,8 @@ const formSchema = z.object({
   trackInventory: z.boolean().default(false),
   reason: z.string().optional().nullable(),
   variants: z.array(variantSchema).default([]),
+  /** ID topping shop được phép chọn khi bán */
+  assignedToppingIds: z.array(z.string()).default([]),
 });
 
 // ── Variant Card ─────────────────────────────────────────────────────────────
@@ -512,7 +515,10 @@ export default function ProductForm({
   const isReadOnly = mode === "view";
   const isCreate = mode === "create";
 
-  const { selectedShopId, selectedIndustry } = useShop();
+  const { selectedShopId, selectedIndustry, selectedShop } = useShop();
+  const toppingsFeatureOn = selectedShop?.toppingsEnabled === true;
+
+  const [shopToppingCatalog, setShopToppingCatalog] = useState([]);
 
   // Suggest loading states
   const [suggestingSkU, setSuggestingSkU] = useState(false);
@@ -683,6 +689,7 @@ export default function ProductForm({
                 }))
               : [],
           })),
+          assignedToppingIds: [...(product.assignedToppingIds ?? [])],
         }
       : {
           name: "",
@@ -698,6 +705,7 @@ export default function ProductForm({
           trackInventory: savedTrackInventory,
           reason: "",
           variants: [],
+          assignedToppingIds: [],
         },
   });
 
@@ -729,6 +737,32 @@ export default function ProductForm({
   } = form;
 
   const watchedName = useWatch({ control: form.control, name: "name" });
+  const watchedAssignedToppings = useWatch({
+    control: form.control,
+    name: "assignedToppingIds",
+  }) ?? [];
+
+  useEffect(() => {
+    if (!selectedShopId || !toppingsFeatureOn) {
+      setShopToppingCatalog([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getShopToppings(selectedShopId);
+        const list = res.data?.data;
+        if (!cancelled && Array.isArray(list)) {
+          setShopToppingCatalog(list);
+        }
+      } catch {
+        if (!cancelled) setShopToppingCatalog([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedShopId, toppingsFeatureOn]);
 
   useEffect(() => {
     if (!isCreate || isReadOnly) {
@@ -950,6 +984,7 @@ export default function ProductForm({
               }))
             : [],
         })),
+        assignedToppingIds: [...(product.assignedToppingIds ?? [])],
       });
       setVariantMedia({});
       setUnitMode(isCustomUnit(product.unit) ? "custom" : "select");
@@ -986,7 +1021,12 @@ export default function ProductForm({
         });
       }
       await onSubmit(
-        { ...data, images: keptImages, variants: mergedVariants },
+        {
+          ...data,
+          images: keptImages,
+          variants: mergedVariants,
+          assignedToppingIds: data.assignedToppingIds ?? [],
+        },
         files,
       );
       setVariantMedia({});
@@ -1573,7 +1613,96 @@ export default function ProductForm({
   };
 
   // ── Image upload section ───────────────────────────────────────────────────
-  // ── Variants section ─────────────────────────────────────────────────────
+  // ── Topping gán từ danh mục shop ───────────────────────────────────────────
+  const toggleAssignedTopping = (toppingId) => {
+    if (!toppingId || isReadOnly) return;
+    const cur = form.getValues("assignedToppingIds") ?? [];
+    const next = new Set(cur);
+    if (next.has(toppingId)) next.delete(toppingId);
+    else next.add(toppingId);
+    form.setValue("assignedToppingIds", [...next], { shouldDirty: true });
+  };
+
+  const ToppingsSection = () => {
+    if (!toppingsFeatureOn) return null;
+    if (isReadOnly) {
+      const apps = product?.applicableToppings ?? [];
+      if (!apps.length) {
+        return (
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">Topping áp dụng</span>
+            <p className="text-xs text-muted-foreground">
+              Không gán topping cho sản phẩm này.
+            </p>
+          </div>
+        );
+      }
+      return (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-semibold">Topping áp dụng</span>
+          <ul className="text-sm space-y-1 border rounded-md p-3 bg-muted/30">
+            {apps.map((t) => (
+              <li key={t.toppingId}>
+                {t.name}{" "}
+                <span className="text-muted-foreground">
+                  (+{Number(t.extraPrice).toLocaleString("vi-VN")} ₫)
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col gap-3">
+        <div>
+          <span className="text-sm font-semibold">Topping áp dụng</span>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Chọn từ danh mục topping chung của shop (nút &quot;Cài đặt topping&quot;
+            trên trang sản phẩm).
+          </p>
+        </div>
+        {!shopToppingCatalog.length ? (
+          <div className="text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-md px-3 py-2">
+            Chưa có topping trong danh mục shop. Hãy mở &quot;Cài đặt topping&quot;
+            trên trang sản phẩm.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 border rounded-md p-3">
+            {shopToppingCatalog.map((t) => {
+              const id = t.toppingId;
+              const checked = (watchedAssignedToppings ?? []).includes(id);
+              return (
+                <label
+                  key={id}
+                  className="flex items-start gap-2 text-sm cursor-pointer py-1"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1 rounded border-gray-300"
+                    checked={checked}
+                    onChange={() => toggleAssignedTopping(id)}
+                  />
+                  <span>
+                    {t.name}{" "}
+                    <span className="text-muted-foreground text-xs">
+                      (+{Number(t.extraPrice).toLocaleString("vi-VN")} ₫)
+                    </span>
+                    {t.active === false && (
+                      <span className="text-xs text-amber-600 ml-1">
+                        (đang tắt bán)
+                      </span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const VariantsSection = () => (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -1809,6 +1938,8 @@ export default function ProductForm({
         {ProductInfoSection()}
 
         {VariantsSection()}
+
+        {ToppingsSection()}
 
         {ImageUploadSection()}
 

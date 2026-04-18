@@ -1,4 +1,9 @@
 import React from "react";
+import {
+  orderLineAttributesLabel,
+  orderLineToppings,
+  orderLineVariantLabel,
+} from "../../utils/orderItemDisplay.js";
 
 const fmtMoney = (n) =>
   Number(n ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 0 });
@@ -35,6 +40,8 @@ export function PosInvoiceReceipt({
   shopAddress,
   shopPhone,
   branchName,
+  branchWifiSsid,
+  branchWifiPassword,
   order,
   customerName,
   tableName,
@@ -191,6 +198,11 @@ export function PosInvoiceReceipt({
         const gross = (item.price ?? 0) * (item.quantity ?? 0);
         const line = unit * (item.quantity ?? 0);
         const hasDisc = item.price != null && unit < item.price;
+        const tops = orderLineToppings(item);
+        const vLine = orderLineVariantLabel(item);
+        const attrLine = orderLineAttributesLabel(item);
+        const showAttr =
+          attrLine && attrLine !== (item.variantName || "").trim();
         return (
           <div
             key={`${item.productId}-${idx}`}
@@ -199,6 +211,28 @@ export function PosInvoiceReceipt({
             <div style={{ fontWeight: 600, fontSize: "11px" }}>
               {item.productName}
             </div>
+            {vLine ? (
+              <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
+                {vLine}
+              </div>
+            ) : null}
+            {showAttr ? (
+              <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
+                Thuộc tính: {attrLine}
+              </div>
+            ) : null}
+            {tops.length > 0 ? (
+              <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
+                {tops.map((t, ti) => (
+                  <div key={`${t.toppingId || ti}`}>
+                    + {t.name || t.toppingId}
+                    {Number(t.extraPrice) > 0
+                      ? ` (${fmtMoney(t.extraPrice)} ₫)`
+                      : ""}
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <div style={{ ...rowStyle, marginBottom: 0 }}>
               <span style={labelMuted}>
                 {fmtMoney(unit)} × {item.quantity}
@@ -293,6 +327,38 @@ export function PosInvoiceReceipt({
         <div style={{ marginTop: "10px", fontSize: "10px", ...labelMuted }}>
           <div style={{ fontWeight: 600, color: "#333" }}>Ghi chú</div>
           <div style={{ whiteSpace: "pre-wrap" }}>{order.note}</div>
+        </div>
+      ) : null}
+
+      {branchWifiSsid?.trim() || branchWifiPassword?.trim() ? (
+        <div
+          style={{
+            marginTop: "12px",
+            paddingTop: "10px",
+            borderTop: "1px dashed #ccc",
+            fontSize: "10px",
+            ...labelMuted,
+          }}
+        >
+          <div style={{ fontWeight: 700, color: "#333", marginBottom: "4px" }}>
+            Wi‑Fi
+          </div>
+          {branchWifiSsid?.trim() ? (
+            <div style={rowStyle}>
+              <span>Tên mạng</span>
+              <span style={{ fontWeight: 600, textAlign: "right" }}>
+                {String(branchWifiSsid).trim()}
+              </span>
+            </div>
+          ) : null}
+          {branchWifiPassword?.trim() ? (
+            <div style={rowStyle}>
+              <span>Mật khẩu</span>
+              <span style={{ fontWeight: 600, textAlign: "right" }}>
+                {String(branchWifiPassword).trim()}
+              </span>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
