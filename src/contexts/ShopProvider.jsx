@@ -261,6 +261,7 @@ const ShopProvider = ({ children }) => {
         selectedShop,
         setSelectedShop,
         selectedRole,
+        shopRole: selectedRole,
         isOwner,
         isStaff,
         isCashier,

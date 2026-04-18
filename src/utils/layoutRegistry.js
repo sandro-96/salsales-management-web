@@ -28,12 +28,14 @@ export const layoutRegistry = {
             MANAGER: { layout: BaseWebLayout, props: { title: "FNB Manager", navItems: fnbWebNav.manager } },
             ADMIN: { layout: BaseWebLayout, props: { title: "FNB Admin", navItems: fnbWebNav.admin } },
             STAFF: { layout: BaseWebLayout, props: { title: "FNB Staff", navItems: fnbWebNav.staff } },
+            CASHIER: { layout: BaseWebLayout, props: { title: "FNB Thu ngân", navItems: fnbWebNav.staff } },
         },
         pos: {
             OWNER: { layout: PosChromeLayout, props: { title: "FNB POS Admin", navItems: fnbPosNav.admin } },
             MANAGER: { layout: PosChromeLayout, props: { title: "FNB POS Manager", navItems: fnbPosNav.admin } },
             ADMIN: { layout: PosChromeLayout, props: { title: "FNB POS Admin", navItems: fnbPosNav.admin } },
             STAFF: { layout: PosChromeLayout, props: { title: "FNB POS Staff", navItems: fnbPosNav.staff } },
+            CASHIER: { layout: PosChromeLayout, props: { title: "FNB POS Thu ngân", navItems: fnbPosNav.staff } },
         },
     },
 
@@ -43,12 +45,14 @@ export const layoutRegistry = {
             MANAGER: { layout: BaseWebLayout, props: { title: "Retail Manager", navItems: retailWebNav.manager } },
             ADMIN: { layout: BaseWebLayout, props: { title: "Retail Admin", navItems: retailWebNav.manager } },
             STAFF: { layout: BaseWebLayout, props: { title: "Retail Staff", navItems: retailWebNav.staff } },
+            CASHIER: { layout: BaseWebLayout, props: { title: "Retail Thu ngân", navItems: retailWebNav.staff } },
         },
         pos: {
             OWNER: { layout: PosChromeLayout, props: { title: "Retail POS Manager", navItems: retailPosNav.admin } },
             MANAGER: { layout: PosChromeLayout, props: { title: "Retail POS Manager", navItems: retailPosNav.admin } },
             ADMIN: { layout: PosChromeLayout, props: { title: "Retail POS Admin", navItems: retailPosNav.admin } },
             STAFF: { layout: PosChromeLayout, props: { title: "Retail POS Staff", navItems: retailPosNav.staff } },
+            CASHIER: { layout: PosChromeLayout, props: { title: "Retail POS Thu ngân", navItems: retailPosNav.staff } },
         },
     },
 
@@ -58,12 +62,14 @@ export const layoutRegistry = {
             MANAGER: { layout: BaseWebLayout, props: { title: "Pharmacy Manager", navItems: pharmacyWebNav.manager } },
             ADMIN: { layout: BaseWebLayout, props: { title: "Pharmacy Admin", navItems: pharmacyWebNav.admin } },
             STAFF: { layout: BaseWebLayout, props: { title: "Pharmacy Staff", navItems: pharmacyWebNav.staff } },
+            CASHIER: { layout: BaseWebLayout, props: { title: "Pharmacy Thu ngân", navItems: pharmacyWebNav.staff } },
         },
         pos: {
             OWNER: { layout: PharmacyPosLayout, props: { title: "Pharmacy POS Admin", navItems: pharmacyPosNav.admin } },
             MANAGER: { layout: PharmacyPosLayout, props: { title: "Pharmacy POS Manager", navItems: pharmacyPosNav.admin } },
             ADMIN: { layout: PharmacyPosLayout, props: { title: "Pharmacy POS Admin", navItems: pharmacyPosNav.admin } },
             STAFF: { layout: PharmacyPosLayout, props: { title: "Pharmacy POS Staff", navItems: pharmacyPosNav.staff } },
+            CASHIER: { layout: PharmacyPosLayout, props: { title: "Pharmacy POS Thu ngân", navItems: pharmacyPosNav.staff } },
         },
     },
 
@@ -73,12 +79,14 @@ export const layoutRegistry = {
             MANAGER: { layout: BaseWebLayout, props: { title: "Healthcare Manager", navItems: healthcareWebNav.manager } },
             ADMIN: { layout: BaseWebLayout, props: { title: "Healthcare Admin", navItems: healthcareWebNav.admin } },
             STAFF: { layout: BaseWebLayout, props: { title: "Healthcare Staff", navItems: healthcareWebNav.staff } },
+            CASHIER: { layout: BaseWebLayout, props: { title: "Healthcare Thu ngân", navItems: healthcareWebNav.staff } },
         },
         pos: {
             OWNER: { layout: HealthcarePosLayout, props: { title: "Healthcare POS Admin", navItems: healthcarePosNav.admin } },
             MANAGER: { layout: HealthcarePosLayout, props: { title: "Healthcare POS Manager", navItems: healthcarePosNav.admin } },
             ADMIN: { layout: HealthcarePosLayout, props: { title: "Healthcare POS Admin", navItems: healthcarePosNav.admin } },
             STAFF: { layout: HealthcarePosLayout, props: { title: "Healthcare POS Staff", navItems: healthcarePosNav.staff } },
+            CASHIER: { layout: HealthcarePosLayout, props: { title: "Healthcare POS Thu ngân", navItems: healthcarePosNav.staff } },
         },
     },
 
@@ -88,12 +96,14 @@ export const layoutRegistry = {
             MANAGER: { layout: BaseWebLayout, props: { title: "Education Manager", navItems: educationWebNav.manager } },
             ADMIN: { layout: BaseWebLayout, props: { title: "Education Admin", navItems: educationWebNav.admin } },
             STAFF: { layout: BaseWebLayout, props: { title: "Education Staff", navItems: educationWebNav.staff } },
+            CASHIER: { layout: BaseWebLayout, props: { title: "Education Thu ngân", navItems: educationWebNav.staff } },
         },
         pos: {
             OWNER: { layout: EducationPosLayout, props: { title: "Education POS Admin", navItems: educationPosNav.admin } },
             MANAGER: { layout: EducationPosLayout, props: { title: "Education POS Manager", navItems: educationPosNav.admin } },
             ADMIN: { layout: EducationPosLayout, props: { title: "Education POS Admin", navItems: educationPosNav.admin } },
             STAFF: { layout: EducationPosLayout, props: { title: "Education POS Staff", navItems: educationPosNav.staff } },
+            CASHIER: { layout: EducationPosLayout, props: { title: "Education POS Thu ngân", navItems: educationPosNav.staff } },
         },
     },
 
@@ -103,12 +113,14 @@ export const layoutRegistry = {
             MANAGER: { layout: BaseWebLayout, props: { title: "Ecommerce Manager", navItems: ecommerceWebNav.manager } },
             ADMIN: { layout: BaseWebLayout, props: { title: "Ecommerce Admin", navItems: ecommerceWebNav.admin } },
             STAFF: { layout: BaseWebLayout, props: { title: "Ecommerce Staff", navItems: ecommerceWebNav.staff } },
+            CASHIER: { layout: BaseWebLayout, props: { title: "Ecommerce Thu ngân", navItems: ecommerceWebNav.staff } },
         },
         pos: {
             OWNER: { layout: EcommercePosLayout, props: { title: "Ecommerce POS Admin", navItems: ecommercePosNav.admin } },
             MANAGER: { layout: EcommercePosLayout, props: { title: "Ecommerce POS Manager", navItems: ecommercePosNav.admin } },
             ADMIN: { layout: EcommercePosLayout, props: { title: "Ecommerce POS Admin", navItems: ecommercePosNav.admin } },
             STAFF: { layout: EcommercePosLayout, props: { title: "Ecommerce POS Staff", navItems: ecommercePosNav.staff } },
+            CASHIER: { layout: EcommercePosLayout, props: { title: "Ecommerce POS Thu ngân", navItems: ecommercePosNav.staff } },
         },
     },
 
@@ -118,12 +130,14 @@ export const layoutRegistry = {
             MANAGER: { layout: BaseWebLayout, props: { title: "Service Manager", navItems: serviceWebNav.manager } },
             ADMIN: { layout: BaseWebLayout, props: { title: "Service Admin", navItems: serviceWebNav.admin } },
             STAFF: { layout: BaseWebLayout, props: { title: "Service Staff", navItems: serviceWebNav.staff } },
+            CASHIER: { layout: BaseWebLayout, props: { title: "Service Thu ngân", navItems: serviceWebNav.staff } },
         },
         pos: {
             OWNER: { layout: ServicePosLayout, props: { title: "Service POS Admin", navItems: servicePosNav.admin } },
             MANAGER: { layout: ServicePosLayout, props: { title: "Service POS Manager", navItems: servicePosNav.admin } },
             ADMIN: { layout: ServicePosLayout, props: { title: "Service POS Admin", navItems: servicePosNav.admin } },
             STAFF: { layout: ServicePosLayout, props: { title: "Service POS Staff", navItems: servicePosNav.staff } },
+            CASHIER: { layout: ServicePosLayout, props: { title: "Service POS Thu ngân", navItems: servicePosNav.staff } },
         },
     },
 

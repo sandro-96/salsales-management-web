@@ -841,11 +841,12 @@ const OrderListPage = () => {
     setSelectedBranchId,
     isOwner,
     isStaff,
+    isCashier,
   } = useShop();
 
   const shopHasTableManagement = selectedIndustry === SHOP_INDUSTRY.FNB;
   const { confirm } = useAlertDialog();
-  const canManage = isOwner || isStaff;
+  const canManage = isOwner || isStaff || isCashier;
 
   const [orders, setOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);

@@ -73,9 +73,9 @@ const formatDate = (dateStr) => {
 };
 
 const CustomerListPage = () => {
-  const { selectedShopId, branches, isOwner, isStaff } = useShop();
+  const { selectedShopId, branches, isOwner, isStaff, isCashier } = useShop();
   const shopId = selectedShopId;
-  const canManage = isOwner || isStaff;
+  const canManage = isOwner || isStaff || isCashier;
   const { confirm } = useAlertDialog();
 
   const branchMap = useMemo(() => {
