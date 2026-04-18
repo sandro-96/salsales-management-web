@@ -40,6 +40,7 @@ import {
   createExternalStaff,
 } from "../../api/staffProfileApi.js";
 import { useShop } from "../../hooks/useShop.js";
+import { SHOP_ROLE_LABELS } from "../../constants/shopRoles.js";
 
 const CONTRACT_TYPES = [
   { value: "FULL_TIME", label: "Toàn thời gian" },
@@ -47,13 +48,6 @@ const CONTRACT_TYPES = [
   { value: "PROBATION", label: "Thử việc" },
   { value: "CONTRACT", label: "Hợp đồng" },
 ];
-
-const ROLE_LABELS = {
-  OWNER: "Chủ cửa hàng",
-  MANAGER: "Quản lý",
-  ADMIN: "Admin",
-  STAFF: "Nhân viên",
-};
 
 export default function StaffProfileModal({
   open,
@@ -277,7 +271,7 @@ export default function StaffProfileModal({
                   <Badge variant="secondary">Ngoài hệ thống</Badge>
                 ) : (
                   <Badge variant="outline">
-                    {ROLE_LABELS[staff.role] || staff.role}
+                    {SHOP_ROLE_LABELS[staff.role] || staff.role}
                   </Badge>
                 )}
               </div>

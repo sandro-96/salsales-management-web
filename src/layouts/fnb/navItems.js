@@ -17,7 +17,7 @@ import {
 export const fnbWebNav = {
   admin: [
     { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
-    { to: "/products", icon: Utensils, label: "Menu" },
+    { to: "/products", icon: Utensils, label: "Sản phẩm" },
     { to: "/tables", icon: Table, label: "Bàn" },
     { to: "/customers", icon: UserCircle, label: "Khách hàng" },
     { to: "/branches", icon: Store, label: "Chi nhánh" },
@@ -27,7 +27,7 @@ export const fnbWebNav = {
   ],
   manager: [
     { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/products", icon: Utensils, label: "Menu" },
+    { to: "/products", icon: Utensils, label: "Sản phẩm" },
     { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
     { to: "/tables", icon: Table, label: "Bàn" },
     { to: "/customers", icon: UserCircle, label: "Khách hàng" },
@@ -40,7 +40,7 @@ export const fnbWebNav = {
   ],
   staff: [
     { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
-    { to: "/products", icon: Utensils, label: "Menu" },
+    { to: "/products", icon: Utensils, label: "Sản phẩm" },
     { to: "/tables", icon: Table, label: "Bàn" },
     { to: "/customers", icon: UserCircle, label: "Khách hàng" },
     { to: "/branches", icon: Store, label: "Chi nhánh" },

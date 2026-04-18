@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   flexRender,
   getCoreRowModel,
@@ -24,10 +24,12 @@ import {
   Filter,
   Plus,
   Percent,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop.js";
+import { SHOP_INDUSTRY } from "../../constants/ShopIndustry.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { getTables } from "../../api/tableApi.js";
 import { PosInvoiceReceipt } from "../../components/pos/PosInvoiceReceipt.jsx";
@@ -127,7 +129,21 @@ function displayOrderCode(order) {
   if (code) return code;
   const id = order?.id;
   if (!id) return "—";
-  return id.length > 10 ? `DH-${id.slice(-8).toUpperCase()}` : String(id).toUpperCase();
+  return id.length > 10
+    ? `DH-${id.slice(-8).toUpperCase()}`
+    : String(id).toUpperCase();
+}
+
+function orderHasGuestInfo(order) {
+  return !!(order?.guestName?.trim() || order?.guestPhone?.trim());
+}
+
+function orderHasCrmCustomerInfo(order) {
+  return !!(
+    order?.customerName?.trim() ||
+    order?.customerPhone?.trim() ||
+    order?.customerId
+  );
 }
 
 /** Biến thể: ưu tiên tên từ API; nếu chỉ có variantId vẫn hiển thị mã rút gọn. */
@@ -168,9 +184,7 @@ function orderTaxSummaryTooltip(order) {
     lines.push(`Tổng thuế: ${(t.taxTotal ?? 0).toLocaleString("vi-VN")} ₫`);
     (t.taxes || []).forEach((x) => {
       if ((x.amount ?? 0) > 0.005) {
-        lines.push(
-          `${x.label}: ${(x.amount ?? 0).toLocaleString("vi-VN")} ₫`,
-        );
+        lines.push(`${x.label}: ${(x.amount ?? 0).toLocaleString("vi-VN")} ₫`);
       }
     });
   } else {
@@ -304,6 +318,8 @@ const OrderDetailDialog = ({
   const [form, setForm] = useState({
     note: "",
     customerId: "",
+    guestName: "",
+    guestPhone: "",
     shippingCarrier: "",
     shippingMethod: "",
     trackingNumber: "",
@@ -315,6 +331,8 @@ const OrderDetailDialog = ({
     setForm({
       note: order.note ?? "",
       customerId: order.customerId ?? "",
+      guestName: order.guestName ?? "",
+      guestPhone: order.guestPhone ?? "",
       shippingCarrier: order.shippingCarrier ?? "",
       shippingMethod: order.shippingMethod ?? "",
       trackingNumber: order.trackingNumber ?? "",
@@ -330,6 +348,8 @@ const OrderDetailDialog = ({
       const payload = {
         note: form.note.trim(),
         customerId: form.customerId.trim(),
+        guestName: form.guestName.trim(),
+        guestPhone: form.guestPhone.trim(),
         shippingCarrier: form.shippingCarrier.trim(),
         shippingMethod: form.shippingMethod.trim(),
         trackingNumber: form.trackingNumber.trim(),
@@ -352,18 +372,12 @@ const OrderDetailDialog = ({
   if (!order) return null;
   const customerIdUnchanged =
     (form.customerId || "").trim() === (order.customerId || "").trim();
-  const showCustomerSummary =
-    !!(
-      order.customerName ||
-      order.customerPhone ||
-      order.customerId
-    ) &&
-    (!canEdit || customerIdUnchanged);
+  const showCrmCustomerSummary =
+    orderHasCrmCustomerInfo(order) && (!canEdit || customerIdUnchanged);
+  const showGuestSummary = orderHasGuestInfo(order);
   const tax = order.taxSnapshot;
   const itemsSubtotal = (order.items ?? []).reduce(
-    (s, i) =>
-      s +
-      (i.priceAfterDiscount ?? i.price ?? 0) * (i.quantity ?? 0),
+    (s, i) => s + (i.priceAfterDiscount ?? i.price ?? 0) * (i.quantity ?? 0),
     0,
   );
   return (
@@ -391,9 +405,11 @@ const OrderDetailDialog = ({
             />
           </div>
 
-          {showCustomerSummary && (
+          {showCrmCustomerSummary && (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">Khách hàng: </span>
+              <p className="text-[11px] text-muted-foreground mb-0.5">
+                Khách hàng (CRM / loyalty)
+              </p>
               <span className="font-medium">
                 {order.customerName?.trim() || "—"}
               </span>
@@ -411,45 +427,69 @@ const OrderDetailDialog = ({
             </div>
           )}
 
+          {showGuestSummary && (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <p className="text-[11px] text-muted-foreground mb-0.5">
+                Khách ghi nhận (POS / walk-in)
+              </p>
+              {order.guestName?.trim() ? (
+                <p>
+                  <span className="text-muted-foreground">Tên: </span>
+                  <span className="font-medium">{order.guestName.trim()}</span>
+                </p>
+              ) : null}
+              {order.guestPhone?.trim() ? (
+                <p>
+                  <span className="text-muted-foreground">SĐT: </span>
+                  <span className="font-mono">{order.guestPhone.trim()}</span>
+                </p>
+              ) : null}
+            </div>
+          )}
+
           {!canEdit &&
             (order.note ||
               order.shippingCarrier ||
               order.shippingMethod ||
               order.trackingNumber ||
               order.externalOrderRef) && (
-            <div className="rounded-md border p-3 space-y-1 text-sm">
-              {order.note && (
-                <p>
-                  <span className="text-muted-foreground">Ghi chú: </span>
-                  {order.note}
-                </p>
-              )}
-              {order.externalOrderRef && (
-                <p>
-                  <span className="text-muted-foreground">Tham chiếu ngoài: </span>
-                  <span className="font-mono">{order.externalOrderRef}</span>
-                </p>
-              )}
-              {order.shippingMethod && (
-                <p>
-                  <span className="text-muted-foreground">Hình thức giao: </span>
-                  {order.shippingMethod}
-                </p>
-              )}
-              {order.shippingCarrier && (
-                <p>
-                  <span className="text-muted-foreground">Đơn vị VC: </span>
-                  {order.shippingCarrier}
-                </p>
-              )}
-              {order.trackingNumber && (
-                <p>
-                  <span className="text-muted-foreground">Vận đơn: </span>
-                  <span className="font-mono">{order.trackingNumber}</span>
-                </p>
-              )}
-            </div>
-          )}
+              <div className="rounded-md border p-3 space-y-1 text-sm">
+                {order.note && (
+                  <p>
+                    <span className="text-muted-foreground">Ghi chú: </span>
+                    {order.note}
+                  </p>
+                )}
+                {order.externalOrderRef && (
+                  <p>
+                    <span className="text-muted-foreground">
+                      Tham chiếu ngoài:{" "}
+                    </span>
+                    <span className="font-mono">{order.externalOrderRef}</span>
+                  </p>
+                )}
+                {order.shippingMethod && (
+                  <p>
+                    <span className="text-muted-foreground">
+                      Hình thức giao:{" "}
+                    </span>
+                    {order.shippingMethod}
+                  </p>
+                )}
+                {order.shippingCarrier && (
+                  <p>
+                    <span className="text-muted-foreground">Đơn vị VC: </span>
+                    {order.shippingCarrier}
+                  </p>
+                )}
+                {order.trackingNumber && (
+                  <p>
+                    <span className="text-muted-foreground">Vận đơn: </span>
+                    <span className="font-mono">{order.trackingNumber}</span>
+                  </p>
+                )}
+              </div>
+            )}
 
           {canEdit && (
             <div className="rounded-md border p-3 space-y-3">
@@ -461,7 +501,9 @@ const OrderDetailDialog = ({
                 <Textarea
                   className="text-sm min-h-[56px]"
                   value={form.note}
-                  onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, note: e.target.value }))
+                  }
                   rows={2}
                 />
               </div>
@@ -476,17 +518,47 @@ const OrderDetailDialog = ({
                   placeholder="Dán ID khách hàng; để trống nếu không gắn"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Tên và SĐT hiển thị ở trên theo ID đã lưu; đổi ID rồi bấm Lưu để cập nhật.
+                  Tên và SĐT CRM hiển thị theo ID đã lưu; đổi ID rồi bấm Lưu để
+                  cập nhật.
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Tham chiếu ngoài (Shopee, …)</Label>
+                  <Label className="text-xs">Tên khách (POS / walk-in)</Label>
+                  <Input
+                    className="h-8 text-sm"
+                    value={form.guestName}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, guestName: e.target.value }))
+                    }
+                    placeholder="Tách với khách CRM"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">SĐT khách (POS / walk-in)</Label>
+                  <Input
+                    className="h-8 text-sm font-mono"
+                    value={form.guestPhone}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, guestPhone: e.target.value }))
+                    }
+                    placeholder="Số điện thoại"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    Tham chiếu ngoài (Shopee, …)
+                  </Label>
                   <Input
                     className="h-8 text-sm"
                     value={form.externalOrderRef}
                     onChange={(e) =>
-                      setForm((f) => ({ ...f, externalOrderRef: e.target.value }))
+                      setForm((f) => ({
+                        ...f,
+                        externalOrderRef: e.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -507,7 +579,10 @@ const OrderDetailDialog = ({
                     className="h-8 text-sm"
                     value={form.shippingCarrier}
                     onChange={(e) =>
-                      setForm((f) => ({ ...f, shippingCarrier: e.target.value }))
+                      setForm((f) => ({
+                        ...f,
+                        shippingCarrier: e.target.value,
+                      }))
                     }
                     placeholder="GHN, GHTK, …"
                   />
@@ -539,10 +614,8 @@ const OrderDetailDialog = ({
               <TableBody>
                 {order.items?.map((item, idx) => {
                   const basePrice = item.price ?? 0;
-                  const unitAfter =
-                    item.priceAfterDiscount ?? item.price ?? 0;
-                  const showOrig =
-                    Math.abs(basePrice - unitAfter) > 0.009;
+                  const unitAfter = item.priceAfterDiscount ?? item.price ?? 0;
+                  const showOrig = Math.abs(basePrice - unitAfter) > 0.009;
                   const lineTotal = unitAfter * item.quantity;
                   const promoBits = [
                     item.promotionName,
@@ -704,9 +777,9 @@ const OrderDetailDialog = ({
             ) : (
               <>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Không có snapshot thuế trên đơn — thường gặp ở đơn tạo trước khi
-                  hệ thống lưu thuế. Xem tổng tiền hàng; cấu hình thuế tại mục
-                  chính sách thuế theo chi nhánh.
+                  Không có snapshot thuế trên đơn — thường gặp ở đơn tạo trước
+                  khi hệ thống lưu thuế. Xem tổng tiền hàng; cấu hình thuế tại
+                  mục chính sách thuế theo chi nhánh.
                 </p>
                 <div className="flex justify-between font-semibold text-base pt-1">
                   <span>Tổng cộng</span>
@@ -751,9 +824,11 @@ const OrderDetailDialog = ({
 
 const OrderListPage = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const {
     selectedShopId,
     selectedShop,
+    selectedIndustry,
     selectedBranchId,
     selectedBranch,
     branches,
@@ -761,6 +836,8 @@ const OrderListPage = () => {
     isOwner,
     isStaff,
   } = useShop();
+
+  const shopHasTableManagement = selectedIndustry === SHOP_INDUSTRY.FNB;
   const { confirm } = useAlertDialog();
   const canManage = isOwner || isStaff;
 
@@ -802,9 +879,9 @@ const OrderListPage = () => {
     [selectedBranchId, branches],
   );
 
-  // Load tables to display table name in order list (when branch is selected)
+  // Load tables để hiển thị tên bàn — chỉ shop FNB (có màn Quản lý bàn)
   useEffect(() => {
-    if (!selectedShopId || !effectiveBranchId) {
+    if (!shopHasTableManagement || !selectedShopId || !effectiveBranchId) {
       setTables([]);
       return;
     }
@@ -825,7 +902,7 @@ const OrderListPage = () => {
     return () => {
       alive = false;
     };
-  }, [selectedShopId, effectiveBranchId]);
+  }, [shopHasTableManagement, selectedShopId, effectiveBranchId]);
 
   const tableNameById = useMemo(() => {
     const map = new Map();
@@ -861,13 +938,7 @@ const OrderListPage = () => {
       });
       setInvoiceOpen(true);
     },
-    [
-      selectedShop,
-      selectedBranch,
-      branches,
-      effectiveBranchId,
-      tableNameById,
-    ],
+    [selectedShop, selectedBranch, branches, effectiveBranchId, tableNameById],
   );
 
   // ── Fetch ────────────────────────────────────────────────────────────────
@@ -975,6 +1046,19 @@ const OrderListPage = () => {
     setPaymentDialogOpen(true);
   }, []);
 
+  const goEditOrderOnPos = useCallback(
+    (order) => {
+      const q = new URLSearchParams();
+      if (order.orderCode) {
+        q.set("orderCode", order.orderCode);
+      } else {
+        q.set("orderId", order.id);
+      }
+      navigate(`/pos?${q.toString()}`);
+    },
+    [navigate],
+  );
+
   const handleConfirmPayment = async () => {
     if (!payingOrderId) return;
     try {
@@ -1001,8 +1085,31 @@ const OrderListPage = () => {
   };
 
   // ── Columns ──────────────────────────────────────────────────────────────
-  const columns = useMemo(
-    () => [
+  const columns = useMemo(() => {
+    const tableColumn = {
+      id: "table",
+      header: "Bàn",
+      enableSorting: false,
+      cell: ({ row }) => {
+        const tableId = row.original?.tableId;
+        if (!tableId) return <span className="text-muted-foreground">—</span>;
+        const name = tableNameById.get(tableId);
+        return (
+          <div className="max-w-[140px]">
+            <p className="text-sm font-medium truncate">
+              {name || `Bàn #${shortId(tableId)}`}
+            </p>
+            {name && (
+              <p className="text-[10px] text-muted-foreground font-mono truncate">
+                {shortId(tableId)}
+              </p>
+            )}
+          </div>
+        );
+      },
+    };
+
+    return [
       {
         accessorKey: "orderCode",
         header: "Mã đơn hàng",
@@ -1031,24 +1138,38 @@ const OrderListPage = () => {
           );
         },
       },
+      ...(shopHasTableManagement ? [tableColumn] : []),
       {
-        id: "table",
-        header: "Bàn",
+        id: "customerGuest",
+        header: "Khách hàng",
         enableSorting: false,
         cell: ({ row }) => {
-          const tableId = row.original?.tableId;
-          if (!tableId) return <span className="text-muted-foreground">—</span>;
-          const name = tableNameById.get(tableId);
+          const o = row.original;
+          const crm = [o.customerName?.trim(), o.customerPhone?.trim()]
+            .filter(Boolean)
+            .join(" · ");
+          const guest = [o.guestName?.trim(), o.guestPhone?.trim()]
+            .filter(Boolean)
+            .join(" · ");
+          if (!crm && !guest) {
+            return <span className="text-muted-foreground">—</span>;
+          }
           return (
-            <div className="max-w-[140px]">
-              <p className="text-sm font-medium truncate">
-                {name || `Bàn #${shortId(tableId)}`}
-              </p>
-              {name && (
-                <p className="text-[10px] text-muted-foreground font-mono truncate">
-                  {shortId(tableId)}
+            <div className="max-w-[220px]">
+              {crm ? (
+                <p className="text-sm font-medium truncate" title={crm}>
+                  {crm}
                 </p>
-              )}
+              ) : null}
+              {guest ? (
+                <p
+                  className={`text-xs truncate ${crm ? "text-muted-foreground" : "text-sm font-medium"}`}
+                  title={guest}
+                >
+                  {crm ? "POS: " : ""}
+                  {guest}
+                </p>
+              ) : null}
             </div>
           );
         },
@@ -1165,6 +1286,13 @@ const OrderListPage = () => {
                   <Eye className="h-4 w-4 mr-2" /> Xem chi tiết
                 </DropdownMenuItem>
 
+                {!order.paid && !isTerminal && canManage && (
+                  <DropdownMenuItem onClick={() => goEditOrderOnPos(order)}>
+                    <Pencil className="h-4 w-4 mr-2 text-primary" />
+                    Chỉnh sửa trên POS
+                  </DropdownMenuItem>
+                )}
+
                 <DropdownMenuItem
                   onClick={() => openInvoiceDialog(order)}
                   disabled={!order?.items || order.items.length === 0}
@@ -1227,17 +1355,18 @@ const OrderListPage = () => {
           );
         },
       },
-    ],
-    [
-      canManage,
-      submitting,
-      handleCancel,
-      handleStatusChange,
-      openPaymentDialog,
-      tableNameById,
-      openInvoiceDialog,
-    ],
-  );
+    ];
+  }, [
+    shopHasTableManagement,
+    canManage,
+    submitting,
+    handleCancel,
+    handleStatusChange,
+    openPaymentDialog,
+    goEditOrderOnPos,
+    tableNameById,
+    openInvoiceDialog,
+  ]);
 
   const table = useReactTable({
     data: orders,
@@ -1271,12 +1400,12 @@ const OrderListPage = () => {
               Theo dõi và xử lý đơn hàng
             </p>
           </div>
-          {canManage && (
+          {/* {canManage && (
             <Button onClick={() => setCreateOrderOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               Tạo đơn hàng
             </Button>
-          )}
+          )} */}
         </div>
 
         {/* ── Stat Cards ──────────────────────────────────────────── */}

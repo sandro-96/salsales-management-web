@@ -9,6 +9,19 @@ export const getOrders = (shopId, params = {}) =>
   axiosInstance.get("/orders", { params: { shopId, ...params } });
 
 /**
+ * Tra cứu đơn cho POS — mở chỉnh sửa khi chưa thanh toán.
+ * GET /api/orders/lookup?shopId=&branchId=&orderCode= | &orderId=
+ * Cần một trong hai: orderCode hoặc orderId.
+ */
+export const lookupOrderForPosEdit = (shopId, branchId, { orderCode, orderId } = {}) => {
+  const params = { shopId };
+  if (branchId) params.branchId = branchId;
+  if (orderCode) params.orderCode = orderCode;
+  if (orderId) params.orderId = orderId;
+  return axiosInstance.get("/orders/lookup", { params });
+};
+
+/**
  * 🔍 Lọc đơn hàng theo trạng thái
  * GET /api/orders/filter?shopId={shopId}&status={status}
  */

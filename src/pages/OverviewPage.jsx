@@ -110,7 +110,7 @@ const OverviewPage = () => {
   const [reportError, setReportError] = useState(false);
 
   const canViewReport =
-    isOwner || shopRole === "MANAGER" || shopRole === "ADMIN";
+    isOwner || shopRole === "MANAGER";
 
   /** Đơn gần đây: 1 chi nhánh → luôn theo chi nhánh đó; nhiều chi nhánh → theo bộ lọc báo cáo. */
   const recentOrdersBranchId = useMemo(() => {

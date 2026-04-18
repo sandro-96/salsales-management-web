@@ -26,12 +26,7 @@ import {
   updateStaffRole,
   updateStaffPermissions,
 } from "../../api/staffApi.js";
-
-const ROLES = [
-  { value: "MANAGER", label: "Quản lý" },
-  { value: "ADMIN", label: "Admin" },
-  { value: "STAFF", label: "Nhân viên" },
-];
+import { SHOP_ROLE_LABELS, SHOP_ROLES_ASSIGNABLE } from "../../constants/shopRoles.js";
 
 const PERMISSION_GROUPS = [
   {
@@ -131,12 +126,6 @@ const DEFAULT_PERMISSIONS = {
     "SHOP_USER_VIEW", "SHOP_USER_CREATE", "SHOP_USER_UPDATE",
     "BRANCH_VIEW", "BRANCH_MANAGE",
     "INVENTORY_VIEW", "INVENTORY_MANAGE", "REPORT_VIEW",
-  ],
-  ADMIN: [
-    "ORDER_VIEW", "ORDER_CREATE", "ORDER_UPDATE", "ORDER_PAYMENT_CONFIRM",
-    "CUSTOMER_VIEW", "PRODUCT_VIEW", "PRODUCT_EXPORT",
-    "PROMOTION_VIEW", "TABLE_VIEW", "BRANCH_VIEW", "INVENTORY_VIEW",
-    "INVENTORY_MANAGE", "SHOP_VIEW",
   ],
   STAFF: [
     "ORDER_VIEW", "ORDER_CREATE", "ORDER_UPDATE",
@@ -290,7 +279,9 @@ export default function EditStaffModal({
                 {staff.email}
               </p>
             </div>
-            <Badge variant="outline">{staff.role}</Badge>
+            <Badge variant="outline">
+              {SHOP_ROLE_LABELS[staff.role] || staff.role}
+            </Badge>
           </div>
 
           {/* Role */}
@@ -301,7 +292,7 @@ export default function EditStaffModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                {ROLES.map((r) => (
+                {SHOP_ROLES_ASSIGNABLE.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
                   </SelectItem>

@@ -22,19 +22,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getFlagUrl } from "../../utils/commonUtils";
 import { COUNTRIES } from "../../constants/countries";
 import { SHOP_INDUSTRY } from "../../constants/ShopIndustry.js";
+import { SHOP_ROLE_LABELS } from "../../constants/shopRoles.js";
 
 const PLAN_COLORS = {
   FREE: "bg-gray-100 text-gray-600 border-gray-200",
   BASIC: "bg-sky-100 text-sky-700 border-sky-200",
   PRO: "bg-violet-100 text-violet-700 border-violet-200",
   ENTERPRISE: "bg-amber-100 text-amber-700 border-amber-200",
-};
-
-const SHOP_ROLE_LABELS = {
-  OWNER: "Chủ cửa hàng",
-  MANAGER: "Quản lý",
-  ADMIN: "Admin",
-  STAFF: "Nhân viên",
 };
 
 const INDUSTRY_LABELS = {

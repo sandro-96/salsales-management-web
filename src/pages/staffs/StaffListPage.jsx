@@ -61,20 +61,10 @@ import {
 import AddStaffModal from "./AddStaffModal.jsx";
 import EditStaffModal from "./EditStaffModal.jsx";
 import StaffProfileModal from "./StaffProfileModal.jsx";
-
-const ROLE_LABELS = {
-  OWNER: "Chủ cửa hàng",
-  MANAGER: "Quản lý",
-  ADMIN: "Admin",
-  STAFF: "Nhân viên",
-};
-
-const ROLE_VARIANTS = {
-  OWNER: "default",
-  MANAGER: "secondary",
-  ADMIN: "outline",
-  STAFF: "outline",
-};
+import {
+  SHOP_ROLE_BADGE_VARIANT,
+  SHOP_ROLE_LABELS,
+} from "../../constants/shopRoles.js";
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "-";
@@ -354,9 +344,12 @@ const StaffListPage = () => {
         }
         const role = row.getValue("role");
         return (
-          <Badge variant={ROLE_VARIANTS[role] || "outline"} className="gap-1">
+          <Badge
+            variant={SHOP_ROLE_BADGE_VARIANT[role] || "outline"}
+            className="gap-1"
+          >
             <Shield className="h-3 w-3" />
-            {ROLE_LABELS[role] || role}
+            {SHOP_ROLE_LABELS[role] || role}
           </Badge>
         );
       },

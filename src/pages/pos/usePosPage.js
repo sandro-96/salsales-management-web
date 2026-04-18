@@ -1,0 +1,1646 @@
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
+import { useShop } from "../../hooks/useShop";
+import { getBranchProducts } from "../../api/productApi";
+import { getCurrentOrderByTable, getTables } from "../../api/tableApi";
+import { getPromotions } from "../../api/promotionApi";
+import {
+  createTableGroup,
+  deleteTableGroup,
+  getTableGroups,
+} from "../../api/tableGroupApi";
+import {
+  createOrder,
+  confirmPayment,
+  previewOrderTax,
+  patchOrderFulfillment,
+  updateOrder,
+  moveOrderTable,
+  splitOrder,
+  mergeTableGroupOrders,
+  lookupOrderForPosEdit,
+} from "../../api/orderApi";
+import {
+  createCustomer,
+  getCustomers,
+  getCustomerPoints,
+} from "../../api/customerApi";
+
+import { ALL_CATEGORY } from "./posConstants";
+import { cartFromOrderItems, createEmptyTab } from "./posCartUtils";
+import {
+  buildPromotionMap,
+  getBestPromo,
+  calcDiscountedPrice,
+  formatDiscount,
+} from "./posPromotionUtils";
+import { hasBranchVariants, variantCatalogName } from "./posProductUtils";
+import { buildDraftOrderForInvoice } from "./posInvoiceDraft";
+import { getPaymentMethodLabel } from "./posPayment";
+
+export function usePosPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const {
+    selectedShopId,
+    selectedBranchId,
+    branches,
+    setSelectedBranchId,
+    selectedShop,
+  } = useShop();
+
+  const [products, setProducts] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [promotions, setPromotions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
+
+  const [orderTabs, setOrderTabs] = useState([createEmptyTab(1)]);
+  const [activeTabId, setActiveTabId] = useState(1);
+  const activeTabIdRef = React.useRef(activeTabId);
+  const nextTabIdRef = React.useRef(2);
+
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
+
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [submitting, setSubmitting] = useState(false);
+  const [holdSuccessOpen, setHoldSuccessOpen] = useState(false);
+  const [holdSuccessMessage, setHoldSuccessMessage] = useState("");
+  const [moveTableOpen, setMoveTableOpen] = useState(false);
+  const [moveToTableId, setMoveToTableId] = useState("none");
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoicePayload, setInvoicePayload] = useState(null);
+  const [invoicePreviewOpen, setInvoicePreviewOpen] = useState(false);
+  const [previewPrintedAt, setPreviewPrintedAt] = useState(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [variantPickerProduct, setVariantPickerProduct] = useState(null);
+
+  const [postSaleOpen, setPostSaleOpen] = useState(false);
+  const [postSaleOrderId, setPostSaleOrderId] = useState(null);
+  const [postSaleName, setPostSaleName] = useState("");
+  const [postSalePhone, setPostSalePhone] = useState("");
+  const [postSaleSaving, setPostSaleSaving] = useState(false);
+
+  const [customerResults, setCustomerResults] = useState([]);
+  const [customerSearching, setCustomerSearching] = useState(false);
+
+  const [tableGroups, setTableGroups] = useState([]);
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  const [groupSelectedIds, setGroupSelectedIds] = useState([]);
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [splitToTableId, setSplitToTableId] = useState("none");
+  const [splitQtyByLineKey, setSplitQtyByLineKey] = useState({});
+  const [mergeGroupSubmitting, setMergeGroupSubmitting] = useState(false);
+
+  const [orderLookupInput, setOrderLookupInput] = useState("");
+  const [orderLookupSubmitting, setOrderLookupSubmitting] = useState(false);
+
+  const tableGroupByTableId = useMemo(() => {
+    const map = new Map();
+    (tableGroups || []).forEach((g) => {
+      (g.tableIds || []).forEach((tid) => {
+        if (tid) map.set(tid, g);
+      });
+    });
+    return map;
+  }, [tableGroups]);
+
+  const activeTab = orderTabs.find((t) => t.id === activeTabId) || orderTabs[0];
+  const cart = useMemo(() => activeTab?.cart || [], [activeTab]);
+  const cartRef = React.useRef(cart);
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
+  const selectedTableId = activeTab?.tableId || "";
+  const note = activeTab?.note || "";
+  const selectedCustomer = activeTab?.customer || null;
+  const guestName = activeTab?.guestName ?? "";
+  const guestPhone = activeTab?.guestPhone ?? "";
+  const displayOrderCode = activeTab?.displayOrderCode ?? null;
+  const pointsToRedeem = activeTab?.pointsToRedeem || 0;
+  const activeOrderId = activeTab?.orderId || null;
+
+  const activeGroup = useMemo(() => {
+    if (!selectedTableId || selectedTableId === "none") return null;
+    return tableGroupByTableId.get(selectedTableId) || null;
+  }, [selectedTableId, tableGroupByTableId]);
+
+  const updateActiveTab = useCallback((updates) => {
+    const aid = activeTabIdRef.current;
+    setOrderTabs((prev) =>
+      prev.map((tab) => (tab.id === aid ? { ...tab, ...updates } : tab)),
+    );
+  }, []);
+
+  const setCart = useCallback((updater) => {
+    const aid = activeTabIdRef.current;
+    setOrderTabs((prev) =>
+      prev.map((tab) => {
+        if (tab.id !== aid) return tab;
+        const newCart =
+          typeof updater === "function" ? updater(tab.cart) : updater;
+        return { ...tab, cart: newCart };
+      }),
+    );
+  }, []);
+
+  const activateTableTab = useCallback(
+    (tableId) => {
+      if (!tableId || tableId === "none") {
+        updateActiveTab({ tableId });
+        return;
+      }
+
+      let nextActiveId = null;
+      setOrderTabs((prev) => {
+        const existing = prev.find((t) => t.tableId === tableId);
+        if (existing) {
+          nextActiveId = existing.id;
+          return prev;
+        }
+        const id = nextTabIdRef.current++;
+        const nextTab = { ...createEmptyTab(id), tableId };
+        nextActiveId = nextTab.id;
+        return [...prev, nextTab];
+      });
+
+      if (nextActiveId != null) {
+        activeTabIdRef.current = nextActiveId;
+        setActiveTabId(nextActiveId);
+        setCustomerResults([]);
+      }
+    },
+    [updateActiveTab],
+  );
+
+  const setSelectedTableId = useCallback(
+    async (v) => {
+      if (!v || v === "none") {
+        updateActiveTab({ tableId: v });
+        return;
+      }
+
+      // Selecting another table should open/switch to an order tab for that table,
+      // not move the currently loaded order.
+      activateTableTab(v);
+    },
+    [activateTableTab, updateActiveTab],
+  );
+  const setNote = useCallback(
+    (v) => updateActiveTab({ note: v }),
+    [updateActiveTab],
+  );
+  const setSelectedCustomer = useCallback(
+    (v) => updateActiveTab({ customer: v }),
+    [updateActiveTab],
+  );
+  const setPointsToRedeem = useCallback(
+    (v) => updateActiveTab({ pointsToRedeem: v }),
+    [updateActiveTab],
+  );
+  const setGuestName = useCallback(
+    (v) => updateActiveTab({ guestName: v }),
+    [updateActiveTab],
+  );
+  const setGuestPhone = useCallback(
+    (v) => updateActiveTab({ guestPhone: v }),
+    [updateActiveTab],
+  );
+
+  const addTab = useCallback(() => {
+    const id = nextTabIdRef.current++;
+    activeTabIdRef.current = id;
+    setOrderTabs((prev) => [...prev, createEmptyTab(id)]);
+    setActiveTabId(id);
+    setCustomerResults([]);
+  }, []);
+
+  const switchTab = useCallback(
+    (tabId) => {
+      if (tabId !== activeTabId) {
+        activeTabIdRef.current = tabId;
+        setActiveTabId(tabId);
+        setCustomerResults([]);
+      }
+    },
+    [activeTabId],
+  );
+
+  const closeTab = useCallback(
+    (tabId) => {
+      setOrderTabs((prev) => {
+        if (prev.length <= 1) return prev;
+        const filtered = prev.filter((t) => t.id !== tabId);
+        // Chá»‰ cÃ²n 1 Ä‘Æ¡n: reset bá»™ Ä‘áº¿m id Ä‘á»ƒ Ä‘Æ¡n má»›i khÃ´ng bá»‹ nháº£y sá»‘ (vd. xÃ³a Ä‘Æ¡n 2 â†’ thÃªm láº¡i lÃ  Ä‘Æ¡n 2).
+        if (filtered.length === 1) {
+          nextTabIdRef.current = filtered[0].id + 1;
+        }
+        if (tabId === activeTabId) {
+          const idx = prev.findIndex((t) => t.id === tabId);
+          const next = filtered[Math.min(idx, filtered.length - 1)];
+          activeTabIdRef.current = next.id;
+          setActiveTabId(next.id);
+        }
+        return filtered;
+      });
+    },
+    [activeTabId],
+  );
+
+  const effectiveBranchId =
+    selectedBranchId || (branches.length === 1 ? branches[0]?.id : null);
+
+  const groupOrderTabs = useMemo(() => {
+    if (!activeGroup?.tableIds?.length) return [];
+    const set = new Set((activeGroup.tableIds || []).filter(Boolean));
+    return orderTabs.filter(
+      (t) => t.tableId && t.tableId !== "none" && set.has(t.tableId),
+    );
+  }, [activeGroup, orderTabs]);
+
+  const mergeGroupBillDisabled = useMemo(() => {
+    if (!selectedShopId) return true;
+    if (!effectiveBranchId) return true;
+    if (!activeGroup?.id) return true;
+    if (groupOrderTabs.length < 2) return true;
+    if (!groupOrderTabs.every((t) => !!t.orderId)) return true;
+    if (!activeOrderId) return true;
+    const targetTab = groupOrderTabs.find((t) => t.id === activeTabId);
+    if (!targetTab?.orderId) return true;
+    const ids = new Set(groupOrderTabs.map((t) => t.orderId));
+    return ids.size < 2;
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    activeGroup,
+    groupOrderTabs,
+    activeOrderId,
+    activeTabId,
+  ]);
+
+  // Resume open order by table (multi-device)
+  useEffect(() => {
+    if (!selectedShopId) return;
+    if (!selectedTableId || selectedTableId === "none") return;
+    if (!effectiveBranchId) return;
+
+    let alive = true;
+    (async () => {
+      try {
+        const res = await getCurrentOrderByTable(
+          selectedShopId,
+          selectedTableId,
+        );
+        const order = res.data?.data;
+        if (!alive) return;
+        if (!order?.id) return;
+        // If already loaded, skip
+        if (activeOrderId && activeOrderId === order.id) return;
+
+        updateActiveTab({
+          orderId: order.id,
+          displayOrderCode: order.orderCode || null,
+          cart: cartFromOrderItems(order.items),
+          note: order.note || "",
+          customer: order.customerId
+            ? {
+                id: order.customerId,
+                name: order.customerName,
+                phone: order.customerPhone,
+              }
+            : null,
+          pointsToRedeem: order.pointsRedeemed ?? 0,
+          guestName: order.guestName || "",
+          guestPhone: order.guestPhone || "",
+        });
+        toast.info("Đã tải đơn đang mở của bàn.");
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [
+    selectedShopId,
+    selectedTableId,
+    effectiveBranchId,
+    activeOrderId,
+    updateActiveTab,
+  ]);
+
+  const fetchData = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    setLoading(true);
+    try {
+      const [prodRes, tableRes, promoRes] = await Promise.all([
+        getBranchProducts(selectedShopId, effectiveBranchId, {
+          size: 500,
+          active: true,
+        }),
+        getTables(selectedShopId, effectiveBranchId),
+        getPromotions(selectedShopId, {
+          branchId: effectiveBranchId,
+          size: 200,
+        }),
+      ]);
+      const prodList = prodRes.data?.data?.content || prodRes.data?.data || [];
+      setProducts(prodList.filter((p) => p.activeInBranch !== false));
+      const tableList =
+        tableRes.data?.data?.content || tableRes.data?.data || [];
+      setTables(tableList);
+      const promoList =
+        promoRes.data?.data?.content || promoRes.data?.data || [];
+      setPromotions(promoList);
+    } catch (err) {
+      console.error("Failed to load POS data", err);
+      toast.error("KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u sáº£n pháº©m");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedShopId, effectiveBranchId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const fetchGroups = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    try {
+      const res = await getTableGroups(selectedShopId, effectiveBranchId);
+      setTableGroups(res.data?.data || []);
+    } catch {
+      setTableGroups([]);
+    }
+  }, [selectedShopId, effectiveBranchId]);
+
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
+
+  const handleCreateGroup = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (!Array.isArray(groupSelectedIds) || groupSelectedIds.length < 2) {
+      toast.error("Chá»n Ã­t nháº¥t 2 bÃ n Ä‘á»ƒ ghÃ©p.");
+      return;
+    }
+    try {
+      await createTableGroup(selectedShopId, effectiveBranchId, {
+        shopId: selectedShopId,
+        branchId: effectiveBranchId,
+        tableIds: groupSelectedIds,
+      });
+      toast.success("ÄÃ£ ghÃ©p bÃ n.");
+      setGroupDialogOpen(false);
+      setGroupSelectedIds([]);
+      fetchGroups();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "KhÃ´ng thá»ƒ ghÃ©p bÃ n.");
+    }
+  }, [selectedShopId, effectiveBranchId, groupSelectedIds, fetchGroups]);
+
+  const handleUngroup = useCallback(
+    async (groupId) => {
+      if (!selectedShopId || !effectiveBranchId) return;
+      try {
+        await deleteTableGroup(groupId, selectedShopId, effectiveBranchId);
+        toast.success("ÄÃ£ giáº£i nhÃ³m bÃ n.");
+        fetchGroups();
+      } catch (err) {
+        toast.error(err.response?.data?.message || "KhÃ´ng thá»ƒ giáº£i nhÃ³m.");
+      }
+    },
+    [selectedShopId, effectiveBranchId, fetchGroups],
+  );
+
+  const handleMergeGroupBills = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (mergeGroupSubmitting) return;
+
+    const targetOrderId = activeOrderId;
+    const sourceOrderIds = Array.from(
+      new Set(groupOrderTabs.map((t) => t.orderId).filter(Boolean)),
+    );
+    if (!targetOrderId || sourceOrderIds.length < 2) return;
+    if (!sourceOrderIds.includes(targetOrderId)) return;
+
+    const ok = window.confirm(
+      "Gá»™p bill nhÃ³m: cÃ¡c Ä‘Æ¡n khÃ¡c trong nhÃ³m sáº½ bá»‹ huá»· vÃ  toÃ n bá»™ mÃ³n Ä‘Æ°á»£c gá»™p vá» Ä‘Æ¡n hiá»‡n táº¡i. Báº¡n cháº¯c cháº¯n?",
+    );
+    if (!ok) return;
+
+    setMergeGroupSubmitting(true);
+    try {
+      const res = await mergeTableGroupOrders(selectedShopId, {
+        targetOrderId,
+        sourceOrderIds,
+      });
+      const merged = res.data?.data;
+      if (!merged?.id) {
+        throw new Error("MISSING_MERGED_ORDER");
+      }
+
+      const cancelledIds = sourceOrderIds.filter((id) => id !== merged.id);
+
+      let nextActiveId = activeTabId;
+      setOrderTabs((prev) => {
+        const kept = prev.filter(
+          (t) => !t.orderId || !cancelledIds.includes(t.orderId),
+        );
+        const nextTabs = kept.length > 0 ? kept : [createEmptyTab(1)];
+
+        const existsActive = nextTabs.some((t) => t.id === activeTabId);
+        if (!existsActive) {
+          const preferred =
+            nextTabs.find((t) => t.orderId === merged.id) || nextTabs[0];
+          nextActiveId = preferred.id;
+        }
+
+        return nextTabs.map((t) => {
+          if (t.orderId !== merged.id) return t;
+          return {
+            ...t,
+            orderId: merged.id,
+            displayOrderCode: merged.orderCode || t.displayOrderCode || null,
+            cart: cartFromOrderItems(merged.items),
+            note: merged.note || "",
+            tableId: merged.tableId || t.tableId,
+            customer: merged.customerId
+              ? {
+                  id: merged.customerId,
+                  name: merged.customerName,
+                  phone: merged.customerPhone,
+                }
+              : null,
+            pointsToRedeem: merged.pointsRedeemed ?? 0,
+            guestName: merged.guestName ?? t.guestName ?? "",
+            guestPhone: merged.guestPhone ?? t.guestPhone ?? "",
+          };
+        });
+      });
+
+      activeTabIdRef.current = nextActiveId;
+      setActiveTabId(nextActiveId);
+      setCustomerResults([]);
+
+      toast.success("ÄÃ£ gá»™p bill nhÃ³m.");
+      fetchData();
+      fetchGroups();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "KhÃ´ng thá»ƒ gá»™p bill nhÃ³m.");
+    } finally {
+      setMergeGroupSubmitting(false);
+    }
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    mergeGroupSubmitting,
+    activeOrderId,
+    groupOrderTabs,
+    activeTabId,
+    fetchData,
+    fetchGroups,
+  ]);
+
+  const handleSplit = useCallback(async () => {
+    if (!selectedShopId || !activeOrderId) return;
+    const itemsToMove = cart
+      .map((it) => {
+        const q = Number(splitQtyByLineKey[it.lineKey] ?? 0);
+        if (!q || q <= 0) return null;
+        return {
+          productId: it.productId,
+          ...(it.variantId ? { variantId: it.variantId } : {}),
+          quantity: q,
+        };
+      })
+      .filter(Boolean);
+    if (itemsToMove.length === 0) {
+      toast.error("Chá»n sá»‘ lÆ°á»£ng mÃ³n cáº§n tÃ¡ch.");
+      return;
+    }
+    try {
+      const payload = {
+        toTableId:
+          splitToTableId && splitToTableId !== "none" ? splitToTableId : null,
+        itemsToMove,
+      };
+      const res = await splitOrder(activeOrderId, selectedShopId, payload);
+      const data = res.data?.data;
+      const src = data?.source;
+      updateActiveTab({
+        orderId: src?.id || activeOrderId,
+        cart: cartFromOrderItems(src?.items),
+        note: src?.note || "",
+        tableId: src?.tableId || selectedTableId,
+      });
+      toast.success("ÄÃ£ tÃ¡ch mÃ³n sang Ä‘Æ¡n má»›i.");
+      setSplitDialogOpen(false);
+      setSplitToTableId("none");
+      setSplitQtyByLineKey({});
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "KhÃ´ng thá»ƒ tÃ¡ch mÃ³n.");
+    }
+  }, [
+    selectedShopId,
+    activeOrderId,
+    cart,
+    splitQtyByLineKey,
+    splitToTableId,
+    updateActiveTab,
+    selectedTableId,
+    fetchData,
+  ]);
+
+  const syncTimerRef = React.useRef(null);
+
+  // Debounced sync updates for open server order (edit items before payment)
+  useEffect(() => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (!activeOrderId) return;
+
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(async () => {
+      try {
+        const payload = {
+          tableId:
+            selectedTableId && selectedTableId !== "none"
+              ? selectedTableId
+              : null,
+          note: note || null,
+          guestName: guestName != null ? String(guestName) : "",
+          guestPhone: guestPhone != null ? String(guestPhone) : "",
+          items: cart.map((item) => ({
+            productId: item.productId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            quantity: item.quantity,
+          })),
+        };
+        await updateOrder(activeOrderId, selectedShopId, payload);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "KhÃ´ng thá»ƒ cáº­p nháº­t Ä‘Æ¡n.");
+      }
+    }, 650);
+
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, [
+    activeOrderId,
+    selectedShopId,
+    effectiveBranchId,
+    selectedTableId,
+    note,
+    guestName,
+    guestPhone,
+    cart,
+  ]);
+
+  const handleHoldOrder = useCallback(async () => {
+    if (!selectedShopId || !effectiveBranchId) return;
+    if (!Array.isArray(cart) || cart.length === 0) return;
+
+    try {
+      if (!activeOrderId) {
+        const orderData = {
+          shopId: selectedShopId,
+          branchId: effectiveBranchId,
+          tableId:
+            selectedTableId && selectedTableId !== "none"
+              ? selectedTableId
+              : null,
+          note: note || null,
+          customerId: selectedCustomer?.id || null,
+          guestName: guestName?.trim() || null,
+          guestPhone: guestPhone?.trim() || null,
+          pointsToRedeem:
+            selectedCustomer && pointsToRedeem > 0 ? pointsToRedeem : null,
+          items: cart.map((item) => ({
+            productId: item.productId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            quantity: item.quantity,
+          })),
+        };
+        const res = await createOrder(
+          selectedShopId,
+          effectiveBranchId,
+          orderData,
+        );
+        const created = res.data?.data;
+        if (created?.id) {
+          fetchData();
+          // After creating a new order, keep current data to continue selling on this order.
+          updateActiveTab({
+            orderId: created.id,
+            displayOrderCode: created.orderCode || null,
+          });
+          setHoldSuccessMessage(
+            created?.orderCode
+              ? `Đã tạo đơn ${created.orderCode} thành công.`
+              : "Đã tạo đơn thành công.",
+          );
+          setHoldSuccessOpen(true);
+        }
+        return;
+      }
+
+      // Force immediate sync
+      const payload = {
+        tableId:
+          selectedTableId && selectedTableId !== "none"
+            ? selectedTableId
+            : null,
+        note: note || null,
+        guestName: guestName != null ? String(guestName) : "",
+        guestPhone: guestPhone != null ? String(guestPhone) : "",
+        items: cart.map((item) => ({
+          productId: item.productId,
+          ...(item.variantId ? { variantId: item.variantId } : {}),
+          quantity: item.quantity,
+        })),
+      };
+      await updateOrder(activeOrderId, selectedShopId, payload);
+      toast.success("Đã lưu thay đổi đơn.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "KhÃ´ng thá»ƒ lÆ°u Ä‘Æ¡n.");
+    }
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    cart,
+    activeOrderId,
+    selectedTableId,
+    note,
+    selectedCustomer,
+    pointsToRedeem,
+    guestName,
+    guestPhone,
+    updateActiveTab,
+    fetchData,
+  ]);
+
+  const customerSearchTimer = React.useRef(null);
+  const handleCustomerSearch = useCallback(
+    (keyword) => {
+      setCustomerResults([]);
+      if (customerSearchTimer.current)
+        clearTimeout(customerSearchTimer.current);
+      if (!keyword || keyword.trim().length < 2) return;
+      customerSearchTimer.current = setTimeout(async () => {
+        setCustomerSearching(true);
+        try {
+          const res = await getCustomers(selectedShopId, {
+            keyword: keyword.trim(),
+            size: 8,
+          });
+          const data = res.data?.data;
+          const list = data?.content ?? (Array.isArray(data) ? data : []);
+          setCustomerResults(list);
+        } catch {
+          setCustomerResults([]);
+        } finally {
+          setCustomerSearching(false);
+        }
+      }, 350);
+    },
+    [selectedShopId],
+  );
+
+  const handleSelectCustomer = useCallback(
+    async (customer) => {
+      setCustomerResults([]);
+      try {
+        const res = await getCustomerPoints(customer.id, selectedShopId);
+        const points = res.data?.data ?? customer.loyaltyPoints ?? 0;
+        setSelectedCustomer({ ...customer, loyaltyPoints: points });
+      } catch {
+        setSelectedCustomer(customer);
+      }
+    },
+    [selectedShopId, setSelectedCustomer],
+  );
+
+  const handleClearCustomer = useCallback(() => {
+    setSelectedCustomer(null);
+    setCustomerResults([]);
+    setPointsToRedeem(0);
+  }, [setSelectedCustomer, setPointsToRedeem]);
+
+  const { promoMap, activePromotions } = useMemo(
+    () => buildPromotionMap(promotions, effectiveBranchId),
+    [promotions, effectiveBranchId],
+  );
+
+  const categories = useMemo(() => {
+    const cats = new Set();
+    products.forEach((p) => {
+      if (p.category) cats.add(p.category);
+    });
+    return [ALL_CATEGORY, ...Array.from(cats).sort()];
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (selectedCategory !== ALL_CATEGORY && p.category !== selectedCategory)
+        return false;
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        return (
+          p.name?.toLowerCase().includes(q) ||
+          p.sku?.toLowerCase().includes(q) ||
+          p.barcode?.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [products, selectedCategory, searchTerm]);
+
+  const availableTables = useMemo(() => {
+    const list = Array.isArray(tables) ? [...tables] : [];
+    const rank = (s) => {
+      if (s === "AVAILABLE") return 0;
+      if (s === "OCCUPIED") return 1;
+      if (s === "CLOSED") return 2;
+      return 3;
+    };
+    list.sort((a, b) => {
+      const ra = rank(a.status);
+      const rb = rank(b.status);
+      if (ra !== rb) return ra - rb;
+      const an = (a.name || "").toLowerCase();
+      const bn = (b.name || "").toLowerCase();
+      return an.localeCompare(bn, "vi");
+    });
+    return list;
+  }, [tables]);
+
+  // Auto-load other tables in the same group (preload open orders into tabs)
+  const loadedGroupRef = React.useRef("");
+  useEffect(() => {
+    if (!selectedShopId) return;
+    if (!effectiveBranchId) return;
+    if (!activeGroup?.id) return;
+    if (!selectedTableId || selectedTableId === "none") return;
+    const key = `${activeGroup.id}__${selectedTableId}__${activeTabId}`;
+    if (loadedGroupRef.current === key) return;
+    loadedGroupRef.current = key;
+
+    const otherTableIds = (activeGroup.tableIds || []).filter(
+      (id) => id && id !== selectedTableId,
+    );
+    if (otherTableIds.length === 0) return;
+
+    let alive = true;
+    (async () => {
+      for (const tid of otherTableIds) {
+        if (!alive) return;
+        try {
+          const res = await getCurrentOrderByTable(selectedShopId, tid);
+          const order = res.data?.data;
+          if (!order?.id) continue;
+          const exists = orderTabs.some((t) => t.orderId === order.id);
+          if (exists) continue;
+
+          const newTabId = nextTabIdRef.current++;
+          setOrderTabs((prev) => [
+            ...prev,
+            {
+              ...createEmptyTab(newTabId),
+              orderId: order.id,
+              displayOrderCode: order.orderCode || null,
+              tableId: tid,
+              cart: cartFromOrderItems(order.items),
+              note: order.note || "",
+              customer: order.customerId
+                ? {
+                    id: order.customerId,
+                    name: order.customerName,
+                    phone: order.customerPhone,
+                  }
+                : null,
+              pointsToRedeem: order.pointsRedeemed ?? 0,
+              guestName: order.guestName || "",
+              guestPhone: order.guestPhone || "",
+            },
+          ]);
+        } catch {
+          // ignore per-table failure
+        }
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [
+    selectedShopId,
+    effectiveBranchId,
+    activeGroup,
+    selectedTableId,
+    orderTabs,
+    activeTabId,
+  ]);
+
+  const addToCart = useCallback(
+    (product, variantId) => {
+      const hasVars = hasBranchVariants(product);
+      const branchVariant =
+        hasVars && variantId
+          ? product.branchVariants.find((v) => v.variantId === variantId)
+          : null;
+      if (hasVars && (!variantId || !branchVariant)) {
+        toast.error("Chá»n biáº¿n thá»ƒ há»£p lá»‡.");
+        return;
+      }
+
+      const basePrice = hasVars
+        ? branchVariant.price > 0
+          ? branchVariant.price
+          : product.price
+        : product.price;
+      const maxStock = product.trackInventory
+        ? hasVars
+          ? branchVariant.quantity
+          : (product.quantity ?? 0)
+        : null;
+
+      const prev = cartRef.current;
+      const lineMatch = (item) =>
+        hasVars
+          ? item.productId === product.productId && item.variantId === variantId
+          : item.productId === product.productId && !item.variantId;
+
+      const existing = prev.find(lineMatch);
+      if (existing) {
+        if (maxStock != null && existing.quantity >= maxStock) {
+          toast.error("KhÃ´ng Ä‘á»§ tá»“n kho.");
+          return;
+        }
+        setCart(
+          prev.map((item) =>
+            lineMatch(item) ? { ...item, quantity: item.quantity + 1 } : item,
+          ),
+        );
+        return;
+      }
+
+      if (maxStock != null && maxStock < 1) {
+        toast.error("Háº¿t hÃ ng.");
+        return;
+      }
+
+      const promo = getBestPromo(promoMap, product.productId);
+      const discountedPrice = calcDiscountedPrice(basePrice, promo);
+      const hasDiscount = promo && discountedPrice < basePrice;
+      const vName = hasVars ? variantCatalogName(product, variantId) : "";
+      const lineKey = hasVars
+        ? `${product.productId}__${variantId}`
+        : product.productId;
+
+      setCart([
+        ...prev,
+        {
+          lineKey,
+          productId: product.productId,
+          variantId: hasVars ? variantId : null,
+          branchProductId: product.id,
+          productName: vName ? `${product.name} â€” ${vName}` : product.name,
+          originalPrice: basePrice,
+          price: hasDiscount ? discountedPrice : basePrice,
+          hasDiscount: !!hasDiscount,
+          promoLabel: hasDiscount ? formatDiscount(promo) : null,
+          promoName: promo?.name || null,
+          image: product.images?.[0] || null,
+          quantity: 1,
+          trackInventory: !!product.trackInventory,
+          maxStock,
+        },
+      ]);
+    },
+    [promoMap, setCart],
+  );
+
+  const updateQuantity = useCallback(
+    (lineKey, delta) => {
+      const prev = cartRef.current;
+      const item = prev.find((i) => i.lineKey === lineKey);
+      if (!item) return;
+      const nextQty = item.quantity + delta;
+      if (
+        delta > 0 &&
+        item.trackInventory &&
+        item.maxStock != null &&
+        nextQty > item.maxStock
+      ) {
+        toast.error("KhÃ´ng Ä‘á»§ tá»“n kho.");
+        return;
+      }
+      setCart(
+        prev
+          .map((it) => {
+            if (it.lineKey !== lineKey) return it;
+            return { ...it, quantity: Math.max(0, nextQty) };
+          })
+          .filter((it) => it.quantity > 0),
+      );
+    },
+    [setCart],
+  );
+
+  const removeFromCart = useCallback(
+    (lineKey) => {
+      setCart((prev) => prev.filter((item) => item.lineKey !== lineKey));
+    },
+    [setCart],
+  );
+
+  const clearCart = useCallback(() => {
+    updateActiveTab({
+      cart: [],
+      tableId: "",
+      note: "",
+      customer: null,
+      orderId: null,
+      displayOrderCode: null,
+      guestName: "",
+      guestPhone: "",
+      pointsToRedeem: 0,
+    });
+    setCustomerResults([]);
+  }, [updateActiveTab]);
+
+  const handleConfirmMoveTable = useCallback(async () => {
+    if (!selectedShopId || !activeOrderId) return;
+    if (!moveToTableId || moveToTableId === "none") return;
+    try {
+      await moveOrderTable(activeOrderId, selectedShopId, moveToTableId);
+      updateActiveTab({ tableId: moveToTableId });
+      toast.success("ÄÃ£ Ä‘á»•i bÃ n.");
+      fetchData();
+      setMoveTableOpen(false);
+      setMoveToTableId("none");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "KhÃ´ng thá»ƒ Ä‘á»•i bÃ n.");
+    }
+  }, [
+    selectedShopId,
+    activeOrderId,
+    moveToTableId,
+    updateActiveTab,
+    fetchData,
+  ]);
+
+  const subtotal = useMemo(
+    () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [cart],
+  );
+
+  const totalSavings = useMemo(
+    () =>
+      cart.reduce(
+        (sum, item) =>
+          sum +
+          (item.hasDiscount
+            ? (item.originalPrice - item.price) * item.quantity
+            : 0),
+        0,
+      ),
+    [cart],
+  );
+
+  const totalItems = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart],
+  );
+
+  const totalAfterPoints = useMemo(
+    () => Math.max(0, subtotal - pointsToRedeem * 1000),
+    [subtotal, pointsToRedeem],
+  );
+
+  const [taxPreview, setTaxPreview] = useState(null);
+  const [taxPreviewLoading, setTaxPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!effectiveBranchId || !selectedShopId || totalAfterPoints <= 0) {
+      setTaxPreview(null);
+      setTaxPreviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setTaxPreviewLoading(true);
+      previewOrderTax(selectedShopId, effectiveBranchId, totalAfterPoints)
+        .then((res) => {
+          if (!cancelled) {
+            setTaxPreview(res.data?.data ?? null);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setTaxPreview(null);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setTaxPreviewLoading(false);
+          }
+        });
+    }, 280);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [selectedShopId, effectiveBranchId, totalAfterPoints]);
+
+  const draftOrderForPreview = useMemo(
+    () =>
+      cart.length === 0
+        ? null
+        : buildDraftOrderForInvoice({
+            cart,
+            subtotal,
+            taxPreview,
+            pointsToRedeem,
+            note,
+            paymentMethod,
+          }),
+    [cart, subtotal, taxPreview, pointsToRedeem, note, paymentMethod],
+  );
+
+  const openCheckoutInvoicePreview = useCallback(() => {
+    setPreviewPrintedAt(new Date().toISOString());
+    setInvoicePreviewOpen(true);
+  }, []);
+
+  const draftInvoiceMeta = useMemo(() => {
+    const branchName =
+      branches.find((b) => b.id === effectiveBranchId)?.name || null;
+    const tableName =
+      selectedTableId && selectedTableId !== "none"
+        ? tables.find((t) => t.id === selectedTableId)?.name || null
+        : null;
+    return {
+      shopName: selectedShop?.name,
+      shopAddress: selectedShop?.address,
+      shopPhone: selectedShop?.phone,
+      branchName,
+      customerName:
+        selectedCustomer?.name ||
+        (guestName?.trim() ? guestName.trim() : null) ||
+        null,
+      tableName,
+      paymentMethodLabel: getPaymentMethodLabel(paymentMethod),
+    };
+  }, [
+    branches,
+    effectiveBranchId,
+    selectedTableId,
+    tables,
+    selectedShop,
+    selectedCustomer,
+    guestName,
+    paymentMethod,
+  ]);
+
+  const handlePostSaleCustomerSave = useCallback(async () => {
+    if (!postSaleOrderId || !selectedShopId) return;
+    const name = postSaleName.trim();
+    if (!name) {
+      toast.error("Vui lÃ²ng nháº­p tÃªn khÃ¡ch hÃ ng.");
+      return;
+    }
+    setPostSaleSaving(true);
+    try {
+      const res = await createCustomer(selectedShopId, {
+        name,
+        phone: postSalePhone.trim() || null,
+        email: null,
+        address: null,
+        note: null,
+        branchId: effectiveBranchId || null,
+      });
+      const newId = res.data?.data?.id;
+      if (!res.data?.success || !newId) {
+        toast.error(res.data?.message || "KhÃ´ng táº¡o Ä‘Æ°á»£c khÃ¡ch hÃ ng.");
+        return;
+      }
+      await patchOrderFulfillment(postSaleOrderId, selectedShopId, {
+        customerId: newId,
+      });
+      toast.success("ÄÃ£ táº¡o khÃ¡ch vÃ  gáº¯n vÃ o Ä‘Æ¡n hÃ ng.");
+      setPostSaleOpen(false);
+      setPostSaleOrderId(null);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "KhÃ´ng hoÃ n táº¥t thao tÃ¡c.");
+    } finally {
+      setPostSaleSaving(false);
+    }
+  }, [
+    postSaleOrderId,
+    selectedShopId,
+    effectiveBranchId,
+    postSaleName,
+    postSalePhone,
+  ]);
+
+  const lastTableParamRef = React.useRef("");
+  const lastOrderCodeParamRef = React.useRef("");
+  const lastPosOrderIdParamRef = React.useRef("");
+  const prevSearchRef = React.useRef(location.search || "");
+
+  const openOrderForPosEdit = useCallback(
+    async ({ orderCode: codeIn, orderId: idIn, relaxBranchCheck = false }) => {
+      const code = (codeIn || "").trim();
+      const oid = (idIn || "").trim();
+      if (!selectedShopId) {
+        toast.error("Chưa chọn cửa hàng.");
+        return;
+      }
+      if (!code && !oid) {
+        toast.error("Nhập mã đơn.");
+        return;
+      }
+      const apiBranch = relaxBranchCheck ? undefined : effectiveBranchId;
+      if (!relaxBranchCheck && code && !apiBranch) {
+        toast.error("Chọn chi nhánh để mở đơn theo mã.");
+        return;
+      }
+      setOrderLookupSubmitting(true);
+      try {
+        const res = await lookupOrderForPosEdit(selectedShopId, apiBranch, {
+          orderCode: code || undefined,
+          orderId: oid || undefined,
+        });
+        const order = res.data?.data;
+        if (!order?.id) {
+          toast.error("Không tìm thấy đơn.");
+          return;
+        }
+
+        if (order.branchId) {
+          setSelectedBranchId(order.branchId);
+        }
+
+        const existing = orderTabs.find((t) => t.orderId === order.id);
+        if (existing) {
+          switchTab(existing.id);
+          toast.info("Đơn đã mở trên một tab khác.");
+          return;
+        }
+
+        const id = nextTabIdRef.current++;
+        const tab = {
+          ...createEmptyTab(id),
+          orderId: order.id,
+          displayOrderCode: order.orderCode || null,
+          tableId: order.tableId || "",
+          cart: cartFromOrderItems(order.items),
+          note: order.note || "",
+          customer: order.customerId
+            ? {
+                id: order.customerId,
+                name: order.customerName,
+                phone: order.customerPhone,
+              }
+            : null,
+          pointsToRedeem: order.pointsRedeemed ?? 0,
+          guestName: order.guestName || "",
+          guestPhone: order.guestPhone || "",
+        };
+        setOrderTabs((prev) => [...prev, tab]);
+        activeTabIdRef.current = id;
+        setActiveTabId(id);
+        setCustomerResults([]);
+        toast.success(`Đã mở đơn ${order.orderCode || order.id}`);
+      } catch (err) {
+        toast.error(
+          err.response?.data?.message ||
+            "Không thể mở đơn (đã thanh toán hoặc không thuộc chi nhánh).",
+        );
+      } finally {
+        setOrderLookupSubmitting(false);
+      }
+    },
+    [
+      selectedShopId,
+      effectiveBranchId,
+      setSelectedBranchId,
+      switchTab,
+      orderTabs,
+    ],
+  );
+
+  const openOrderByCode = useCallback(
+    (rawCode) =>
+      openOrderForPosEdit({
+        orderCode: rawCode,
+        relaxBranchCheck: false,
+      }),
+    [openOrderForPosEdit],
+  );
+
+  // Deeplink: /pos?tableId=... | ?orderCode=... | ?orderId=...
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search || "");
+    const tid = sp.get("tableId");
+    const orderCodeParam = sp.get("orderCode");
+    const posOrderIdParam = sp.get("orderId");
+    const prevSearch = prevSearchRef.current;
+    prevSearchRef.current = location.search || "";
+    const searchChanged = prevSearch !== (location.search || "");
+
+    if (orderCodeParam) {
+      if (
+        !(
+          orderCodeParam === lastOrderCodeParamRef.current && !searchChanged
+        )
+      ) {
+        lastOrderCodeParamRef.current = orderCodeParam;
+        openOrderForPosEdit({
+          orderCode: orderCodeParam,
+          relaxBranchCheck: true,
+        });
+      }
+      navigate("/pos", { replace: true });
+      return;
+    }
+    lastOrderCodeParamRef.current = "";
+
+    if (posOrderIdParam) {
+      if (
+        !(
+          posOrderIdParam === lastPosOrderIdParamRef.current &&
+          !searchChanged
+        )
+      ) {
+        lastPosOrderIdParamRef.current = posOrderIdParam;
+        openOrderForPosEdit({
+          orderId: posOrderIdParam,
+          relaxBranchCheck: true,
+        });
+      }
+      navigate("/pos", { replace: true });
+      return;
+    }
+    lastPosOrderIdParamRef.current = "";
+
+    if (!tid) {
+      lastTableParamRef.current = "";
+      return;
+    }
+
+    if (tid === lastTableParamRef.current && !searchChanged) return;
+
+    activateTableTab(tid);
+    lastTableParamRef.current = tid;
+    navigate("/pos", { replace: true });
+  }, [location.search, activateTableTab, navigate, openOrderForPosEdit]);
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    setSubmitting(true);
+    try {
+      const hadNoCustomer = !selectedCustomer;
+      const orderData = {
+        shopId: selectedShopId,
+        branchId: effectiveBranchId,
+        tableId:
+          selectedTableId && selectedTableId !== "none"
+            ? selectedTableId
+            : null,
+        note: note || null,
+        customerId: selectedCustomer?.id || null,
+        guestName: guestName?.trim() || null,
+        guestPhone: guestPhone?.trim() || null,
+        pointsToRedeem:
+          selectedCustomer && pointsToRedeem > 0 ? pointsToRedeem : null,
+        items: cart.map((item) => ({
+          productId: item.productId,
+          ...(item.variantId ? { variantId: item.variantId } : {}),
+          quantity: item.quantity,
+        })),
+        ...(paymentMethod === "ShipCOD"
+          ? { checkoutPaymentMethod: "ShipCOD" }
+          : {}),
+      };
+
+      const res = await createOrder(
+        selectedShopId,
+        effectiveBranchId,
+        orderData,
+      );
+      let finalOrder = res.data?.data;
+
+      const deferPayment = paymentMethod === "ShipCOD";
+      if (paymentMethod && finalOrder?.id && !deferPayment) {
+        try {
+          const payRes = await confirmPayment(
+            finalOrder.id,
+            selectedShopId,
+            `POS-${Date.now()}`,
+            paymentMethod,
+          );
+          finalOrder = payRes.data?.data ?? finalOrder;
+        } catch {
+          toast.info("ÄÆ¡n hÃ ng Ä‘Ã£ táº¡o nhÆ°ng chÆ°a thanh toÃ¡n");
+        }
+      }
+
+      const branchName =
+        branches.find((b) => b.id === effectiveBranchId)?.name || null;
+      const tableName =
+        selectedTableId && selectedTableId !== "none"
+          ? tables.find((t) => t.id === selectedTableId)?.name || null
+          : null;
+
+      setInvoicePayload({
+        order: finalOrder,
+        printedAt: new Date().toISOString(),
+        shopName: selectedShop?.name,
+        shopAddress: selectedShop?.address,
+        shopPhone: selectedShop?.phone,
+        branchName,
+        customerName:
+          selectedCustomer?.name ||
+          (guestName?.trim() ? guestName.trim() : null) ||
+          null,
+        tableName,
+        paymentMethodLabel: getPaymentMethodLabel(
+          finalOrder?.paymentMethod || paymentMethod,
+        ),
+      });
+      setInvoiceOpen(true);
+
+      toast.success(
+        deferPayment
+          ? "ÄÃ£ táº¡o Ä‘Æ¡n â€” chá» thu COD. XÃ¡c nháº­n Ä‘Ã£ thu tiá»n trong má»¥c ÄÆ¡n hÃ ng."
+          : "ÄÆ¡n hÃ ng Ä‘Ã£ Ä‘Æ°á»£c táº¡o thÃ nh cÃ´ng!",
+      );
+      setCheckoutOpen(false);
+      if (orderTabs.length > 1) {
+        closeTab(activeTabId);
+      } else {
+        // Giá»¯ bÃ n trÃªn tab sau thanh toÃ¡n; nhÃ³m bÃ n Ä‘Æ°á»£c server cáº­p nháº­t (fetchGroups bÃªn dÆ°á»›i).
+        updateActiveTab({
+          orderId: null,
+          displayOrderCode: null,
+          cart: [],
+          note: "",
+          customer: null,
+          guestName: "",
+          guestPhone: "",
+          pointsToRedeem: 0,
+          tableId:
+            selectedTableId && selectedTableId !== "none"
+              ? selectedTableId
+              : "",
+        });
+        setCustomerResults([]);
+      }
+      fetchData();
+      fetchGroups();
+
+      if (hadNoCustomer && finalOrder?.id) {
+        setPostSaleOrderId(finalOrder.id);
+        setPostSaleName("");
+        setPostSalePhone("");
+        setPostSaleOpen(true);
+      }
+    } catch (err) {
+      console.error("Order creation failed", err);
+      const msg = err.response?.data?.message || "Không thể tạo đơn hàng";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const tabBarProps = {
+    tabs: orderTabs,
+    activeTabId,
+    onSelect: switchTab,
+    onAdd: addTab,
+    onClose: closeTab,
+    tables,
+  };
+
+  const cartPanelProps = {
+    cart,
+    totalItems,
+    subtotal,
+    totalSavings,
+    note,
+    setNote,
+    guestName,
+    guestPhone,
+    setGuestName,
+    setGuestPhone,
+    selectedTableId,
+    setSelectedTableId,
+    availableTables,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    selectedCustomer,
+    onCustomerSearch: handleCustomerSearch,
+    onSelectCustomer: handleSelectCustomer,
+    onClearCustomer: handleClearCustomer,
+    customerResults,
+    customerSearching,
+    pointsToRedeem,
+    taxPreview,
+    taxPreviewLoading,
+    showTableSelect: tables.length > 0,
+    onHoldOrder: handleHoldOrder,
+    holdDisabled: !effectiveBranchId || cart.length === 0 || submitting,
+    canMoveTable:
+      !!activeOrderId && !!selectedTableId && selectedTableId !== "none",
+    onOpenMoveTableDialog: () => {
+      setMoveToTableId("none");
+      setMoveTableOpen(true);
+    },
+    onOpenGroupDialog: () => {
+      setGroupDialogOpen(true);
+      setGroupSelectedIds([]);
+    },
+    onOpenSplitDialog: () => {
+      setSplitDialogOpen(true);
+      setSplitToTableId("none");
+      setSplitQtyByLineKey({});
+    },
+    splitDisabled: !activeOrderId || cart.length === 0 || submitting,
+    onMergeGroupBills: handleMergeGroupBills,
+    mergeGroupDisabled: mergeGroupBillDisabled,
+    mergeGroupBusy: mergeGroupSubmitting,
+    activeGroup,
+    tables,
+    onQuickSwitchTable: (tid) => setSelectedTableId(tid),
+  };
+
+  return {
+    activateTableTab,
+    activeGroup,
+    activeOrderId,
+    activePromotions,
+    activeTab,
+    activeTabId,
+    activeTabIdRef,
+    addTab,
+    addToCart,
+    availableTables,
+    branches,
+    cart,
+    cartOpen,
+    cartPanelProps,
+    cartRef,
+    categories,
+    checkoutOpen,
+    clearCart,
+    closeTab,
+    customerResults,
+    customerSearchTimer,
+    customerSearching,
+    draftInvoiceMeta,
+    draftOrderForPreview,
+    effectiveBranchId,
+    fetchData,
+    fetchGroups,
+    filteredProducts,
+    displayOrderCode,
+    groupDialogOpen,
+    groupOrderTabs,
+    groupSelectedIds,
+    guestName,
+    guestPhone,
+    handleCheckout,
+    handleClearCustomer,
+    handleConfirmMoveTable,
+    handleCreateGroup,
+    handleCustomerSearch,
+    handleHoldOrder,
+    handleMergeGroupBills,
+    handlePostSaleCustomerSave,
+    handleSelectCustomer,
+    handleSplit,
+    handleUngroup,
+    holdSuccessMessage,
+    holdSuccessOpen,
+    invoiceOpen,
+    invoicePayload,
+    invoicePreviewOpen,
+    lastTableParamRef,
+    loadedGroupRef,
+    loading,
+    location,
+    mergeGroupBillDisabled,
+    mergeGroupSubmitting,
+    moveTableOpen,
+    moveToTableId,
+    navigate,
+    nextTabIdRef,
+    note,
+    openCheckoutInvoicePreview,
+    openOrderByCode,
+    orderLookupInput,
+    orderLookupSubmitting,
+    orderTabs,
+    paymentMethod,
+    pointsToRedeem,
+    postSaleName,
+    postSaleOpen,
+    postSaleOrderId,
+    postSalePhone,
+    postSaleSaving,
+    prevSearchRef,
+    previewPrintedAt,
+    products,
+    promoMap,
+    promotions,
+    removeFromCart,
+    searchTerm,
+    selectedBranchId,
+    selectedCategory,
+    selectedCustomer,
+    selectedShop,
+    selectedShopId,
+    selectedTableId,
+    setActiveTabId,
+    setCart,
+    setCartOpen,
+    setCheckoutOpen,
+    setCustomerResults,
+    setCustomerSearching,
+    setGroupDialogOpen,
+    setGroupSelectedIds,
+    setGuestName,
+    setGuestPhone,
+    setHoldSuccessMessage,
+    setHoldSuccessOpen,
+    setInvoiceOpen,
+    setInvoicePayload,
+    setInvoicePreviewOpen,
+    setLoading,
+    setMergeGroupSubmitting,
+    setMoveTableOpen,
+    setMoveToTableId,
+    setNote,
+    setOrderLookupInput,
+    setOrderTabs,
+    setPaymentMethod,
+    setPointsToRedeem,
+    setPostSaleName,
+    setPostSaleOpen,
+    setPostSaleOrderId,
+    setPostSalePhone,
+    setPostSaleSaving,
+    setPreviewPrintedAt,
+    setProducts,
+    setPromotions,
+    setSearchTerm,
+    setSelectedBranchId,
+    setSelectedCategory,
+    setSelectedCustomer,
+    setSelectedTableId,
+    setSplitDialogOpen,
+    setSplitQtyByLineKey,
+    setSplitToTableId,
+    setSubmitting,
+    setTableGroups,
+    setTables,
+    setTaxPreview,
+    setTaxPreviewLoading,
+    setVariantPickerProduct,
+    splitDialogOpen,
+    splitQtyByLineKey,
+    splitToTableId,
+    submitting,
+    subtotal,
+    switchTab,
+    syncTimerRef,
+    tabBarProps,
+    tableGroupByTableId,
+    tableGroups,
+    tables,
+    taxPreview,
+    taxPreviewLoading,
+    totalAfterPoints,
+    totalItems,
+    totalSavings,
+    updateActiveTab,
+    updateQuantity,
+    variantPickerProduct,
+  };
+
+}

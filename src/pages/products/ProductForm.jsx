@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useFieldArray, useWatch, useFormContext } from "react-hook-form";
 import { format } from "date-fns";
 import { z } from "zod";
@@ -19,10 +19,16 @@ import { useShop } from "@/hooks/useShop.js";
 import {
   getSuggestedSku,
   getSuggestedBarcode,
+  searchProductCatalog,
   uploadStagedVariantImages,
 } from "@/api/productApi.js";
 import BarcodeScanner from "@/components/products/BarcodeScanner.jsx";
 import { lookupBarcode } from "@/utils/barcodeUtils.js";
+import {
+  isValidStandardGs1Barcode,
+  normalizeBarcodeDigits,
+  resolveBarcodeForSave,
+} from "@/utils/gtinBarcode.js";
 import {
   Form,
   FormControl,
@@ -516,6 +522,10 @@ export default function ProductForm({
   const [scannerOpen, setScannerOpen] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
 
+  const [nameCatalogHits, setNameCatalogHits] = useState([]);
+  const [nameCatalogLoading, setNameCatalogLoading] = useState(false);
+  const nameCatalogTimerRef = useRef(null);
+
   const handleSuggestSku = async () => {
     if (!selectedShopId) return;
     setSuggestingSkU(true);
@@ -540,14 +550,23 @@ export default function ProductForm({
 
   const handleBarcodeDetected = async (barcode) => {
     setScannerOpen(false);
-    // Fill barcode field
-    form.setValue("barcode", barcode, { shouldDirty: true });
+    let bcForForm = barcode;
+    try {
+      const resolved = resolveBarcodeForSave(barcode);
+      if (resolved) bcForForm = resolved;
+    } catch {
+      toast.error(
+        "Mã vạch không đúng chữ số kiểm tra GS1. Sửa tay trước khi lưu.",
+        { id: "barcode-lookup" },
+      );
+    }
+    form.setValue("barcode", bcForForm, { shouldDirty: true });
 
     // Tra cứu: catalog hệ thống
     setLookingUp(true);
     toast.info("Đang tra cứu thông tin sản phẩm...", { id: "barcode-lookup" });
     try {
-      const info = await lookupBarcode(barcode);
+      const info = await lookupBarcode(bcForForm);
       if (info) {
         if (info.name && !form.getValues("name")) {
           form.setValue("name", info.name, { shouldDirty: true });
@@ -573,7 +592,7 @@ export default function ProductForm({
         );
       } else {
         toast.success(
-          `Quét được: ${barcode} — không tìm thấy thông tin trên cơ sở dữ liệu`,
+          `Quét được: ${bcForForm} — không tìm thấy thông tin trên cơ sở dữ liệu`,
           { id: "barcode-lookup" },
         );
       }
@@ -709,6 +728,49 @@ export default function ProductForm({
     formState: { isDirty },
   } = form;
 
+  const watchedName = useWatch({ control: form.control, name: "name" });
+
+  useEffect(() => {
+    if (!isCreate || isReadOnly) {
+      setNameCatalogHits([]);
+      setNameCatalogLoading(false);
+      return;
+    }
+    const q = (watchedName || "").trim();
+    if (q.length < 2) {
+      setNameCatalogHits([]);
+      setNameCatalogLoading(false);
+      return;
+    }
+    if (nameCatalogTimerRef.current) clearTimeout(nameCatalogTimerRef.current);
+    nameCatalogTimerRef.current = setTimeout(async () => {
+      setNameCatalogLoading(true);
+      try {
+        const res = await searchProductCatalog(q, { size: 8 });
+        const raw = res.data?.data;
+        const list = Array.isArray(raw) ? raw : [];
+        const qLower = q.toLowerCase();
+        const hits = list
+          .slice()
+          .sort((a, b) => {
+            const an = (a.name || "").toLowerCase() === qLower ? 0 : 1;
+            const bn = (b.name || "").toLowerCase() === qLower ? 0 : 1;
+            return an - bn;
+          })
+          .slice(0, 8);
+        setNameCatalogHits(hits);
+      } catch {
+        setNameCatalogHits([]);
+      } finally {
+        setNameCatalogLoading(false);
+      }
+    }, 380);
+    return () => {
+      if (nameCatalogTimerRef.current)
+        clearTimeout(nameCatalogTimerRef.current);
+    };
+  }, [watchedName, isCreate, isReadOnly]);
+
   const {
     fields: variantFields,
     append: appendVariant,
@@ -740,6 +802,33 @@ export default function ProductForm({
     setFileInputKey(Date.now());
     setVariantMedia({});
   }, [product, prefill, isCreate]);
+
+  /** Áp dụng một bản ghi catalog hệ thống (admin) vào form tạo mới. */
+  const applySystemCatalogEntry = (entry) => {
+    if (!entry) return;
+    setNameCatalogHits([]);
+    form.setValue("name", entry.name ?? "", { shouldDirty: true });
+    if (entry.barcode) {
+      form.setValue("barcode", entry.barcode, { shouldDirty: true });
+    }
+    if (entry.category) {
+      form.setValue("category", entry.category, { shouldDirty: true });
+      setCategoryMode(
+        isCustomCategory(entry.category) ? "custom" : "select",
+      );
+    }
+    if (entry.description != null) {
+      form.setValue("description", entry.description, { shouldDirty: true });
+    }
+    const imgs = Array.isArray(entry.images)
+      ? entry.images.filter(Boolean)
+      : [];
+    setKeptImages(imgs);
+    setFiles([]);
+    setPreviews([]);
+    setFileInputKey(Date.now());
+    toast.success("Đã áp dụng thông tin từ catalog hệ thống");
+  };
 
   const removeExistingImage = (index) => {
     setKeptImages((prev) => prev.filter((_, i) => i !== index));
@@ -1054,8 +1143,63 @@ export default function ProductForm({
               <ReadOnlyValue value={field.value} />
             ) : (
               <FormControl>
-                <Input placeholder="Nhập tên sản phẩm" {...field} />
+                <div className="relative">
+                  <Input
+                    placeholder="Nhập tên — gợi ý từ catalog hệ thống (chuẩn hoá)"
+                    autoComplete="off"
+                    {...field}
+                  />
+                  {isCreate && nameCatalogLoading && (
+                    <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                  {isCreate &&
+                    !nameCatalogLoading &&
+                    nameCatalogHits.length > 0 &&
+                    (field.value || "").trim().length >= 2 && (
+                      <div className="absolute z-30 mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
+                        <p className="px-2 py-1.5 text-[10px] text-muted-foreground border-b">
+                          Catalog hệ thống — chọn để điền nhanh tên, mã vạch, ảnh…
+                        </p>
+                        {nameCatalogHits.map((p) => (
+                          <button
+                            key={p.id || p.barcode}
+                            type="button"
+                            className="w-full text-left px-2.5 py-2 text-xs hover:bg-muted flex gap-2 items-start"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => applySystemCatalogEntry(p)}
+                          >
+                            <span className="h-9 w-9 rounded border bg-muted shrink-0 overflow-hidden">
+                              {p.images?.[0] ? (
+                                <img
+                                  src={p.images[0]}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                                  —
+                                </span>
+                              )}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="font-medium line-clamp-2 block">
+                                {p.name}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {p.barcode || "—"}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                </div>
               </FormControl>
+            )}
+            {isCreate && !isReadOnly && (
+              <p className="text-[11px] text-muted-foreground">
+                Gõ từ khoá để tìm trong catalog hệ thống; chọn dòng để điền nhanh form (tránh nhập trùng).
+              </p>
             )}
             <FormMessage />
           </FormItem>
@@ -1160,11 +1304,46 @@ export default function ProductForm({
               ) : (
                 <FormControl>
                   <Input
-                    placeholder="12-13 chữ số"
+                    placeholder="12-13 chữ số (EAN/UPC)"
                     {...field}
                     value={field.value ?? ""}
+                    onBlur={(e) => {
+                      field.onBlur();
+                      const v = (e.target.value || "").trim();
+                      if (!v) return;
+                      const digits = normalizeBarcodeDigits(v);
+                      if (!digits) return;
+                      if (
+                        [8, 12, 13, 14].includes(digits.length) &&
+                        !isValidStandardGs1Barcode(digits)
+                      ) {
+                        toast.error(
+                          "Mã vạch có độ dài chuẩn GS1 nhưng sai chữ số kiểm tra. Kiểm tra lại số in trên bao bì.",
+                        );
+                        return;
+                      }
+                      if (digits.length === 12 && isValidStandardGs1Barcode(digits)) {
+                        try {
+                          const canon = resolveBarcodeForSave(digits);
+                          if (canon && canon !== (field.value ?? "")) {
+                            form.setValue("barcode", canon, { shouldDirty: true });
+                            toast.info(
+                              "Đã chuẩn hoá UPC-12 → EAN-13 (thêm 0 đầu) để đồng bộ với catalog.",
+                            );
+                          }
+                        } catch {
+                          /* đã báo lỗi ở trên */
+                        }
+                      }
+                    }}
                   />
                 </FormControl>
+              )}
+              {!isReadOnly && (
+                <p className="text-[11px] text-muted-foreground">
+                  EAN-8 / UPC-12 / EAN-13 / GTIN-14: hệ thống kiểm tra checksum; UPC-12
+                  hợp lệ được lưu dạng EAN-13. Mã nội bộ (không đủ chuẩn) vẫn nhập được.
+                </p>
               )}
               <FormMessage />
             </FormItem>

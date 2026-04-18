@@ -239,14 +239,20 @@ export const importProductsExcel = (shopId, file) => {
 };
 
 /**
- * 🔍 Tra cứu thông tin sản phẩm từ shared catalog theo mã vạch.
+ * Tra cứu thông tin sản phẩm từ catalog chuẩn (do system admin duy trì) theo mã vạch.
  * GET /api/catalog/barcode/{barcode}
- *
- * Catalog được xây dựng từ dữ liệu sản phẩm của tất cả shop trong hệ thống (crowdsourced).
- * Khi một shop tạo sản phẩm có barcode, dữ liệu tự động đóng góp vào catalog chung.
  *
  * @param {string} barcode - EAN-13 / EAN-8 / UPC-A
  * @returns {Promise<AxiosResponse<{success: boolean, data: {name, category, description, images}}>>}
  */
 export const lookupProductByBarcode = (barcode) =>
   axiosInstance.get(`/catalog/barcode/${encodeURIComponent(barcode)}`);
+
+/**
+ * Tìm kiếm catalog chuẩn (system) theo tên — substring, không phân biệt hoa thường.
+ * GET /api/catalog/search?keyword=&size=
+ */
+export const searchProductCatalog = (keyword, params = {}) =>
+  axiosInstance.get("/catalog/search", {
+    params: { keyword, size: params.size ?? 8 },
+  });

@@ -152,9 +152,30 @@ export function PosInvoiceReceipt({
       ) : null}
       {customerName ? (
         <div style={{ ...rowStyle, fontSize: "10px" }}>
-          <span style={labelMuted}>Khách hàng</span>
+          <span style={labelMuted}>Khách hàng (CRM)</span>
           <span style={{ textAlign: "right" }}>{customerName}</span>
         </div>
+      ) : null}
+      {(order?.guestName && String(order.guestName).trim()) ||
+      (order?.guestPhone && String(order.guestPhone).trim()) ? (
+        <>
+          {order?.guestName && String(order.guestName).trim() ? (
+            <div style={{ ...rowStyle, fontSize: "10px" }}>
+              <span style={labelMuted}>Tên khách</span>
+              <span style={{ textAlign: "right", wordBreak: "break-word" }}>
+                {String(order.guestName).trim()}
+              </span>
+            </div>
+          ) : null}
+          {order?.guestPhone && String(order.guestPhone).trim() ? (
+            <div style={{ ...rowStyle, fontSize: "10px" }}>
+              <span style={labelMuted}>SĐT khách</span>
+              <span style={{ textAlign: "right", wordBreak: "break-all" }}>
+                {String(order.guestPhone).trim()}
+              </span>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       <div

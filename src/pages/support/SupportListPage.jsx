@@ -76,7 +76,7 @@ const formatDate = (d) => {
 const SupportListPage = () => {
   const { selectedShopId, isOwner, shopRole } = useShop();
   const shopId = selectedShopId;
-  const isManager = isOwner || shopRole === "MANAGER" || shopRole === "ADMIN";
+  const isManager = isOwner || shopRole === "MANAGER";
   const { confirm } = useAlertDialog();
 
   const [tickets, setTickets] = useState([]);

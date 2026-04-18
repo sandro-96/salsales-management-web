@@ -22,22 +22,17 @@ import {
 } from "@/components/ui/select";
 
 import { addStaff } from "../../api/staffApi.js";
-
-const ROLES = [
-  { value: "MANAGER", label: "Quản lý" },
-  { value: "ADMIN", label: "Admin" },
-  { value: "STAFF", label: "Nhân viên" },
-];
+import { SHOP_ROLES_ASSIGNABLE } from "../../constants/shopRoles.js";
 
 export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("STAFF");
+  const [role, setRole] = useState(SHOP_ROLES_ASSIGNABLE[1]?.value ?? "STAFF");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
       setEmail("");
-      setRole("STAFF");
+      setRole(SHOP_ROLES_ASSIGNABLE[1]?.value ?? "STAFF");
     }
   }, [open]);
 
@@ -122,7 +117,7 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
                 <SelectValue placeholder="Chọn vai trò" />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                {ROLES.map((r) => (
+                {SHOP_ROLES_ASSIGNABLE.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
                   </SelectItem>
