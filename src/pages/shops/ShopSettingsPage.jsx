@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useShop } from "../../hooks/useShop.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import axiosInstance from "../../api/axiosInstance";
 import { deleteShop } from "../../api/shopApi.js";
@@ -65,9 +67,10 @@ const PLAN_COLORS = {
 const ShopSettingsPage = () => {
   const { confirm } = useAlertDialog();
   const { enums } = useAuth();
-  const { selectedShop, setSelectedShop, fetchShops, isOwner, selectedRole } =
-    useShop();
-  const canManageTax = isOwner || selectedRole === "MANAGER";
+  const { selectedShop, setSelectedShop, fetchShops } = useShop();
+  const { hasShopPermission } = useShopPermissions();
+  const canManageTax = hasShopPermission(PERM.SHOP_UPDATE);
+  const canDeleteShop = hasShopPermission(PERM.SHOP_DELETE);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const navigate = useNavigate();
@@ -344,19 +347,21 @@ const ShopSettingsPage = () => {
             </div>
 
             <div className="shrink-0 flex gap-2">
-              {!isEditMode ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditMode(true)}
-                >
-                  <Pencil className="h-4 w-4 mr-1" /> Chỉnh sửa
-                </Button>
-              ) : (
-                <Button variant="ghost" size="sm" onClick={cancelEdit}>
-                  <X className="h-4 w-4 mr-1" /> Hủy
-                </Button>
-              )}
+              {!isEditMode
+                ? canManageTax && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditMode(true)}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" /> Chỉnh sửa
+                    </Button>
+                  )
+                : (
+                    <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                      <X className="h-4 w-4 mr-1" /> Hủy
+                    </Button>
+                  )}
             </div>
           </div>
         </CardContent>
@@ -717,7 +722,7 @@ const ShopSettingsPage = () => {
       </Card>
 
       {/* Danger zone */}
-      {isOwner && (
+      {canDeleteShop && (
         <Card className="border-destructive/30">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-medium text-destructive">

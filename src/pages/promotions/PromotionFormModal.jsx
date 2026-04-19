@@ -41,6 +41,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 import { createPromotion, updatePromotion } from "../../api/promotionApi.js";
 import { getProducts } from "../../api/productApi.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import { cn } from "@/lib/utils";
 
 const toLocalDateTime = (date) => {
@@ -65,6 +67,10 @@ export default function PromotionFormModal({
   onSuccess,
 }) {
   const isEdit = !!promotion;
+  const { hasShopPermission } = useShopPermissions();
+  const canUpdate = hasShopPermission(PERM.PROMOTION_UPDATE);
+  const canCreate = hasShopPermission(PERM.PROMOTION_CREATE);
+  const readOnly = isEdit ? !canUpdate : !canCreate;
 
   const [name, setName] = useState("");
   const [discountType, setDiscountType] = useState("PERCENT");
@@ -240,7 +246,11 @@ export default function PromotionFormModal({
       >
         <DialogHeader className="shrink-0">
           <DialogTitle>
-            {isEdit ? "Chỉnh sửa khuyến mãi" : "Tạo khuyến mãi mới"}
+            {readOnly
+              ? "Chi tiết khuyến mãi"
+              : isEdit
+                ? "Chỉnh sửa khuyến mãi"
+                : "Tạo khuyến mãi mới"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {isEdit
@@ -249,7 +259,10 @@ export default function PromotionFormModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-5 pr-1 py-2">
+        <fieldset
+          disabled={readOnly}
+          className="flex-1 overflow-y-auto space-y-5 pr-1 py-2 disabled:opacity-70"
+        >
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="promo-name">Tên khuyến mãi *</Label>
@@ -496,16 +509,18 @@ export default function PromotionFormModal({
               </div>
             )}
           </div>
-        </div>
+        </fieldset>
 
         <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Hủy
+            {readOnly ? "Đóng" : "Hủy"}
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-            {isEdit ? "Lưu thay đổi" : "Tạo khuyến mãi"}
-          </Button>
+          {!readOnly && (
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+              {isEdit ? "Lưu thay đổi" : "Tạo khuyến mãi"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

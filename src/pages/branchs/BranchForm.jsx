@@ -28,6 +28,8 @@ import {
 import { COUNTRIES } from "@/constants/countries";
 import { getFlagUrl } from "@/utils/commonUtils";
 import { cn } from "@/lib/utils"; // giả sử bạn có utils cn cho className
+import { useShopPermissions } from "@/hooks/useShopPermissions.js";
+import { PERM } from "@/constants/shopPermissions.js";
 
 const formSchema = z
   .object({
@@ -98,6 +100,8 @@ export default function BranchForm({
   handleDelete,
   shop,
 }) {
+  const { hasShopPermission } = useShopPermissions();
+  const canManage = hasShopPermission(PERM.BRANCH_MANAGE);
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: branch || {
@@ -585,13 +589,15 @@ export default function BranchForm({
                   Xóa
                 </Button>
               )}
-              <Button
-                variant="warning"
-                type="button"
-                onClick={() => onModeChange?.("edit")}
-              >
-                Chỉnh sửa
-              </Button>
+              {canManage && (
+                <Button
+                  variant="warning"
+                  type="button"
+                  onClick={() => onModeChange?.("edit")}
+                >
+                  Chỉnh sửa
+                </Button>
+              )}
             </>
           ) : (
             <>
@@ -604,6 +610,7 @@ export default function BranchForm({
               >
                 Hủy
               </Button>
+              {canManage && (
               <Button
                 variant={mode === "edit" ? "warning" : "success"}
                 type="submit"
@@ -615,6 +622,7 @@ export default function BranchForm({
                   ? "Cập nhật"
                   : "Tạo chi nhánh"}
               </Button>
+              )}
             </>
           )}
         </div>

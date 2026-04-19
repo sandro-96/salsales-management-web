@@ -35,6 +35,8 @@ import {
 import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import { getBranchProducts } from "../../api/productApi.js";
 import { getTransactionHistory } from "../../api/inventoryApi.js";
 
@@ -225,11 +227,10 @@ const InventoryListPage = () => {
     selectedBranch,
     branches,
     setSelectedBranchId,
-    isOwner,
-    isStaff,
   } = useShop();
+  const { hasShopPermission } = useShopPermissions();
 
-  const canManage = isOwner || isStaff;
+  const canManage = hasShopPermission(PERM.INVENTORY_MANAGE);
 
   // ── Stock tab state ──────────────────────────────────────────────────────
   const [products, setProducts] = useState([]);

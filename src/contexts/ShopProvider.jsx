@@ -1,7 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { ShopContext } from "./ShopContext";
 import { useAuth } from "../hooks/useAuth.js";
+import {
+  normalizePermissionSet,
+  hasShopPermission as hasShopPermissionUtil,
+  hasAnyShopPermission as hasAnyShopPermissionUtil,
+  hasAllShopPermissions as hasAllShopPermissionsUtil,
+} from "../utils/shopPermissionUtils.js";
 
 const ShopProvider = ({ children }) => {
   const { isUserContextReady, user, fetchEnums } = useAuth();
@@ -252,6 +258,24 @@ const ShopProvider = ({ children }) => {
   const isStaff = selectedRole === "STAFF";
   const isCashier = selectedRole === "CASHIER";
 
+  const shopPermissions = useMemo(
+    () => normalizePermissionSet(selectedShop?.permissions),
+    [selectedShop?.permissions],
+  );
+
+  const hasShopPermission = useCallback(
+    (code) => hasShopPermissionUtil(shopPermissions, code),
+    [shopPermissions],
+  );
+  const hasAnyShopPermission = useCallback(
+    (codes) => hasAnyShopPermissionUtil(shopPermissions, codes),
+    [shopPermissions],
+  );
+  const hasAllShopPermissions = useCallback(
+    (codes) => hasAllShopPermissionsUtil(shopPermissions, codes),
+    [shopPermissions],
+  );
+
   return (
     <ShopContext.Provider
       value={{
@@ -274,6 +298,10 @@ const ShopProvider = ({ children }) => {
         selectedBranchId,
         selectedBranch,
         setSelectedBranchId,
+        shopPermissions,
+        hasShopPermission,
+        hasAnyShopPermission,
+        hasAllShopPermissions,
       }}
     >
       {children}

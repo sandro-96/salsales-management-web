@@ -29,6 +29,8 @@ import {
 import BranchForm from "./BranchForm";
 import BranchProductPanel from "./BranchProductPanel";
 import { useShop } from "../../hooks/useShop";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog";
 import { getBranchBySlug } from "@/api/branchApi";
 import { getBranchProducts } from "@/api/productApi";
@@ -38,7 +40,10 @@ const BranchSettingsPage = () => {
   const navigate = useNavigate();
   const { confirm } = useAlertDialog();
   const { slug } = useParams();
-  const { fetchBranches, selectedShop } = useShop();
+  const { fetchBranches, selectedShop, isOwner } = useShop();
+  const { hasShopPermission } = useShopPermissions();
+  const canUpdate = hasShopPermission(PERM.BRANCH_MANAGE);
+  const canDelete = isOwner;
 
   const [branch, setBranch] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -258,7 +263,7 @@ const BranchSettingsPage = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!branch.default && (
+          {!branch.default && canDelete && (
             <Button
               variant="destructive"
               size="sm"
@@ -269,14 +274,16 @@ const BranchSettingsPage = () => {
               <span className="hidden sm:inline ml-1.5">Xóa</span>
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setEditSheetOpen(true)}
-          >
-            <Settings className="h-3.5 w-3.5" />
-            <span className="ml-1.5">Cài đặt</span>
-          </Button>
+          {canUpdate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditSheetOpen(true)}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              <span className="ml-1.5">Cài đặt</span>
+            </Button>
+          )}
         </div>
       </div>
 

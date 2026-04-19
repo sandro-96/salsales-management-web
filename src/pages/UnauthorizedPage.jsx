@@ -1,9 +1,18 @@
 // src/pages/UnauthorizedPage.jsx
-import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth.js";
 
 const UnauthorizedPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const isAdmin =
+    typeof user?.role === "string"
+      ? user.role.includes("ROLE_ADMIN")
+      : Array.isArray(user?.role)
+        ? user.role.includes("ROLE_ADMIN")
+        : false;
+  const homePath = isAdmin ? "/admin" : "/";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
@@ -20,7 +29,7 @@ const UnauthorizedPage = () => {
             Quay lại
           </button>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate(homePath)}
             className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition duration-300"
           >
             Về trang chủ

@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import { useShop } from "@/hooks/useShop.js";
+import { useShopPermissions } from "@/hooks/useShopPermissions.js";
+import { PERM } from "@/constants/shopPermissions.js";
 import {
   getSuggestedSku,
   getSuggestedBarcode,
@@ -516,6 +518,10 @@ export default function ProductForm({
   const isCreate = mode === "create";
 
   const { selectedShopId, selectedIndustry, selectedShop } = useShop();
+  const { hasShopPermission } = useShopPermissions();
+  const canCreate = hasShopPermission(PERM.PRODUCT_CREATE);
+  const canUpdate = hasShopPermission(PERM.PRODUCT_UPDATE);
+  const canDelete = hasShopPermission(PERM.PRODUCT_DELETE);
   const toppingsFeatureOn = selectedShop?.toppingsEnabled === true;
 
   const [shopToppingCatalog, setShopToppingCatalog] = useState([]);
@@ -1877,7 +1883,7 @@ export default function ProductForm({
           <Button variant="outline" type="button" onClick={() => onCancel?.()}>
             Quay lại
           </Button>
-          {handleDelete && (
+          {handleDelete && canDelete && (
             <Button
               variant="destructive"
               type="button"
@@ -1887,13 +1893,15 @@ export default function ProductForm({
               Xóa
             </Button>
           )}
-          <Button
-            variant="warning"
-            type="button"
-            onClick={() => onModeChange?.("edit")}
-          >
-            Chỉnh sửa
-          </Button>
+          {canUpdate && (
+            <Button
+              variant="warning"
+              type="button"
+              onClick={() => onModeChange?.("edit")}
+            >
+              Chỉnh sửa
+            </Button>
+          )}
         </>
       ) : (
         <>
@@ -1906,23 +1914,26 @@ export default function ProductForm({
           >
             Hủy
           </Button>
-          <Button
-            variant={mode === "edit" ? "warning" : "success"}
-            type="submit"
-            disabled={
-              isLoading ||
-              (mode !== "create" &&
-                !isDirty &&
-                !imageDirty &&
-                !variantImageDirty)
-            }
-          >
-            {isLoading
-              ? "Đang xử lý..."
-              : mode === "edit"
-                ? "Cập nhật"
-                : "Thêm sản phẩm"}
-          </Button>
+          {((mode === "create" && canCreate) ||
+            (mode === "edit" && canUpdate)) && (
+            <Button
+              variant={mode === "edit" ? "warning" : "success"}
+              type="submit"
+              disabled={
+                isLoading ||
+                (mode !== "create" &&
+                  !isDirty &&
+                  !imageDirty &&
+                  !variantImageDirty)
+              }
+            >
+              {isLoading
+                ? "Đang xử lý..."
+                : mode === "edit"
+                  ? "Cập nhật"
+                  : "Thêm sản phẩm"}
+            </Button>
+          )}
         </>
       )}
     </div>

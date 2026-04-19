@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { toast } from "sonner";
@@ -83,9 +84,27 @@ const SupportListPage = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
   const [detailTicketId, setDetailTicketId] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  useEffect(() => {
+    const qid = searchParams.get("ticketId");
+    if (qid) {
+      setDetailTicketId(qid);
+      setDetailOpen(true);
+    }
+  }, [searchParams]);
+
+  const handleDetailOpenChange = (nextOpen) => {
+    setDetailOpen(nextOpen);
+    if (!nextOpen) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("ticketId");
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   const [sorting, setSorting] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -364,7 +383,7 @@ const SupportListPage = () => {
 
       <TicketDetailModal
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={handleDetailOpenChange}
         shopId={shopId}
         ticketId={detailTicketId}
         isManager={isManager}

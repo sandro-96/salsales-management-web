@@ -85,6 +85,12 @@ export default function NotificationBell() {
         setUnreadCount((c) => c + 1);
         setNotifications((prev) => [message.data, ...prev].slice(0, 5));
         toast.info(message.data.title, { description: message.data.message });
+        // Phát event cho các widget phụ (vd. badge hỗ trợ trong AdminLayout)
+        // refresh mà không cần tự subscribe duplicate cùng topic.
+        const t = message.data.type;
+        if (t === "TICKET_CREATED" || t === "TICKET_REPLIED") {
+          window.dispatchEvent(new CustomEvent("admin-support-badge-refresh"));
+        }
       }
     });
 
@@ -105,6 +111,17 @@ export default function NotificationBell() {
     }
   };
 
+  const isSystemAdmin =
+    typeof user?.role === "string"
+      ? user.role.includes("ROLE_ADMIN")
+      : Array.isArray(user?.role)
+        ? user.role.includes("ROLE_ADMIN")
+        : false;
+
+  const notificationsRoute = isSystemAdmin
+    ? "/admin/notifications"
+    : "/notifications";
+
   const handleClickNotification = async (notification) => {
     if (!notification.read) {
       try {
@@ -121,7 +138,8 @@ export default function NotificationBell() {
     setOpen(false);
 
     if (notification.referenceType === "TICKET" && notification.referenceId) {
-      navigate("/support");
+      const base = isSystemAdmin ? "/admin/support" : "/support";
+      navigate(`${base}?ticketId=${encodeURIComponent(notification.referenceId)}`);
     }
   };
 
@@ -198,7 +216,10 @@ export default function NotificationBell() {
             variant="ghost"
             size="sm"
             className="w-full text-xs h-8"
-            onClick={() => { setOpen(false); navigate("/notifications"); }}
+            onClick={() => {
+              setOpen(false);
+              navigate(notificationsRoute);
+            }}
           >
             Xem tất cả thông báo
           </Button>

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useShop } from "../../hooks/useShop";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import {
   getTaxPolicies,
   createTaxPolicy,
@@ -129,16 +131,10 @@ const TAX_PRESETS = [
 
 export default function TaxPolicyPage() {
   const { confirm } = useAlertDialog();
-  const {
-    selectedShopId,
-    selectedShop,
-    branches,
-    isOwner,
-    selectedRole,
-    fetchBranches,
-  } = useShop();
+  const { selectedShopId, selectedShop, branches, fetchBranches } = useShop();
+  const { hasShopPermission } = useShopPermissions();
 
-  const canManage = isOwner || selectedRole === "MANAGER";
+  const canManage = hasShopPermission(PERM.SHOP_UPDATE);
 
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);

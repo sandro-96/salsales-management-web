@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useShop } from "../../hooks/useShop.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { toast } from "sonner";
 import {
@@ -73,9 +75,11 @@ const formatDate = (dateStr) => {
 };
 
 const CustomerListPage = () => {
-  const { selectedShopId, branches, isOwner, isStaff, isCashier } = useShop();
+  const { selectedShopId, branches } = useShop();
+  const { hasShopPermission } = useShopPermissions();
   const shopId = selectedShopId;
-  const canManage = isOwner || isStaff || isCashier;
+  const canManage = hasShopPermission(PERM.CUSTOMER_UPDATE);
+  const canDelete = hasShopPermission(PERM.CUSTOMER_DELETE);
   const { confirm } = useAlertDialog();
 
   const branchMap = useMemo(() => {
@@ -334,9 +338,9 @@ const CustomerListPage = () => {
                   handleOpenEdit(cust);
                 }}
               >
-                Chỉnh sửa
+                {canManage ? "Chỉnh sửa" : "Xem chi tiết"}
               </DropdownMenuItem>
-              {canManage && (
+              {canDelete && (
                 <DropdownMenuItem
                   className="text-red-600 focus:bg-red-100 focus:text-red-700"
                   disabled={isSubmitting}

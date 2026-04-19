@@ -51,22 +51,22 @@ import {
 import ProductFormModal from "./ProductFormModal.jsx";
 import ProductImportExportDialog from "./ProductImportExportDialog.jsx";
 import ShopToppingsModal from "./ShopToppingsModal.jsx";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 
 const ProductPage = () => {
-  const {
-    selectedShopId,
-    branches,
-    isOwner,
-    isStaff,
-    selectedShop,
-    fetchShops,
-    selectedRole,
-  } = useShop();
+  const { selectedShopId, branches, selectedShop, fetchShops } = useShop();
+  const { hasShopPermission, hasAnyShopPermission } = useShopPermissions();
   const shopId = selectedShopId;
-  const canImportExport = isOwner || isStaff;
-  /** Lưu danh mục topping cần quyền SHOP_UPDATE (OWNER / MANAGER) */
-  const canManageShopToppings =
-    isOwner || selectedRole === "MANAGER";
+  const canCreate = hasShopPermission(PERM.PRODUCT_CREATE);
+  const canUpdate = hasShopPermission(PERM.PRODUCT_UPDATE);
+  const canDelete = hasShopPermission(PERM.PRODUCT_DELETE);
+  const canUpdateStatus = hasShopPermission(PERM.PRODUCT_UPDATE_STATUS);
+  const canImportExport = hasAnyShopPermission([
+    PERM.PRODUCT_IMPORT,
+    PERM.PRODUCT_EXPORT,
+  ]);
+  const canManageShopToppings = hasShopPermission(PERM.SHOP_UPDATE);
   const { confirm } = useAlertDialog();
 
   const [products, setProducts] = useState([]);
@@ -294,6 +294,7 @@ const ProductPage = () => {
           <div onClick={(e) => e.stopPropagation()}>
             <Switch
               checked={checked}
+              disabled={!canUpdateStatus}
               onCheckedChange={() => handleToggleActive(product)}
             />
           </div>
@@ -312,6 +313,7 @@ const ProductPage = () => {
           <div onClick={(e) => e.stopPropagation()}>
             <Switch
               checked={checked}
+              disabled={!canUpdate}
               onCheckedChange={(val) =>
                 handleToggleTrackInventory(product, val)
               }
@@ -342,21 +344,23 @@ const ProductPage = () => {
                   handleOpenEdit(product);
                 }}
               >
-                Chỉnh sửa
+                {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-red-600 focus:bg-red-100 focus:text-red-700"
-                disabled={isSubmitting}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(product);
-                }}
-              >
-                Xóa
-                <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
-                  ⌘⌫
-                </DropdownMenuShortcut>
-              </DropdownMenuItem>
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                  disabled={isSubmitting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(product);
+                  }}
+                >
+                  Xóa
+                  <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
+                    ⌘⌫
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -432,32 +436,36 @@ const ProductPage = () => {
                 <span className="hidden sm:inline">Excel</span>
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="cursor-pointer"
-              onClick={() => {
-                setEditingProduct(null);
-                setCreateStep("scan");
-                setModalOpen(true);
-              }}
-            >
-              <ScanLine className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Quét mã vạch</span>
-            </Button>
-            <Button
-              variant="success"
-              size="sm"
-              className="cursor-pointer"
-              onClick={() => {
-                setEditingProduct(null);
-                setCreateStep("form");
-                setModalOpen(true);
-              }}
-            >
-              <PackagePlus className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Thêm sản phẩm</span>
-            </Button>
+            {canCreate && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setEditingProduct(null);
+                    setCreateStep("scan");
+                    setModalOpen(true);
+                  }}
+                >
+                  <ScanLine className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Quét mã vạch</span>
+                </Button>
+                <Button
+                  variant="success"
+                  size="sm"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setEditingProduct(null);
+                    setCreateStep("form");
+                    setModalOpen(true);
+                  }}
+                >
+                  <PackagePlus className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Thêm sản phẩm</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

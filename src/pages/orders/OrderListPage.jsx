@@ -29,6 +29,10 @@ import {
 import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { useBranchChannel } from "../../hooks/useBranchChannel.js";
+import { WebSocketMessageTypes } from "../../constants/websocket.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import { SHOP_INDUSTRY } from "../../constants/ShopIndustry.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { getTables } from "../../api/tableApi.js";
@@ -839,14 +843,14 @@ const OrderListPage = () => {
     selectedBranch,
     branches,
     setSelectedBranchId,
-    isOwner,
-    isStaff,
-    isCashier,
   } = useShop();
+  const { hasShopPermission } = useShopPermissions();
 
   const shopHasTableManagement = selectedIndustry === SHOP_INDUSTRY.FNB;
   const { confirm } = useAlertDialog();
-  const canManage = isOwner || isStaff || isCashier;
+  const canUpdate = hasShopPermission(PERM.ORDER_UPDATE);
+  const canCancel = hasShopPermission(PERM.ORDER_CANCEL);
+  const canPay = hasShopPermission(PERM.ORDER_PAYMENT_CONFIRM);
 
   const [orders, setOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -986,6 +990,71 @@ const OrderListPage = () => {
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  // ── Realtime: subscribe kênh order của shop+branch đang chọn ─────────────
+  const onRealtimeOrder = useCallback(
+    (msg) => {
+      if (!msg?.type) return;
+      const t = msg.type;
+      const payload = msg.data;
+
+      const matchesStatusFilter = (order) =>
+        statusFilter === "ALL" || order?.status === statusFilter;
+
+      if (t === WebSocketMessageTypes.ORDER_CREATED) {
+        if (!payload?.id) return;
+        if (!matchesStatusFilter(payload)) return;
+        setOrders((prev) => {
+          if (prev.some((o) => o.id === payload.id)) return prev;
+          // Chỉ prepend ở trang đầu để không phá vỡ phân trang;
+          // các trang khác sẽ nhận qua refetch định kỳ / thao tác của user.
+          if (pagination.pageIndex !== 0) return prev;
+          return [payload, ...prev].slice(0, pagination.pageSize);
+        });
+        setTotalCount((c) => c + 1);
+        return;
+      }
+
+      if (
+        t === WebSocketMessageTypes.ORDER_UPDATED ||
+        t === WebSocketMessageTypes.ORDER_STATUS_CHANGED ||
+        t === WebSocketMessageTypes.PAYMENT_SUCCEEDED
+      ) {
+        if (!payload?.id) return;
+        setOrders((prev) => {
+          let removedFromList = false;
+          const next = prev
+            .map((o) => (o.id === payload.id ? { ...o, ...payload } : o))
+            .filter((o) => {
+              if (o.id !== payload.id) return true;
+              if (!matchesStatusFilter(o)) {
+                removedFromList = true;
+                return false;
+              }
+              return true;
+            });
+          if (removedFromList) setTotalCount((c) => Math.max(0, c - 1));
+          return next;
+        });
+        setSelectedOrder((cur) =>
+          cur?.id === payload.id ? { ...cur, ...payload } : cur,
+        );
+        return;
+      }
+
+      if (t === WebSocketMessageTypes.ORDER_DELETED) {
+        const removedId = payload?.id || payload;
+        if (!removedId) return;
+        setOrders((prev) => {
+          if (!prev.some((o) => o.id === removedId)) return prev;
+          setTotalCount((c) => Math.max(0, c - 1));
+          return prev.filter((o) => o.id !== removedId);
+        });
+      }
+    },
+    [statusFilter, pagination.pageIndex, pagination.pageSize],
+  );
+  useBranchChannel("orders", onRealtimeOrder, { branchId: effectiveBranchId });
 
   // ── Stats ────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -1289,7 +1358,7 @@ const OrderListPage = () => {
                   <Eye className="h-4 w-4 mr-2" /> Xem chi tiết
                 </DropdownMenuItem>
 
-                {!order.paid && !isTerminal && canManage && (
+                {!order.paid && !isTerminal && canUpdate && (
                   <DropdownMenuItem onClick={() => goEditOrderOnPos(order)}>
                     <Pencil className="h-4 w-4 mr-2 text-primary" />
                     Chỉnh sửa trên POS
@@ -1303,14 +1372,14 @@ const OrderListPage = () => {
                   <Printer className="h-4 w-4 mr-2" /> In lại bill
                 </DropdownMenuItem>
 
-                {!order.paid && !isTerminal && canManage && (
+                {!order.paid && !isTerminal && canPay && (
                   <DropdownMenuItem onClick={() => openPaymentDialog(order)}>
                     <CreditCard className="h-4 w-4 mr-2 text-emerald-600" />{" "}
                     Thanh toán
                   </DropdownMenuItem>
                 )}
 
-                {order.status === "PENDING" && canManage && (
+                {order.status === "PENDING" && canUpdate && (
                   <DropdownMenuItem
                     onClick={() => handleStatusChange(order, "CONFIRMED")}
                     disabled={submitting}
@@ -1320,7 +1389,7 @@ const OrderListPage = () => {
                   </DropdownMenuItem>
                 )}
 
-                {order.status === "CONFIRMED" && canManage && (
+                {order.status === "CONFIRMED" && canUpdate && (
                   <DropdownMenuItem
                     onClick={() => handleStatusChange(order, "SHIPPING")}
                     disabled={submitting}
@@ -1331,7 +1400,7 @@ const OrderListPage = () => {
 
                 {(order.status === "SHIPPING" ||
                   order.status === "CONFIRMED") &&
-                  canManage && (
+                  canUpdate && (
                     <DropdownMenuItem
                       onClick={() => handleStatusChange(order, "COMPLETED")}
                       disabled={submitting}
@@ -1341,7 +1410,7 @@ const OrderListPage = () => {
                     </DropdownMenuItem>
                   )}
 
-                {!order.paid && !isTerminal && canManage && (
+                {!order.paid && !isTerminal && canCancel && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -1361,7 +1430,9 @@ const OrderListPage = () => {
     ];
   }, [
     shopHasTableManagement,
-    canManage,
+    canUpdate,
+    canCancel,
+    canPay,
     submitting,
     handleCancel,
     handleStatusChange,
@@ -1575,7 +1646,7 @@ const OrderListPage = () => {
         onClose={() => setDetailOpen(false)}
         order={selectedOrder}
         shopId={selectedShopId}
-        canEdit={canManage}
+        canEdit={canUpdate}
         onSaved={fetchOrders}
         onOrderPatched={(o) => setSelectedOrder(o)}
       />

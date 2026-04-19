@@ -72,6 +72,7 @@ export function CartPanel({
   activeGroup,
   tables,
   onQuickSwitchTable,
+  canPay = true,
 }) {
   const [tableOpsOpen, setTableOpsOpen] = useState(false);
 
@@ -511,14 +512,21 @@ export function CartPanel({
           Gửi bếp
         </Button> */}
       </div>
-      <Button
-        className="w-full h-11 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-200 disabled:text-emerald-900"
-        disabled={cart.length === 0}
-        onClick={onCheckout}
-      >
-        <ShoppingCart className="h-4 w-4 mr-2" />
-        Thanh toán ({totalItems} món)
-      </Button>
+      {canPay ? (
+        <Button
+          className="w-full h-11 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-200 disabled:text-emerald-900"
+          disabled={cart.length === 0}
+          onClick={onCheckout}
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Thanh toán ({totalItems} món)
+        </Button>
+      ) : (
+        <p className="text-[11px] text-muted-foreground text-center px-2">
+          Bạn không có quyền thanh toán. Hãy{" "}
+          <span className="font-medium">Treo / Lưu</span> đơn để thu ngân xử lý.
+        </p>
+      )}
     </div>
   </>
 );

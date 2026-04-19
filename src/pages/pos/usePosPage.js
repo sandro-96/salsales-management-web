@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
+import { useBranchChannel } from "../../hooks/useBranchChannel.js";
+import { WebSocketMessageTypes } from "../../constants/websocket.js";
 import { getBranchProducts } from "../../api/productApi";
 import { getCurrentOrderByTable, getTables } from "../../api/tableApi";
 import { getPromotions } from "../../api/promotionApi";
@@ -57,6 +61,8 @@ export function usePosPage() {
     setSelectedBranchId,
     selectedShop,
   } = useShop();
+  const { hasShopPermission } = useShopPermissions();
+  const canPay = hasShopPermission(PERM.ORDER_PAYMENT_CONFIRM);
 
   const [products, setProducts] = useState([]);
   const [tables, setTables] = useState([]);
@@ -393,6 +399,93 @@ export function usePosPage() {
   useEffect(() => {
     fetchGroups();
   }, [fetchGroups]);
+
+  // ── Realtime: tables (cập nhật trạng thái bàn tại chỗ) ───────────────────
+  const onRealtimeTable = useCallback((msg) => {
+    if (!msg?.type || !msg.data) return;
+    const payload = msg.data;
+    if (msg.type === WebSocketMessageTypes.TABLE_DELETED) {
+      setTables((prev) => prev.filter((t) => t.id !== payload.id));
+      return;
+    }
+    if (msg.type === WebSocketMessageTypes.TABLE_CREATED) {
+      setTables((prev) => {
+        if (prev.some((t) => t.id === payload.id)) return prev;
+        return [...prev, payload];
+      });
+      return;
+    }
+    if (
+      msg.type === WebSocketMessageTypes.TABLE_UPDATED ||
+      msg.type === WebSocketMessageTypes.TABLE_STATUS_CHANGED ||
+      msg.type === WebSocketMessageTypes.TABLE_ASSIGNED
+    ) {
+      setTables((prev) =>
+        prev.map((t) => (t.id === payload.id ? { ...t, ...payload } : t)),
+      );
+    }
+  }, []);
+  useBranchChannel("tables", onRealtimeTable, { branchId: effectiveBranchId });
+
+  // ── Realtime: orders (đồng bộ đơn đang mở giữa nhiều staff) ──────────────
+  const onRealtimeOrder = useCallback(
+    (msg) => {
+      if (!msg?.type || !msg.data) return;
+      const payload = msg.data;
+      const orderId = payload.id;
+      if (!orderId) return;
+
+      // Chỉ quan tâm đơn đang nằm trên 1 trong các tab của POS.
+      setOrderTabs((prev) => {
+        const idx = prev.findIndex((t) => t.orderId === orderId);
+        if (idx < 0) return prev;
+
+        if (msg.type === WebSocketMessageTypes.ORDER_DELETED) {
+          // Đơn bị xoá bởi người khác — xoá tab khỏi POS.
+          const removed = prev[idx];
+          if (removed?.id === activeTabIdRef.current) {
+            toast.warning(
+              `Đơn ${removed.displayOrderCode || orderId} đã bị xoá bởi người khác.`,
+            );
+          }
+          return prev.filter((t) => t.orderId !== orderId);
+        }
+
+        const isPaidByOther =
+          payload.paid === true ||
+          payload.status === "COMPLETED" ||
+          payload.paymentStatus === "PAID";
+        const isCancelledByOther = payload.status === "CANCELLED";
+
+        if (isPaidByOther || isCancelledByOther) {
+          const target = prev[idx];
+          if (target?.id === activeTabIdRef.current) {
+            toast.warning(
+              isPaidByOther
+                ? `Đơn ${target.displayOrderCode || orderId} đã được thanh toán bởi người khác.`
+                : `Đơn ${target.displayOrderCode || orderId} đã bị huỷ bởi người khác.`,
+            );
+          }
+          // Loại bỏ đơn đã đóng khỏi tab POS đang chỉnh sửa.
+          const filtered = prev.filter((t) => t.orderId !== orderId);
+          return filtered.length === 0 ? [createEmptyTab(1)] : filtered;
+        }
+
+        // ORDER_UPDATED/ORDER_STATUS_CHANGED trên đơn đang mở:
+        // cập nhật note/table/customer; KHÔNG overwrite cart vì user có thể đang gõ.
+        return prev.map((t) => {
+          if (t.orderId !== orderId) return t;
+          return {
+            ...t,
+            displayOrderCode: payload.orderCode ?? t.displayOrderCode,
+            tableId: payload.tableId ?? t.tableId,
+          };
+        });
+      });
+    },
+    [],
+  );
+  useBranchChannel("orders", onRealtimeOrder, { branchId: effectiveBranchId });
 
   const handleCreateGroup = useCallback(async () => {
     if (!selectedShopId || !effectiveBranchId) return;
@@ -1555,6 +1648,7 @@ export function usePosPage() {
     activeGroup,
     tables,
     onQuickSwitchTable: (tid) => setSelectedTableId(tid),
+    canPay,
   };
 
   return {

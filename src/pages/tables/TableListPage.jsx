@@ -17,6 +17,10 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 import { useShop } from "../../hooks/useShop.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { useBranchChannel } from "../../hooks/useBranchChannel.js";
+import { WebSocketMessageTypes } from "../../constants/websocket.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import {
   getTables,
@@ -102,8 +106,11 @@ const TableFormDialog = ({
   shopId,
   branchId,
   onSuccess,
+  canCreate = false,
+  canUpdate = false,
 }) => {
   const isEdit = !!editTable;
+  const readOnly = isEdit ? !canUpdate : !canCreate;
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState("");
   const [note, setNote] = useState("");
@@ -171,7 +178,7 @@ const TableFormDialog = ({
             {isEdit ? "Cập nhật thông tin bàn." : "Tạo bàn mới cho chi nhánh."}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <fieldset disabled={readOnly} className="space-y-4 disabled:opacity-70">
           <div className="space-y-2">
             <Label htmlFor="table-name">Tên bàn *</Label>
             <Input
@@ -222,15 +229,20 @@ const TableFormDialog = ({
               </p>
             </div>
           </label>
-        </div>
+        </fieldset>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Hủy
+            {readOnly ? "Đóng" : "Hủy"}
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || !name.trim()}>
-            {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-            {isEdit ? "Lưu thay đổi" : "Tạo bàn"}
-          </Button>
+          {!readOnly && (
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || !name.trim()}
+            >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+              {isEdit ? "Lưu thay đổi" : "Tạo bàn"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -241,13 +253,14 @@ const TableFormDialog = ({
 
 const TableCard = ({
   table,
-  canManage,
-  isOwner,
+  canUpdate,
+  canDelete,
   onEdit,
   onDelete,
   onStatusChange,
   onOpenPos,
 }) => {
+  const canManage = canUpdate || canDelete;
   const cfg = TABLE_STATUSES[table.status] || TABLE_STATUSES.AVAILABLE;
   const isOccupied = table.status === "OCCUPIED";
   const isAlwaysAvailable = !!table.alwaysAvailable;
@@ -306,13 +319,15 @@ const TableCard = ({
               <DropdownMenuContent align="end" className="bg-background w-44">
                 <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => onEdit(table)}
-                  disabled={isOccupied}
-                >
-                  <Pencil className="h-4 w-4 mr-2" /> Chỉnh sửa
-                </DropdownMenuItem>
-                {table.status !== "AVAILABLE" && !isOccupied && (
+                {canUpdate && (
+                  <DropdownMenuItem
+                    onClick={() => onEdit(table)}
+                    disabled={isOccupied}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" /> Chỉnh sửa
+                  </DropdownMenuItem>
+                )}
+                {canUpdate && table.status !== "AVAILABLE" && !isOccupied && (
                   <DropdownMenuItem
                     onClick={() => onStatusChange(table, "AVAILABLE")}
                   >
@@ -320,14 +335,14 @@ const TableCard = ({
                     Mở bàn
                   </DropdownMenuItem>
                 )}
-                {table.status !== "CLOSED" && !isOccupied && (
+                {canUpdate && table.status !== "CLOSED" && !isOccupied && (
                   <DropdownMenuItem
                     onClick={() => onStatusChange(table, "CLOSED")}
                   >
                     <Lock className="h-4 w-4 mr-2 text-gray-600" /> Đóng bàn
                   </DropdownMenuItem>
                 )}
-                {isOwner && (
+                {canDelete && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -378,11 +393,12 @@ const TableListPage = () => {
     selectedBranch,
     branches,
     setSelectedBranchId,
-    isOwner,
-    isStaff,
   } = useShop();
+  const { hasShopPermission } = useShopPermissions();
   const { confirm } = useAlertDialog();
-  const canManage = isOwner || isStaff;
+  const canCreate = hasShopPermission(PERM.TABLE_CREATE);
+  const canUpdate = hasShopPermission(PERM.TABLE_UPDATE);
+  const canDelete = hasShopPermission(PERM.TABLE_DELETE);
 
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -416,6 +432,37 @@ const TableListPage = () => {
   useEffect(() => {
     fetchTables();
   }, [fetchTables]);
+
+  // ── Realtime: tables channel (đồng bộ trạng thái bàn giữa các tab) ───────
+  const onRealtimeTable = useCallback((msg) => {
+    if (!msg?.type || !msg.data) return;
+    const payload = msg.data;
+    if (msg.type === WebSocketMessageTypes.TABLE_DELETED) {
+      setTables((prev) => prev.filter((t) => t.id !== payload.id));
+      return;
+    }
+    if (msg.type === WebSocketMessageTypes.TABLE_CREATED) {
+      setTables((prev) => {
+        if (prev.some((t) => t.id === payload.id)) return prev;
+        const next = [...prev, payload];
+        next.sort((a, b) =>
+          (a.name || "").localeCompare(b.name || "", "vi"),
+        );
+        return next;
+      });
+      return;
+    }
+    if (
+      msg.type === WebSocketMessageTypes.TABLE_UPDATED ||
+      msg.type === WebSocketMessageTypes.TABLE_STATUS_CHANGED ||
+      msg.type === WebSocketMessageTypes.TABLE_ASSIGNED
+    ) {
+      setTables((prev) =>
+        prev.map((t) => (t.id === payload.id ? { ...t, ...payload } : t)),
+      );
+    }
+  }, []);
+  useBranchChannel("tables", onRealtimeTable);
 
   // ── Stats ────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -515,7 +562,7 @@ const TableListPage = () => {
                 </SelectContent>
               </Select>
             )}
-            {isOwner && !noBranch && (
+            {canCreate && !noBranch && (
               <Button
                 onClick={() => {
                   setEditingTable(null);
@@ -663,8 +710,8 @@ const TableListPage = () => {
                   <TableCard
                     key={table.id}
                     table={table}
-                    canManage={canManage}
-                    isOwner={isOwner}
+                    canUpdate={canUpdate}
+                    canDelete={canDelete}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onStatusChange={handleStatusChange}
@@ -696,6 +743,8 @@ const TableListPage = () => {
         table={editingTable}
         shopId={selectedShopId}
         branchId={selectedBranchId}
+        canCreate={canCreate}
+        canUpdate={canUpdate}
         onSuccess={fetchTables}
       />
     </div>

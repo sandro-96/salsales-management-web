@@ -22,7 +22,22 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
-import { getTicket, replyToTicket, updateTicketStatus } from "../../api/supportApi.js";
+import {
+  getTicket as defaultGetTicket,
+  replyToTicket as defaultReplyToTicket,
+  updateTicketStatus as defaultUpdateTicketStatus,
+} from "../../api/supportApi.js";
+
+/**
+ * Adapter mặc định cho trang hỗ trợ phía shop. Nhận shopId + ticketId.
+ * AdminSupportPage truyền adapter riêng (không cần shopId).
+ */
+const defaultAdapter = {
+  getTicket: (shopId, ticketId) => defaultGetTicket(shopId, ticketId),
+  reply: (shopId, ticketId, data) => defaultReplyToTicket(shopId, ticketId, data),
+  updateStatus: (shopId, ticketId, data) =>
+    defaultUpdateTicketStatus(shopId, ticketId, data),
+};
 
 const STATUS_MAP = {
   OPEN: { label: "Mở", variant: "default" },
@@ -47,7 +62,15 @@ const CATEGORY_MAP = {
   OTHER: "Khác",
 };
 
-export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId, isManager, onUpdated }) {
+export default function TicketDetailModal({
+  open,
+  onOpenChange,
+  shopId,
+  ticketId,
+  isManager,
+  onUpdated,
+  apiAdapter = defaultAdapter,
+}) {
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -56,10 +79,10 @@ export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId
   const messagesEndRef = useRef(null);
 
   const fetchTicket = useCallback(async () => {
-    if (!shopId || !ticketId) return;
+    if (!ticketId) return;
     setLoading(true);
     try {
-      const res = await getTicket(shopId, ticketId);
+      const res = await apiAdapter.getTicket(shopId, ticketId);
       if (res.data?.success) {
         setTicket(res.data.data);
       }
@@ -69,7 +92,7 @@ export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId
     } finally {
       setLoading(false);
     }
-  }, [shopId, ticketId]);
+  }, [shopId, ticketId, apiAdapter]);
 
   useEffect(() => {
     if (open && ticketId) {
@@ -85,7 +108,7 @@ export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId
     if (!replyText.trim()) return;
     setSending(true);
     try {
-      const res = await replyToTicket(shopId, ticketId, { message: replyText });
+      const res = await apiAdapter.reply(shopId, ticketId, { message: replyText });
       if (res.data?.success) {
         setTicket(res.data.data);
         setReplyText("");
@@ -104,7 +127,7 @@ export default function TicketDetailModal({ open, onOpenChange, shopId, ticketId
   const handleStatusChange = async (newStatus) => {
     setStatusUpdating(true);
     try {
-      const res = await updateTicketStatus(shopId, ticketId, { status: newStatus });
+      const res = await apiAdapter.updateStatus(shopId, ticketId, { status: newStatus });
       if (res.data?.success) {
         setTicket(res.data.data);
         toast.success("Cập nhật trạng thái thành công.");

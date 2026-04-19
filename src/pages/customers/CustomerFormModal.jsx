@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/select";
 
 import { createCustomer, updateCustomer } from "../../api/customerApi.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 
 export default function CustomerFormModal({
   open,
@@ -33,6 +35,9 @@ export default function CustomerFormModal({
   onSuccess,
 }) {
   const isEdit = !!customer;
+  const { hasShopPermission } = useShopPermissions();
+  const canEdit = hasShopPermission(PERM.CUSTOMER_UPDATE);
+  const readOnly = isEdit && !canEdit;
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -123,7 +128,11 @@ export default function CustomerFormModal({
       >
         <DialogHeader className="shrink-0">
           <DialogTitle>
-            {isEdit ? "Chỉnh sửa khách hàng" : "Thêm khách hàng mới"}
+            {readOnly
+              ? "Chi tiết khách hàng"
+              : isEdit
+                ? "Chỉnh sửa khách hàng"
+                : "Thêm khách hàng mới"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {isEdit
@@ -141,6 +150,7 @@ export default function CustomerFormModal({
               onChange={(e) => setName(e.target.value)}
               placeholder="VD: Nguyễn Văn A"
               autoFocus
+              disabled={readOnly}
             />
           </div>
 
@@ -152,6 +162,7 @@ export default function CustomerFormModal({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="VD: 0901234567"
+                disabled={readOnly}
               />
             </div>
             <div className="space-y-2">
@@ -162,6 +173,7 @@ export default function CustomerFormModal({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="VD: email@example.com"
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -173,6 +185,7 @@ export default function CustomerFormModal({
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="VD: 123 Nguyễn Huệ, Q.1, TP.HCM"
+              disabled={readOnly}
             />
           </div>
 
@@ -181,7 +194,7 @@ export default function CustomerFormModal({
             <Select
               value={branchId || "__none__"}
               onValueChange={(v) => setBranchId(v === "__none__" ? "" : v)}
-              disabled={isEdit}
+              disabled={isEdit || readOnly}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Không phân biệt chi nhánh" />
@@ -212,18 +225,21 @@ export default function CustomerFormModal({
               onChange={(e) => setNote(e.target.value)}
               placeholder="VD: Khách VIP, hay mua sản phẩm X..."
               rows={3}
+              disabled={readOnly}
             />
           </div>
         </div>
 
         <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Hủy
+            {readOnly ? "Đóng" : "Hủy"}
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-            {isEdit ? "Lưu thay đổi" : "Thêm khách hàng"}
-          </Button>
+          {!readOnly && (
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+              {isEdit ? "Lưu thay đổi" : "Thêm khách hàng"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

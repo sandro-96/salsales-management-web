@@ -1,5 +1,6 @@
 // src/routes/routeConfig.jsx
 import { lazy } from "react";
+import { PERM } from "../constants/shopPermissions.js";
 const BranchPage = lazy(() => import("../pages/branchs/BranchPage.jsx"));
 const BranchSettingsPage = lazy(
   () => import("../pages/branchs/BranchSettingsPage.jsx"),
@@ -12,6 +13,10 @@ const RegisterPage = lazy(() => import("../pages/RegisterPage"));
 const VerifyEmailPage = lazy(() => import("../pages/VerifyEmailPage"));
 const ForgotPasswordPage = lazy(() => import("../pages/ForgotPasswordPage"));
 const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
+const AdminLayout = lazy(() => import("../layouts/common/AdminLayout.jsx"));
+const AdminSupportPage = lazy(
+  () => import("../pages/admin/support/AdminSupportPage.jsx"),
+);
 const ShopPage = lazy(() => import("../pages/shops/ShopPage"));
 const CreateShopPage = lazy(() => import("../pages/shops/CreateShopPage"));
 const DynamicDashboardLayout = lazy(
@@ -81,11 +86,31 @@ export const routeConfig = [
   },
   {
     path: "/admin",
-    element: <AdminPage />,
+    element: <AdminLayout />,
     protected: true,
     roles: ["ROLE_ADMIN"],
     title: "Trang quản trị",
     breadcrumb: "Quản trị",
+    children: [
+      {
+        path: "",
+        element: <AdminPage />,
+        title: "Tổng quan quản trị",
+        breadcrumb: "Tổng quan",
+      },
+      {
+        path: "support",
+        element: <AdminSupportPage />,
+        title: "Hỗ trợ hệ thống",
+        breadcrumb: "Hỗ trợ",
+      },
+      {
+        path: "notifications",
+        element: <NotificationPage />,
+        title: "Thông báo (admin)",
+        breadcrumb: "Thông báo",
+      },
+    ],
   },
   {
     path: "/unauthorized",
@@ -104,12 +129,14 @@ export const routeConfig = [
         element: <OverviewPage />,
         title: "Tổng quan",
         breadcrumb: "Tổng quan",
+        shopPermissionAny: [PERM.SHOP_VIEW],
       },
       {
         path: "products",
         element: <ProductLayout />,
         title: "Sản phẩm",
         breadcrumb: "Sản phẩm",
+        shopPermissionAny: [PERM.PRODUCT_VIEW],
         children: [
           {
             path: "",
@@ -122,48 +149,56 @@ export const routeConfig = [
         element: <StaffListPage />,
         title: "Nhân sự",
         breadcrumb: "Nhân sự",
+        shopPermissionAny: [PERM.SHOP_USER_VIEW],
       },
       {
         path: "orders",
         element: <OrderListPage />,
         title: "Đơn hàng",
         breadcrumb: "Đơn hàng",
+        shopPermissionAny: [PERM.ORDER_VIEW, PERM.ORDER_CREATE],
       },
       {
         path: "customers",
         element: <CustomerListPage />,
         title: "Khách hàng",
         breadcrumb: "Khách hàng",
+        shopPermissionAny: [PERM.CUSTOMER_VIEW],
       },
       {
         path: "inventory",
         element: <InventoryListPage />,
         title: "Kho hàng",
         breadcrumb: "Kho hàng",
+        shopPermissionAny: [PERM.INVENTORY_VIEW, PERM.INVENTORY_MANAGE],
       },
       {
         path: "reports",
         element: <ReportListPage />,
         title: "Báo cáo",
         breadcrumb: "Báo cáo",
+        shopPermissionAny: [PERM.REPORT_VIEW],
       },
       {
         path: "tables",
         element: <TableListPage />,
         title: "Bàn",
         breadcrumb: "Bàn",
+        shopPermissionAny: [PERM.TABLE_VIEW],
       },
       {
         path: "promotions",
         element: <PromotionListPage />,
         title: "Khuyến mãi",
         breadcrumb: "Khuyến mãi",
+        shopPermissionAny: [PERM.PROMOTION_VIEW],
       },
       {
         path: "tax-policies",
         element: <TaxPolicyPage />,
         title: "Chính sách thuế",
         breadcrumb: "Thuế",
+        shopPermissionAny: [PERM.SHOP_UPDATE],
       },
       {
         path: "accounts",
@@ -200,12 +235,14 @@ export const routeConfig = [
         element: <PosPage />,
         title: "Bán hàng",
         breadcrumb: "Bán hàng",
+        shopPermissionAny: [PERM.ORDER_CREATE],
       },
       {
         path: "branches",
         title: "Chi nhánh",
         breadcrumb: "Chi nhánh",
         element: <BranchLayout />,
+        shopPermissionAny: [PERM.BRANCH_VIEW, PERM.BRANCH_MANAGE],
         children: [
           {
             path: "",

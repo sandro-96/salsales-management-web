@@ -79,8 +79,9 @@ const formatDate = (dateStr) => {
 
 const StaffListPage = () => {
   const [searchParams] = useSearchParams();
-  const { selectedShopId, branches } = useShop();
+  const { selectedShopId, branches, isOwner, shopRole } = useShop();
   const shopId = selectedShopId;
+  const canManageStaff = isOwner || shopRole === "MANAGER";
   const branchMap = Object.fromEntries(
     (branches || []).map((b) => [b.id, b.name]),
   );
@@ -389,7 +390,7 @@ const StaffListPage = () => {
                 <FileUser className="h-4 w-4 mr-2" />
                 Hồ sơ nhân sự
               </DropdownMenuItem>
-              {!staff.external && (
+              {!staff.external && canManageStaff && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
@@ -399,19 +400,21 @@ const StaffListPage = () => {
                   Chỉnh sửa vai trò & quyền
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem
-                className="text-red-600 focus:bg-red-100 focus:text-red-700"
-                disabled={isSubmitting}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(staff);
-                }}
-              >
-                Xóa
-                <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
-                  ⌘⌫
-                </DropdownMenuShortcut>
-              </DropdownMenuItem>
+              {canManageStaff && (
+                <DropdownMenuItem
+                  className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                  disabled={isSubmitting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(staff);
+                  }}
+                >
+                  Xóa
+                  <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
+                    ⌘⌫
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -490,33 +493,39 @@ const StaffListPage = () => {
             <DataTableViewOptions table={table} />
           </div>
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              className="cursor-pointer"
-              onClick={handleExportProfiles}
-            >
-              <FileDown className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Xuất Excel</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="cursor-pointer"
-              onClick={() => setAddExternalModalOpen(true)}
-            >
-              <UserPlus className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Ngoài HT</span>
-            </Button>
-            <Button
-              variant="success"
-              size="sm"
-              className="cursor-pointer"
-              onClick={() => setAddModalOpen(true)}
-            >
-              <Plus className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Thêm nhân viên</span>
-            </Button>
+            {canManageStaff && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+                onClick={handleExportProfiles}
+              >
+                <FileDown className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Xuất Excel</span>
+              </Button>
+            )}
+            {canManageStaff && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+                onClick={() => setAddExternalModalOpen(true)}
+              >
+                <UserPlus className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Ngoài HT</span>
+              </Button>
+            )}
+            {canManageStaff && (
+              <Button
+                variant="success"
+                size="sm"
+                className="cursor-pointer"
+                onClick={() => setAddModalOpen(true)}
+              >
+                <Plus className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Thêm nhân viên</span>
+              </Button>
+            )}
           </div>
         </div>
 

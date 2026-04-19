@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useShop } from "../../hooks/useShop.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import axiosInstance from "../../api/axiosInstance.js";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -36,6 +38,9 @@ import { useAlertDialog } from "../../hooks/useAlertDialog";
 
 const BranchPage = () => {
   const { selectedShopId, branches, fetchBranches, isOwner } = useShop();
+  const { hasShopPermission } = useShopPermissions();
+  const canManage = hasShopPermission(PERM.BRANCH_MANAGE);
+  const canDelete = isOwner; // BE: DELETE /branches/{id} = @RequireRole(OWNER)
   const shopId = selectedShopId;
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,7 +117,7 @@ const BranchPage = () => {
               {stats.total} chi nhánh · {stats.active} hoạt động
             </p>
           </div>
-          {isOwner && (
+          {canManage && (
             <Button onClick={() => navigate("create")} size="sm">
               <Plus className="h-4 w-4 mr-1" /> Thêm chi nhánh
             </Button>
@@ -163,7 +168,7 @@ const BranchPage = () => {
                 ? "Thử tìm kiếm với từ khóa khác."
                 : "Tạo chi nhánh đầu tiên để bắt đầu."}
             </p>
-            {!keyword && isOwner && (
+            {!keyword && canManage && (
               <Button className="mt-4" onClick={() => navigate("create")}>
                 <Plus className="h-4 w-4 mr-1" /> Tạo chi nhánh
               </Button>
@@ -176,7 +181,8 @@ const BranchPage = () => {
               <BranchCard
                 branch={defaultBranch}
                 isHero
-                isOwner={isOwner}
+                canUpdate={canManage}
+                canDelete={canDelete}
                 isSubmitting={isSubmitting}
                 onNavigate={(slug) => navigate(slug)}
                 onDelete={handleDelete}
@@ -190,7 +196,8 @@ const BranchPage = () => {
                   <BranchCard
                     key={branch.id}
                     branch={branch}
-                    isOwner={isOwner}
+                    canUpdate={canManage}
+                    canDelete={canDelete}
                     isSubmitting={isSubmitting}
                     onNavigate={(slug) => navigate(slug)}
                     onDelete={handleDelete}
@@ -210,7 +217,8 @@ const BranchPage = () => {
 const BranchCard = ({
   branch,
   isHero,
-  isOwner,
+  canUpdate,
+  canDelete,
   isSubmitting,
   onNavigate,
   onDelete,
@@ -345,9 +353,10 @@ const BranchCard = ({
                 <DropdownMenuItem
                   onClick={() => onNavigate(`${branch.slug}?mode=edit`)}
                 >
-                  <Pencil className="h-4 w-4 mr-2" /> Chỉnh sửa
+                  <Pencil className="h-4 w-4 mr-2" />{" "}
+                  {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
                 </DropdownMenuItem>
-                {!isDefault && isOwner && (
+                {!isDefault && canDelete && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem

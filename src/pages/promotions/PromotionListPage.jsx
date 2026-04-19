@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useShop } from "../../hooks/useShop.js";
+import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import { PERM } from "../../constants/shopPermissions.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { toast } from "sonner";
 import {
@@ -88,9 +90,12 @@ const formatDiscount = (type, value) => {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const PromotionListPage = () => {
-  const { selectedShopId, branches, isOwner, isStaff } = useShop();
+  const { selectedShopId, branches } = useShop();
+  const { hasShopPermission } = useShopPermissions();
   const shopId = selectedShopId;
-  const canManage = isOwner || isStaff;
+  const canCreate = hasShopPermission(PERM.PROMOTION_CREATE);
+  const canUpdate = hasShopPermission(PERM.PROMOTION_UPDATE);
+  const canDelete = hasShopPermission(PERM.PROMOTION_DELETE);
   const { confirm } = useAlertDialog();
 
   const branchMap = useMemo(() => {
@@ -315,21 +320,23 @@ const PromotionListPage = () => {
                   handleOpenEdit(promo);
                 }}
               >
-                Chỉnh sửa
+                {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-red-600 focus:bg-red-100 focus:text-red-700"
-                disabled={isSubmitting}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(promo);
-                }}
-              >
-                Xóa
-                <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
-                  ⌘⌫
-                </DropdownMenuShortcut>
-              </DropdownMenuItem>
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                  disabled={isSubmitting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(promo);
+                  }}
+                >
+                  Xóa
+                  <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
+                    ⌘⌫
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -420,7 +427,7 @@ const PromotionListPage = () => {
             <DataTableViewOptions table={table} />
           </div>
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-            {canManage && (
+            {canCreate && (
               <Button
                 variant="success"
                 size="sm"

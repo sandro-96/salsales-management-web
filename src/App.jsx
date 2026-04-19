@@ -5,6 +5,7 @@ import { routeConfig } from "./routes/routeConfig.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import GuestOnlyRoute from "./routes/GuestOnlyRoute";
 import RoleBasedRoute from "./routes/RoleBasedRoute";
+import ShopPermissionRoute from "./routes/ShopPermissionRoute.jsx";
 import RouteWithTitle from "./routes/RouteWithTitle";
 import Loading from "./components/loading/Loading.jsx";
 import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
@@ -13,6 +14,22 @@ import { Toaster } from "sonner";
 
 function renderRoute(route) {
   let element = <RouteWithTitle element={route.element} title={route.title} />;
+
+  if (
+    route.shopPermission ||
+    route.shopPermissionAny ||
+    route.shopPermissionAll
+  ) {
+    element = (
+      <ShopPermissionRoute
+        permission={route.shopPermission}
+        any={route.shopPermissionAny}
+        all={route.shopPermissionAll}
+      >
+        {element}
+      </ShopPermissionRoute>
+    );
+  }
 
   if (route.guestOnly) {
     element = <GuestOnlyRoute>{element}</GuestOnlyRoute>;
