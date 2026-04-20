@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, LifeBuoy, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  LifeBuoy,
+  LogOut,
+  Building2,
+  Users,
+  Wallet,
+  Package,
+  Megaphone,
+  ClipboardList,
+  ShieldCheck,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +19,10 @@ import { Separator } from "@/components/ui/separator";
 
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/common/NotificationBell";
+import ImpersonationBanner from "@/components/common/ImpersonationBanner";
 import { getNotifications } from "@/api/notificationApi.js";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
+import { ADMIN_PERM } from "@/constants/adminPermissions";
 
 const NAV_ITEMS = [
   {
@@ -16,12 +30,55 @@ const NAV_ITEMS = [
     label: "Tổng quan",
     icon: LayoutDashboard,
     end: true,
+    requirePerm: ADMIN_PERM.DASHBOARD_VIEW,
+  },
+  {
+    to: "/admin/shops",
+    label: "Shops",
+    icon: Building2,
+    requirePerm: ADMIN_PERM.SHOP_VIEW,
+  },
+  {
+    to: "/admin/users",
+    label: "Users",
+    icon: Users,
+    requirePerm: ADMIN_PERM.USER_VIEW,
+  },
+  {
+    to: "/admin/billing",
+    label: "Billing",
+    icon: Wallet,
+    requirePerm: ADMIN_PERM.BILLING_VIEW,
+  },
+  {
+    to: "/admin/catalog",
+    label: "Catalog",
+    icon: Package,
+    requirePerm: ADMIN_PERM.CATALOG_MANAGE,
+  },
+  {
+    to: "/admin/broadcasts",
+    label: "Broadcast",
+    icon: Megaphone,
+    requirePerm: ADMIN_PERM.BROADCAST_SEND,
+  },
+  {
+    to: "/admin/audit",
+    label: "Audit log",
+    icon: ClipboardList,
+    requirePerm: ADMIN_PERM.AUDIT_VIEW,
   },
   {
     to: "/admin/support",
     label: "Hỗ trợ",
     icon: LifeBuoy,
     badgeKey: "support",
+    requirePerm: ADMIN_PERM.SUPPORT_VIEW,
+  },
+  {
+    to: "/admin/security",
+    label: "Bảo mật (2FA)",
+    icon: ShieldCheck,
   },
 ];
 
@@ -75,18 +132,28 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { count: supportBadge } = useAdminSupportBadge();
+  const { hasAdminPermission } = useAdminPermissions();
 
   const badges = { support: supportBadge };
 
+  // Ẩn nav item nếu admin không có quyền tương ứng. SUPER_ADMIN mặc định đủ
+  // tất cả permissions sau migration; admin con (BILLING_ADMIN, ...) sẽ thấy
+  // tập rút gọn.
+  const visibleNav = NAV_ITEMS.filter(
+    (item) => !item.requirePerm || hasAdminPermission(item.requirePerm),
+  );
+
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex min-h-screen bg-muted/30 flex-col">
+      <ImpersonationBanner />
+      <div className="flex flex-1 min-h-0">
       {/* Sidebar */}
       <aside className="w-60 shrink-0 border-r bg-background flex flex-col">
         <div className="h-14 flex items-center px-5 border-b">
           <span className="font-bold tracking-tight">SalesApp Admin</span>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end, badgeKey }) => (
+          {visibleNav.map(({ to, label, icon: Icon, end, badgeKey }) => (
             <NavLink
               key={to}
               to={to}
@@ -141,6 +208,7 @@ const AdminLayout = () => {
         <main className="flex-1 min-h-0 overflow-y-auto">
           <Outlet />
         </main>
+      </div>
       </div>
     </div>
   );

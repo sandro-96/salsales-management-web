@@ -195,8 +195,18 @@ export function PosInvoiceReceipt({
 
       {items.map((item, idx) => {
         const unit = item.priceAfterDiscount ?? item.price ?? 0;
-        const gross = (item.price ?? 0) * (item.quantity ?? 0);
-        const line = unit * (item.quantity ?? 0);
+        const isWeight = !!item.sellByWeight;
+        const qtyMultiplier = isWeight
+          ? Number(item.weight ?? 0)
+          : (item.quantity ?? 0);
+        const weightUnit = item.weightUnit || "";
+        const qtyLabel = isWeight
+          ? `${Number(item.weight ?? 0).toLocaleString("vi-VN", {
+              maximumFractionDigits: 3,
+            })} ${weightUnit}`.trim()
+          : String(item.quantity ?? 0);
+        const gross = (item.price ?? 0) * qtyMultiplier;
+        const line = unit * qtyMultiplier;
         const hasDisc = item.price != null && unit < item.price;
         const tops = orderLineToppings(item);
         const vLine = orderLineVariantLabel(item);
@@ -235,7 +245,8 @@ export function PosInvoiceReceipt({
             ) : null}
             <div style={{ ...rowStyle, marginBottom: 0 }}>
               <span style={labelMuted}>
-                {fmtMoney(unit)} × {item.quantity}
+                {fmtMoney(unit)}
+                {isWeight && weightUnit ? `/${weightUnit}` : ""} × {qtyLabel}
               </span>
               <span style={{ fontWeight: 600 }}>{fmtMoney(line)} ₫</span>
             </div>

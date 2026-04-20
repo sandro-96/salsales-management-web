@@ -6,6 +6,8 @@ import { useShop } from "../hooks/useShop";
 import { useShopPermissions } from "../hooks/useShopPermissions";
 import { getFirstValidNavItem } from "../utils/getFirstValidNavItem";
 import { filterNavByShopPermissions } from "../utils/navPermissionMap";
+import ImpersonationBanner from "../components/common/ImpersonationBanner";
+import SubscriptionBanner from "../components/common/SubscriptionBanner";
 
 const DynamicDashboardLayout = ({ children }) => {
     const { device = "web", selectedIndustry, selectedRole, isShopContextReady } = useShop();
@@ -34,7 +36,13 @@ const DynamicDashboardLayout = ({ children }) => {
         navigate(target, { replace: true });
     }, [location.pathname, firstNavItem, navigate, industry, device, role, isShopContextReady]);
 
-    return <Layout {...layoutProps}>{children}</Layout>;
+    return (
+        <>
+            <ImpersonationBanner />
+            <SubscriptionBanner />
+            <Layout {...layoutProps}>{children}</Layout>
+        </>
+    );
 };
 
 export default DynamicDashboardLayout;

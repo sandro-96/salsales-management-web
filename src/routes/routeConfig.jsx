@@ -1,6 +1,7 @@
 // src/routes/routeConfig.jsx
 import { lazy } from "react";
 import { PERM } from "../constants/shopPermissions.js";
+import { ADMIN_PERM } from "../constants/adminPermissions.js";
 const BranchPage = lazy(() => import("../pages/branchs/BranchPage.jsx"));
 const BranchSettingsPage = lazy(
   () => import("../pages/branchs/BranchSettingsPage.jsx"),
@@ -16,6 +17,33 @@ const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
 const AdminLayout = lazy(() => import("../layouts/common/AdminLayout.jsx"));
 const AdminSupportPage = lazy(
   () => import("../pages/admin/support/AdminSupportPage.jsx"),
+);
+const AdminShopListPage = lazy(
+  () => import("../pages/admin/shops/AdminShopListPage.jsx"),
+);
+const AdminShopDetailPage = lazy(
+  () => import("../pages/admin/shops/AdminShopDetailPage.jsx"),
+);
+const AdminUserListPage = lazy(
+  () => import("../pages/admin/users/AdminUserListPage.jsx"),
+);
+const AdminUserDetailPage = lazy(
+  () => import("../pages/admin/users/AdminUserDetailPage.jsx"),
+);
+const AdminBillingPage = lazy(
+  () => import("../pages/admin/billing/AdminBillingPage.jsx"),
+);
+const AdminCatalogPage = lazy(
+  () => import("../pages/admin/catalog/AdminCatalogPage.jsx"),
+);
+const AdminBroadcastPage = lazy(
+  () => import("../pages/admin/broadcast/AdminBroadcastPage.jsx"),
+);
+const AdminAuditPage = lazy(
+  () => import("../pages/admin/audit/AdminAuditPage.jsx"),
+);
+const AdminSecurityPage = lazy(
+  () => import("../pages/admin/security/AdminSecurityPage.jsx"),
 );
 const ShopPage = lazy(() => import("../pages/shops/ShopPage"));
 const CreateShopPage = lazy(() => import("../pages/shops/CreateShopPage"));
@@ -53,6 +81,7 @@ const NotificationPage = lazy(
   () => import("../pages/notifications/NotificationPage"),
 );
 const PosPage = lazy(() => import("../pages/pos/PosPage"));
+const BillingPage = lazy(() => import("../pages/billing/BillingPage"));
 const ShopLayout = lazy(() => import("../layouts/common/ShopLayout.jsx"));
 const BranchLayout = lazy(() => import("../layouts/common/BranchLayout.jsx"));
 const ProductLayout = lazy(() => import("../layouts/common/ProductLayout.jsx"));
@@ -103,6 +132,69 @@ export const routeConfig = [
         element: <AdminSupportPage />,
         title: "Hỗ trợ hệ thống",
         breadcrumb: "Hỗ trợ",
+        adminPermissionAny: [ADMIN_PERM.SUPPORT_VIEW, ADMIN_PERM.SUPPORT_MANAGE],
+      },
+      {
+        path: "shops",
+        element: <AdminShopListPage />,
+        title: "Danh sách shop",
+        breadcrumb: "Shops",
+        adminPermissionAny: [ADMIN_PERM.SHOP_VIEW, ADMIN_PERM.SHOP_MANAGE],
+      },
+      {
+        path: "shops/:shopId",
+        element: <AdminShopDetailPage />,
+        title: "Chi tiết shop",
+        breadcrumb: "Chi tiết",
+        adminPermissionAny: [ADMIN_PERM.SHOP_VIEW, ADMIN_PERM.SHOP_MANAGE],
+      },
+      {
+        path: "users",
+        element: <AdminUserListPage />,
+        title: "Danh sách user",
+        breadcrumb: "Users",
+        adminPermissionAny: [ADMIN_PERM.USER_VIEW, ADMIN_PERM.USER_MANAGE],
+      },
+      {
+        path: "users/:userId",
+        element: <AdminUserDetailPage />,
+        title: "Chi tiết user",
+        breadcrumb: "Chi tiết",
+        adminPermissionAny: [ADMIN_PERM.USER_VIEW, ADMIN_PERM.USER_MANAGE],
+      },
+      {
+        path: "billing",
+        element: <AdminBillingPage />,
+        title: "Billing & Subscriptions",
+        breadcrumb: "Billing",
+        adminPermissionAny: [ADMIN_PERM.BILLING_VIEW, ADMIN_PERM.BILLING_MANAGE],
+      },
+      {
+        path: "catalog",
+        element: <AdminCatalogPage />,
+        title: "Catalog",
+        breadcrumb: "Catalog",
+        adminPermissionAny: [ADMIN_PERM.CATALOG_MANAGE],
+      },
+      {
+        path: "broadcasts",
+        element: <AdminBroadcastPage />,
+        title: "Broadcast",
+        breadcrumb: "Broadcast",
+        adminPermissionAny: [ADMIN_PERM.BROADCAST_SEND],
+      },
+      {
+        path: "audit",
+        element: <AdminAuditPage />,
+        title: "Audit log",
+        breadcrumb: "Audit",
+        adminPermissionAny: [ADMIN_PERM.AUDIT_VIEW],
+      },
+      {
+        path: "security",
+        element: <AdminSecurityPage />,
+        title: "Bảo mật tài khoản",
+        breadcrumb: "Bảo mật",
       },
       {
         path: "notifications",
@@ -229,6 +321,12 @@ export const routeConfig = [
         element: <NotificationPage />,
         title: "Thông báo",
         breadcrumb: "Thông báo",
+      },
+      {
+        path: "billing",
+        element: <BillingPage />,
+        title: "Gói dịch vụ",
+        breadcrumb: "Gói dịch vụ",
       },
       {
         path: "pos",

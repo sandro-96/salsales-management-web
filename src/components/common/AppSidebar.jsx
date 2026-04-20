@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CreditCard } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useShop } from "@/hooks/useShop";
@@ -85,6 +85,16 @@ export function AppSidebar({ navItems, ...props }) {
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          {selectedShopId && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <NavLink to="/billing" className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Gói dịch vụ
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink to="/search" className="flex items-center gap-2">

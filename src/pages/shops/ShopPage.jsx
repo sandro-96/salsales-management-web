@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   XCircle,
   Search,
-  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,13 +23,6 @@ import { COUNTRIES } from "../../constants/countries";
 import { SHOP_INDUSTRY } from "../../constants/ShopIndustry.js";
 import { SHOP_ROLE_LABELS } from "../../constants/shopRoles.js";
 
-const PLAN_COLORS = {
-  FREE: "bg-gray-100 text-gray-600 border-gray-200",
-  BASIC: "bg-sky-100 text-sky-700 border-sky-200",
-  PRO: "bg-violet-100 text-violet-700 border-violet-200",
-  ENTERPRISE: "bg-amber-100 text-amber-700 border-amber-200",
-};
-
 const INDUSTRY_LABELS = {
   [SHOP_INDUSTRY.FNB]: "Nhà hàng / F&B",
   [SHOP_INDUSTRY.RETAIL]: "Bán lẻ",
@@ -38,13 +30,6 @@ const INDUSTRY_LABELS = {
   [SHOP_INDUSTRY.SERVICE]: "Dịch vụ",
   [SHOP_INDUSTRY.EDUCATION]: "Giáo dục",
   [SHOP_INDUSTRY.OTHER]: "Khác",
-};
-
-const PLAN_LABELS = {
-  FREE: "Miễn phí",
-  BASIC: "Cơ bản",
-  PRO: "Pro",
-  ENTERPRISE: "Enterprise",
 };
 
 function pickOptionLabel(options, value) {
@@ -135,7 +120,6 @@ const ShopPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredShops.map((shop) => {
             const country = COUNTRIES.find((c) => c.code === shop.countryCode);
-            const planCls = PLAN_COLORS[shop.plan] || PLAN_COLORS.FREE;
             const typeLabel =
               pickOptionLabel(shopTypes, shop.type) ||
               (shop.type ? String(shop.type).replace(/_/g, " ") : null);
@@ -148,8 +132,6 @@ const ShopPage = () => {
               (shop.industry && INDUSTRY_LABELS[shop.industry]) || shop.industry;
             const roleLabel =
               (shop.role && SHOP_ROLE_LABELS[shop.role]) || shop.role;
-            const planLabel =
-              (shop.plan && PLAN_LABELS[shop.plan]) || shop.plan;
 
             return (
               <Card
@@ -226,11 +208,7 @@ const ShopPage = () => {
                           {country.name}
                         </Badge>
                       )}
-                      {shop.plan && (
-                        <Badge className={`text-[10px] px-1.5 py-0 font-normal ${planCls}`}>
-                          <Crown className="h-2.5 w-2.5 mr-0.5" /> {planLabel}
-                        </Badge>
-                      )}
+                      {/* Gói dịch vụ: truy cập chi tiết qua /billing khi shop được chọn */}
                       {roleLabel && (
                         <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 font-normal">
                           {roleLabel}

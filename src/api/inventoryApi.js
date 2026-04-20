@@ -46,6 +46,41 @@ export const adjustProductQuantity = (shopId, { branchId, branchProductId, varia
   });
 
 /**
+ * ⚖️ Nhập tồn theo cân cho SP sellByWeight
+ * POST /api/shops/{shopId}/inventory/import-weight
+ * weight: số thực theo đơn vị tự nhiên (kg/g/l/ml); server tự quy đổi về base unit (gram/ml).
+ * unit (optional): override product.unit.
+ */
+export const importProductWeight = (
+  shopId,
+  { branchId, branchProductId, weight, unit, note },
+) =>
+  axiosInstance.post(`/shops/${shopId}/inventory/import-weight`, {
+    branchId,
+    branchProductId,
+    weight,
+    unit: unit || undefined,
+    note,
+  });
+
+/**
+ * ⚖️ Xuất tồn theo cân (kiểm kê / hao hụt).
+ * POST /api/shops/{shopId}/inventory/export-weight
+ */
+export const exportProductWeight = (
+  shopId,
+  { branchId, branchProductId, weight, unit, note, referenceId },
+) =>
+  axiosInstance.post(`/shops/${shopId}/inventory/export-weight`, {
+    branchId,
+    branchProductId,
+    weight,
+    unit: unit || undefined,
+    note,
+    referenceId,
+  });
+
+/**
  * 📋 Lịch sử giao dịch tồn kho (phân trang)
  * GET /api/shops/{shopId}/inventory/branches/{branchId}/products/{branchProductId}/history
  */

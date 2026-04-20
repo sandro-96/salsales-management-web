@@ -426,6 +426,23 @@ export function PosPageShell(props) {
                           {product.price?.toLocaleString("vi-VN")} ₫
                         </p>
                       )}
+                      {product.sellByWeight &&
+                        product.trackInventory !== false && (
+                          <p className="text-[10px] text-muted-foreground tabular-nums">
+                            Còn:{" "}
+                            {(product.stockInBaseUnits ?? 0).toLocaleString(
+                              "vi-VN",
+                            )}{" "}
+                            {(() => {
+                              const u = String(product.unit || "")
+                                .trim()
+                                .toLowerCase();
+                              if (u === "kg" || u === "g") return "g";
+                              if (u === "l" || u === "ml") return "ml";
+                              return u || "";
+                            })()}
+                          </p>
+                        )}
                     </div>
                   </Card>
                 );

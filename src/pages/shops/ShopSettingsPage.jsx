@@ -20,7 +20,8 @@ import {
   Phone,
   Globe,
   Trash2,
-  Crown,
+  CreditCard,
+  Clock,
   CheckCircle2,
   XCircle,
   Building2,
@@ -49,25 +50,41 @@ import {
 } from "@/components/ui/select";
 import { COUNTRIES } from "@/constants/countries";
 import { getFlagUrl } from "@/utils/commonUtils";
+import { useSubscription } from "@/hooks/useSubscription";
 
-const PLAN_LABELS = {
-  FREE: "Miễn phí",
-  BASIC: "Cơ bản",
-  PRO: "Chuyên nghiệp",
-  ENTERPRISE: "Doanh nghiệp",
-};
+function subscriptionPillClass(status) {
+  switch (status) {
+    case "TRIAL":
+      return "bg-sky-100 text-sky-700 border-sky-200";
+    case "ACTIVE":
+      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    case "EXPIRED":
+      return "bg-red-100 text-red-700 border-red-200";
+    case "CANCELLED":
+      return "bg-slate-200 text-slate-700 border-slate-300";
+    default:
+      return "bg-gray-100 text-gray-600 border-gray-200";
+  }
+}
 
-const PLAN_COLORS = {
-  FREE: "bg-gray-100 text-gray-600 border-gray-200",
-  BASIC: "bg-sky-100 text-sky-700 border-sky-200",
-  PRO: "bg-violet-100 text-violet-700 border-violet-200",
-  ENTERPRISE: "bg-amber-100 text-amber-700 border-amber-200",
-};
+function subscriptionPillLabel(sub) {
+  if (!sub?.status) return "Đang tải…";
+  if (sub.status === "TRIAL") {
+    return `Dùng thử · ${sub.trialDaysRemaining ?? 0} ngày`;
+  }
+  if (sub.status === "ACTIVE") {
+    return `Đang hoạt động · ${sub.periodDaysRemaining ?? 0} ngày`;
+  }
+  if (sub.status === "EXPIRED") return "Hết hạn";
+  if (sub.status === "CANCELLED") return "Đã huỷ";
+  return sub.status;
+}
 
 const ShopSettingsPage = () => {
   const { confirm } = useAlertDialog();
   const { enums } = useAuth();
   const { selectedShop, setSelectedShop, fetchShops } = useShop();
+  const { data: subscription } = useSubscription();
   const { hasShopPermission } = useShopPermissions();
   const canManageTax = hasShopPermission(PERM.SHOP_UPDATE);
   const canDeleteShop = hasShopPermission(PERM.SHOP_DELETE);
@@ -249,7 +266,7 @@ const ShopSettingsPage = () => {
   const country = COUNTRIES.find((c) => c.code === (isEditMode ? countryCode : selectedShop.countryCode)) || COUNTRIES[0];
   const shopTypeLabel = shopTypes.find((s) => s.value === selectedShop.type)?.label || selectedShop.type;
   const bizModelLabel = businessModels.find((b) => b.value === selectedShop.businessModel)?.label || selectedShop.businessModel;
-  const planCls = PLAN_COLORS[selectedShop.plan] || PLAN_COLORS.FREE;
+  const subscriptionPillCls = subscriptionPillClass(subscription?.status);
   const logoSrc = logoPreview || selectedShop.logoUrl;
 
   return (
@@ -326,12 +343,19 @@ const ShopSettingsPage = () => {
                     <XCircle className="h-2.5 w-2.5" /> Tạm ngưng
                   </Badge>
                 )}
-                {selectedShop.plan && (
-                  <Badge className={`text-[10px] gap-0.5 ${planCls}`}>
-                    <Crown className="h-2.5 w-2.5" />
-                    {PLAN_LABELS[selectedShop.plan] || selectedShop.plan}
+                <Link to="/billing" className="contents">
+                  <Badge
+                    className={`text-[10px] gap-0.5 cursor-pointer ${subscriptionPillCls}`}
+                    title="Xem chi tiết gói dịch vụ"
+                  >
+                    {subscription?.status === "ACTIVE" ? (
+                      <CreditCard className="h-2.5 w-2.5" />
+                    ) : (
+                      <Clock className="h-2.5 w-2.5" />
+                    )}
+                    {subscriptionPillLabel(subscription)}
                   </Badge>
-                )}
+                </Link>
                 {selectedShop.slug && (
                   <Badge
                     variant="outline"

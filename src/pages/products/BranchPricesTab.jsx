@@ -160,6 +160,7 @@ export default function BranchPricesTab({
             : null,
         // Inventory is managed on Inventory pages; preserve existing values here.
         quantity: row.quantity ?? 0,
+        stockInBaseUnits: row.stockInBaseUnits ?? null,
         minQuantity: row.minQuantity ?? 0,
         expiryDate: row.expiryDate || null,
         activeInBranch: draft.activeInBranch,

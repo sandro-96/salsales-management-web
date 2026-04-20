@@ -370,8 +370,10 @@ const OrderDetailDialog = ({
     orderHasCrmCustomerInfo(order) && (!canEdit || customerIdUnchanged);
   const showGuestSummary = orderHasGuestInfo(order);
   const tax = order.taxSnapshot;
+  const itemLineQty = (i) =>
+    i?.sellByWeight ? Number(i?.weight ?? 0) : (i?.quantity ?? 0);
   const itemsSubtotal = (order.items ?? []).reduce(
-    (s, i) => s + (i.priceAfterDiscount ?? i.price ?? 0) * (i.quantity ?? 0),
+    (s, i) => s + (i.priceAfterDiscount ?? i.price ?? 0) * itemLineQty(i),
     0,
   );
   return (
@@ -610,7 +612,16 @@ const OrderDetailDialog = ({
                   const basePrice = item.price ?? 0;
                   const unitAfter = item.priceAfterDiscount ?? item.price ?? 0;
                   const showOrig = Math.abs(basePrice - unitAfter) > 0.009;
-                  const lineTotal = unitAfter * item.quantity;
+                  const isWeight = !!item.sellByWeight;
+                  const lineMultiplier = isWeight
+                    ? Number(item.weight ?? 0)
+                    : (item.quantity ?? 0);
+                  const lineTotal = unitAfter * lineMultiplier;
+                  const qtyDisplay = isWeight
+                    ? `${Number(item.weight ?? 0).toLocaleString("vi-VN", {
+                        maximumFractionDigits: 3,
+                      })} ${item.weightUnit || ""}`.trim()
+                    : item.quantity;
                   const promoBits = [
                     item.promotionName,
                     item.promotionDiscountLabel,
@@ -673,15 +684,23 @@ const OrderDetailDialog = ({
                           )}
                       </TableCell>
                       <TableCell className="text-right tabular-nums align-top">
-                        {item.quantity}
+                        {qtyDisplay}
                       </TableCell>
                       <TableCell className="text-right text-sm tabular-nums align-top">
                         {showOrig && (
                           <span className="line-through text-muted-foreground text-xs block">
                             {basePrice.toLocaleString("vi-VN")} ₫
+                            {isWeight && item.weightUnit
+                              ? `/${item.weightUnit}`
+                              : ""}
                           </span>
                         )}
-                        <span>{unitAfter.toLocaleString("vi-VN")} ₫</span>
+                        <span>
+                          {unitAfter.toLocaleString("vi-VN")} ₫
+                          {isWeight && item.weightUnit
+                            ? `/${item.weightUnit}`
+                            : ""}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums align-top">
                         {lineTotal.toLocaleString("vi-VN")} ₫

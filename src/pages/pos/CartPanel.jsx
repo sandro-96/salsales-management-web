@@ -45,6 +45,7 @@ export function CartPanel({
   setSelectedTableId,
   availableTables,
   updateQuantity,
+  updateWeight,
   removeFromCart,
   clearCart,
   onCheckout,
@@ -75,6 +76,10 @@ export function CartPanel({
   canPay = true,
 }) {
   const [tableOpsOpen, setTableOpsOpen] = useState(false);
+  const hasGuestInfo = Boolean((guestName ?? "").trim() || (guestPhone ?? "").trim());
+  const [customerOpen, setCustomerOpen] = useState(
+    Boolean(selectedCustomer) || hasGuestInfo,
+  );
 
   return (
   <>
@@ -103,28 +108,23 @@ export function CartPanel({
     )}
 
     <div className="p-3 border-b space-y-2">
-      {/* Customer selection */}
+      {/* Customer: compact summary row; full form hidden unless expanded */}
       {selectedCustomer ? (
-        <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2.5 py-2">
-          <UserRound className="h-4 w-4 text-primary shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">
+        <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2.5 py-1.5">
+          <UserRound className="h-3.5 w-3.5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0 flex items-center gap-1.5">
+            <span className="text-xs font-medium truncate">
               {selectedCustomer.name}
-            </p>
-            <div className="flex items-center gap-1.5">
-              {selectedCustomer.phone && (
-                <span className="text-[10px] text-muted-foreground">
-                  {selectedCustomer.phone}
-                </span>
-              )}
-              <span className="flex items-center gap-0.5 text-[10px] text-yellow-600 font-medium">
-                <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
-                {(selectedCustomer.loyaltyPoints ?? 0).toLocaleString(
-                  "vi-VN",
-                )}{" "}
-                điểm
+            </span>
+            {selectedCustomer.phone && (
+              <span className="text-[10px] text-muted-foreground truncate">
+                · {selectedCustomer.phone}
               </span>
-            </div>
+            )}
+            <span className="flex items-center gap-0.5 text-[10px] text-yellow-600 font-medium shrink-0">
+              <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
+              {(selectedCustomer.loyaltyPoints ?? 0).toLocaleString("vi-VN")}
+            </span>
           </div>
           <Button
             variant="ghost"
@@ -135,61 +135,103 @@ export function CartPanel({
             <X className="h-3 w-3" />
           </Button>
         </div>
+      ) : hasGuestInfo && !customerOpen ? (
+        <button
+          type="button"
+          onClick={() => setCustomerOpen(true)}
+          className="w-full flex items-center gap-2 bg-muted/40 hover:bg-muted/60 transition-colors rounded-md px-2.5 py-1.5 text-left"
+        >
+          <UserRound className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="flex-1 min-w-0 text-xs font-medium truncate">
+            {(guestName ?? "").trim() || "Khách ghi nhận"}
+            {(guestPhone ?? "").trim() ? (
+              <span className="text-muted-foreground font-normal">
+                {" "}· {guestPhone}
+              </span>
+            ) : null}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        </button>
+      ) : !customerOpen ? (
+        <button
+          type="button"
+          onClick={() => setCustomerOpen(true)}
+          className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors rounded-md px-2.5 py-1.5 border border-dashed border-muted-foreground/30"
+        >
+          <UserRound className="h-3.5 w-3.5" />
+          <span>Thêm thông tin khách</span>
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
       ) : (
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Tìm khách hàng (tên, SĐT)..."
-            className="h-8 text-xs pl-7"
-            onChange={(e) => onCustomerSearch(e.target.value)}
-          />
-          {customerSearching && (
-            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
-          )}
-          {customerResults.length > 0 && (
-            <div className="absolute z-20 mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-40 overflow-y-auto">
-              {customerResults.map((c) => (
-                <button
-                  key={c.id}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors flex items-center justify-between gap-2"
-                  onClick={() => onSelectCustomer(c)}
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{c.name}</p>
-                    {c.phone && (
-                      <p className="text-muted-foreground text-[10px]">
-                        {c.phone}
-                      </p>
-                    )}
-                  </div>
-                  <span className="flex items-center gap-0.5 text-[10px] text-yellow-600 shrink-0">
-                    <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
-                    {(c.loyaltyPoints ?? 0).toLocaleString("vi-VN")}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Thông tin khách
+            </span>
+            <button
+              type="button"
+              onClick={() => setCustomerOpen(false)}
+              className="flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              Thu gọn
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Tìm khách hàng (tên, SĐT)..."
+              className="h-8 text-xs pl-7"
+              onChange={(e) => onCustomerSearch(e.target.value)}
+            />
+            {customerSearching && (
+              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            )}
+            {customerResults.length > 0 && (
+              <div className="absolute z-20 mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-40 overflow-y-auto">
+                {customerResults.map((c) => (
+                  <button
+                    key={c.id}
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors flex items-center justify-between gap-2"
+                    onClick={() => onSelectCustomer(c)}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{c.name}</p>
+                      {c.phone && (
+                        <p className="text-muted-foreground text-[10px]">
+                          {c.phone}
+                        </p>
+                      )}
+                    </div>
+                    <span className="flex items-center gap-0.5 text-[10px] text-yellow-600 shrink-0">
+                      <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
+                      {(c.loyaltyPoints ?? 0).toLocaleString("vi-VN")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5 rounded-md border border-dashed border-muted-foreground/25 px-2.5 py-2 bg-muted/20">
+            <p className="text-[10px] text-muted-foreground leading-tight">
+              Ghi nhận khách trên đơn (không gắn tích điểm)
+            </p>
+            <Input
+              placeholder="Tên khách (ghi nhận)"
+              className="h-8 text-xs"
+              value={guestName ?? ""}
+              onChange={(e) => setGuestName(e.target.value)}
+            />
+            <Input
+              placeholder="Số điện thoại (ghi nhận)"
+              className="h-8 text-xs"
+              value={guestPhone ?? ""}
+              onChange={(e) => setGuestPhone(e.target.value)}
+            />
+          </div>
         </div>
       )}
-
-      <div className="space-y-1.5 rounded-md border border-dashed border-muted-foreground/25 px-2.5 py-2 bg-muted/20">
-        <p className="text-[10px] text-muted-foreground leading-tight">
-          Ghi nhận khách trên đơn (không gắn tích điểm)
-        </p>
-        <Input
-          placeholder="Tên khách (ghi nhận)"
-          className="h-8 text-xs"
-          value={guestName ?? ""}
-          onChange={(e) => setGuestName(e.target.value)}
-        />
-        <Input
-          placeholder="Số điện thoại (ghi nhận)"
-          className="h-8 text-xs"
-          value={guestPhone ?? ""}
-          onChange={(e) => setGuestPhone(e.target.value)}
-        />
-      </div>
 
       {showTableSelect && (
         <div className="space-y-2">
@@ -409,27 +451,75 @@ export function CartPanel({
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => updateQuantity(item.lineKey, -1)}
-                  >
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="text-xs font-semibold w-6 text-center tabular-nums">
-                    {item.quantity}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => updateQuantity(item.lineKey, 1)}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
+                {item.sellByWeight ? (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() =>
+                        updateWeight?.(
+                          item.lineKey,
+                          Math.max(
+                            0,
+                            Math.round(((item.weight ?? 0) - 0.1) * 1000) / 1000,
+                          ),
+                        )
+                      }
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      value={item.weight ?? ""}
+                      onChange={(e) =>
+                        updateWeight?.(item.lineKey, e.target.value)
+                      }
+                      className="h-6 w-16 text-xs text-center tabular-nums px-1"
+                    />
+                    <span className="text-[10px] text-muted-foreground uppercase">
+                      {item.weightUnit || ""}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() =>
+                        updateWeight?.(
+                          item.lineKey,
+                          Math.round(((item.weight ?? 0) + 0.1) * 1000) / 1000,
+                        )
+                      }
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => updateQuantity(item.lineKey, -1)}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="text-xs font-semibold w-6 text-center tabular-nums">
+                      {item.quantity}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => updateQuantity(item.lineKey, 1)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col items-end justify-between">
                 <Button
@@ -441,7 +531,13 @@ export function CartPanel({
                   <X className="h-3 w-3" />
                 </Button>
                 <span className="text-xs font-bold tabular-nums">
-                  {(item.price * item.quantity).toLocaleString("vi-VN")} ₫
+                  {(
+                    item.price *
+                    (item.sellByWeight
+                      ? Number(item.weight ?? 0)
+                      : item.quantity)
+                  ).toLocaleString("vi-VN")}{" "}
+                  ₫
                 </span>
               </div>
             </div>

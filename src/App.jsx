@@ -6,6 +6,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import GuestOnlyRoute from "./routes/GuestOnlyRoute";
 import RoleBasedRoute from "./routes/RoleBasedRoute";
 import ShopPermissionRoute from "./routes/ShopPermissionRoute.jsx";
+import AdminPermissionRoute from "./routes/AdminPermissionRoute.jsx";
 import RouteWithTitle from "./routes/RouteWithTitle";
 import Loading from "./components/loading/Loading.jsx";
 import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
@@ -28,6 +29,22 @@ function renderRoute(route) {
       >
         {element}
       </ShopPermissionRoute>
+    );
+  }
+
+  if (
+    route.adminPermission ||
+    route.adminPermissionAny ||
+    route.adminPermissionAll
+  ) {
+    element = (
+      <AdminPermissionRoute
+        permission={route.adminPermission}
+        any={route.adminPermissionAny}
+        all={route.adminPermissionAll}
+      >
+        {element}
+      </AdminPermissionRoute>
     );
   }
 

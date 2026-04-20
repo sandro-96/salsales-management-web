@@ -32,11 +32,31 @@ import {
   importProductQuantity,
   exportProductQuantity,
   adjustProductQuantity,
+  importProductWeight,
+  exportProductWeight,
 } from "../../api/inventoryApi.js";
 
 function variantLabel(product, variantId) {
   const v = (product?.variants || []).find((x) => x.variantId === variantId);
   return v?.name || variantId || "—";
+}
+
+function baseUnitLabel(unit) {
+  const u = String(unit || "").trim().toLowerCase();
+  if (u === "kg" || u === "g") return "g";
+  if (u === "l" || u === "ml") return "ml";
+  return u || "unit";
+}
+
+function formatBaseStock(baseUnits, unit) {
+  if (baseUnits == null) return "—";
+  return `${Number(baseUnits).toLocaleString("vi-VN")} ${baseUnitLabel(unit)}`;
+}
+
+function toBaseUnits(weight, unit) {
+  const u = String(unit || "").trim().toLowerCase();
+  const mult = u === "kg" || u === "l" ? 1000 : 1;
+  return Math.max(0, Math.round(Number(weight) * mult));
 }
 
 const ACTION_CONFIG = {
@@ -111,65 +131,93 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
     return selectedVariantId;
   }, [branchVariantList, selectedVariantId]);
 
+  const sellByWeight = !!product?.sellByWeight;
+
   const currentStock = useMemo(() => {
     if (!product) return 0;
+    if (sellByWeight) return product.stockInBaseUnits ?? 0;
     if (!branchVariantList.length) return product.quantity ?? 0;
     if (branchVariantList.length > 1 && !effectiveVariantId) return null;
     const bv = branchVariantList.find((v) => v.variantId === effectiveVariantId);
     return bv?.quantity ?? 0;
-  }, [product, branchVariantList, effectiveVariantId]);
+  }, [product, branchVariantList, effectiveVariantId, sellByWeight]);
 
   const config = ACTION_CONFIG[actionType] || ACTION_CONFIG.IMPORT;
   const IconComp = config.icon;
 
+  // ADJUSTMENT hiện chưa hỗ trợ SP cân — hạ action xuống IMPORT/EXPORT tương đương.
+  const isAdjustmentForWeight = sellByWeight && actionType === "ADJUSTMENT";
+
   const handleSubmit = async () => {
     const qty = Number(quantity);
     if (actionType !== "ADJUSTMENT" && (!qty || qty <= 0)) {
-      toast.error("Số lượng phải lớn hơn 0.");
+      toast.error(
+        sellByWeight ? "Trọng lượng phải lớn hơn 0." : "Số lượng phải lớn hơn 0.",
+      );
       return;
     }
-    if (actionType === "ADJUSTMENT" && (quantity === "" || qty < 0)) {
+    if (actionType === "ADJUSTMENT" && !sellByWeight &&
+        (quantity === "" || qty < 0)) {
       toast.error("Số lượng mới phải >= 0.");
       return;
     }
-    if (branchVariantList.length > 1 && !effectiveVariantId) {
+    if (!sellByWeight && branchVariantList.length > 1 && !effectiveVariantId) {
       toast.error("Vui lòng chọn biến thể.");
       return;
     }
 
-    if (actionType === "EXPORT" && currentStock != null && qty > currentStock) {
+    // SP cân: EXPORT check theo base unit sau khi quy đổi ở server; client best-effort warn.
+    if (!sellByWeight && actionType === "EXPORT" && currentStock != null && qty > currentStock) {
       toast.error("Số lượng xuất không được vượt quá tồn kho hiện tại.");
       return;
     }
 
     setSubmitting(true);
     try {
-      const payload = {
-        branchId: selectedBranchId,
-        branchProductId: product?.id,
-        variantId: branchVariantList.length ? effectiveVariantId : undefined,
-        quantity: qty,
-        note,
-      };
-
       let res;
-      switch (actionType) {
-        case "IMPORT":
-          res = await importProductQuantity(selectedShopId, payload);
-          break;
-        case "EXPORT":
-          res = await exportProductQuantity(selectedShopId, payload);
-          break;
-        case "ADJUSTMENT":
-          res = await adjustProductQuantity(selectedShopId, payload);
-          break;
-        default:
-          return;
+      if (sellByWeight) {
+        const weightPayload = {
+          branchId: selectedBranchId,
+          branchProductId: product?.id,
+          weight: qty,
+          unit: product?.unit,
+          note,
+        };
+        if (actionType === "IMPORT" || actionType === "ADJUSTMENT") {
+          // ADJUSTMENT cho SP cân hiện xem như IMPORT vì chưa có API set-absolute.
+          res = await importProductWeight(selectedShopId, weightPayload);
+        } else {
+          res = await exportProductWeight(selectedShopId, weightPayload);
+        }
+      } else {
+        const payload = {
+          branchId: selectedBranchId,
+          branchProductId: product?.id,
+          variantId: branchVariantList.length ? effectiveVariantId : undefined,
+          quantity: qty,
+          note,
+        };
+        switch (actionType) {
+          case "IMPORT":
+            res = await importProductQuantity(selectedShopId, payload);
+            break;
+          case "EXPORT":
+            res = await exportProductQuantity(selectedShopId, payload);
+            break;
+          case "ADJUSTMENT":
+            res = await adjustProductQuantity(selectedShopId, payload);
+            break;
+          default:
+            return;
+        }
       }
 
-      const newQty = res.data?.data;
+      const newQty = res?.data?.data;
+      const newStockLabel = sellByWeight
+        ? formatBaseStock(newQty, product?.unit)
+        : Number(newQty).toLocaleString("vi-VN");
       toast.success(
-        `${config.title} thành công.${newQty !== undefined && newQty !== null ? ` Tồn kho mới: ${Number(newQty).toLocaleString("vi-VN")}` : ""}`,
+        `${config.title} thành công.${newQty != null ? ` Tồn mới: ${newStockLabel}` : ""}`,
       );
       onSuccess?.();
       onClose();
@@ -183,13 +231,21 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
 
   if (!product) return null;
 
+  const enteredWeightInBaseUnits =
+    quantity !== "" && sellByWeight
+      ? toBaseUnits(Number(quantity), product?.unit)
+      : null;
   const previewStock =
     quantity !== ""
-      ? actionType === "IMPORT"
-        ? currentStock + Number(quantity)
-        : actionType === "EXPORT"
-          ? currentStock - Number(quantity)
-          : Number(quantity)
+      ? sellByWeight
+        ? actionType === "EXPORT"
+          ? (currentStock ?? 0) - (enteredWeightInBaseUnits ?? 0)
+          : (currentStock ?? 0) + (enteredWeightInBaseUnits ?? 0)
+        : actionType === "IMPORT"
+          ? currentStock + Number(quantity)
+          : actionType === "EXPORT"
+            ? currentStock - Number(quantity)
+            : Number(quantity)
       : null;
 
   return (
@@ -222,11 +278,13 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
               Tồn:{" "}
               {currentStock === null
                 ? "—"
-                : Number(currentStock).toLocaleString("vi-VN")}
+                : sellByWeight
+                  ? formatBaseStock(currentStock, product?.unit)
+                  : Number(currentStock).toLocaleString("vi-VN")}
             </Badge>
           </div>
 
-          {branchVariantList.length > 1 && (
+          {!sellByWeight && branchVariantList.length > 1 && (
             <div className="space-y-2">
               <Label>Biến thể</Label>
               <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
@@ -246,27 +304,48 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="inv-quantity">{config.quantityLabel}</Label>
+            <Label htmlFor="inv-quantity">
+              {sellByWeight
+                ? `${actionType === "EXPORT" ? "Trọng lượng xuất" : "Trọng lượng nhập"} (${product?.unit || "kg"})`
+                : config.quantityLabel}
+              {isAdjustmentForWeight && (
+                <span className="ml-2 text-xs text-amber-600">
+                  (SP cân chưa hỗ trợ set tồn tuyệt đối — sẽ cộng thêm)
+                </span>
+              )}
+            </Label>
             <NumericInput
               id="inv-quantity"
               value={quantity}
               onChange={setQuantity}
               formatted={false}
-              placeholder={config.quantityPlaceholder}
+              placeholder={
+                sellByWeight
+                  ? `Ví dụ 0.5 (${product?.unit || "kg"})`
+                  : config.quantityPlaceholder
+              }
               max={
-                actionType === "EXPORT" && currentStock != null
+                !sellByWeight && actionType === "EXPORT" && currentStock != null
                   ? currentStock
                   : undefined
               }
               autoFocus
             />
+            {sellByWeight && enteredWeightInBaseUnits != null && (
+              <p className="text-xs text-muted-foreground">
+                = {enteredWeightInBaseUnits.toLocaleString("vi-VN")}{" "}
+                {baseUnitLabel(product?.unit)}
+              </p>
+            )}
           </div>
 
           {previewStock !== null && (
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
               <span className="text-sm text-muted-foreground">Tồn kho sau thao tác</span>
               <span className={`text-sm font-semibold ${previewStock < 0 ? "text-red-600" : previewStock === 0 ? "text-orange-600" : "text-emerald-600"}`}>
-                {previewStock.toLocaleString("vi-VN")}
+                {sellByWeight
+                  ? formatBaseStock(previewStock, product?.unit)
+                  : previewStock.toLocaleString("vi-VN")}
               </span>
             </div>
           )}

@@ -689,12 +689,15 @@ export function usePosPage() {
               ...(item.variantId ? { variantId: item.variantId } : {}),
               ...(tid.length ? { toppingIds: tid } : {}),
               quantity: item.quantity,
+              ...(item.sellByWeight && item.weight != null
+                ? { weight: Number(item.weight) }
+                : {}),
             };
           }),
         };
         await updateOrder(activeOrderId, selectedShopId, payload);
       } catch (err) {
-        toast.error(err.response?.data?.message || "KhÃ´ng thá»ƒ cáº­p nháº­t Ä‘Æ¡n.");
+        toast.error(err.response?.data?.message || "Không thể cập nhật đơn.");
       }
     }, 650);
 
@@ -738,6 +741,9 @@ export function usePosPage() {
               ...(item.variantId ? { variantId: item.variantId } : {}),
               ...(tid.length ? { toppingIds: tid } : {}),
               quantity: item.quantity,
+              ...(item.sellByWeight && item.weight != null
+                ? { weight: Number(item.weight) }
+                : {}),
             };
           }),
         };
@@ -780,6 +786,9 @@ export function usePosPage() {
             ...(item.variantId ? { variantId: item.variantId } : {}),
             ...(tid.length ? { toppingIds: tid } : {}),
             quantity: item.quantity,
+            ...(item.sellByWeight && item.weight != null
+              ? { weight: Number(item.weight) }
+              : {}),
           };
         }),
       };
@@ -991,6 +1000,8 @@ export function usePosPage() {
       const toppingExtra = toppingExtrasForSelection(product, toppingIds);
       const combinedBase = basePrice + toppingExtra;
 
+      const sellByWeight = !!product.sellByWeight;
+
       const maxStock = product.trackInventory
         ? hasVars
           ? branchVariant.quantity
@@ -1001,27 +1012,32 @@ export function usePosPage() {
       const effectiveVariant = hasVars ? variantId : null;
       const tidKey = toppingIds.join(",");
       const lineMatch = (item) =>
+        !item.sellByWeight &&
         item.productId === product.productId &&
         (item.variantId ?? null) === (effectiveVariant ?? null) &&
         normalizeToppingIdList(item.toppingIds || []).join(",") === tidKey;
 
-      const existing = prev.find(lineMatch);
-      if (existing) {
-        if (maxStock != null && existing.quantity >= maxStock) {
-          toast.error("Không đủ tồn kho.");
+      // Sản phẩm bán theo cân: mỗi lần nhấn tạo dòng riêng (không gộp), vì
+      // mỗi dòng đại diện 1 "gói" có khối lượng riêng.
+      if (!sellByWeight) {
+        const existing = prev.find(lineMatch);
+        if (existing) {
+          if (maxStock != null && existing.quantity >= maxStock) {
+            toast.error("Không đủ tồn kho.");
+            return;
+          }
+          setCart(
+            prev.map((item) =>
+              lineMatch(item) ? { ...item, quantity: item.quantity + 1 } : item,
+            ),
+          );
           return;
         }
-        setCart(
-          prev.map((item) =>
-            lineMatch(item) ? { ...item, quantity: item.quantity + 1 } : item,
-          ),
-        );
-        return;
-      }
 
-      if (maxStock != null && maxStock < 1) {
-        toast.error("Hết hàng.");
-        return;
+        if (maxStock != null && maxStock < 1) {
+          toast.error("Hết hàng.");
+          return;
+        }
       }
 
       const promo = getBestPromo(promoMap, product.productId);
@@ -1032,9 +1048,13 @@ export function usePosPage() {
       const displayBase = vName ? `${product.name} — ${vName}` : product.name;
       const productName = topLabel ? `${displayBase} + ${topLabel}` : displayBase;
       const tKey = toppingIds.length ? tidKey : "not";
-      const lineKey = hasVars
+      const baseLineKey = hasVars
         ? `${product.productId}__${variantId}__t:${tKey}`
         : `${product.productId}__t:${tKey}`;
+      // Sản phẩm bán theo cân: thêm suffix theo timestamp để mỗi dòng là duy nhất.
+      const lineKey = sellByWeight
+        ? `${baseLineKey}__w:${Date.now()}${Math.random().toString(36).slice(2, 6)}`
+        : baseLineKey;
 
       setCart([
         ...prev,
@@ -1054,6 +1074,9 @@ export function usePosPage() {
           quantity: 1,
           trackInventory: !!product.trackInventory,
           maxStock,
+          sellByWeight,
+          weight: sellByWeight ? 1 : null,
+          weightUnit: sellByWeight ? (product.unit ?? null) : null,
         },
       ]);
     },
@@ -1087,6 +1110,8 @@ export function usePosPage() {
       const prev = cartRef.current;
       const item = prev.find((i) => i.lineKey === lineKey);
       if (!item) return;
+      // Dòng bán theo cân không đổi qua quantity (+/-); dùng updateWeight.
+      if (item.sellByWeight) return;
       const nextQty = item.quantity + delta;
       if (
         delta > 0 &&
@@ -1094,7 +1119,7 @@ export function usePosPage() {
         item.maxStock != null &&
         nextQty > item.maxStock
       ) {
-        toast.error("KhÃ´ng Ä‘á»§ tá»“n kho.");
+        toast.error("Không đủ tồn kho.");
         return;
       }
       setCart(
@@ -1104,6 +1129,25 @@ export function usePosPage() {
             return { ...it, quantity: Math.max(0, nextQty) };
           })
           .filter((it) => it.quantity > 0),
+      );
+    },
+    [setCart],
+  );
+
+  const updateWeight = useCallback(
+    (lineKey, nextWeightRaw) => {
+      // Cho phép input trống / đang gõ (giữ lại dòng, weight=0 tạm thời).
+      const next =
+        nextWeightRaw === "" || nextWeightRaw == null
+          ? 0
+          : Number(nextWeightRaw);
+      if (!Number.isFinite(next) || next < 0) return;
+      const rounded = Math.round(next * 1000) / 1000;
+      setCart((prev) =>
+        prev.map((it) => {
+          if (it.lineKey !== lineKey || !it.sellByWeight) return it;
+          return { ...it, weight: rounded };
+        }),
       );
     },
     [setCart],
@@ -1152,8 +1196,16 @@ export function usePosPage() {
     fetchData,
   ]);
 
+  // Số lượng quy đổi cho dòng (dùng weight nếu bán theo cân).
+  const effectiveQtyOfItem = (item) =>
+    item.sellByWeight ? Number(item.weight ?? 0) : item.quantity;
+
   const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () =>
+      cart.reduce(
+        (sum, item) => sum + item.price * effectiveQtyOfItem(item),
+        0,
+      ),
     [cart],
   );
 
@@ -1163,7 +1215,7 @@ export function usePosPage() {
         (sum, item) =>
           sum +
           (item.hasDiscount
-            ? (item.originalPrice - item.price) * item.quantity
+            ? (item.originalPrice - item.price) * effectiveQtyOfItem(item)
             : 0),
         0,
       ),
@@ -1488,6 +1540,9 @@ export function usePosPage() {
             ...(item.variantId ? { variantId: item.variantId } : {}),
             ...(tid.length ? { toppingIds: tid } : {}),
             quantity: item.quantity,
+            ...(item.sellByWeight && item.weight != null
+              ? { weight: Number(item.weight) }
+              : {}),
           };
         }),
         ...(paymentMethod === "ShipCOD"
@@ -1612,6 +1667,7 @@ export function usePosPage() {
     setSelectedTableId,
     availableTables,
     updateQuantity,
+    updateWeight,
     removeFromCart,
     clearCart,
     selectedCustomer,
@@ -1806,6 +1862,7 @@ export function usePosPage() {
     totalSavings,
     updateActiveTab,
     updateQuantity,
+    updateWeight,
     variantPickerProduct,
   };
 

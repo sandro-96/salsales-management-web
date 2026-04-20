@@ -133,6 +133,7 @@ const formSchema = z.object({
   costPrice: z.coerce.number().min(0).default(0),
   active: z.boolean().default(true),
   trackInventory: z.boolean().default(false),
+  sellByWeight: z.boolean().default(false),
   reason: z.string().optional().nullable(),
   variants: z.array(variantSchema).default([]),
   /** ID topping shop được phép chọn khi bán */
@@ -680,6 +681,7 @@ export default function ProductForm({
           costPrice: product.costPrice ?? 0,
           active: product.active ?? true,
           trackInventory: product.trackInventory ?? false,
+          sellByWeight: product.sellByWeight ?? false,
           reason: "",
           variants: (product.variants ?? []).map((v) => ({
             variantId: v.variantId ?? undefined,
@@ -709,6 +711,7 @@ export default function ProductForm({
           costPrice: 0,
           active: savedActive,
           trackInventory: savedTrackInventory,
+          sellByWeight: false,
           reason: "",
           variants: [],
           assignedToppingIds: [],
@@ -976,6 +979,7 @@ export default function ProductForm({
         costPrice: product.costPrice ?? 0,
         active: product.active ?? true,
         trackInventory: product.trackInventory ?? false,
+        sellByWeight: product.sellByWeight ?? false,
         variants: (product.variants ?? []).map((v) => ({
           variantId: v.variantId ?? undefined,
           name: v.name ?? "",
@@ -1523,6 +1527,33 @@ export default function ProductForm({
               <p className="text-xs text-muted-foreground pl-0 max-w-xl">
                 Bật để nhập tồn kho, ngưỡng cảnh báo và hạn sử dụng theo chi
                 nhánh.
+              </p>
+            )}
+          </FormItem>
+        )}
+      />
+
+      {/* Bán theo cân / trọng lượng */}
+      <FormField
+        control={form.control}
+        name="sellByWeight"
+        render={({ field }) => (
+          <FormItem className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <FormLabel className="mt-0">Bán theo cân / trọng lượng</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={isReadOnly}
+                />
+              </FormControl>
+            </div>
+            {!isReadOnly && (
+              <p className="text-xs text-muted-foreground pl-0 max-w-xl">
+                Bật khi sản phẩm bán theo cân/trọng lượng (rau củ, thịt, nước
+                ép…). Tại POS sẽ nhập số cân thay vì số lượng; giá nhân với
+                khối lượng theo đơn vị đã chọn ở trên (ví dụ 30.000 ₫/kg).
               </p>
             )}
           </FormItem>

@@ -27,6 +27,7 @@ export function cartFromOrderItems(items) {
     const lineKey = variantId
       ? `${productId}__${variantId}__t:${tKey}`
       : `${productId}__t:${tKey}__i:${idx}`;
+    const sellByWeight = !!it?.sellByWeight;
     return {
       lineKey,
       productId,
@@ -40,6 +41,9 @@ export function cartFromOrderItems(items) {
       quantity: it?.quantity ?? 0,
       trackInventory: null,
       maxStock: null,
+      sellByWeight,
+      weight: sellByWeight ? (it?.weight ?? null) : null,
+      weightUnit: sellByWeight ? (it?.weightUnit ?? null) : null,
     };
   });
 }

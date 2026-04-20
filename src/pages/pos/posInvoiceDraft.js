@@ -14,6 +14,9 @@ export function buildDraftOrderForInvoice({
     quantity: item.quantity,
     price: item.hasDiscount ? item.originalPrice : item.price,
     priceAfterDiscount: item.price,
+    sellByWeight: !!item.sellByWeight,
+    weight: item.sellByWeight ? (item.weight ?? null) : null,
+    weightUnit: item.sellByWeight ? (item.weightUnit ?? null) : null,
   }));
   return {
     items,
