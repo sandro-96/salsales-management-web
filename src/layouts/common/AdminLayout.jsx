@@ -11,17 +11,23 @@ import {
   Megaphone,
   ClipboardList,
   ShieldCheck,
+  Menu,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/common/NotificationBell";
 import ImpersonationBanner from "@/components/common/ImpersonationBanner";
 import { getNotifications } from "@/api/notificationApi.js";
-import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { ADMIN_PERM } from "@/constants/adminPermissions";
 
 const NAV_ITEMS = [
@@ -132,83 +138,149 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { count: supportBadge } = useAdminSupportBadge();
-  const { hasAdminPermission } = useAdminPermissions();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const badges = { support: supportBadge };
 
-  // Ẩn nav item nếu admin không có quyền tương ứng. SUPER_ADMIN mặc định đủ
-  // tất cả permissions sau migration; admin con (BILLING_ADMIN, ...) sẽ thấy
-  // tập rút gọn.
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => !item.requirePerm || hasAdminPermission(item.requirePerm),
-  );
+  // Admin luôn thấy đủ menu; quyền sẽ thể hiện bằng UI (mờ) và route guard/back-end vẫn enforce.
+  const visibleNav = NAV_ITEMS;
+
+  const onLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
-    <div className="flex min-h-screen bg-muted/30 flex-col">
+    <div className="flex h-screen overflow-hidden bg-muted/30 flex-col">
       <ImpersonationBanner />
       <div className="flex flex-1 min-h-0">
-      {/* Sidebar */}
-      <aside className="w-60 shrink-0 border-r bg-background flex flex-col">
-        <div className="h-14 flex items-center px-5 border-b">
-          <span className="font-bold tracking-tight">SalesApp Admin</span>
-        </div>
-        <nav className="flex-1 p-3 space-y-1">
-          {visibleNav.map(({ to, label, icon: Icon, end, badgeKey }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                [
-                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted",
-                ].join(" ")
-              }
-            >
-              <Icon className="h-4 w-4" />
-              <span className="flex-1">{label}</span>
-              {badgeKey && badges[badgeKey] > 0 && (
-                <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
-                  {badges[badgeKey] > 99 ? "99+" : badges[badgeKey]}
-                </Badge>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-
-        <Separator />
-
-        <div className="p-3">
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => {
-              logout();
-              navigate("/login");
-            }}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Đăng xuất
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div className="flex-1 min-w-0 flex flex-col">
-        <header className="h-14 border-b bg-background flex items-center gap-2 px-6">
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              {user?.email}
+        {/* Sidebar */}
+        <aside className="hidden md:flex w-60 shrink-0 border-r bg-background flex-col overflow-hidden">
+          <div className="h-14 flex items-center px-5 border-b">
+            <span className="coiny-regular text-2xl tracking-tight">
+              SỔ THU CHI
             </span>
-            <NotificationBell />
           </div>
-        </header>
-        <main className="flex-1 min-h-0 overflow-y-auto">
-          <Outlet />
-        </main>
-      </div>
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            {visibleNav.map(({ to, label, end, badgeKey }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  [
+                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground hover:bg-muted",
+                  ].join(" ")
+                }
+              >
+                <span className="flex-1">{label}</span>
+                {badgeKey && badges[badgeKey] > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="h-5 px-1.5 text-[10px]"
+                  >
+                    {badges[badgeKey] > 99 ? "99+" : badges[badgeKey]}
+                  </Badge>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+
+          <Separator />
+
+          <div className="p-3">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={onLogout}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Đăng xuất
+            </Button>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <header className="h-14 border-b bg-background flex items-center gap-2 px-3 md:px-6">
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden"
+                  aria-label="Mở menu admin"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 gap-0">
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="h-14 flex items-center px-5 border-b shrink-0">
+                    <span className="text-2xl coiny-regular">SỔ THU CHI</span>
+                  </div>
+
+                  <nav className="flex-1 min-h-0 p-3 space-y-1 overflow-y-auto">
+                    {visibleNav.map(({ to, label, end, badgeKey }) => (
+                      <SheetClose asChild key={to}>
+                        <NavLink
+                          to={to}
+                          end={end}
+                          className={({ isActive }) =>
+                            [
+                              "w-full flex items-center gap-3 rounded-md px-3 h-10 text-sm transition-colors",
+                              isActive
+                                ? "bg-primary text-primary-foreground"
+                                : "text-foreground hover:bg-muted",
+                            ].join(" ")
+                          }
+                        >
+                          <span className="flex-1 truncate">{label}</span>
+                          {badgeKey && badges[badgeKey] > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="h-5 px-1.5 text-[10px] shrink-0"
+                            >
+                              {badges[badgeKey] > 99 ? "99+" : badges[badgeKey]}
+                            </Badge>
+                          )}
+                        </NavLink>
+                      </SheetClose>
+                    ))}
+                  </nav>
+
+                  <Separator />
+
+                  <div className="p-3 shrink-0">
+                    <SheetClose asChild>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start h-10"
+                        onClick={onLogout}
+                      >
+                        <LogOut className="h-4 w-4 mr-2 shrink-0" />
+                        Đăng xuất
+                      </Button>
+                    </SheetClose>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+            <div className="ml-auto flex items-center gap-3">
+              <span className="text-sm text-muted-foreground hidden sm:block">
+                {user?.email}
+              </span>
+              <NotificationBell />
+            </div>
+          </header>
+          <main className="flex-1 min-h-0 overflow-y-auto">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );

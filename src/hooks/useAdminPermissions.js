@@ -39,7 +39,12 @@ async function fetchOnce() {
  */
 export function useAdminPermissions() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ROLE_ADMIN";
+  const isAdmin =
+    typeof user?.role === "string"
+      ? user.role.includes("ROLE_ADMIN")
+      : Array.isArray(user?.role)
+        ? user.role.includes("ROLE_ADMIN")
+        : false;
   const [perms, setPerms] = useState(() => _cache.perms || new Set());
   const [loading, setLoading] = useState(isAdmin && !_cache.perms);
 
@@ -61,7 +66,9 @@ export function useAdminPermissions() {
 
   useEffect(() => {
     const token =
-      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      typeof window !== "undefined"
+        ? (localStorage.getItem("accessToken") ?? localStorage.getItem("token"))
+        : null;
     onTokenChange(token);
     if (!isAdmin) {
       setPerms(new Set());

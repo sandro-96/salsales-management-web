@@ -6,7 +6,6 @@ import { useAuth } from "../hooks/useAuth";
 import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
 import GoogleSignInButton from "../components/common/GoogleSignInButton.jsx";
 import { toast } from "sonner";
-import sothuchiLogo from "../assets/sothuchi_logo.png";
 
 const LoginPage = () => {
   const { loadUser } = useAuth();
@@ -80,13 +79,7 @@ const LoginPage = () => {
       <div className="flex-1 p-6 md:p-12 flex flex-col gap-2 justify-center w-full md:max-w-lg md:mx-auto relative">
         <div className="grid w-full max-w-sm grid-cols-1 gap-4 mx-auto">
           {loading && <LoadingOverlay text="Đang xử lý..." />}
-          <h1 className="text-xl font-bold font-serif text-blue-900">
-            <img
-              src={sothuchiLogo}
-              alt="Sothuchi Logo"
-              className="w-full h-full object-contain"
-            />
-          </h1>
+          <h1 className="text-3xl coiny-regular text-blue-900">SỔ THU CHI</h1>
           <div className="flex flex-col gap-3">
             <h2 className="text-xl font-bold text-gray-800">
               Sign in to your account

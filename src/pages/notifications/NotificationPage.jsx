@@ -242,16 +242,22 @@ const NotificationPage = () => {
                       {NOTIFICATION_TYPE_ICON[n.type] || "📌"}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{n.title}</span>
-                        <Badge variant="outline" className="text-[10px] h-5">
-                          {NOTIFICATION_TYPE_LABEL[n.type] || n.type}
-                        </Badge>
-                        {!n.read && (
-                          <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-                        )}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <span className="text-sm font-medium break-words flex-1 min-w-0">
+                            {n.title}
+                          </span>
+                          {!n.read && (
+                            <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="text-[10px] h-5">
+                            {NOTIFICATION_TYPE_LABEL[n.type] || n.type}
+                          </Badge>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-0.5">
+                      <p className="text-sm text-muted-foreground mt-2 break-words">
                         {n.message}
                       </p>
                       <div className="flex items-center gap-2 mt-1">

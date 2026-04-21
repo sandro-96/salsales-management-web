@@ -99,3 +99,15 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.oi-regular {
+  font-family: "Oi", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.coiny-regular {
+  font-family: "Coiny", serif;
+  font-weight: 400;
+  font-style: normal;
+}
