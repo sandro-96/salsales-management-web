@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import {
   AlertTriangle,
+  Banknote,
   Clock,
   CreditCard,
   Wallet,
@@ -205,8 +206,9 @@ export default function AdminBillingPage() {
       } else {
         toast.warning(`Không resync được (${status}): ${msg}`);
       }
-      // Reload để thấy trạng thái mới.
+      // Reload để thấy trạng thái mới + cập nhật KPI overview (CK chờ).
       loadTxns();
+      loadOverview();
     } catch (err) {
       toast.error(
         err.response?.data?.message || "Không gọi được gateway query API",
@@ -354,6 +356,35 @@ export default function AdminBillingPage() {
         </div>
       </div>
 
+      {!overviewLoading && overview?.pendingManualTransferCount > 0 && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Có{" "}
+              <b>{overview.pendingManualTransferCount}</b> yêu cầu chuyển khoản
+              subscription đang <b>chờ xác nhận</b>. Mở tab giao dịch, lọc{" "}
+              <code className="text-xs bg-white/80 px-1 rounded">MANUAL</code>{" "}
+              + <code className="text-xs bg-white/80 px-1 rounded">PENDING</code>
+              , đối soát sao kê rồi xác nhận trên chi tiết shop.
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 border-amber-400"
+              onClick={() => {
+                const n = new URLSearchParams(sp);
+                n.set("tab", "transactions");
+                n.set("txnStatus", "PENDING");
+                n.set("txnGateway", "MANUAL");
+                n.set("page", "0");
+                setSp(n);
+              }}
+            >
+              Mở danh sách
+            </Button>
+          </div>
+        )}
+
       {overviewLoading ? (
         <Loading />
       ) : (
@@ -386,6 +417,14 @@ export default function AdminBillingPage() {
               label="Đã hết hạn chưa gia hạn"
               value={overview?.expiredUnrenewed ?? 0}
               tone={overview?.expiredUnrenewed > 0 ? "danger" : "default"}
+            />
+            <Kpi
+              icon={Banknote}
+              label="CK chờ xác nhận (MANUAL)"
+              value={overview?.pendingManualTransferCount ?? 0}
+              tone={
+                overview?.pendingManualTransferCount > 0 ? "warn" : "default"
+              }
             />
             <StatusCard label="Phân bố subscription" dist={statusDistribution} />
           </div>
@@ -623,6 +662,7 @@ export default function AdminBillingPage() {
                   <TableHead>Gateway</TableHead>
                   <TableHead>Số tiền</TableHead>
                   <TableHead>Trạng thái</TableHead>
+                  <TableHead>Shop báo CK</TableHead>
                   <TableHead>Mã gateway</TableHead>
                   {canManage && <TableHead className="w-[180px]">Thao tác</TableHead>}
                 </TableRow>
@@ -631,7 +671,7 @@ export default function AdminBillingPage() {
                 {txnsLoading && (
                   <TableRow>
                     <TableCell
-                      colSpan={canManage ? 7 : 6}
+                      colSpan={canManage ? 8 : 7}
                       className="text-center py-10 text-muted-foreground"
                     >
                       Đang tải…
@@ -641,7 +681,7 @@ export default function AdminBillingPage() {
                 {!txnsLoading && txns.content?.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canManage ? 7 : 6}
+                      colSpan={canManage ? 8 : 7}
                       className="text-center py-10 text-muted-foreground"
                     >
                       Không có giao dịch phù hợp.
@@ -684,6 +724,11 @@ export default function AdminBillingPage() {
                             {t.failureReason}
                           </div>
                         ) : null}
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {t.shopReportedTransferAt
+                          ? fmtDate(t.shopReportedTransferAt)
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-xs">
                         <div className="font-mono">{t.providerTxnRef}</div>
@@ -857,6 +902,7 @@ export default function AdminBillingPage() {
                   setResolveTarget(null);
                   setResolveReason("");
                   loadTxns();
+                  loadOverview();
                 } catch (err) {
                   toast.error(
                     err.response?.data?.message ||

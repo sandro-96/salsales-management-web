@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   CreditCard,
   Clock,
@@ -6,6 +6,9 @@ import {
   AlertTriangle,
   Receipt,
   Loader2,
+  Landmark,
+  Copy,
+  QrCode,
 } from "lucide-react";
 import {
   Card,
@@ -18,13 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -33,16 +29,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useShop } from "@/hooks/useShop";
 import {
   getSubscriptionHistory,
+  getSubscriptionTransferInfo,
   startSubscriptionPayment,
+  reportSubscriptionManualTransferSent,
 } from "@/api/subscriptionApi";
 import { toast } from "sonner";
+import { SHOP_ROLE_LABELS } from "@/constants/shopRoles.js";
 
+/** Hiện tập trung chuyển khoản + admin xác nhận (VNPay/MoMo tạm gác). */
 const GATEWAY_OPTIONS = [
-  { value: "VNPAY", label: "VNPay" },
-  { value: "MOMO", label: "MoMo" },
-  { value: "MANUAL", label: "Chuyển khoản / Admin xác nhận" },
+  { value: "MANUAL", label: "Chuyển khoản — admin xác nhận" },
 ];
 
 function fmtVnd(v) {
@@ -93,8 +92,7 @@ function statusBadge(status) {
 }
 
 /**
- * Khi gateway redirect về /billing, đọc query string để show toast + refresh.
- * Dùng để detect: vnp_ResponseCode (VNPay), resultCode (MoMo), pay=success (fallback).
+ * Khi gateway redirect về /billing (VNPay/MoMo — giữ lại cho tương lai).
  */
 function parsePaymentCallback(search) {
   if (!search || search.length <= 1) return null;
@@ -123,20 +121,137 @@ function parsePaymentCallback(search) {
   return null;
 }
 
+function TransferBlock({ title, info, showCopyContent }) {
+  if (!info?.accountNumber) return null;
+  const copyContent = () => {
+    if (!info.transferContent) return;
+    navigator.clipboard.writeText(info.transferContent);
+    toast.success("Đã copy nội dung chuyển khoản");
+  };
+  return (
+    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Landmark className="h-4 w-4" />
+        {title}
+      </div>
+      <div className="grid gap-2 text-sm md:grid-cols-2">
+        <div>
+          <span className="text-muted-foreground">Ngân hàng: </span>
+          {info.bankName || "—"}
+        </div>
+        <div>
+          <span className="text-muted-foreground">Chủ TK: </span>
+          {info.accountHolder}
+        </div>
+        <div className="md:col-span-2">
+          <span className="text-muted-foreground">Số TK: </span>
+          <span className="font-mono font-semibold">{info.accountNumber}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Số tiền: </span>
+          <span className="font-semibold tabular-nums">{fmtVnd(info.amountVnd)}</span>
+        </div>
+        {info.transferContent ? (
+          <div className="md:col-span-2 flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground">Nội dung CK: </span>
+            <code className="rounded bg-background px-2 py-0.5 text-xs font-mono border">
+              {info.transferContent}
+            </code>
+            {showCopyContent && (
+              <Button type="button" variant="outline" size="sm" onClick={copyContent}>
+                <Copy className="h-3.5 w-3.5 mr-1" />
+                Copy
+              </Button>
+            )}
+          </div>
+        ) : null}
+      </div>
+      {info.qrImageUrl ? (
+        <div className="flex flex-col gap-3 border-t pt-3 mt-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <QrCode className="h-4 w-4 shrink-0" />
+            <span>
+              Quét mã QR để chuyển (điền sẵn số tiền / nội dung nếu hỗ trợ)
+            </span>
+          </div>
+          <div className="flex justify-center w-full">
+            <img
+              src={info.qrImageUrl}
+              alt="QR chuyển khoản"
+              className="w-full max-w-[360px] aspect-square rounded-lg border bg-white object-contain p-2 shadow-sm"
+            />
+          </div>
+        </div>
+      ) : null}
+      {info.instructions ? (
+        <p className="text-xs text-muted-foreground whitespace-pre-line border-t pt-2">
+          {info.instructions}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function BillingPage() {
-  const { data, loading, refresh } = useSubscription();
+  const { selectedShopId, selectedShop, shops, isShopContextReady } = useShop();
+  const needsShopPick =
+    isShopContextReady &&
+    (shops?.length ?? 0) > 1 &&
+    !selectedShopId;
+  const { data, loading, refresh } = useSubscription({
+    enabled: isShopContextReady && !needsShopPick,
+  });
   const [paying, setPaying] = useState(false);
   const [history, setHistory] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [selectedGateway, setSelectedGateway] = useState("VNPAY");
+  const [transferPreview, setTransferPreview] = useState(null);
+  const [transferPreviewLoading, setTransferPreviewLoading] = useState(true);
+  /** Sau khi bấm Thanh toán MANUAL — có mã + QR đầy đủ */
+  const [lastPaymentTransfer, setLastPaymentTransfer] = useState(null);
+  /** Mã MANUAL vừa tạo trong phiên (trước khi /me kịp có pendingManualProviderTxnRef). */
+  const [lastCreatedTxnRef, setLastCreatedTxnRef] = useState(null);
+  const [reportingTransfer, setReportingTransfer] = useState(false);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await getSubscriptionHistory();
+      const items = res?.data?.data ?? res?.data ?? [];
+      setHistory(Array.isArray(items) ? items : []);
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [selectedShopId]);
 
   useEffect(() => {
-    if (data?.gateway && GATEWAY_OPTIONS.some((o) => o.value === data.gateway)) {
-      setSelectedGateway(data.gateway);
-    }
-  }, [data?.gateway]);
+    if (!isShopContextReady || needsShopPick) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setTransferPreviewLoading(true);
+        const res = await getSubscriptionTransferInfo();
+        const dto = res?.data?.data ?? res?.data ?? null;
+        if (!cancelled) setTransferPreview(dto);
+      } catch {
+        if (!cancelled) setTransferPreview(null);
+      } finally {
+        if (!cancelled) setTransferPreviewLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedShopId, isShopContextReady, needsShopPick]);
 
-  // Xử lý redirect từ VNPay / MoMo về /billing?vnp_ResponseCode=...
+  useEffect(() => {
+    if (!isShopContextReady || needsShopPick) return;
+    refresh();
+    loadHistory();
+  }, [selectedShopId, isShopContextReady, needsShopPick, refresh, loadHistory]);
+
+  // Xử lý redirect từ VNPay / MoMo về /billing (nếu bật lại sau này)
   useEffect(() => {
     const callback = parsePaymentCallback(window.location.search);
     if (!callback) return;
@@ -165,25 +280,6 @@ export default function BillingPage() {
     window.history.replaceState({}, document.title, url.pathname + url.search);
   }, [refresh]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setHistoryLoading(true);
-        const res = await getSubscriptionHistory();
-        const items = res?.data?.data ?? res?.data ?? [];
-        if (!cancelled) setHistory(Array.isArray(items) ? items : []);
-      } catch {
-        if (!cancelled) setHistory([]);
-      } finally {
-        if (!cancelled) setHistoryLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const keyDate = useMemo(() => {
     if (!data) return null;
     if (data.status === "TRIAL") return data.trialEndsAt;
@@ -198,16 +294,46 @@ export default function BillingPage() {
         ? data.periodDaysRemaining
         : 0;
 
+  const pendingManualRef = data?.pendingManualProviderTxnRef;
+  const pendingManualReportedAt = data?.pendingManualShopReportedAt;
+  const manualRefToReport = pendingManualRef || lastCreatedTxnRef;
+
+  const onReportTransferSent = async () => {
+    if (!manualRefToReport) return;
+    try {
+      setReportingTransfer(true);
+      const res = await reportSubscriptionManualTransferSent({
+        providerTxnRef: manualRefToReport,
+      });
+      if (res?.data?.success === false) {
+        toast.error(res?.data?.message || "Không ghi nhận được");
+        return;
+      }
+      setLastCreatedTxnRef(null);
+      await refresh();
+      toast.success(
+        "Đã ghi nhận: bạn đã chuyển khoản. Admin sẽ đối soát và xác nhận sớm nhất.",
+      );
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message ||
+          "Không ghi nhận được. Thử lại hoặc liên hệ hỗ trợ.",
+      );
+    } finally {
+      setReportingTransfer(false);
+    }
+  };
+
   const onPay = async () => {
     try {
       setPaying(true);
       const res = await startSubscriptionPayment({
-        gateway: selectedGateway,
+        gateway: "MANUAL",
         returnUrl: window.location.origin + "/billing",
       });
       const payload = res?.data?.data ?? res?.data;
       if (
-        selectedGateway !== "MANUAL" &&
+        payload?.gateway !== "MANUAL" &&
         payload?.paymentUrl &&
         !payload.paymentUrl.startsWith("/mock-pay")
       ) {
@@ -215,10 +341,22 @@ export default function BillingPage() {
         window.location.href = payload.paymentUrl;
         return;
       }
-      toast.success(
-        "Đã ghi nhận yêu cầu thanh toán thủ công. Vui lòng chuyển khoản theo hướng dẫn của admin — gói sẽ được kích hoạt sau khi admin xác nhận.",
-      );
-      refresh();
+      const instr = payload?.transferInstructions;
+      if (instr?.transferContent) {
+        setLastPaymentTransfer(instr);
+        setLastCreatedTxnRef(payload?.transactionId || null);
+        toast.success(
+          `Đã tạo mã giao dịch ${payload.transactionId}. Admin đã nhận thông báo — sau khi chuyển khoản, vui lòng chờ xác nhận (thường trong giờ hành chính).`,
+        );
+      } else {
+        setLastPaymentTransfer(null);
+        setLastCreatedTxnRef(payload?.transactionId || null);
+        toast.success(
+          "Đã ghi nhận yêu cầu. Vui lòng chuyển khoản theo thông tin tài khoản — admin đã được thông báo nếu hệ thống cấu hình đủ.",
+        );
+      }
+      await refresh();
+      await loadHistory();
     } catch (err) {
       toast.error(
         err?.response?.data?.message ||
@@ -229,12 +367,136 @@ export default function BillingPage() {
     }
   };
 
+  const displayTransfer = lastPaymentTransfer || transferPreview;
+
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-4">
       <div className="flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-semibold">Gói dịch vụ &amp; Thanh toán</h1>
       </div>
+
+      {needsShopPick && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <AlertTriangle className="inline h-4 w-4 mr-1 align-text-bottom" />
+            Bạn có nhiều shop — hãy <b>chọn shop</b> trên menu (góc trên) để xem và thanh toán
+            đúng gói cho từng shop.
+          </div>
+        )}
+
+      {selectedShop && !needsShopPick && isShopContextReady && (
+        <div className="rounded-lg border bg-card px-4 py-3 text-sm shadow-sm">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Thanh toán cho cửa hàng
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-lg font-semibold">{selectedShop.name}</span>
+            {selectedShop.role && (
+              <Badge variant="outline" className="text-xs font-normal">
+                {SHOP_ROLE_LABELS[selectedShop.role] || selectedShop.role}
+              </Badge>
+            )}
+          </div>
+          {selectedShop.slug ? (
+            <p className="text-xs text-muted-foreground font-mono mt-1">
+              /{selectedShop.slug}
+            </p>
+          ) : null}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground shrink-0">Trạng thái gói:</span>
+            {loading && !data ? (
+              <span className="text-muted-foreground text-xs">Đang tải…</span>
+            ) : data ? (
+              <>
+                {statusBadge(data.status)}
+                {(data.status === "TRIAL" || data.status === "ACTIVE") && (
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    Còn {remainingDays} ngày
+                  </span>
+                )}
+              </>
+            ) : selectedShop.subscriptionStatus != null ? (
+              <>
+                {statusBadge(selectedShop.subscriptionStatus)}
+                {(selectedShop.subscriptionStatus === "TRIAL" ||
+                  selectedShop.subscriptionStatus === "ACTIVE") && (
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    Còn {selectedShop.subscriptionDaysRemaining ?? 0} ngày
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-muted-foreground text-xs">—</span>
+            )}
+          </div>
+          {data?.shopId && selectedShop.id && data.shopId !== selectedShop.id ? (
+            <p className="text-xs text-amber-800 mt-2">
+              Dữ liệu gói chưa khớp shop đang chọn. Hãy tải lại trang hoặc đổi shop.
+            </p>
+          ) : null}
+        </div>
+      )}
+
+      {transferPreviewLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Đang tải thông tin chuyển khoản…
+        </div>
+      ) : displayTransfer?.accountNumber ? (
+        <div className="space-y-3">
+          <TransferBlock
+            title={
+              lastPaymentTransfer?.transferContent
+                ? "Thanh toán lần này (mã vừa tạo)"
+                : "Thông tin chuyển khoản hệ thống"
+            }
+            info={displayTransfer}
+            showCopyContent={!!lastPaymentTransfer?.transferContent}
+          />
+          {manualRefToReport && !pendingManualReportedAt && (
+              <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-sky-950">
+                <p className="text-sm">
+                  Sau khi <b>đã chuyển khoản</b> đúng số tiền và nội dung, hãy bấm nút
+                  bên phải để báo admin đối soát — không thay thế xác nhận của admin.
+                </p>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={reportingTransfer}
+                  onClick={onReportTransferSent}
+                >
+                  {reportingTransfer ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang gửi…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Tôi đã chuyển khoản
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          {pendingManualReportedAt && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-2 text-sm text-emerald-950">
+              <CheckCircle2 className="inline h-4 w-4 mr-1 align-text-bottom" />
+              Đã báo admin lúc {fmtDate(pendingManualReportedAt)}. Vui lòng chờ xác
+              nhận (thường trong giờ hành chính).
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <AlertTriangle className="inline h-4 w-4 mr-1 align-text-bottom" />
+          Chưa cấu hình tài khoản nhận (env{" "}
+          <code className="text-xs">BILLING_ACCOUNT_NUMBER</code>,{" "}
+          <code className="text-xs">BILLING_ACCOUNT_HOLDER</code>, …). Liên hệ quản trị hệ thống.
+        </div>
+      )}
 
       <Card>
         <CardHeader className="gap-2">
@@ -248,7 +510,9 @@ export default function BillingPage() {
           </div>
           <CardDescription>
             Mỗi shop được dùng thử miễn phí <b>30 ngày</b>. Sau thời gian dùng
-            thử, phí dịch vụ là <b>99.000đ/tháng</b>.
+            thử, phí dịch vụ là <b>99.000đ/tháng</b>. Thanh toán qua{" "}
+            <b>chuyển khoản</b> — gói được gia hạn sau khi admin xác nhận đã nhận
+            tiền.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -294,36 +558,21 @@ export default function BillingPage() {
           )}
         </CardContent>
         <CardFooter className="flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Phương thức:
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            Phương thức:{" "}
+            <span className="font-medium text-foreground">
+              {GATEWAY_OPTIONS[0].label}
             </span>
-            <Select
-              value={selectedGateway}
-              onValueChange={setSelectedGateway}
-              disabled={paying}
-            >
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Chọn phương thức" />
-              </SelectTrigger>
-              <SelectContent>
-                {GATEWAY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-          <Button disabled={paying} onClick={onPay} className="min-w-[180px]">
+          <Button disabled={paying} onClick={onPay} className="min-w-[200px]">
             {paying ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
               <CreditCard className="h-4 w-4 mr-2" />
             )}
             {data?.status === "ACTIVE"
-              ? "Gia hạn thêm 1 tháng"
-              : "Thanh toán 99.000đ"}
+              ? "Tạo mã & gia hạn (chuyển khoản 99.000đ)"
+              : "Tạo mã thanh toán (chuyển khoản 99.000đ)"}
           </Button>
         </CardFooter>
       </Card>
@@ -333,6 +582,8 @@ export default function BillingPage() {
           <CardTitle className="text-base">Lịch sử gói &amp; thanh toán</CardTitle>
           <CardDescription>
             Các thay đổi status, giao dịch thanh toán và thao tác admin (nếu có).
+            Khi admin xác nhận, dòng <b>PAYMENT</b> sẽ ghi nhận thời gian và mã
+            giao dịch.
           </CardDescription>
         </CardHeader>
         <CardContent>

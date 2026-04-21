@@ -14,8 +14,10 @@ export const getAdminDashboard = () =>
 export const listAdminShops = (params = {}) =>
   axiosInstance.get("/admin/shops", { params });
 
-export const getAdminShopDetail = (shopId) =>
-  axiosInstance.get(`/admin/shops/${shopId}`);
+export const getAdminShopDetail = (shopId, { cacheBust = false } = {}) =>
+  axiosInstance.get(`/admin/shops/${shopId}`, {
+    params: cacheBust ? { _t: Date.now() } : undefined,
+  });
 
 export const updateAdminShopStatus = (shopId, payload) =>
   axiosInstance.patch(`/admin/shops/${shopId}/status`, payload);

@@ -86,7 +86,7 @@ export function NavUser({ user }) {
                 }}
                 className={cn(
                   currentPath === "/accounts" &&
-                    "bg-accent text-accent-foreground"
+                    "bg-accent text-accent-foreground",
                 )}
               >
                 <UserCircleIcon />
@@ -94,11 +94,11 @@ export function NavUser({ user }) {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => {
-                  navigate("billings");
+                  navigate("billing");
                 }}
                 className={cn(
-                  currentPath === "/billings" &&
-                    "bg-accent text-accent-foreground"
+                  currentPath === "/billing" &&
+                    "bg-accent text-accent-foreground",
                 )}
               >
                 <CreditCardIcon />
@@ -110,7 +110,7 @@ export function NavUser({ user }) {
                 }}
                 className={cn(
                   currentPath === "/notifications" &&
-                    "bg-accent text-accent-foreground"
+                    "bg-accent text-accent-foreground",
                 )}
               >
                 <BellIcon />

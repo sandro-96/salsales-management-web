@@ -127,16 +127,17 @@ export default function AdminShopDetailPage() {
   });
   const [paidSubmitting, setPaidSubmitting] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts = {}) => {
+    const { showFullSpinner = true, cacheBust = false } = opts;
+    if (showFullSpinner) setLoading(true);
     try {
-      const res = await getAdminShopDetail(shopId);
+      const res = await getAdminShopDetail(shopId, { cacheBust });
       if (res.data?.success) setData(res.data.data);
     } catch (err) {
       console.error(err);
       toast.error("Không tải được chi tiết shop");
     } finally {
-      setLoading(false);
+      if (showFullSpinner) setLoading(false);
     }
   }, [shopId]);
 
@@ -209,15 +210,21 @@ export default function AdminShopDetailPage() {
   const handleMarkPaid = async () => {
     setPaidSubmitting(true);
     try {
-      await markAdminShopPaid(s.id, {
+      const res = await markAdminShopPaid(s.id, {
         gateway: paidForm.gateway,
         transactionId: paidForm.transactionId || null,
         reason: paidForm.reason || null,
       });
+      const body = res?.data;
+      if (!body?.success || !body.data) {
+        toast.error(body?.message || "Xác nhận thất bại");
+        return;
+      }
+      setData(body.data);
       toast.success("Đã xác nhận thanh toán 99.000đ");
       setPaidOpen(false);
       setPaidForm({ gateway: "MANUAL", transactionId: "", reason: "" });
-      await load();
+      await load({ showFullSpinner: false, cacheBust: true });
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || "Xác nhận thất bại");
@@ -271,20 +278,23 @@ export default function AdminShopDetailPage() {
             )}
             {canManageBilling && (
               <>
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={() => {
-                    setPaidForm({
-                      gateway: "MANUAL",
-                      transactionId: "",
-                      reason: "",
-                    });
-                    setPaidOpen(true);
-                  }}
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-1" /> Xác nhận đã thanh toán
-                </Button>
+                {data.hasPendingManualBilling && (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => {
+                      setPaidForm({
+                        gateway: "MANUAL",
+                        transactionId: data.pendingManualProviderTxnRef || "",
+                        reason: "",
+                      });
+                      setPaidOpen(true);
+                    }}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    Xác nhận đã thanh toán
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -411,8 +421,10 @@ export default function AdminShopDetailPage() {
       <Separator />
       <p className="text-xs text-muted-foreground">
         Chỉ admin có AdminPermission tương ứng (SHOP_MANAGE / BILLING_MANAGE) mới
-        thấy các thao tác ghi. "Xác nhận đã thanh toán" kéo dài thêm 1 chu kỳ từ
-        mốc hiện tại.
+        thấy các thao tác ghi.
+        {data.hasPendingManualBilling
+          ? ' Nút "Xác nhận đã thanh toán" chỉ hiện khi có giao dịch chuyển khoản đang chờ; xác nhận sẽ kéo dài thêm 1 chu kỳ từ mốc hiện tại.'
+          : " Gia hạn hoặc đổi trạng thái subscription vẫn dùng các nút tương ứng."}
       </p>
 
       {/* Lock / Unlock */}
@@ -538,14 +550,20 @@ export default function AdminShopDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Mark paid */}
-      <Dialog open={paidOpen} onOpenChange={setPaidOpen}>
+      {/* Mark paid — chỉ khi còn billing MANUAL pending (tránh mở dialog khi refetch). */}
+      <Dialog
+        open={paidOpen && Boolean(data.hasPendingManualBilling)}
+        onOpenChange={setPaidOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Xác nhận đã thanh toán</DialogTitle>
             <DialogDescription>
               Ghi nhận shop đã thanh toán 99.000đ — kéo dài thêm 1 chu kỳ (1
-              tháng) từ mốc hiện tại.
+              tháng) từ mốc hiện tại. Nếu shop đã bấm &quot;Tạo mã thanh toán&quot;
+              trên trang billing, hãy dán đúng mã{" "}
+              <code className="text-xs">MANUAL-…</code> vào ô mã giao dịch để
+              khớp bản ghi chờ xác nhận.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   XCircle,
   Search,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import { getFlagUrl } from "../../utils/commonUtils";
 import { COUNTRIES } from "../../constants/countries";
 import { SHOP_INDUSTRY } from "../../constants/ShopIndustry.js";
 import { SHOP_ROLE_LABELS } from "../../constants/shopRoles.js";
+import { SUBSCRIPTION_STATUS_LABELS } from "../../constants/subscriptionStatus.js";
 
 const INDUSTRY_LABELS = {
   [SHOP_INDUSTRY.FNB]: "Nhà hàng / F&B",
@@ -215,6 +217,29 @@ const ShopPage = () => {
                         </Badge>
                       )}
                     </div>
+
+                    {shop.subscriptionStatus != null && (
+                      <div className="flex items-start gap-2 text-xs pt-2 border-t text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/70" />
+                        <span>
+                          <span className="font-medium text-foreground">
+                            {SUBSCRIPTION_STATUS_LABELS[shop.subscriptionStatus] ||
+                              shop.subscriptionStatus}
+                          </span>
+                          {(shop.subscriptionStatus === "TRIAL" ||
+                            shop.subscriptionStatus === "ACTIVE") && (
+                            <>
+                              {" "}
+                              · Còn{" "}
+                              <span className="tabular-nums font-medium text-foreground">
+                                {shop.subscriptionDaysRemaining ?? 0}
+                              </span>{" "}
+                              ngày
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -13,6 +14,18 @@ axiosInstance.interceptors.request.use(
     const token = localStorage.getItem("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      try {
+        const decoded = jwtDecode(token);
+        const uid = decoded?.sub;
+        if (uid) {
+          const sid = localStorage.getItem(`selectedShopId:${uid}`);
+          if (sid) {
+            config.headers["X-Shop-Id"] = sid;
+          }
+        }
+      } catch {
+        /* token không decode được — bỏ qua X-Shop-Id */
+      }
     }
     return config;
   },
