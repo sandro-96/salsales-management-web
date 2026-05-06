@@ -255,15 +255,15 @@ export function CartPanel({
                     "text-xs rounded-sm my-0.5",
                     t.alwaysAvailable &&
                       t.status !== "CLOSED" &&
-                      "bg-sky-50 text-sky-900 focus:bg-sky-100",
+                      "bg-sky-50 text-sky-900 focus:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-100 dark:focus:bg-sky-500/25",
                     !t.alwaysAvailable &&
                       t.status === "AVAILABLE" &&
-                      "bg-emerald-50 text-emerald-900 focus:bg-emerald-100",
+                      "bg-emerald-50 text-emerald-900 focus:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-100 dark:focus:bg-emerald-500/25",
                     !t.alwaysAvailable &&
                       t.status === "OCCUPIED" &&
-                      "bg-amber-50 text-amber-950 focus:bg-amber-100",
+                      "bg-amber-50 text-amber-950 focus:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-100 dark:focus:bg-amber-500/25",
                     t.status === "CLOSED" &&
-                      "bg-slate-100 text-slate-500 line-through opacity-80",
+                      "bg-slate-100 text-slate-500 line-through opacity-80 dark:bg-muted dark:text-muted-foreground",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -278,15 +278,15 @@ export function CartPanel({
                           "text-[10px] font-medium px-1.5 py-0.5 rounded",
                           t.alwaysAvailable &&
                             t.status !== "CLOSED" &&
-                            "bg-sky-100 text-sky-900",
+                            "bg-sky-100 text-sky-900 dark:bg-sky-500/25 dark:text-sky-100",
                           !t.alwaysAvailable &&
                             t.status === "AVAILABLE" &&
-                            "bg-emerald-100 text-emerald-800",
+                            "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/25 dark:text-emerald-100",
                           !t.alwaysAvailable &&
                             t.status === "OCCUPIED" &&
-                            "bg-amber-100 text-amber-900",
+                            "bg-amber-100 text-amber-900 dark:bg-amber-500/25 dark:text-amber-100",
                           t.status === "CLOSED" &&
-                            "bg-slate-200 text-slate-700",
+                            "bg-slate-200 text-slate-700 dark:bg-muted dark:text-muted-foreground",
                         ]
                           .filter(Boolean)
                           .join(" ")}
@@ -591,7 +591,7 @@ export function CartPanel({
       <div className="grid grid-cols-2 gap-2">
         <Button
           variant="secondary"
-          className="h-10 text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 disabled:bg-amber-200 disabled:text-amber-800"
+          className="h-10 text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 disabled:bg-amber-200 disabled:text-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500 dark:disabled:bg-amber-500/30 dark:disabled:text-amber-200"
           disabled={holdDisabled}
           onClick={onHoldOrder}
         >
@@ -610,7 +610,7 @@ export function CartPanel({
       </div>
       {canPay ? (
         <Button
-          className="w-full h-11 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-200 disabled:text-emerald-900"
+          className="w-full h-11 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-200 disabled:text-emerald-900 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:disabled:bg-emerald-500/30 dark:disabled:text-emerald-100"
           disabled={cart.length === 0}
           onClick={onCheckout}
         >

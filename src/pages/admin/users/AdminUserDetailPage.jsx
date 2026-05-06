@@ -256,7 +256,7 @@ export default function AdminUserDetailPage() {
             {u.verified ? (
               <Badge variant="outline">Đã xác thực</Badge>
             ) : (
-              <Badge variant="outline" className="text-amber-700 border-amber-300">
+              <Badge variant="outline" className="text-amber-700 border-amber-300 dark:text-amber-300 dark:border-amber-500/40">
                 Chưa xác thực
               </Badge>
             )}

@@ -28,7 +28,7 @@ export default function SubscriptionBanner() {
           bạn thanh toán <b>99.000đ</b> để gia hạn.
         </span>
         <Button size="sm" variant="secondary"
-          className="h-7 bg-white/95 text-red-700 hover:bg-white shrink-0"
+          className="h-7 bg-white/95 text-red-700 hover:bg-white shrink-0 dark:bg-red-100 dark:text-red-900 dark:hover:bg-white"
           onClick={goBilling}
         >
           Thanh toán ngay
@@ -45,7 +45,7 @@ export default function SubscriptionBanner() {
           99.000đ/tháng để tiếp tục sử dụng.
         </span>
         <Button size="sm" variant="secondary"
-          className="h-7 bg-white/95 text-amber-800 hover:bg-white shrink-0"
+          className="h-7 bg-white/95 text-amber-800 hover:bg-white shrink-0 dark:bg-amber-100 dark:text-amber-900 dark:hover:bg-white"
           onClick={goBilling}
         >
           Xem chi tiết
@@ -62,7 +62,7 @@ export default function SubscriptionBanner() {
           để không bị gián đoạn.
         </span>
         <Button size="sm" variant="secondary"
-          className="h-7 bg-white/95 text-sky-800 hover:bg-white shrink-0"
+          className="h-7 bg-white/95 text-sky-800 hover:bg-white shrink-0 dark:bg-sky-100 dark:text-sky-900 dark:hover:bg-white"
           onClick={goBilling}
         >
           Gia hạn
@@ -76,9 +76,11 @@ export default function SubscriptionBanner() {
 
 function Bar({ tone, icon, children }) {
   const toneClass =
-    tone === "danger" ? "bg-red-600 text-white"
-    : tone === "warn" ? "bg-amber-500 text-white"
-    : "bg-sky-600 text-white";
+    tone === "danger"
+      ? "bg-red-600 text-white dark:bg-red-700"
+      : tone === "warn"
+        ? "bg-amber-500 text-white dark:bg-amber-600"
+        : "bg-sky-600 text-white dark:bg-sky-700";
   return (
     <div className={`sticky top-0 z-40 text-sm flex items-center gap-3 px-4 py-2 shadow-md ${toneClass}`}>
       <span className="shrink-0">{icon}</span>

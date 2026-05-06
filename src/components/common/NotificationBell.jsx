@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -16,8 +16,14 @@ import { Separator } from "@/components/ui/separator";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useShop } from "@/hooks/useShop";
+import { useAlertDialog } from "@/hooks/useAlertDialog.js";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from "../../api/notificationApi.js";
+import {
+  getNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+} from "../../api/notificationApi.js";
 import { WebSocketMessageTypes } from "../../constants/websocket.js";
 
 const NOTIFICATION_TYPE_ICON = {
@@ -35,8 +41,10 @@ const NOTIFICATION_TYPE_ICON = {
 export default function NotificationBell() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedShopId } = useShop();
+  const { selectedShopId, fetchShops, setSelectedShop } = useShop();
+  const { alert } = useAlertDialog();
   const { subscribe, connected } = useWebSocket();
+  const kickedFromShopRef = useRef(false);
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
@@ -46,20 +54,24 @@ export default function NotificationBell() {
   const fetchUnreadCount = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const res = await getUnreadCount(selectedShopId);
+      // Notifications are user-scoped, not shop-scoped
+      const res = await getUnreadCount();
       if (res.data?.success) {
         setUnreadCount(res.data.data?.count ?? 0);
       }
     } catch (err) {
       console.error("Fetch unread count error:", err);
     }
-  }, [user?.id, selectedShopId]);
+  }, [user?.id]);
 
   const fetchPreview = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const res = await getNotifications({ page: 0, size: 5, shopId: selectedShopId || undefined });
+      const res = await getNotifications({
+        page: 0,
+        size: 5,
+      });
       if (res.data?.success) {
         const data = res.data.data;
         setNotifications(data?.content ?? (Array.isArray(data) ? data : []));
@@ -69,7 +81,7 @@ export default function NotificationBell() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, selectedShopId]);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchUnreadCount();
@@ -91,11 +103,57 @@ export default function NotificationBell() {
         if (t === "TICKET_CREATED" || t === "TICKET_REPLIED") {
           window.dispatchEvent(new CustomEvent("admin-support-badge-refresh"));
         }
+
+        // Realtime shop membership changes
+        if (t === "STAFF_ADDED" || t === "STAFF_REMOVED") {
+          // Refresh shop list so role/permissions update immediately
+          fetchShops?.();
+
+          // If user is removed from the currently selected shop, clear context + redirect.
+          const removedFromSelected =
+            t === "STAFF_REMOVED" &&
+            message.data?.shopId &&
+            String(message.data.shopId) === String(selectedShopId);
+          if (removedFromSelected) {
+            if (kickedFromShopRef.current) return;
+            kickedFromShopRef.current = true;
+
+            // Re-fetch shop list, then auto-select the first shop if any.
+            // Finally redirect to "/" so DynamicDashboardLayout routes to the first valid nav item.
+            (async () => {
+              const list = await fetchShops?.();
+              if (Array.isArray(list) && list.length > 0) {
+                navigate("/", { replace: true });
+              } else {
+                navigate("/shops", { replace: true });
+              }
+            })();
+
+            // Show a blocking alert so user knows why menus changed
+            setTimeout(() => {
+              alert(
+                "Chủ shop đã gỡ bạn khỏi cửa hàng này. Bấm “Tải lại” để cập nhật quyền và menu.",
+                { title: "Bạn đã bị gỡ khỏi shop", confirmText: "Tải lại" },
+              ).then(() => {
+                window.location.reload();
+              });
+            }, 0);
+          }
+        }
       }
     });
 
     return unsub;
-  }, [user?.id, connected, subscribe]);
+  }, [
+    user?.id,
+    connected,
+    subscribe,
+    fetchShops,
+    selectedShopId,
+    setSelectedShop,
+    navigate,
+    alert,
+  ]);
 
   useEffect(() => {
     if (open) fetchPreview();
@@ -103,7 +161,7 @@ export default function NotificationBell() {
 
   const handleMarkAllRead = async () => {
     try {
-      await markAllAsRead(selectedShopId);
+      await markAllAsRead();
       setUnreadCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     } catch (err) {
@@ -128,7 +186,9 @@ export default function NotificationBell() {
         await markAsRead(notification.id);
         setUnreadCount((c) => Math.max(0, c - 1));
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+          prev.map((n) =>
+            n.id === notification.id ? { ...n, read: true } : n,
+          ),
         );
       } catch (err) {
         console.error("Mark read error:", err);
@@ -139,14 +199,19 @@ export default function NotificationBell() {
 
     if (notification.referenceType === "TICKET" && notification.referenceId) {
       const base = isSystemAdmin ? "/admin/support" : "/support";
-      navigate(`${base}?ticketId=${encodeURIComponent(notification.referenceId)}`);
+      navigate(
+        `${base}?ticketId=${encodeURIComponent(notification.referenceId)}`,
+      );
     }
   };
 
   const formatDate = (d) => {
     if (!d) return "";
-    try { return format(new Date(d), "dd/MM HH:mm", { locale: vi }); }
-    catch { return ""; }
+    try {
+      return format(new Date(d), "dd/MM HH:mm", { locale: vi });
+    } catch {
+      return "";
+    }
   };
 
   return (
@@ -169,7 +234,12 @@ export default function NotificationBell() {
         <div className="flex items-center justify-between px-4 py-2.5 border-b">
           <h4 className="text-sm font-semibold">Thông báo</h4>
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleMarkAllRead}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleMarkAllRead}
+            >
               <Check className="mr-1 h-3 w-3" />
               Đọc tất cả
             </Button>
@@ -183,7 +253,9 @@ export default function NotificationBell() {
           ) : notifications.length === 0 ? (
             <div className="py-10 text-center">
               <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">Không có thông báo mới.</p>
+              <p className="text-sm text-muted-foreground">
+                Không có thông báo mới.
+              </p>
             </div>
           ) : (
             notifications.map((n) => (
@@ -195,16 +267,24 @@ export default function NotificationBell() {
                 }`}
               >
                 <div className="flex items-start gap-2">
-                  <span className="text-base mt-0.5">{NOTIFICATION_TYPE_ICON[n.type] || "📌"}</span>
+                  <span className="text-base mt-0.5">
+                    {NOTIFICATION_TYPE_ICON[n.type] || "📌"}
+                  </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium line-clamp-1">{n.title}</span>
+                      <span className="text-sm font-medium line-clamp-1">
+                        {n.title}
+                      </span>
                       {!n.read && (
                         <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{n.message}</p>
-                    <span className="text-xs text-muted-foreground mt-1 block">{formatDate(n.createdAt)}</span>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                      {n.message}
+                    </p>
+                    <span className="text-xs text-muted-foreground mt-1 block">
+                      {formatDate(n.createdAt)}
+                    </span>
                   </div>
                 </div>
               </button>

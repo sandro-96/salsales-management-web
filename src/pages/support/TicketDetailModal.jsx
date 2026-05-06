@@ -48,10 +48,22 @@ const defaultAdapter = {
 };
 
 const PRIORITY_MAP = {
-  LOW: { label: "Thấp", className: "bg-gray-100 text-gray-700" },
-  MEDIUM: { label: "Trung bình", className: "bg-blue-100 text-blue-700" },
-  HIGH: { label: "Cao", className: "bg-orange-100 text-orange-700" },
-  URGENT: { label: "Khẩn cấp", className: "bg-red-100 text-red-700" },
+  LOW: {
+    label: "Thấp",
+    className: "bg-gray-100 text-gray-700 dark:bg-muted dark:text-foreground",
+  },
+  MEDIUM: {
+    label: "Trung bình",
+    className: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200",
+  },
+  HIGH: {
+    label: "Cao",
+    className: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-200",
+  },
+  URGENT: {
+    label: "Khẩn cấp",
+    className: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200",
+  },
 };
 
 const CATEGORY_MAP = {

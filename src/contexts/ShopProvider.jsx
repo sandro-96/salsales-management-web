@@ -116,9 +116,10 @@ const ShopProvider = ({ children }) => {
   );
 
   const fetchShops = useCallback(async (preferredShopId) => {
+    let shopList = [];
     try {
       const res = await axiosInstance.get("/shop/my?page=0&size=1000");
-      const shopList = res.data.data.content;
+      shopList = res.data.data.content || [];
       setShops(shopList);
 
       const { shopIdKey } = storageKeys();
@@ -163,6 +164,7 @@ const ShopProvider = ({ children }) => {
     } finally {
       setIsShopContextReady(true);
     }
+    return shopList;
   }, [selectedShopId, storageKeys]);
 
   const fetchBranches = useCallback(

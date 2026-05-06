@@ -2,83 +2,160 @@
 
 @custom-variant dark (&:is(.dark *));
 
-body {
-  @apply bg-background text-foreground;
-}
+/* =====================================================================
+ * Modern shadcn/ui v4 palette (oklch) — light + dark.
+ * Dark mode chọn theo xu hướng 2026: nền trung tính-deep với chút ấm,
+ * highlight indigo/violet hoà với accent xanh để tạo chiều sâu, không
+ * dùng đen tuyệt đối nhằm tránh banding & nhức mắt khi dùng lâu.
+ * ===================================================================== */
+:root {
+  --radius: 0.625rem;
 
-* {
-  @apply border-sidebar-border outline-sidebar-ring/50;
+  /* Base surfaces */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+
+  /* Brand */
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+
+  /* Neutral helpers */
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+
+  /* Semantic */
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --success: oklch(0.65 0.18 150);
+  --success-foreground: oklch(0.985 0 0);
+
+  --warning: oklch(0.78 0.16 80);
+  --warning-foreground: oklch(0.205 0 0);
+
+  --info: oklch(0.62 0.18 245);
+  --info-foreground: oklch(0.985 0 0);
+
+  /* Form / outline */
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+
+  /* Sidebar */
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 .dark {
-  --tw-bg-opacity: 1;
-  --tw-text-opacity: 1;
-  --color-background: hsl(240 10% 3.9%);
-  --color-foreground: hsl(0 0% 98%);
-  --color-muted: hsl(240 3.7% 15.9%);
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-  --accent: hsl(224.3 76.3% 48%);
-  --accent-foreground: hsl(0 0% 100%);
-  --color-success: hsl(142 70% 30%);
-  --color-success-foreground: hsl(0 0% 98%);
-  --color-info: hsl(217 91% 65%);
-  --color-info-foreground: hsl(0 0% 98%);
-  --color-warning: hsl(38 92% 55%);
-  --color-warning-foreground: hsl(0 0% 98%);
-  --color-destructive: hsl(0 63% 45%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-popover: hsl(240 10% 3.9%);
-  --color-popover-foreground: hsl(0 0% 98%);
-}
+  /* Surfaces — nền trung tính sâu, không pure black */
+  --background: oklch(0.145 0.005 285);
+  --foreground: oklch(0.985 0 0);
 
-@theme {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(240 10% 3.9%);
-  --color-muted: hsl(240 4.8% 95.9%);
-  --color-border: hsl(220 13% 91%);
-  --color-ring: hsl(217.2 91.2% 59.8%);
-  --color-sidebar: hsl(0 0% 98%);
-  --color-sidebar-foreground: hsl(240 5.3% 26.1%);
-  --color-sidebar-primary: hsl(240 5.9% 10%);
-  --color-sidebar-primary-foreground: hsl(0 0% 98%);
-  --color-sidebar-accent: hsl(240 4.8% 95.9%);
-  --color-sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --color-sidebar-border: hsl(220 13% 91%);
-  --color-sidebar-ring: hsl(217.2 91.2% 59.8%);
-  --color-muted-foreground: hsl(240 3.8% 46.1%);
-  --color-success: hsl(142 76% 36%);
-  --color-success-foreground: hsl(0 0% 98%);
-  --color-info: hsl(217 91% 60%);
-  --color-info-foreground: hsl(0 0% 98%);
-  --color-warning: hsl(38 92% 50%);
-  --color-warning-foreground: hsl(0 0% 20%);
-  --color-destructive: hsl(0 84% 60%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(240 10% 3.9%);
-}
+  --card: oklch(0.205 0.006 285);
+  --card-foreground: oklch(0.985 0 0);
 
-:root {
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-  --accent: hsl(240 4.8% 95.9%);
-  --accent-foreground: hsl(240 5.9% 10%);
+  --popover: oklch(0.205 0.006 285);
+  --popover-foreground: oklch(0.985 0 0);
+
+  /* Brand — đảo nghịch so với light */
+  --primary: oklch(0.92 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+
+  --secondary: oklch(0.269 0.005 285);
+  --secondary-foreground: oklch(0.985 0 0);
+
+  /* Neutral helpers */
+  --muted: oklch(0.269 0.005 285);
+  --muted-foreground: oklch(0.708 0.01 285);
+
+  --accent: oklch(0.305 0.008 285);
+  --accent-foreground: oklch(0.985 0 0);
+
+  /* Semantic — sáng hơn để bám trên nền tối */
+  --destructive: oklch(0.7 0.19 22);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --success: oklch(0.72 0.17 155);
+  --success-foreground: oklch(0.145 0 0);
+
+  --warning: oklch(0.82 0.16 75);
+  --warning-foreground: oklch(0.145 0 0);
+
+  --info: oklch(0.7 0.18 245);
+  --info-foreground: oklch(0.145 0 0);
+
+  /* Form / outline — viền dùng alpha để mềm mắt */
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.556 0 0);
+
+  /* Sidebar — tối hơn card 1 chút để tách lớp */
+  --sidebar: oklch(0.18 0.006 285);
+  --sidebar-foreground: oklch(0.96 0 0);
+  --sidebar-primary: oklch(0.62 0.2 264);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.28 0.008 285);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.62 0.2 264);
 }
 
 @theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -87,8 +164,11 @@ body {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 @layer base {
@@ -110,4 +190,24 @@ body {
   font-family: "Coiny", serif;
   font-weight: 400;
   font-style: normal;
+}
+
+/* Scrollbar — tinh tế cả 2 chế độ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 35%, transparent);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--muted-foreground) 55%, transparent);
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }

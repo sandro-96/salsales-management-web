@@ -34,10 +34,10 @@ const VerifyEmailPage = () => {
     }, [token, navigate]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-            <div className="bg-white p-8 rounded-lg shadow w-full max-w-md text-center">
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-background px-4 text-foreground">
+            <div className="bg-card text-card-foreground p-8 rounded-lg shadow w-full max-w-md text-center border">
                 <h2 className="text-xl font-semibold mb-4">Xác minh email</h2>
-                <p className="text-gray-700">{status}</p>
+                <p className="text-muted-foreground">{status}</p>
             </div>
         </div>
     );

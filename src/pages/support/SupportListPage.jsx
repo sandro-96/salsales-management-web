@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -79,6 +80,7 @@ const SupportListPage = () => {
   const { user } = useAuth();
   const { subscribe, connected } = useWebSocket();
   const { selectedShopId, isOwner, shopRole } = useShop();
+  const isMobile = useIsMobile();
   const shopId = selectedShopId;
   const isManager = isOwner || shopRole === "MANAGER";
   const { confirm } = useAlertDialog();
@@ -116,6 +118,16 @@ const SupportListPage = () => {
   const [categoryFilter, setCategoryFilter] = useState("__all__");
   const [keyword, setKeyword] = useState("");
   const [viewMode, setViewMode] = useState("all"); // "all" for managers, "my" for staff
+
+  // Mobile: reduce columns so the table fits nicely.
+  useEffect(() => {
+    setColumnVisibility((prev) => ({
+      ...prev,
+      userName: !isMobile,
+      category: !isMobile,
+      createdAt: !isMobile,
+    }));
+  }, [isMobile]);
 
   const fetchTickets = useCallback(async (silent = false) => {
     if (!shopId) return;
@@ -312,7 +324,7 @@ const SupportListPage = () => {
   });
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
+    <div className="w-full p-4 md:p-6 space-y-4 md:max-w-7xl md:mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -326,7 +338,7 @@ const SupportListPage = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
         <Input
           placeholder="Tìm kiếm tiêu đề, người gửi..."
           value={keyword}
@@ -334,10 +346,10 @@ const SupportListPage = () => {
             setKeyword(e.target.value);
             setPagination((p) => ({ ...p, pageIndex: 0 }));
           }}
-          className="w-64"
+          className="w-full sm:w-64"
         />
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })); }}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Trạng thái" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Trạng thái" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Tất cả trạng thái</SelectItem>
             {Object.entries(TICKET_STATUS_MAP).map(([k, v]) => (
@@ -346,7 +358,7 @@ const SupportListPage = () => {
           </SelectContent>
         </Select>
         <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })); }}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Danh mục" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Danh mục" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Tất cả danh mục</SelectItem>
             {Object.entries(CATEGORY_MAP).map(([k, v]) => (
@@ -356,7 +368,7 @@ const SupportListPage = () => {
         </Select>
         {isManager && (
           <Select value={viewMode} onValueChange={(v) => { setViewMode(v); setPagination((p) => ({ ...p, pageIndex: 0 })); }}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả ticket</SelectItem>
               <SelectItem value="my">Ticket của tôi</SelectItem>
@@ -366,8 +378,8 @@ const SupportListPage = () => {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="min-w-[640px]">
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>

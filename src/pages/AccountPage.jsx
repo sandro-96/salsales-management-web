@@ -304,7 +304,7 @@ const AccountPage = () => {
                       <Mail className="h-3.5 w-3.5" /> {user?.email}
                     </span>
                     <Badge
-                      className={`text-[10px] ${user?.verified ? "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100"}`}
+                      className={`text-[10px] ${user?.verified ? "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15" : "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40 dark:hover:bg-amber-500/15"}`}
                     >
                       <Shield className="h-2.5 w-2.5 mr-0.5" />
                       {user?.verified ? "Đã xác thực" : "Chưa xác thực"}

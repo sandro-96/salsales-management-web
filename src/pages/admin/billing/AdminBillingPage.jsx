@@ -88,12 +88,12 @@ const GATEWAY_OPTIONS = ["VNPAY", "MOMO", "MANUAL"];
 function txnStatusBadge(status) {
   const cls =
     status === "SUCCESS"
-      ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+      ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
       : status === "PENDING"
-        ? "bg-sky-100 text-sky-800 hover:bg-sky-100"
+        ? "bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:hover:bg-sky-500/15"
         : status === "FAILED"
-          ? "bg-red-100 text-red-800 hover:bg-red-100"
-          : "bg-slate-200 text-slate-700 hover:bg-slate-200";
+          ? "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200 dark:hover:bg-red-500/15"
+          : "bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700/50";
   return <Badge className={cls}>{status || "—"}</Badge>;
 }
 
@@ -116,11 +116,11 @@ const fmtDate = (d) => {
 function Kpi({ icon: Icon, label, value, tone = "default" }) {
   const toneCls =
     tone === "warn"
-      ? "text-amber-600"
+      ? "text-amber-600 dark:text-amber-300"
       : tone === "danger"
-        ? "text-red-600"
+        ? "text-red-600 dark:text-red-300"
         : tone === "info"
-          ? "text-sky-700"
+          ? "text-sky-700 dark:text-sky-300"
           : "text-foreground";
   return (
     <Card>
@@ -142,13 +142,13 @@ function Kpi({ icon: Icon, label, value, tone = "default" }) {
 function actionBadge(action) {
   const cls =
     action === "PAYMENT" || action === "ADMIN_EXTEND"
-      ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+      ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
       : action === "PAYMENT_FAILED" ||
           action === "TRIAL_EXPIRED" ||
           action === "PERIOD_EXPIRED" ||
           action === "CANCELLED"
-        ? "bg-red-100 text-red-800 hover:bg-red-100"
-        : "bg-slate-200 text-slate-700 hover:bg-slate-200";
+        ? "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200 dark:hover:bg-red-500/15"
+        : "bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700/50";
   return <Badge className={cls}>{action}</Badge>;
 }
 
@@ -392,13 +392,13 @@ export default function AdminBillingPage() {
       </div>
 
       {!overviewLoading && overview?.pendingManualTransferCount > 0 && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 flex flex-wrap items-center justify-between gap-2">
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 flex flex-wrap items-center justify-between gap-2 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
             <span>
               Có{" "}
               <b>{overview.pendingManualTransferCount}</b> yêu cầu chuyển khoản
               subscription đang <b>chờ xác nhận</b>. Mở tab giao dịch, lọc{" "}
-              <code className="text-xs bg-white/80 px-1 rounded">MANUAL</code>{" "}
-              + <code className="text-xs bg-white/80 px-1 rounded">PENDING</code>
+              <code className="text-xs bg-white/80 px-1 rounded dark:bg-amber-500/20">MANUAL</code>{" "}
+              + <code className="text-xs bg-white/80 px-1 rounded dark:bg-amber-500/20">PENDING</code>
               , đối soát sao kê rồi xác nhận trên chi tiết shop.
             </span>
             <Button
@@ -795,7 +795,7 @@ export default function AdminBillingPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="border-red-200 text-red-800 hover:bg-red-50"
+                                  className="border-red-200 text-red-800 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/15"
                                   disabled={cancellingManualTxnId === t.id}
                                   onClick={(e) => {
                                     e.stopPropagation();

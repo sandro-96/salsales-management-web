@@ -136,12 +136,12 @@ const StockStatusBadge = ({ quantity, minQuantity, trackInventory }) => {
     );
   if (minQuantity > 0 && quantity <= minQuantity)
     return (
-      <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
+      <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40 dark:hover:bg-amber-500/15">
         <AlertTriangle className="h-3 w-3" /> Sắp hết
       </Badge>
     );
   return (
-    <Badge className="gap-1 text-[11px] bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100">
+    <Badge className="gap-1 text-[11px] bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15">
       Còn hàng
     </Badge>
   );
@@ -196,17 +196,17 @@ const TxTypeBadge = ({ type }) => {
     IMPORT: {
       label: "Nhập hàng",
       icon: TrendingUp,
-      cls: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      cls: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40",
     },
     EXPORT: {
       label: "Xuất hàng",
       icon: TrendingDown,
-      cls: "bg-orange-100 text-orange-800 border-orange-200",
+      cls: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/15 dark:text-orange-200 dark:border-orange-500/40",
     },
     ADJUSTMENT: {
       label: "Điều chỉnh",
       icon: SlidersHorizontal,
-      cls: "bg-blue-100 text-blue-800 border-blue-200",
+      cls: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-500/40",
     },
   };
   const cfg = map[type] || { label: type, icon: ArrowDownUp, cls: "" };
@@ -863,28 +863,28 @@ const InventoryListPage = () => {
                 icon={Package}
                 label="Theo dõi tồn kho"
                 value={stats.totalProducts.toLocaleString("vi-VN")}
-                iconClassName="bg-violet-100 text-violet-600"
+                iconClassName="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300"
                 loading={loading && products.length === 0}
               />
               <StatCard
                 icon={Warehouse}
                 label="Tổng tồn kho"
                 value={stats.totalStock.toLocaleString("vi-VN")}
-                iconClassName="bg-sky-100 text-sky-600"
+                iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300"
                 loading={loading && products.length === 0}
               />
               <StatCard
                 icon={AlertTriangle}
                 label="Sắp hết hàng"
                 value={stats.lowStock}
-                iconClassName="bg-amber-100 text-amber-600"
+                iconClassName="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300"
                 loading={loading && products.length === 0}
               />
               <StatCard
                 icon={PackageX}
                 label="Hết hàng"
                 value={stats.outOfStock}
-                iconClassName="bg-red-100 text-red-600"
+                iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"
                 loading={loading && products.length === 0}
               />
               {stats.notTracked > 0 && (

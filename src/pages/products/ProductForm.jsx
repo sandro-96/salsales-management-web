@@ -1715,7 +1715,7 @@ export default function ProductForm({
           </p>
         </div>
         {!shopToppingCatalog.length ? (
-          <div className="text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-md px-3 py-2">
+          <div className="text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-md px-3 py-2 dark:text-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10">
             Chưa có topping trong danh mục shop. Hãy mở &quot;Cài đặt topping&quot;
             trên trang sản phẩm.
           </div>

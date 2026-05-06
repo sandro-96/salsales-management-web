@@ -263,9 +263,9 @@ const BranchCard = ({
                 isHero ? "h-14 w-14" : "h-11 w-11",
                 isActive
                   ? isDefault
-                    ? "bg-amber-100 text-amber-600"
-                    : "bg-violet-100 text-violet-600"
-                  : "bg-gray-100 text-gray-400",
+                    ? "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300"
+                    : "bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300"
+                  : "bg-gray-100 text-gray-400 dark:bg-muted dark:text-muted-foreground",
               ].join(" ")}
             >
               {isDefault ? (
@@ -285,17 +285,17 @@ const BranchCard = ({
                 {isDefault && (
                   <Badge
                     variant="outline"
-                    className="text-[10px] font-normal text-amber-600 border-amber-300 px-1.5 py-0"
+                    className="text-[10px] font-normal text-amber-600 border-amber-300 px-1.5 py-0 dark:text-amber-300 dark:border-amber-500/40"
                   >
                     Mặc định
                   </Badge>
                 )}
                 {isActive ? (
-                  <Badge className="text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                  <Badge className="text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15">
                     <CheckCircle2 className="h-2.5 w-2.5" /> Hoạt động
                   </Badge>
                 ) : (
-                  <Badge className="text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100">
+                  <Badge className="text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-muted dark:text-muted-foreground dark:border-border dark:hover:bg-muted">
                     <XCircle className="h-2.5 w-2.5" /> Tạm ngưng
                   </Badge>
                 )}
@@ -360,7 +360,7 @@ const BranchCard = ({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                      className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
                       disabled={isSubmitting}
                       onClick={() => onDelete(branch)}
                     >

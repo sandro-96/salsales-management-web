@@ -32,7 +32,7 @@ export default function ImpersonationBanner() {
   };
 
   return (
-    <div className="sticky top-0 z-50 bg-amber-500 text-white text-sm flex items-center gap-3 px-4 py-2 shadow-md">
+    <div className="sticky top-0 z-50 bg-amber-500 text-white text-sm flex items-center gap-3 px-4 py-2 shadow-md dark:bg-amber-600">
       <ShieldAlert className="h-4 w-4 shrink-0" />
       <div className="flex-1 min-w-0 truncate">
         Đang giả danh{" "}
@@ -45,7 +45,7 @@ export default function ImpersonationBanner() {
       <Button
         size="sm"
         variant="secondary"
-        className="h-7 bg-white/90 text-amber-700 hover:bg-white"
+        className="h-7 bg-white/90 text-amber-700 hover:bg-white dark:bg-amber-100 dark:text-amber-900 dark:hover:bg-amber-50"
         onClick={onStop}
       >
         <LogOut className="h-3.5 w-3.5 mr-1" />

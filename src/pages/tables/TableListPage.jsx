@@ -68,20 +68,20 @@ const TABLE_STATUSES = {
   AVAILABLE: {
     label: "Trống",
     icon: CheckCircle2,
-    cls: "bg-emerald-100 text-emerald-700 border-emerald-300",
-    ring: "ring-emerald-300",
+    cls: "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40",
+    ring: "ring-emerald-300 dark:ring-emerald-500/40",
   },
   OCCUPIED: {
     label: "Đang phục vụ",
     icon: Users,
-    cls: "bg-amber-100 text-amber-700 border-amber-300",
-    ring: "ring-amber-300",
+    cls: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40",
+    ring: "ring-amber-300 dark:ring-amber-500/40",
   },
   CLOSED: {
     label: "Đã đóng",
     icon: Lock,
-    cls: "bg-gray-100 text-gray-600 border-gray-300",
-    ring: "ring-gray-300",
+    cls: "bg-gray-100 text-gray-600 border-gray-300 dark:bg-muted dark:text-muted-foreground dark:border-border",
+    ring: "ring-gray-300 dark:ring-border",
   },
 };
 
@@ -346,7 +346,7 @@ const TableCard = ({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                      className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
                       onClick={() => onDelete(table)}
                       disabled={isOccupied}
                     >
@@ -363,7 +363,7 @@ const TableCard = ({
           <div className="flex items-center gap-2 min-w-0">
             <TableStatusBadge status={table.status} />
             {isAlwaysAvailable && (
-              <Badge className="text-[10px] bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100">
+              <Badge className="text-[10px] bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:border-sky-500/40 dark:hover:bg-sky-500/15">
                 Luôn trống
               </Badge>
             )}
@@ -591,7 +591,7 @@ const TableListPage = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <Card className="py-4 gap-3">
                 <CardContent className="flex items-center gap-4">
-                  <div className="flex items-center justify-center h-11 w-11 rounded-xl shrink-0 bg-violet-100 text-violet-600">
+                  <div className="flex items-center justify-center h-11 w-11 rounded-xl shrink-0 bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
                     <Armchair className="h-5 w-5" />
                   </div>
                   <div>
@@ -610,7 +610,7 @@ const TableListPage = () => {
               </Card>
               <Card className="py-4 gap-3">
                 <CardContent className="flex items-center gap-4">
-                  <div className="flex items-center justify-center h-11 w-11 rounded-xl shrink-0 bg-emerald-100 text-emerald-600">
+                  <div className="flex items-center justify-center h-11 w-11 rounded-xl shrink-0 bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300">
                     <CheckCircle2 className="h-5 w-5" />
                   </div>
                   <div>
@@ -627,7 +627,7 @@ const TableListPage = () => {
               </Card>
               <Card className="py-4 gap-3">
                 <CardContent className="flex items-center gap-4">
-                  <div className="flex items-center justify-center h-11 w-11 rounded-xl shrink-0 bg-amber-100 text-amber-600">
+                  <div className="flex items-center justify-center h-11 w-11 rounded-xl shrink-0 bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300">
                     <Users className="h-5 w-5" />
                   </div>
                   <div>

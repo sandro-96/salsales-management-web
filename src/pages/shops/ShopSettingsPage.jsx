@@ -55,15 +55,15 @@ import { useSubscription } from "@/hooks/useSubscription";
 function subscriptionPillClass(status) {
   switch (status) {
     case "TRIAL":
-      return "bg-sky-100 text-sky-700 border-sky-200";
+      return "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-500/15 dark:text-sky-200 dark:border-sky-500/40";
     case "ACTIVE":
-      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      return "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40";
     case "EXPIRED":
-      return "bg-red-100 text-red-700 border-red-200";
+      return "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-200 dark:border-red-500/40";
     case "CANCELLED":
-      return "bg-slate-200 text-slate-700 border-slate-300";
+      return "bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-700/50 dark:text-slate-200 dark:border-slate-600";
     default:
-      return "bg-gray-100 text-gray-600 border-gray-200";
+      return "bg-gray-100 text-gray-600 border-gray-200 dark:bg-muted dark:text-muted-foreground dark:border-border";
   }
 }
 
@@ -83,13 +83,12 @@ function subscriptionPillLabel(sub) {
 const ShopSettingsPage = () => {
   const { confirm } = useAlertDialog();
   const { enums } = useAuth();
-  const { selectedShop, setSelectedShop, fetchShops, isOwner, shopRole } =
-    useShop();
+  const { selectedShop, setSelectedShop, fetchShops, isOwner } = useShop();
   const { data: subscription } = useSubscription();
   const { hasShopPermission } = useShopPermissions();
   const canManageTax = hasShopPermission(PERM.SHOP_UPDATE);
   const canDeleteShop = hasShopPermission(PERM.SHOP_DELETE);
-  const showSubscriptionStatus = isOwner || shopRole === "MANAGER";
+  const showSubscriptionStatus = isOwner;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const navigate = useNavigate();
@@ -319,7 +318,7 @@ const ShopSettingsPage = () => {
                 </AvatarFallback>
               </Avatar>
               {isEditMode && (
-                <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity dark:bg-black/60">
                   <Camera className="h-5 w-5 text-white" />
                   <input
                     type="file"
@@ -337,11 +336,11 @@ const ShopSettingsPage = () => {
               </h3>
               <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start mt-1.5">
                 {selectedShop.active ? (
-                  <Badge className="text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                  <Badge className="text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15">
                     <CheckCircle2 className="h-2.5 w-2.5" /> Hoạt động
                   </Badge>
                 ) : (
-                  <Badge className="text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100">
+                  <Badge className="text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-muted dark:text-muted-foreground dark:border-border dark:hover:bg-muted">
                     <XCircle className="h-2.5 w-2.5" /> Tạm ngưng
                   </Badge>
                 )}

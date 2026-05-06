@@ -41,7 +41,7 @@ function pickOptionLabel(options, value) {
 }
 
 const ShopPage = () => {
-  const { shops, setSelectedShop } = useShop();
+  const { shops, setSelectedShop, isOwner } = useShop();
   const { enums, fetchEnums } = useAuth();
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
@@ -160,11 +160,11 @@ const ShopPage = () => {
                         )}
                       </div>
                       {shop.active ? (
-                        <Badge className="shrink-0 text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                        <Badge className="shrink-0 text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15">
                           <CheckCircle2 className="h-2.5 w-2.5" /> Hoạt động
                         </Badge>
                       ) : (
-                        <Badge className="shrink-0 text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100">
+                        <Badge className="shrink-0 text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-muted dark:text-muted-foreground dark:border-border dark:hover:bg-muted">
                           <XCircle className="h-2.5 w-2.5" /> Tạm ngưng
                         </Badge>
                       )}
@@ -218,7 +218,7 @@ const ShopPage = () => {
                       )}
                     </div>
 
-                    {shop.subscriptionStatus != null && (
+                    {isOwner && shop.subscriptionStatus != null && (
                       <div className="flex items-start gap-2 text-xs pt-2 border-t text-muted-foreground">
                         <Clock className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/70" />
                         <span>

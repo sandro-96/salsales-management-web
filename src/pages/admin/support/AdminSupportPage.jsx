@@ -50,10 +50,22 @@ import {
 import { WebSocketMessageTypes } from "@/constants/websocket.js";
 
 const PRIORITY_MAP = {
-  LOW: { label: "Thấp", className: "bg-gray-100 text-gray-800" },
-  MEDIUM: { label: "Trung bình", className: "bg-blue-100 text-blue-800" },
-  HIGH: { label: "Cao", className: "bg-orange-100 text-orange-800" },
-  URGENT: { label: "Khẩn cấp", className: "bg-red-100 text-red-800" },
+  LOW: {
+    label: "Thấp",
+    className: "bg-gray-100 text-gray-800 dark:bg-muted dark:text-foreground",
+  },
+  MEDIUM: {
+    label: "Trung bình",
+    className: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-200",
+  },
+  HIGH: {
+    label: "Cao",
+    className: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-200",
+  },
+  URGENT: {
+    label: "Khẩn cấp",
+    className: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-200",
+  },
 };
 
 const CATEGORY_MAP = {

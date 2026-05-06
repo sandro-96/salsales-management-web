@@ -11,7 +11,7 @@ import RouteWithTitle from "./routes/RouteWithTitle";
 import Loading from "./components/loading/Loading.jsx";
 import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
 import BranchFormModal from "./pages/branchs/BranchFormModal.jsx";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 function renderRoute(route) {
   let element = <RouteWithTitle element={route.element} title={route.title} />;

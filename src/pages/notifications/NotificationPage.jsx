@@ -16,7 +16,6 @@ import {
 import { Card } from "@/components/ui/card";
 
 import { useAuth } from "@/hooks/useAuth";
-import { useShop } from "@/hooks/useShop";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import {
   getNotifications,
@@ -67,7 +66,6 @@ const groupByDate = (notifications) => {
 
 const NotificationPage = () => {
   const { user } = useAuth();
-  const { selectedShopId } = useShop();
   const { subscribe, connected } = useWebSocket();
 
   const [notifications, setNotifications] = useState([]);
@@ -82,7 +80,6 @@ const NotificationPage = () => {
     setLoading(true);
     try {
       const params = { page, size: pageSize };
-      if (selectedShopId) params.shopId = selectedShopId;
       if (readFilter !== "__all__") params.read = readFilter;
 
       const res = await getNotifications(params);
@@ -103,7 +100,7 @@ const NotificationPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, selectedShopId, page, readFilter]);
+  }, [user?.id, page, readFilter]);
 
   useEffect(() => {
     fetchNotifications();
@@ -136,7 +133,7 @@ const NotificationPage = () => {
 
   const handleMarkAllRead = async () => {
     try {
-      await markAllAsRead(selectedShopId);
+      await markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       toast.success("Đã đánh dấu tất cả đã đọc.");
     } catch (err) {

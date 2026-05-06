@@ -102,27 +102,27 @@ const ORDER_STATUSES = {
   PENDING: {
     label: "Chờ xử lý",
     icon: Clock,
-    cls: "bg-amber-100 text-amber-800 border-amber-200",
+    cls: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40",
   },
   CONFIRMED: {
     label: "Đã xác nhận",
     icon: CheckCircle2,
-    cls: "bg-blue-100 text-blue-800 border-blue-200",
+    cls: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-500/40",
   },
   SHIPPING: {
     label: "Đang giao",
     icon: Truck,
-    cls: "bg-violet-100 text-violet-800 border-violet-200",
+    cls: "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-500/15 dark:text-violet-200 dark:border-violet-500/40",
   },
   COMPLETED: {
     label: "Hoàn tất",
     icon: CheckCircle2,
-    cls: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    cls: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40",
   },
   CANCELLED: {
     label: "Đã hủy",
     icon: Ban,
-    cls: "bg-red-100 text-red-800 border-red-200",
+    cls: "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/15 dark:text-red-200 dark:border-red-500/40",
   },
 };
 
@@ -232,14 +232,14 @@ function OrderTaxBadge({ order }) {
 function PaymentCollectionBadge({ paid, paymentStatus }) {
   if (paid) {
     return (
-      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1">
+      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40">
         <CreditCard className="h-3 w-3" /> Đã thanh toán
       </Badge>
     );
   }
   if (paymentStatus === "PENDING_COLLECTION") {
     return (
-      <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-900 border-amber-200">
+      <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40">
         <Truck className="h-3 w-3" /> Chờ thu COD
       </Badge>
     );
@@ -1433,7 +1433,7 @@ const OrderListPage = () => {
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                      className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
                       onClick={() => handleCancel(order)}
                       disabled={submitting}
                     >
@@ -1507,28 +1507,28 @@ const OrderListPage = () => {
             icon={ShoppingCart}
             label="Tổng đơn hàng"
             value={stats.total}
-            iconClassName="bg-violet-100 text-violet-600"
+            iconClassName="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300"
             loading={loading && orders.length === 0}
           />
           <StatCard
             icon={Clock}
             label="Chờ xử lý"
             value={stats.pending}
-            iconClassName="bg-amber-100 text-amber-600"
+            iconClassName="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300"
             loading={loading && orders.length === 0}
           />
           <StatCard
             icon={CheckCircle2}
             label="Hoàn tất"
             value={stats.completed}
-            iconClassName="bg-emerald-100 text-emerald-600"
+            iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300"
             loading={loading && orders.length === 0}
           />
           <StatCard
             icon={CreditCard}
             label="Doanh thu"
             value={stats.revenue.toLocaleString("vi-VN") + " ₫"}
-            iconClassName="bg-sky-100 text-sky-600"
+            iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300"
             loading={loading && orders.length === 0}
           />
         </div>

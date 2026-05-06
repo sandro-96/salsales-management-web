@@ -75,20 +75,20 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
+    <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
       <div className="flex-1 p-6 md:p-12 flex flex-col gap-2 justify-center w-full md:max-w-lg md:mx-auto relative">
         <div className="grid w-full max-w-sm grid-cols-1 gap-4 mx-auto">
           {loading && <LoadingOverlay text="Đang xử lý..." />}
-          <h1 className="text-3xl coiny-regular text-blue-900">SỔ THU CHI</h1>
+          <h1 className="text-3xl coiny-regular text-blue-900 dark:text-blue-300">SỔ THU CHI</h1>
           <div className="flex flex-col gap-3">
-            <h2 className="text-xl font-bold text-gray-800">
+            <h2 className="text-xl font-bold text-foreground">
               Sign in to your account
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Not having an account?{" "}
               <Link
                 to="/register"
-                className="text-sm font-bold text-blue-600 hover:underline"
+                className="text-sm font-bold text-blue-600 hover:underline dark:text-blue-400"
               >
                 Sign up for free today.
               </Link>
@@ -96,28 +96,28 @@ const LoginPage = () => {
           </div>
           <form onSubmit={handleLogin} className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-foreground">
                 Email address
               </label>
               <input
                 type="email"
                 name="email"
                 placeholder="Email"
-                className="w-full p-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 text-sm border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formValue.email}
                 onChange={handleChange}
                 required
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-foreground">
                 Password
               </label>
               <input
                 type="password"
                 name="password"
                 placeholder="Mật khẩu"
-                className="w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-sm p-2 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formValue.password}
                 onChange={handleChange}
                 required
@@ -129,11 +129,11 @@ const LoginPage = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-400 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-border rounded accent-blue-600"
                 />
                 <label
                   htmlFor="remember-me"
-                  className="ml-2 block text-sm text-gray-900"
+                  className="ml-2 block text-sm text-foreground"
                 >
                   Remember me
                 </label>
@@ -141,7 +141,7 @@ const LoginPage = () => {
               <div className="text-sm">
                 <Link
                   to="/forgot-password"
-                  className="font-medium text-blue-600 hover:underline"
+                  className="font-medium text-blue-600 hover:underline dark:text-blue-400"
                 >
                   Forgot your password?
                 </Link>
@@ -150,16 +150,16 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 font-medium"
+              className="w-full mt-2 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 font-medium dark:bg-blue-600 dark:hover:bg-blue-500"
             >
               {loading ? "Processing ..." : "Login"}
             </button>
             <div className="flex items-center my-4">
-              <hr className="flex-grow border-t border-gray-300" />
-              <span className="mx-5 text-sm font-medium text-gray-700">
+              <hr className="flex-grow border-t border-border" />
+              <span className="mx-5 text-sm font-medium text-muted-foreground">
                 Or continue with
               </span>
-              <hr className="flex-grow border-t border-gray-300" />
+              <hr className="flex-grow border-t border-border" />
             </div>
             <GoogleSignInButton
               callback={handleGoogleSignIn}

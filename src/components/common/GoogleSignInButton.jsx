@@ -66,12 +66,12 @@ const GoogleSignInButton = ({
 
   return (
     <div>
-      {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+      {error && <p className="text-red-500 dark:text-red-400 text-sm mb-3">{error}</p>}
       <button
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className={`flex items-center justify-center gap-3 w-full border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors disabled:opacity-60 ${className}`}
+        className={`flex items-center justify-center gap-3 w-full border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors disabled:opacity-60 dark:bg-card dark:border-border dark:text-foreground dark:hover:bg-muted ${className}`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

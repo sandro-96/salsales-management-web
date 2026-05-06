@@ -11,15 +11,39 @@ const axiosInstance = axios.create({
 // Gắn accessToken vào mỗi request
 axiosInstance.interceptors.request.use(
   (config) => {
+    config.headers = config.headers ?? {};
     const token = localStorage.getItem("accessToken");
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Axios v1 may use AxiosHeaders; support both plain object & set()
+      if (typeof config.headers.set === "function") {
+        config.headers.set("Authorization", `Bearer ${token}`);
+      } else {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
       try {
         const decoded = jwtDecode(token);
-        const uid = decoded?.sub;
-        if (uid) {
-          const sid = localStorage.getItem(`selectedShopId:${uid}`);
-          if (sid) {
+        // Some tokens use `sub` (email/username) while app storage keys use `user.id`.
+        // Try multiple common keys and fall back to legacy shared key.
+        const candidates = [
+          decoded?.id,
+          decoded?.userId,
+          decoded?.uid,
+          decoded?.sub,
+        ]
+          .map((v) => (v == null ? null : String(v)))
+          .filter(Boolean);
+
+        let sid = null;
+        for (const uid of candidates) {
+          sid = localStorage.getItem(`selectedShopId:${uid}`);
+          if (sid) break;
+        }
+        if (!sid) sid = localStorage.getItem("selectedShopId");
+
+        if (sid) {
+          if (typeof config.headers.set === "function") {
+            config.headers.set("X-Shop-Id", sid);
+          } else {
             config.headers["X-Shop-Id"] = sid;
           }
         }
@@ -29,7 +53,7 @@ axiosInstance.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Tự động refresh token nếu accessToken hết hạn
@@ -59,7 +83,7 @@ axiosInstance.interceptors.response.use(
         const res = await axiosInstance.post(
           "/auth/refresh-token",
           { refreshToken },
-          { headers: { "Content-Type": "application/json" }, timeout: 10000 }
+          { headers: { "Content-Type": "application/json" }, timeout: 10000 },
         );
 
         // Kiểm tra cấu trúc response
@@ -87,7 +111,7 @@ axiosInstance.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default axiosInstance;

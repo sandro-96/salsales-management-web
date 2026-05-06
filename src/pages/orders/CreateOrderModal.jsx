@@ -455,7 +455,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                                   {p.name}
                                 </p>
                                 {hasPromo && (
-                                  <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1 py-0 h-4 gap-0.5 shrink-0">
+                                  <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1 py-0 h-4 gap-0.5 shrink-0 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40">
                                     <Percent className="h-2.5 w-2.5" />
                                     {formatDiscount(promo)}
                                   </Badge>
@@ -526,7 +526,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                               {item.productName}
                             </span>
                             {item.hasDiscount && (
-                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1 py-0 h-4 shrink-0">
+                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1 py-0 h-4 shrink-0 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40">
                                 {item.promoLabel}
                               </Badge>
                             )}

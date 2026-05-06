@@ -21,11 +21,8 @@ import { PERM } from "@/constants/shopPermissions";
 export function AppSidebar({ navItems, ...props }) {
   const { user } = useAuth();
   const { shops, selectedShopId, isOwner, shopRole } = useShop();
-  const {
-    hasShopPermission,
-    hasAnyShopPermission,
-    hasAllShopPermissions,
-  } = useShopPermissions();
+  const { hasShopPermission, hasAnyShopPermission, hasAllShopPermissions } =
+    useShopPermissions();
   const permHelpers = React.useMemo(
     () => ({ hasShopPermission, hasAnyShopPermission, hasAllShopPermissions }),
     [hasShopPermission, hasAnyShopPermission, hasAllShopPermissions],
@@ -77,9 +74,9 @@ export function AppSidebar({ navItems, ...props }) {
       <SidebarContent>
         <NavMain items={mainNavItems} />
         {/* <NavDocuments items={data.documents} /> */}
-        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
+        <NavSecondary items={navSecondary} />
         <NavUser user={userData} />
       </SidebarFooter>
     </Sidebar>

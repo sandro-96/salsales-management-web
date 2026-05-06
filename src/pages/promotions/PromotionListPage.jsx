@@ -324,7 +324,7 @@ const PromotionListPage = () => {
               </DropdownMenuItem>
               {canDelete && (
                 <DropdownMenuItem
-                  className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                  className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
                   disabled={isSubmitting}
                   onClick={(e) => {
                     e.stopPropagation();

@@ -172,8 +172,8 @@ export default function AdminSecurityPage() {
               )}
 
               {enabled && (
-                <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4">
-                  <div className="flex items-center gap-2 text-sm text-amber-800">
+                <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/40 dark:bg-amber-500/10">
+                  <div className="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
                     <ShieldOff className="h-4 w-4" />
                     2FA đang bật. Nhập mã hiện tại để tắt.
                   </div>

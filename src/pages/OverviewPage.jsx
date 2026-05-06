@@ -62,11 +62,26 @@ const toISODate = (date) => {
 };
 
 const ORDER_STATUS_MAP = {
-  PENDING: { label: "Chờ xử lý", cls: "bg-amber-100 text-amber-800" },
-  CONFIRMED: { label: "Đã xác nhận", cls: "bg-blue-100 text-blue-800" },
-  SHIPPING: { label: "Đang giao", cls: "bg-violet-100 text-violet-800" },
-  COMPLETED: { label: "Hoàn tất", cls: "bg-emerald-100 text-emerald-800" },
-  CANCELLED: { label: "Đã hủy", cls: "bg-red-100 text-red-800" },
+  PENDING: {
+    label: "Chờ xử lý",
+    cls: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
+  },
+  CONFIRMED: {
+    label: "Đã xác nhận",
+    cls: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+  },
+  SHIPPING: {
+    label: "Đang giao",
+    cls: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
+  },
+  COMPLETED: {
+    label: "Hoàn tất",
+    cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+  },
+  CANCELLED: {
+    label: "Đã hủy",
+    cls: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
+  },
 };
 
 const RANGE_OPTIONS = [

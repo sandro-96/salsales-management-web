@@ -8,8 +8,8 @@ const Loading = ({ text = "Đang tải...", fullScreen = false }) => {
         fullScreen ? "min-h-screen" : "py-6"
       }`}
     >
-      <FaSpinner className="animate-spin text-blue-500 text-4xl mb-3" />
-      <p className="text-gray-700 font-medium">{text}</p>
+      <FaSpinner className="animate-spin text-blue-500 dark:text-blue-400 text-4xl mb-3" />
+      <p className="text-foreground font-medium">{text}</p>
     </div>
   );
 };

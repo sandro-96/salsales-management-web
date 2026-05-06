@@ -72,13 +72,13 @@ function subscriptionBadge(status) {
   switch (status) {
     case "TRIAL":
       return (
-        <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">
+        <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:hover:bg-sky-500/15">
           Trial
         </Badge>
       );
     case "ACTIVE":
       return (
-        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/15">
           Active
         </Badge>
       );
@@ -86,7 +86,7 @@ function subscriptionBadge(status) {
       return <Badge variant="destructive">Expired</Badge>;
     case "CANCELLED":
       return (
-        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200">
+        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700/50">
           Cancelled
         </Badge>
       );

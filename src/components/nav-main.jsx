@@ -7,12 +7,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 export function NavMain({ items }) {
   const navigate = useNavigate();
+  const { isMobile, setOpenMobile } = useSidebar();
   const currentPath = window.location.pathname;
 
   return (
@@ -24,6 +26,7 @@ export function NavMain({ items }) {
               key={item.label}
               onClick={() => {
                 navigate(item.to);
+                if (isMobile) setOpenMobile(false);
               }}
               className={cn(
                 "rounded-md",

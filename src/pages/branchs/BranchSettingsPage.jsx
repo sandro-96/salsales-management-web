@@ -240,8 +240,8 @@ const BranchSettingsPage = () => {
             <Badge
               className={`text-xs border ${
                 branch.active
-                  ? "bg-green-100 text-green-700 border-green-300"
-                  : "bg-gray-100 text-gray-500 border-gray-200"
+                  ? "bg-green-100 text-green-700 border-green-300 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40"
+                  : "bg-gray-100 text-gray-500 border-gray-200 dark:bg-muted dark:text-muted-foreground dark:border-border"
               }`}
             >
               {branch.active ? "Hoạt động" : "Tạm ngưng"}

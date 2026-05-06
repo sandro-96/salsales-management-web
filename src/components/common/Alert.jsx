@@ -5,10 +5,13 @@ import { motion as Motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, Info, AlertTriangle, XCircle } from "lucide-react";
 
 const alertStyles = {
-  success: "bg-green-100 text-green-800 border-green-400",
-  error: "bg-red-100 text-red-800 border-red-400",
-  info: "bg-blue-100 text-blue-800 border-blue-400",
-  warning: "bg-yellow-100 text-yellow-800 border-yellow-500",
+  success:
+    "bg-green-100 text-green-800 border-green-400 dark:bg-green-500/15 dark:text-green-200 dark:border-green-500/40",
+  error:
+    "bg-red-100 text-red-800 border-red-400 dark:bg-red-500/15 dark:text-red-200 dark:border-red-500/40",
+  info: "bg-blue-100 text-blue-800 border-blue-400 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-500/40",
+  warning:
+    "bg-yellow-100 text-yellow-800 border-yellow-500 dark:bg-yellow-500/15 dark:text-yellow-200 dark:border-yellow-500/40",
 };
 
 const positionStyles = {
@@ -19,10 +22,10 @@ const positionStyles = {
 };
 
 const alertIcons = {
-  success: <CheckCircle className="w-5 h-5 text-green-600" />,
-  error: <XCircle className="w-5 h-5 text-red-600" />,
-  info: <Info className="w-5 h-5 text-blue-600" />,
-  warning: <AlertTriangle className="w-5 h-5 text-yellow-600" />,
+  success: <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />,
+  error: <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />,
+  info: <Info className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
+  warning: <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />,
 };
 
 const Alert = ({
@@ -54,21 +57,21 @@ const Alert = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60"
         >
           <Motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className={`bg-white rounded-lg shadow-xl w-full max-w-md p-6 border-l-4 ${alertStyles[type]}`}
+            className={`bg-card text-card-foreground rounded-lg shadow-xl w-full max-w-md p-6 border-l-4 ${alertStyles[type]}`}
           >
             <div className="flex items-center gap-2 mb-4">
               {alertIcons[type]}
               <h3 className="text-lg font-semibold">{title}</h3>
             </div>
             {description && (
-              <p className="text-gray-700 text-sm">{description}</p>
+              <p className="text-muted-foreground text-sm">{description}</p>
             )}
             {children && <div className="mt-4">{children}</div>}
             <div className="flex justify-end gap-2 mt-4">
@@ -89,7 +92,7 @@ const Alert = ({
               ) : (
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600"
+                  className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500"
                 >
                   Đóng
                 </button>
@@ -111,7 +114,7 @@ const Alert = ({
               <div>
                 <div className="font-semibold">{title}</div>
                 {description && (
-                  <div className="text-sm text-gray-700 mt-1">
+                  <div className="text-sm opacity-90 mt-1">
                     {description}
                   </div>
                 )}

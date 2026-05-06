@@ -12,15 +12,15 @@ const ErrorPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
-                <h1 className="text-4xl font-bold text-red-600 mb-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-background text-foreground">
+            <div className="bg-card text-card-foreground p-8 rounded-lg shadow-lg text-center max-w-md border">
+                <h1 className="text-4xl font-bold text-red-600 dark:text-red-400 mb-4">
                     {error.status || "Lỗi"}
                 </h1>
-                <p className="text-gray-600 mb-6">{error.message}</p>
+                <p className="text-muted-foreground mb-6">{error.message}</p>
                 <button
                     onClick={() => navigate("/")}
-                    className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition duration-300"
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition duration-300 dark:bg-blue-600 dark:hover:bg-blue-500"
                 >
                     Quay lại Trang chủ
                 </button>

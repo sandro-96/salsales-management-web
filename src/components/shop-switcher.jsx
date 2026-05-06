@@ -22,13 +22,15 @@ import { useNavigate } from "react-router-dom";
 import { formatSubscriptionLine } from "@/constants/subscriptionStatus.js";
 
 export function ShopSwitcher() {
-  const { selectedShop, shops, setSelectedShop } = useShop();
+  const { selectedShop, shops, setSelectedShop, isOwner } = useShop();
   const navigate = useNavigate();
   if (!selectedShop) return null;
-  const selectedSubLine = formatSubscriptionLine(
-    selectedShop.subscriptionStatus,
-    selectedShop.subscriptionDaysRemaining,
-  );
+  const selectedSubLine = isOwner
+    ? formatSubscriptionLine(
+        selectedShop.subscriptionStatus,
+        selectedShop.subscriptionDaysRemaining,
+      )
+    : null;
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -61,7 +63,7 @@ export function ShopSwitcher() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-64 rounded-lg bg-background"
+            className="w-64 rounded-lg"
             align="start"
             side="bottom"
             sideOffset={4}
@@ -78,10 +80,12 @@ export function ShopSwitcher() {
               }}
             >
               {shops.map((shop, index) => {
-                const subLine = formatSubscriptionLine(
-                  shop.subscriptionStatus,
-                  shop.subscriptionDaysRemaining,
-                );
+                const subLine = isOwner
+                  ? formatSubscriptionLine(
+                      shop.subscriptionStatus,
+                      shop.subscriptionDaysRemaining,
+                    )
+                  : null;
                 return (
                 <DropdownMenuRadioItem
                   key={shop.id}
@@ -113,7 +117,7 @@ export function ShopSwitcher() {
               })}
             </DropdownMenuRadioGroup>
 
-            <DropdownMenuSeparator className="border-t border-muted-foreground" />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               className="gap-2 p-2"
               onSelect={() => {

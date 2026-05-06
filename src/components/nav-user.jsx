@@ -28,9 +28,14 @@ import { cn } from "@/lib/utils";
 
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
+  const { setOpenMobile } = useSidebar();
   const navigate = useNavigate();
   const { logout } = useAuth();
   const currentPath = window.location.pathname;
+
+  const closeSidebarIfMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <SidebarMenu>
@@ -57,7 +62,7 @@ export function NavUser({ user }) {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-56 rounded-lg bg-background"
+            className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-56 rounded-lg"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
@@ -78,11 +83,12 @@ export function NavUser({ user }) {
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator className="border-t border-muted-foreground" />
+            <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem
                 onSelect={() => {
                   navigate("accounts");
+                  closeSidebarIfMobile();
                 }}
                 className={cn(
                   currentPath === "/accounts" &&
@@ -95,6 +101,7 @@ export function NavUser({ user }) {
               <DropdownMenuItem
                 onSelect={() => {
                   navigate("billing");
+                  closeSidebarIfMobile();
                 }}
                 className={cn(
                   currentPath === "/billing" &&
@@ -107,6 +114,7 @@ export function NavUser({ user }) {
               <DropdownMenuItem
                 onSelect={() => {
                   navigate("notifications");
+                  closeSidebarIfMobile();
                 }}
                 className={cn(
                   currentPath === "/notifications" &&
@@ -117,10 +125,11 @@ export function NavUser({ user }) {
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator className="border-t border-muted-foreground" />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => {
                 logout();
+                closeSidebarIfMobile();
               }}
             >
               <LogOutIcon />

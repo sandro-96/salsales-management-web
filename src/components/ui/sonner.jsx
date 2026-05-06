@@ -1,10 +1,8 @@
-import { useTheme } from "next-themes"
+import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 
-const Toaster = ({
-  ...props
-}) => {
-  const { theme = "system" } = useTheme()
+const Toaster = ({ ...props }) => {
+  const { theme = "system" } = useTheme();
 
   return (
     <Sonner
@@ -14,11 +12,34 @@ const Toaster = ({
         {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)"
+          "--normal-border": "var(--border)",
+
+          "--success-bg":
+            "color-mix(in oklab, var(--success) 18%, var(--popover))",
+          "--success-text": "var(--popover-foreground)",
+          "--success-border":
+            "color-mix(in oklab, var(--success) 35%, var(--border))",
+
+          "--error-bg":
+            "color-mix(in oklab, var(--destructive) 16%, var(--popover))",
+          "--error-text": "var(--popover-foreground)",
+          "--error-border":
+            "color-mix(in oklab, var(--destructive) 35%, var(--border))",
+
+          "--warning-bg":
+            "color-mix(in oklab, var(--warning) 16%, var(--popover))",
+          "--warning-text": "var(--popover-foreground)",
+          "--warning-border":
+            "color-mix(in oklab, var(--warning) 35%, var(--border))",
+
+          "--info-bg": "color-mix(in oklab, var(--info) 16%, var(--popover))",
+          "--info-text": "var(--popover-foreground)",
+          "--info-border":
+            "color-mix(in oklab, var(--info) 35%, var(--border))",
         }
       }
       {...props} />
   );
-}
+};
 
-export { Toaster }
+export { Toaster };

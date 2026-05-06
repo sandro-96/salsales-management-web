@@ -80,13 +80,13 @@ function statusBadge(status) {
   switch (status) {
     case "TRIAL":
       return (
-        <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">
+        <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-500/20 dark:text-sky-200 dark:hover:bg-sky-500/20">
           Đang dùng thử
         </Badge>
       );
     case "ACTIVE":
       return (
-        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-200 dark:hover:bg-emerald-500/20">
           Đang hoạt động
         </Badge>
       );
@@ -94,7 +94,7 @@ function statusBadge(status) {
       return <Badge variant="destructive">Đã hết hạn</Badge>;
     case "CANCELLED":
       return (
-        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200">
+        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700/50">
           Đã huỷ
         </Badge>
       );
@@ -466,14 +466,14 @@ export default function BillingPage() {
   const displayTransfer = lastPaymentTransfer || transferPreview;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-4">
+    <div className="w-full p-4 space-y-4 md:max-w-5xl md:mx-auto">
       <div className="flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-semibold">Gói dịch vụ &amp; Thanh toán</h1>
       </div>
 
       {needsShopPick && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
             <AlertTriangle className="inline h-4 w-4 mr-1 align-text-bottom" />
             Bạn có nhiều shop — hãy <b>chọn shop</b> trên menu (góc trên) để xem và thanh toán
             đúng gói cho từng shop.
@@ -526,7 +526,7 @@ export default function BillingPage() {
             )}
           </div>
           {data?.shopId && selectedShop.id && data.shopId !== selectedShop.id ? (
-            <p className="text-xs text-amber-800 mt-2">
+            <p className="text-xs text-amber-800 dark:text-amber-300 mt-2">
               Dữ liệu gói chưa khớp shop đang chọn. Hãy tải lại trang hoặc đổi shop.
             </p>
           ) : null}
@@ -550,7 +550,7 @@ export default function BillingPage() {
             showCopyContent={!!lastPaymentTransfer?.transferContent}
           />
           {manualRefToReport && !pendingManualReportedAt && (
-              <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-sky-950">
+              <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-sky-950 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-100">
                 <p className="text-sm">
                   Sau khi <b>đã chuyển khoản</b> đúng số tiền và nội dung, hãy bấm nút
                   bên phải để báo admin đối soát — không thay thế xác nhận của admin.
@@ -560,7 +560,7 @@ export default function BillingPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="border-red-200 bg-white text-red-800 hover:bg-red-50 hover:text-red-900"
+                    className="border-red-200 bg-white text-red-800 hover:bg-red-50 hover:text-red-900 dark:border-red-500/40 dark:bg-transparent dark:text-red-200 dark:hover:bg-red-500/15 dark:hover:text-red-100"
                     disabled={cancellingTransfer || reportingTransfer}
                     onClick={onCancelPendingManual}
                   >
@@ -577,7 +577,7 @@ export default function BillingPage() {
                     type="button"
                     variant="default"
                     size="sm"
-                    className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+                    className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm dark:bg-emerald-500 dark:hover:bg-emerald-400"
                     disabled={reportingTransfer || cancellingTransfer}
                     onClick={onReportTransferSent}
                   >
@@ -597,7 +597,7 @@ export default function BillingPage() {
               </div>
             )}
           {pendingManualReportedAt && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-emerald-950">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
               <div>
                 <CheckCircle2 className="inline h-4 w-4 mr-1 align-text-bottom" />
                 Đã báo admin lúc {fmtDate(pendingManualReportedAt)}. Vui lòng chờ xác
@@ -608,7 +608,7 @@ export default function BillingPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="border-red-200 bg-white text-red-800 hover:bg-red-50 shrink-0"
+                  className="border-red-200 bg-white text-red-800 hover:bg-red-50 shrink-0 dark:border-red-500/40 dark:bg-transparent dark:text-red-200 dark:hover:bg-red-500/15"
                   disabled={cancellingTransfer}
                   onClick={onCancelPendingManual}
                 >
@@ -626,7 +626,7 @@ export default function BillingPage() {
           )}
         </div>
       ) : (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
           <AlertTriangle className="inline h-4 w-4 mr-1 align-text-bottom" />
           Chưa cấu hình tài khoản nhận (env{" "}
           <code className="text-xs">BILLING_ACCOUNT_NUMBER</code>,{" "}
@@ -684,7 +684,7 @@ export default function BillingPage() {
           </div>
 
           {(data?.status === "EXPIRED" || data?.status === "CANCELLED") && (
-            <div className="flex items-start gap-2 p-3 rounded-md bg-red-50 text-red-800 text-sm">
+            <div className="flex items-start gap-2 p-3 rounded-md bg-red-50 text-red-800 text-sm dark:bg-red-500/10 dark:text-red-200">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <p>
                 Các thao tác ghi (thêm/sửa/xoá đơn, sản phẩm, khách hàng…) đang
@@ -703,7 +703,7 @@ export default function BillingPage() {
           <Button
             disabled={paying}
             onClick={onPay}
-            className="min-w-[200px] bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
+            className="min-w-[200px] bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-400"
           >
             {paying ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />

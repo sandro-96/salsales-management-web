@@ -331,7 +331,7 @@ export function PosPageShell(props) {
             {filteredProducts.length} sản phẩm
           </Badge>
           {activePromotions.length > 0 && (
-            <Badge className="shrink-0 bg-emerald-100 text-emerald-800 border-emerald-200 gap-1">
+            <Badge className="shrink-0 bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40">
               <Tag className="h-3 w-3" />
               {activePromotions.length} KM
             </Badge>
@@ -535,7 +535,7 @@ export function PosPageShell(props) {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 text-emerald-700">
+              <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                 <CheckCircle2 className="h-5 w-5" />
               </span>
               Tạo đơn thành công
