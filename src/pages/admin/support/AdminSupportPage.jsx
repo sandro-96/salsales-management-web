@@ -40,14 +40,14 @@ import {
   adminGetTicketStats,
 } from "@/api/adminSupportApi.js";
 import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import TicketDetailModal from "@/pages/support/TicketDetailModal.jsx";
-
-const STATUS_MAP = {
-  OPEN: { label: "Mở", variant: "default" },
-  IN_PROGRESS: { label: "Đang xử lý", variant: "secondary" },
-  RESOLVED: { label: "Đã giải quyết", variant: "outline" },
-  CLOSED: { label: "Đã đóng", variant: "destructive" },
-};
+import {
+  TICKET_STATUS_MAP,
+  TICKET_LIST_WS_TYPES,
+  ticketStatusBadgeClass,
+} from "@/constants/supportTicketStatus.js";
+import { WebSocketMessageTypes } from "@/constants/websocket.js";
 
 const PRIORITY_MAP = {
   LOW: { label: "Thấp", className: "bg-gray-100 text-gray-800" },
@@ -76,6 +76,7 @@ const formatDate = (d) => {
 
 const AdminSupportPage = () => {
   const { user } = useAuth();
+  const { subscribe, connected } = useWebSocket();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [tickets, setTickets] = useState([]);
@@ -94,9 +95,9 @@ const AdminSupportPage = () => {
   const [assignedFilter, setAssignedFilter] = useState("all"); // all | mine
   const [keyword, setKeyword] = useState("");
 
-  const fetchTickets = useCallback(async () => {
-    setLoading(true);
+  const fetchTickets = useCallback(async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
       const params = {
         page: pagination.pageIndex,
         size: pagination.pageSize,
@@ -120,7 +121,7 @@ const AdminSupportPage = () => {
       console.error("Admin fetch tickets error:", err);
       toast.error("Không thể tải danh sách ticket.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [
     pagination,
@@ -141,8 +142,21 @@ const AdminSupportPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchTickets();
+    fetchTickets(false);
   }, [fetchTickets]);
+
+  /** Realtime: đổi trạng thái / reply / ticket mới → làm mới bảng + số liệu */
+  useEffect(() => {
+    if (!user?.id || !connected) return;
+    return subscribe(`/topic/notifications/${user.id}`, (message) => {
+      if (message.type !== WebSocketMessageTypes.NOTIFICATION || !message.data) return;
+      const d = message.data;
+      if (d.referenceType !== "TICKET") return;
+      if (!TICKET_LIST_WS_TYPES.has(d.type)) return;
+      fetchTickets(true);
+      fetchStats();
+    });
+  }, [user?.id, connected, subscribe, fetchTickets, fetchStats]);
 
   useEffect(() => {
     fetchStats();
@@ -204,8 +218,13 @@ const AdminSupportPage = () => {
         <DataTableColumnHeader column={column} title="Trạng thái" />
       ),
       cell: ({ row }) => {
-        const s = STATUS_MAP[row.original.status] || STATUS_MAP.OPEN;
-        return <Badge variant={s.variant}>{s.label}</Badge>;
+        const st = row.original.status;
+        const cfg = TICKET_STATUS_MAP[st] || TICKET_STATUS_MAP.OPEN;
+        return (
+          <Badge variant="outline" className={ticketStatusBadgeClass(st)}>
+            {cfg.label}
+          </Badge>
+        );
       },
       size: 120,
     },
@@ -285,10 +304,10 @@ const AdminSupportPage = () => {
   });
 
   const statCards = [
-    { key: "OPEN", label: "Đang mở", className: "text-blue-600" },
-    { key: "IN_PROGRESS", label: "Đang xử lý", className: "text-amber-600" },
-    { key: "RESOLVED", label: "Đã giải quyết", className: "text-emerald-600" },
-    { key: "CLOSED", label: "Đã đóng", className: "text-gray-500" },
+    { key: "OPEN", label: "Đang mở", className: "text-amber-700 dark:text-amber-400" },
+    { key: "IN_PROGRESS", label: "Đang xử lý", className: "text-sky-700 dark:text-sky-400" },
+    { key: "RESOLVED", label: "Đã giải quyết", className: "text-emerald-700 dark:text-emerald-400" },
+    { key: "CLOSED", label: "Đã đóng", className: "text-slate-600 dark:text-slate-400" },
   ];
 
   return (
@@ -334,7 +353,7 @@ const AdminSupportPage = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Tất cả trạng thái</SelectItem>
-            {Object.entries(STATUS_MAP).map(([k, v]) => (
+            {Object.entries(TICKET_STATUS_MAP).map(([k, v]) => (
               <SelectItem key={k} value={k}>
                 {v.label}
               </SelectItem>

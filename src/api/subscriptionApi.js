@@ -24,6 +24,10 @@ export const startSubscriptionPayment = (payload = {}) =>
 export const reportSubscriptionManualTransferSent = (payload = {}) =>
   axiosInstance.post(`${SUBSCRIPTION_API}/manual-transfer/reported`, payload);
 
+/** Shop huỷ giao dịch MANUAL đang chờ. payload: { providerTxnRef?: string } */
+export const cancelSubscriptionManualTransferPending = (payload = {}) =>
+  axiosInstance.post(`${SUBSCRIPTION_API}/manual-transfer/cancel`, payload);
+
 /**
  * Lịch sử thanh toán + thay đổi gói của shop.
  */

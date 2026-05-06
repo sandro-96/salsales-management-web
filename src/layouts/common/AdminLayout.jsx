@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   LifeBuoy,
@@ -29,6 +29,7 @@ import NotificationBell from "@/components/common/NotificationBell";
 import ImpersonationBanner from "@/components/common/ImpersonationBanner";
 import { getNotifications } from "@/api/notificationApi.js";
 import { ADMIN_PERM } from "@/constants/adminPermissions";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   {
@@ -87,6 +88,52 @@ const NAV_ITEMS = [
     icon: ShieldCheck,
   },
 ];
+
+/** Khớp menu admin với pathname (ổn định với RR7; NavLink isActive đôi khi sai với một số path). */
+function adminNavPathActive(pathname, to, end) {
+  const base = to === "/" ? "/" : to.replace(/\/$/, "");
+  if (end) return pathname === base;
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+function AdminSidebarNavLink({
+  to,
+  label,
+  end,
+  badgeKey,
+  badges,
+  className,
+  labelClassName,
+}) {
+  const { pathname } = useLocation();
+  const active = adminNavPathActive(pathname, to, end);
+  return (
+    <Link
+      to={to}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        className,
+        active
+          ? "bg-accent text-accent-foreground"
+          : "text-foreground hover:bg-muted",
+      )}
+    >
+      <span
+        className={["flex-1", labelClassName].filter(Boolean).join(" ")}
+      >
+        {label}
+      </span>
+      {badgeKey && badges[badgeKey] > 0 && (
+        <Badge
+          variant="destructive"
+          className="h-5 px-1.5 text-[10px] shrink-0"
+        >
+          {badges[badgeKey] > 99 ? "99+" : badges[badgeKey]}
+        </Badge>
+      )}
+    </Link>
+  );
+}
 
 /**
  * Đếm nhanh số notification TICKET_* chưa đọc để hiện badge
@@ -163,29 +210,15 @@ const AdminLayout = () => {
           </div>
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             {visibleNav.map(({ to, label, end, badgeKey }) => (
-              <NavLink
+              <AdminSidebarNavLink
                 key={to}
                 to={to}
+                label={label}
                 end={end}
-                className={({ isActive }) =>
-                  [
-                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-muted",
-                  ].join(" ")
-                }
-              >
-                <span className="flex-1">{label}</span>
-                {badgeKey && badges[badgeKey] > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="h-5 px-1.5 text-[10px]"
-                  >
-                    {badges[badgeKey] > 99 ? "99+" : badges[badgeKey]}
-                  </Badge>
-                )}
-              </NavLink>
+                badgeKey={badgeKey}
+                badges={badges}
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors"
+              />
             ))}
           </nav>
 
@@ -227,28 +260,15 @@ const AdminLayout = () => {
                   <nav className="flex-1 min-h-0 p-3 space-y-1 overflow-y-auto">
                     {visibleNav.map(({ to, label, end, badgeKey }) => (
                       <SheetClose asChild key={to}>
-                        <NavLink
+                        <AdminSidebarNavLink
                           to={to}
+                          label={label}
                           end={end}
-                          className={({ isActive }) =>
-                            [
-                              "w-full flex items-center gap-3 rounded-md px-3 h-10 text-sm transition-colors",
-                              isActive
-                                ? "bg-primary text-primary-foreground"
-                                : "text-foreground hover:bg-muted",
-                            ].join(" ")
-                          }
-                        >
-                          <span className="flex-1 truncate">{label}</span>
-                          {badgeKey && badges[badgeKey] > 0 && (
-                            <Badge
-                              variant="destructive"
-                              className="h-5 px-1.5 text-[10px] shrink-0"
-                            >
-                              {badges[badgeKey] > 99 ? "99+" : badges[badgeKey]}
-                            </Badge>
-                          )}
-                        </NavLink>
+                          badgeKey={badgeKey}
+                          badges={badges}
+                          labelClassName="truncate"
+                          className="w-full flex items-center gap-3 rounded-md px-3 h-10 text-sm transition-colors"
+                        />
                       </SheetClose>
                     ))}
                   </nav>

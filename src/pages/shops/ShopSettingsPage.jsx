@@ -83,11 +83,13 @@ function subscriptionPillLabel(sub) {
 const ShopSettingsPage = () => {
   const { confirm } = useAlertDialog();
   const { enums } = useAuth();
-  const { selectedShop, setSelectedShop, fetchShops } = useShop();
+  const { selectedShop, setSelectedShop, fetchShops, isOwner, shopRole } =
+    useShop();
   const { data: subscription } = useSubscription();
   const { hasShopPermission } = useShopPermissions();
   const canManageTax = hasShopPermission(PERM.SHOP_UPDATE);
   const canDeleteShop = hasShopPermission(PERM.SHOP_DELETE);
+  const showSubscriptionStatus = isOwner || shopRole === "MANAGER";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const navigate = useNavigate();
@@ -343,19 +345,21 @@ const ShopSettingsPage = () => {
                     <XCircle className="h-2.5 w-2.5" /> Tạm ngưng
                   </Badge>
                 )}
-                <Link to="/billing" className="contents">
-                  <Badge
-                    className={`text-[10px] gap-0.5 cursor-pointer ${subscriptionPillCls}`}
-                    title="Xem chi tiết gói dịch vụ"
-                  >
-                    {subscription?.status === "ACTIVE" ? (
-                      <CreditCard className="h-2.5 w-2.5" />
-                    ) : (
-                      <Clock className="h-2.5 w-2.5" />
-                    )}
-                    {subscriptionPillLabel(subscription)}
-                  </Badge>
-                </Link>
+                {showSubscriptionStatus && (
+                  <Link to="/billing" className="contents">
+                    <Badge
+                      className={`text-[10px] gap-0.5 cursor-pointer ${subscriptionPillCls}`}
+                      title="Xem chi tiết gói dịch vụ"
+                    >
+                      {subscription?.status === "ACTIVE" ? (
+                        <CreditCard className="h-2.5 w-2.5" />
+                      ) : (
+                        <Clock className="h-2.5 w-2.5" />
+                      )}
+                      {subscriptionPillLabel(subscription)}
+                    </Badge>
+                  </Link>
+                )}
                 {selectedShop.slug && (
                   <Badge
                     variant="outline"

@@ -945,6 +945,15 @@ export default function ProductForm({
   const watchedUnit = watch("unit");
   const watchedActive = watch("active");
   const watchedTrackInventory = watch("trackInventory");
+  const watchedSellByWeight = watch("sellByWeight");
+
+  // SP bán theo cân mặc định không theo dõi tồn kho
+  useEffect(() => {
+    if (isReadOnly) return;
+    if (watchedSellByWeight && watchedTrackInventory) {
+      form.setValue("trackInventory", false, { shouldDirty: true });
+    }
+  }, [watchedSellByWeight, watchedTrackInventory, form, isReadOnly]);
 
   // Persist last used category, unit, active & trackInventory for create mode
   useEffect(() => {
@@ -1519,7 +1528,7 @@ export default function ProductForm({
                 <Switch
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  disabled={isReadOnly}
+                  disabled={isReadOnly || watchedSellByWeight}
                 />
               </FormControl>
             </div>
@@ -1527,6 +1536,12 @@ export default function ProductForm({
               <p className="text-xs text-muted-foreground pl-0 max-w-xl">
                 Bật để nhập tồn kho, ngưỡng cảnh báo và hạn sử dụng theo chi
                 nhánh.
+              </p>
+            )}
+            {!isReadOnly && watchedSellByWeight && (
+              <p className="text-xs text-muted-foreground pl-0 max-w-xl">
+                Sản phẩm bán theo cân/trọng lượng sẽ <b>không theo dõi tồn kho</b>{" "}
+                theo mặc định.
               </p>
             )}
           </FormItem>

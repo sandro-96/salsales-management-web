@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
+import { useShop } from "@/hooks/useShop.js";
 import {
   flexRender,
   getCoreRowModel,
@@ -57,6 +58,9 @@ export default function BranchProductPanel({
   branchId,
   onCountChange,
 }) {
+  const { isOwner, shopRole } = useShop();
+  const canEditBranchPricing = isOwner || shopRole === "MANAGER";
+
   const [products, setProducts] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -237,6 +241,7 @@ export default function BranchProductPanel({
           <div onClick={(e) => e.stopPropagation()}>
             <Switch
               checked={!!(product.activeInBranch ?? product.active)}
+              disabled={!canEditBranchPricing}
               onCheckedChange={() => handleToggleActive(product)}
             />
           </div>
@@ -248,6 +253,11 @@ export default function BranchProductPanel({
       enableHiding: false,
       cell: ({ row }) => {
         const product = row.original;
+        if (!canEditBranchPricing) {
+          return (
+            <span className="text-xs text-muted-foreground tabular-nums">—</span>
+          );
+        }
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -346,8 +356,14 @@ export default function BranchProductPanel({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="cursor-pointer"
-                  onClick={() => handleOpenEdit(row.original)}
+                  className={
+                    canEditBranchPricing ? "cursor-pointer" : undefined
+                  }
+                  onClick={
+                    canEditBranchPricing
+                      ? () => handleOpenEdit(row.original)
+                      : undefined
+                  }
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

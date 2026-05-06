@@ -53,6 +53,7 @@ import {
 import Loading from "@/components/loading/Loading";
 
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
+import { useAlertDialog } from "@/hooks/useAlertDialog";
 import { ADMIN_PERM } from "@/constants/adminPermissions";
 import {
   getAdminBillingOverview,
@@ -153,6 +154,7 @@ function actionBadge(action) {
 
 export default function AdminBillingPage() {
   const navigate = useNavigate();
+  const { confirm } = useAlertDialog();
   const { hasAdminPermission, loading: permLoading } = useAdminPermissions();
   const canView = hasAdminPermission(ADMIN_PERM.BILLING_VIEW);
 
@@ -183,7 +185,40 @@ export default function AdminBillingPage() {
 
   // Resync with gateway — track per-row loading state by txn id.
   const [resyncingId, setResyncingId] = useState(null);
+  const [cancellingManualTxnId, setCancellingManualTxnId] = useState(null);
   const canManage = hasAdminPermission(ADMIN_PERM.BILLING_MANAGE);
+
+  const ADMIN_CANCEL_MANUAL_REASON =
+    "Admin huỷ trạng thái chờ xác nhận chuyển khoản";
+
+  const handleCancelManualPending = async (t) => {
+    if (!t?.id || cancellingManualTxnId) return;
+    const shopLabel = t.shopName || t.shopId || "—";
+    const ok = await confirm(
+      `Huỷ giao dịch chuyển khoản đang chờ xác nhận? Mã: ${t.providerTxnRef ?? "—"}. Shop: ${shopLabel}.`,
+      {
+        title: "Huỷ chờ xác nhận chuyển khoản",
+        confirmText: "Huỷ",
+        cancelText: "Đóng",
+        variant: "destructive",
+      },
+    );
+    if (!ok) return;
+    setCancellingManualTxnId(t.id);
+    try {
+      await resolveAdminPaymentTransaction(t.id, {
+        status: "CANCELLED",
+        reason: ADMIN_CANCEL_MANUAL_REASON,
+      });
+      toast.success("Đã huỷ giao dịch chờ xác nhận.");
+      loadTxns();
+      loadOverview();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Không huỷ được.");
+    } finally {
+      setCancellingManualTxnId(null);
+    }
+  };
 
   const handleResync = async (txnId) => {
     if (!txnId || resyncingId) return;
@@ -754,6 +789,23 @@ export default function AdminBillingPage() {
                                   title="Gọi gateway để tra trạng thái thực tế"
                                 >
                                   {resyncingId === t.id ? "Đang…" : "Resync"}
+                                </Button>
+                              )}
+                              {t.gateway === "MANUAL" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-red-200 text-red-800 hover:bg-red-50"
+                                  disabled={cancellingManualTxnId === t.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCancelManualPending(t);
+                                  }}
+                                  title="Đóng yêu cầu CK chờ shop — không gọi được gateway"
+                                >
+                                  {cancellingManualTxnId === t.id
+                                    ? "Đang…"
+                                    : "Huỷ chờ xác nhận"}
                                 </Button>
                               )}
                               <Button

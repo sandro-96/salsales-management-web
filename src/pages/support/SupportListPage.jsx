@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
@@ -44,13 +46,12 @@ import { DataTablePagination } from "@/components/table/DataTablePagination.jsx"
 import { getTickets, getMyTickets, deleteTicket } from "../../api/supportApi.js";
 import CreateTicketModal from "./CreateTicketModal.jsx";
 import TicketDetailModal from "./TicketDetailModal.jsx";
-
-const STATUS_MAP = {
-  OPEN: { label: "Mở", variant: "default" },
-  IN_PROGRESS: { label: "Đang xử lý", variant: "secondary" },
-  RESOLVED: { label: "Đã giải quyết", variant: "outline" },
-  CLOSED: { label: "Đã đóng", variant: "destructive" },
-};
+import {
+  TICKET_STATUS_MAP,
+  TICKET_LIST_WS_TYPES,
+  ticketStatusBadgeClass,
+} from "@/constants/supportTicketStatus.js";
+import { WebSocketMessageTypes } from "@/constants/websocket.js";
 
 const PRIORITY_MAP = {
   LOW: { label: "Thấp", className: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
@@ -75,6 +76,8 @@ const formatDate = (d) => {
 };
 
 const SupportListPage = () => {
+  const { user } = useAuth();
+  const { subscribe, connected } = useWebSocket();
   const { selectedShopId, isOwner, shopRole } = useShop();
   const shopId = selectedShopId;
   const isManager = isOwner || shopRole === "MANAGER";
@@ -114,10 +117,10 @@ const SupportListPage = () => {
   const [keyword, setKeyword] = useState("");
   const [viewMode, setViewMode] = useState("all"); // "all" for managers, "my" for staff
 
-  const fetchTickets = useCallback(async () => {
+  const fetchTickets = useCallback(async (silent = false) => {
     if (!shopId) return;
-    setLoading(true);
     try {
+      if (!silent) setLoading(true);
       const params = {
         page: pagination.pageIndex,
         size: pagination.pageSize,
@@ -142,13 +145,26 @@ const SupportListPage = () => {
       console.error("Fetch tickets error:", err);
       toast.error("Không thể tải danh sách ticket.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [shopId, pagination, statusFilter, categoryFilter, keyword, viewMode, isManager]);
 
   useEffect(() => {
-    fetchTickets();
+    fetchTickets(false);
   }, [fetchTickets]);
+
+  /** Danh sách ticket cập nhật realtime khi có thông báo WS (đổi trạng thái / reply). */
+  useEffect(() => {
+    if (!shopId || !user?.id || !connected) return;
+    return subscribe(`/topic/notifications/${user.id}`, (message) => {
+      if (message.type !== WebSocketMessageTypes.NOTIFICATION || !message.data) return;
+      const d = message.data;
+      if (d.referenceType !== "TICKET") return;
+      if (!TICKET_LIST_WS_TYPES.has(d.type)) return;
+      if (d.shopId && d.shopId !== shopId) return;
+      fetchTickets(true);
+    });
+  }, [shopId, user?.id, connected, subscribe, fetchTickets]);
 
   const handleDelete = async (ticket) => {
     const ok = await confirm(
@@ -192,8 +208,13 @@ const SupportListPage = () => {
       accessorKey: "status",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Trạng thái" />,
       cell: ({ row }) => {
-        const s = STATUS_MAP[row.original.status] || STATUS_MAP.OPEN;
-        return <Badge variant={s.variant}>{s.label}</Badge>;
+        const st = row.original.status;
+        const cfg = TICKET_STATUS_MAP[st] || TICKET_STATUS_MAP.OPEN;
+        return (
+          <Badge variant="outline" className={ticketStatusBadgeClass(st)}>
+            {cfg.label}
+          </Badge>
+        );
       },
       size: 130,
     },
@@ -231,28 +252,47 @@ const SupportListPage = () => {
     {
       id: "actions",
       cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleOpenDetail(row.original)}>
-              Xem chi tiết
-            </DropdownMenuItem>
-            {isManager && (
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => handleDelete(row.original)}
+        <div
+          className="flex justify-end"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
               >
-                Xóa
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.stopPropagation();
+                  handleOpenDetail(row.original);
+                }}
+              >
+                Xem chi tiết
               </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {isManager && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={(e) => {
+                    e.stopPropagation();
+                    handleDelete(row.original);
+                  }}
+                >
+                  Xóa
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
       size: 60,
     },
@@ -300,7 +340,7 @@ const SupportListPage = () => {
           <SelectTrigger className="w-40"><SelectValue placeholder="Trạng thái" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Tất cả trạng thái</SelectItem>
-            {Object.entries(STATUS_MAP).map(([k, v]) => (
+            {Object.entries(TICKET_STATUS_MAP).map(([k, v]) => (
               <SelectItem key={k} value={k}>{v.label}</SelectItem>
             ))}
           </SelectContent>

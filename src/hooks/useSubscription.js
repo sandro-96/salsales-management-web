@@ -2,17 +2,21 @@ import { useCallback, useEffect, useState } from "react";
 import { getCurrentSubscription } from "@/api/subscriptionApi";
 
 /**
- * Fetch subscription của shop hiện tại. Tự refetch khi focus tab hoặc khi gọi refresh().
- * Trả về { data, loading, error, refresh }.
+ * Fetch subscription của shop hiện tại.
+ * @param {boolean} enabled
+ * @param {boolean} refetchOnWindowFocus — mặc định false (tránh reload khi đổi tab/cửa sổ).
  */
-export function useSubscription({ enabled = true } = {}) {
+export function useSubscription({
+  enabled = true,
+  refetchOnWindowFocus = false,
+} = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(Boolean(enabled));
   const [error, setError] = useState(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await getCurrentSubscription();
       const payload = res?.data?.data ?? res?.data ?? null;
       setData(payload);
@@ -20,17 +24,21 @@ export function useSubscription({ enabled = true } = {}) {
     } catch (err) {
       setError(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (!enabled) return;
-    load();
-    const onFocus = () => load();
+    load(false);
+  }, [enabled, load]);
+
+  useEffect(() => {
+    if (!enabled || !refetchOnWindowFocus) return;
+    const onFocus = () => load(true);
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [enabled, load]);
+  }, [enabled, refetchOnWindowFocus, load]);
 
   return { data, loading, error, refresh: load };
 }

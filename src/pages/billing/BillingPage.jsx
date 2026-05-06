@@ -30,11 +30,16 @@ import {
 } from "@/components/ui/table";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useShop } from "@/hooks/useShop";
+import { useAlertDialog } from "@/hooks/useAlertDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { WebSocketMessageTypes } from "@/constants/websocket.js";
 import {
   getSubscriptionHistory,
   getSubscriptionTransferInfo,
   startSubscriptionPayment,
   reportSubscriptionManualTransferSent,
+  cancelSubscriptionManualTransferPending,
 } from "@/api/subscriptionApi";
 import { toast } from "sonner";
 import { SHOP_ROLE_LABELS } from "@/constants/shopRoles.js";
@@ -43,6 +48,13 @@ import { SHOP_ROLE_LABELS } from "@/constants/shopRoles.js";
 const GATEWAY_OPTIONS = [
   { value: "MANUAL", label: "Chuyển khoản — admin xác nhận" },
 ];
+
+/** Push WS từ server khi có thông báo billing (NotificationType). */
+const BILLING_REFRESH_WS_TYPES = new Set([
+  "BILLING_PAYMENT_SUCCESS",
+  "BILLING_PAYMENT_FAILED",
+  "BILLING_MANUAL_TRANSFER_PENDING",
+]);
 
 function fmtVnd(v) {
   if (v == null) return "—";
@@ -193,6 +205,9 @@ function TransferBlock({ title, info, showCopyContent }) {
 }
 
 export default function BillingPage() {
+  const { confirm } = useAlertDialog();
+  const { user } = useAuth();
+  const { subscribe, connected } = useWebSocket();
   const { selectedShopId, selectedShop, shops, isShopContextReady } = useShop();
   const needsShopPick =
     isShopContextReady &&
@@ -211,17 +226,19 @@ export default function BillingPage() {
   /** Mã MANUAL vừa tạo trong phiên (trước khi /me kịp có pendingManualProviderTxnRef). */
   const [lastCreatedTxnRef, setLastCreatedTxnRef] = useState(null);
   const [reportingTransfer, setReportingTransfer] = useState(false);
+  const [cancellingTransfer, setCancellingTransfer] = useState(false);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (opts) => {
+    const silent = opts?.silent === true;
     try {
-      setHistoryLoading(true);
+      if (!silent) setHistoryLoading(true);
       const res = await getSubscriptionHistory();
       const items = res?.data?.data ?? res?.data ?? [];
       setHistory(Array.isArray(items) ? items : []);
     } catch {
       setHistory([]);
     } finally {
-      setHistoryLoading(false);
+      if (!silent) setHistoryLoading(false);
     }
   }, [selectedShopId]);
 
@@ -251,6 +268,53 @@ export default function BillingPage() {
     loadHistory();
   }, [selectedShopId, isShopContextReady, needsShopPick, refresh, loadHistory]);
 
+  /** Chủ shop nhận WS /topic/notifications/{userId} khi có thanh toán — làm mới lịch sử ngay. */
+  useEffect(() => {
+    if (!user?.id || !connected || !isShopContextReady || needsShopPick) return;
+    return subscribe(`/topic/notifications/${user.id}`, (message) => {
+      if (message.type !== WebSocketMessageTypes.NOTIFICATION || !message.data) return;
+      const t = message.data.type;
+      if (!BILLING_REFRESH_WS_TYPES.has(t)) return;
+      const sid = message.data.shopId;
+      if (selectedShopId && sid && sid !== selectedShopId) return;
+      refresh(true);
+      loadHistory({ silent: true });
+    });
+  }, [
+    user?.id,
+    connected,
+    subscribe,
+    selectedShopId,
+    needsShopPick,
+    isShopContextReady,
+    refresh,
+    loadHistory,
+  ]);
+
+  /** Đang chờ CK / chờ admin → poll nhanh hơn; còn không → vẫn poll nhẹ để bắt hủy phía admin. */
+  const pendingManualRef = data?.pendingManualProviderTxnRef;
+  const pendingManualReportedAt = data?.pendingManualShopReportedAt;
+  const waitingBillingSync = Boolean(
+    pendingManualRef || lastCreatedTxnRef || pendingManualReportedAt,
+  );
+
+  useEffect(() => {
+    if (!isShopContextReady || needsShopPick) return;
+    const intervalMs = waitingBillingSync ? 18000 : 42000;
+    const id = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      refresh(true);
+      loadHistory({ silent: true });
+    }, intervalMs);
+    return () => clearInterval(id);
+  }, [
+    isShopContextReady,
+    needsShopPick,
+    waitingBillingSync,
+    refresh,
+    loadHistory,
+  ]);
+
   // Xử lý redirect từ VNPay / MoMo về /billing (nếu bật lại sau này)
   useEffect(() => {
     const callback = parsePaymentCallback(window.location.search);
@@ -264,7 +328,8 @@ export default function BillingPage() {
         `Thanh toán ${callback.gateway} thất bại (mã ${callback.code}). Vui lòng thử lại hoặc chọn phương thức khác.`,
       );
     }
-    refresh();
+    refresh(true);
+    loadHistory({ silent: true });
     const url = new URL(window.location.href);
     const keysToStrip = [
       "vnp_Amount", "vnp_BankCode", "vnp_BankTranNo", "vnp_CardType",
@@ -278,7 +343,7 @@ export default function BillingPage() {
     ];
     keysToStrip.forEach((k) => url.searchParams.delete(k));
     window.history.replaceState({}, document.title, url.pathname + url.search);
-  }, [refresh]);
+  }, [refresh, loadHistory]);
 
   const keyDate = useMemo(() => {
     if (!data) return null;
@@ -294,9 +359,39 @@ export default function BillingPage() {
         ? data.periodDaysRemaining
         : 0;
 
-  const pendingManualRef = data?.pendingManualProviderTxnRef;
-  const pendingManualReportedAt = data?.pendingManualShopReportedAt;
   const manualRefToReport = pendingManualRef || lastCreatedTxnRef;
+
+  const onCancelPendingManual = async () => {
+    if (!manualRefToReport) return;
+    const ok = await confirm(
+      "Huỷ yêu cầu chuyển khoản đang chờ xác nhận? Sau đó bạn có thể tạo mã thanh toán mới.",
+      {
+        title: "Huỷ yêu cầu chờ xác nhận",
+        confirmText: "Huỷ yêu cầu",
+        cancelText: "Đóng",
+        variant: "destructive",
+      },
+    );
+    if (!ok) return;
+    try {
+      setCancellingTransfer(true);
+      await cancelSubscriptionManualTransferPending({
+        providerTxnRef: manualRefToReport,
+      });
+      setLastPaymentTransfer(null);
+      setLastCreatedTxnRef(null);
+      await refresh();
+      await loadHistory();
+      toast.success("Đã huỷ yêu cầu chờ xác nhận.");
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message ||
+          "Không huỷ được. Thử lại hoặc liên hệ hỗ trợ.",
+      );
+    } finally {
+      setCancellingTransfer(false);
+    }
+  };
 
   const onReportTransferSent = async () => {
     if (!manualRefToReport) return;
@@ -311,6 +406,7 @@ export default function BillingPage() {
       }
       setLastCreatedTxnRef(null);
       await refresh();
+      await loadHistory();
       toast.success(
         "Đã ghi nhận: bạn đã chuyển khoản. Admin sẽ đối soát và xác nhận sớm nhất.",
       );
@@ -459,33 +555,73 @@ export default function BillingPage() {
                   Sau khi <b>đã chuyển khoản</b> đúng số tiền và nội dung, hãy bấm nút
                   bên phải để báo admin đối soát — không thay thế xác nhận của admin.
                 </p>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  className="shrink-0"
-                  disabled={reportingTransfer}
-                  onClick={onReportTransferSent}
-                >
-                  {reportingTransfer ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Đang gửi…
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Tôi đã chuyển khoản
-                    </>
-                  )}
-                </Button>
+                <div className="flex flex-wrap gap-2 shrink-0 justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-red-200 bg-white text-red-800 hover:bg-red-50 hover:text-red-900"
+                    disabled={cancellingTransfer || reportingTransfer}
+                    onClick={onCancelPendingManual}
+                  >
+                    {cancellingTransfer ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Đang huỷ…
+                      </>
+                    ) : (
+                      "Huỷ yêu cầu chờ"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+                    disabled={reportingTransfer || cancellingTransfer}
+                    onClick={onReportTransferSent}
+                  >
+                    {reportingTransfer ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Đang gửi…
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Tôi đã chuyển khoản
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
           {pendingManualReportedAt && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-2 text-sm text-emerald-950">
-              <CheckCircle2 className="inline h-4 w-4 mr-1 align-text-bottom" />
-              Đã báo admin lúc {fmtDate(pendingManualReportedAt)}. Vui lòng chờ xác
-              nhận (thường trong giờ hành chính).
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-emerald-950">
+              <div>
+                <CheckCircle2 className="inline h-4 w-4 mr-1 align-text-bottom" />
+                Đã báo admin lúc {fmtDate(pendingManualReportedAt)}. Vui lòng chờ xác
+                nhận (thường trong giờ hành chính).
+              </div>
+              {manualRefToReport ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-red-200 bg-white text-red-800 hover:bg-red-50 shrink-0"
+                  disabled={cancellingTransfer}
+                  onClick={onCancelPendingManual}
+                >
+                  {cancellingTransfer ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang huỷ…
+                    </>
+                  ) : (
+                    "Huỷ chờ xác nhận"
+                  )}
+                </Button>
+              ) : null}
             </div>
           )}
         </div>
@@ -564,7 +700,11 @@ export default function BillingPage() {
               {GATEWAY_OPTIONS[0].label}
             </span>
           </div>
-          <Button disabled={paying} onClick={onPay} className="min-w-[200px]">
+          <Button
+            disabled={paying}
+            onClick={onPay}
+            className="min-w-[200px] bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
+          >
             {paying ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (

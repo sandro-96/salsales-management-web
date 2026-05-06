@@ -22,7 +22,8 @@ export default function BranchPricesTab({
   focusBranchId,
   onSuccess,
 }) {
-  const { branches } = useShop();
+  const { branches, isOwner, shopRole } = useShop();
+  const canEditBranchPricing = isOwner || shopRole === "MANAGER";
 
   const [rowsMap, setRowsMap] = useState({});
   const [drafts, setDrafts] = useState({});
@@ -124,6 +125,7 @@ export default function BranchPricesTab({
   };
 
   const handleSave = async (branchId) => {
+    if (!canEditBranchPricing) return;
     const row = rowsMap[branchId];
     if (!row?.id) return;
 
@@ -241,6 +243,11 @@ export default function BranchPricesTab({
 
   return (
     <div className="flex flex-col gap-3">
+      {!canEditBranchPricing && (
+        <p className="text-xs text-muted-foreground rounded-md border bg-muted/40 px-3 py-2">
+          Chỉ chủ shop và quản lý được chỉnh giá sản phẩm tại chi nhánh.
+        </p>
+      )}
       {/* Shop defaults summary — only show when viewing all branches */}
       {!focusBranchId && (
         <p className="text-sm text-muted-foreground">
@@ -289,6 +296,7 @@ export default function BranchPricesTab({
                     </span>
                     <Switch
                       checked={draft.activeInBranch}
+                      disabled={!canEditBranchPricing}
                       onCheckedChange={(val) =>
                         setDraftField(branch.id, "activeInBranch", val)
                       }
@@ -307,6 +315,7 @@ export default function BranchPricesTab({
                       value={draft.price}
                       onChange={(v) => setDraftField(branch.id, "price", v)}
                       suffix=" ₫"
+                      disabled={!canEditBranchPricing}
                     />
                     <Field
                       label="Giá vốn tại chi nhánh"
@@ -316,6 +325,7 @@ export default function BranchPricesTab({
                         setDraftField(branch.id, "branchCostPrice", v)
                       }
                       suffix=" ₫"
+                      disabled={!canEditBranchPricing}
                     />
                     <Field
                       label="Giá khuyến mãi"
@@ -325,6 +335,7 @@ export default function BranchPricesTab({
                         setDraftField(branch.id, "discountPrice", v)
                       }
                       suffix=" ₫"
+                      disabled={!canEditBranchPricing}
                     />
                     <Field
                       label="Giảm giá (%)"
@@ -335,6 +346,7 @@ export default function BranchPricesTab({
                         setDraftField(branch.id, "discountPercentage", v)
                       }
                       suffix=" %"
+                      disabled={!canEditBranchPricing}
                     />
                   </div>
 
@@ -373,6 +385,7 @@ export default function BranchPricesTab({
                                   }));
                                 }}
                                 suffix=" ₫"
+                                disabled={!canEditBranchPricing}
                               />
                             );
                           })}
@@ -388,6 +401,7 @@ export default function BranchPricesTab({
                     <Input
                       placeholder="Lý do thay đổi giá (không bắt buộc)"
                       value={draft.reason}
+                      disabled={!canEditBranchPricing}
                       onChange={(e) =>
                         setDraftField(branch.id, "reason", e.target.value)
                       }
@@ -398,7 +412,9 @@ export default function BranchPricesTab({
                     <Button
                       size="sm"
                       variant="success"
-                      disabled={!dirty || isSaving}
+                      disabled={
+                        !dirty || isSaving || !canEditBranchPricing
+                      }
                       onClick={() => handleSave(branch.id)}
                     >
                       {isSaving ? (
@@ -497,7 +513,15 @@ export default function BranchPricesTab({
 }
 
 // ── Small helper ─────────────────────────────────────────────────────────────
-function Field({ label, value, onChange, placeholder = "", max, suffix = "" }) {
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder = "",
+  max,
+  suffix = "",
+  disabled,
+}) {
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs text-muted-foreground font-medium">
@@ -509,6 +533,7 @@ function Field({ label, value, onChange, placeholder = "", max, suffix = "" }) {
         value={value}
         onChange={onChange}
         suffix={suffix}
+        disabled={disabled}
       />
     </div>
   );

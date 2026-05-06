@@ -109,6 +109,16 @@ const AccountPage = () => {
 
   const countryCode = watch("countryCode");
 
+  const refreshUserSnapshot = useCallback(async () => {
+    try {
+      const res = await getCurrentUser();
+      const data = res.data?.data ?? res.data;
+      if (data) setUser(data);
+    } catch {
+      /* bỏ qua — không chặn UI sau đổi MK */
+    }
+  }, []);
+
   const loadUser = useCallback(async () => {
     try {
       setLoading(true);
@@ -173,15 +183,25 @@ const AccountPage = () => {
     }
   };
 
+  /** Backend chỉ set false cho tài khoản chỉ Google; undefined = API cũ → vẫn bắt MK hiện tại */
+  const requiresCurrentPassword = user?.passwordSet !== false;
+  const googleOnlyNoPassword = user?.passwordSet === false;
+
   const onPasswordSubmit = async (data) => {
     try {
       setIsSubmitting(true);
-      await changePassword({
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
-      });
-      toast.success("Đổi mật khẩu thành công!");
+      const payload = { newPassword: data.newPassword };
+      if (requiresCurrentPassword) {
+        payload.currentPassword = data.currentPassword;
+      }
+      await changePassword(payload);
+      toast.success(
+        googleOnlyNoPassword
+          ? "Đã đặt mật khẩu đăng nhập. Bạn có thể đăng nhập bằng email và mật khẩu."
+          : "Đổi mật khẩu thành công!",
+      );
       resetPassword();
+      await refreshUserSnapshot();
     } catch (err) {
       toast.error(err.response?.data?.message || "Có lỗi khi đổi mật khẩu.");
     } finally {
@@ -546,35 +566,46 @@ const AccountPage = () => {
         <TabsContent value="security" className="mt-2 space-y-6">
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-base font-medium">Đổi mật khẩu</CardTitle>
+              <CardTitle className="text-base font-medium">
+                {googleOnlyNoPassword ? "Đặt mật khẩu đăng nhập" : "Đổi mật khẩu"}
+              </CardTitle>
+              {googleOnlyNoPassword ? (
+                <p className="text-sm text-muted-foreground font-normal pt-1">
+                  Tài khoản của bạn đăng nhập qua Google và chưa có mật khẩu cục bộ.
+                  Đặt mật khẩu bên dưới nếu bạn muốn đăng nhập thêm bằng email và mật
+                  khẩu (vẫn có thể dùng Google như hiện tại).
+                </p>
+              ) : null}
             </CardHeader>
             <CardContent>
               <form
                 onSubmit={handlePasswordSubmit(onPasswordSubmit)}
                 className="max-w-md space-y-4"
               >
-                <FieldWrapper
-                  label="Mật khẩu hiện tại"
-                  error={passwordErrors.currentPassword}
-                >
-                  <div className="relative">
-                    <Input
-                      type={showCurrentPw ? "text" : "password"}
-                      {...registerPassword("currentPassword", {
-                        required: "Không được để trống.",
-                      })}
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowCurrentPw(!showCurrentPw)}
-                      tabIndex={-1}
-                    >
-                      {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </FieldWrapper>
+                {requiresCurrentPassword ? (
+                  <FieldWrapper
+                    label="Mật khẩu hiện tại"
+                    error={passwordErrors.currentPassword}
+                  >
+                    <div className="relative">
+                      <Input
+                        type={showCurrentPw ? "text" : "password"}
+                        {...registerPassword("currentPassword", {
+                          required: "Không được để trống.",
+                        })}
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowCurrentPw(!showCurrentPw)}
+                        tabIndex={-1}
+                      >
+                        {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </FieldWrapper>
+                ) : null}
 
                 <FieldWrapper
                   label="Mật khẩu mới"
@@ -631,7 +662,7 @@ const AccountPage = () => {
                     type="submit"
                     disabled={
                       isSubmitting ||
-                      !watchPassword("currentPassword") ||
+                      (requiresCurrentPassword && !watchPassword("currentPassword")) ||
                       !watchPassword("newPassword") ||
                       !watchPassword("confirmNewPassword")
                     }
@@ -641,7 +672,11 @@ const AccountPage = () => {
                     ) : (
                       <Lock className="h-4 w-4 mr-1" />
                     )}
-                    {isSubmitting ? "Đang xử lý..." : "Đổi mật khẩu"}
+                    {isSubmitting
+                      ? "Đang xử lý..."
+                      : googleOnlyNoPassword
+                        ? "Đặt mật khẩu"
+                        : "Đổi mật khẩu"}
                   </Button>
                 </div>
               </form>

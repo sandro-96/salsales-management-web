@@ -13,10 +13,6 @@ const AdminPermissionRoute = ({
   fallbackPath = "/admin",
   children,
 }) => {
-  // Disable admin permission gating on frontend.
-  // Backend vẫn có thể enforce quyền (nếu bật), nhưng UI/route phía client không chặn nữa.
-  return children;
-
   const {
     loading,
     hasAdminPermission,

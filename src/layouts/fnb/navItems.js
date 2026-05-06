@@ -37,6 +37,7 @@ export const fnbWebNav = {
     { to: "/staffs", icon: Users, label: "Nhân sự" },
   ],
   staff: [
+    { to: "/overview", icon: Home, label: "Tổng quan" },
     { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
     { to: "/products", icon: Utensils, label: "Sản phẩm" },
     { to: "/tables", icon: Table, label: "Bàn" },
