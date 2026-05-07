@@ -44,9 +44,11 @@ import {
 import { toast } from "sonner";
 import { SHOP_ROLE_LABELS } from "@/constants/shopRoles.js";
 
-/** Hiện tập trung chuyển khoản + admin xác nhận (VNPay/MoMo tạm gác). */
 const GATEWAY_OPTIONS = [
-  { value: "MANUAL", label: "Chuyển khoản — admin xác nhận" },
+  {
+    value: "MANUAL",
+    label: "Chuyển khoản — admin xác nhận",
+  },
 ];
 
 /** Push WS từ server khi có thông báo billing (NotificationType). */
@@ -240,7 +242,7 @@ export default function BillingPage() {
     } finally {
       if (!silent) setHistoryLoading(false);
     }
-  }, [selectedShopId]);
+  }, []);
 
   useEffect(() => {
     if (!isShopContextReady || needsShopPick) return;

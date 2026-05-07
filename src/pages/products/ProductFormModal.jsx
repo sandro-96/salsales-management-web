@@ -337,7 +337,7 @@ export default function ProductFormModal({
 
         {/* ─── FORM STEP ──────────────────────────────────────────────── */}
         {step === "form" && (
-          <div className="flex-1 overflow-y-auto pr-1">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]">
             <ProductForm
               mode={mode}
               product={product}

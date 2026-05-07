@@ -163,6 +163,13 @@ function orderHasPositiveTax(tax) {
   return (tax.taxes || []).some((l) => (l.amount ?? 0) > 0.005);
 }
 
+function fmtVndInt(v) {
+  if (v == null) return "—";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return Math.round(n).toLocaleString("vi-VN") + " ₫";
+}
+
 function orderTaxSummaryTooltip(order) {
   const t = order.taxSnapshot;
   if (!t) {
@@ -172,20 +179,20 @@ function orderTaxSummaryTooltip(order) {
     t.priceIncludesTax
       ? "Chính sách: giá bán đã gồm thuế — «Tạm tính» là NET (đã tách VAT)."
       : "Chính sách: giá chưa gồm thuế — thuế cộng thêm vào tạm tính.",
-    `Tạm tính (cơ sở thuế): ${(t.netAmount ?? 0).toLocaleString("vi-VN")} ₫`,
+    `Tạm tính (cơ sở thuế): ${fmtVndInt(t.netAmount ?? 0)}`,
   ];
   if (orderHasPositiveTax(t)) {
-    lines.push(`Tổng thuế: ${(t.taxTotal ?? 0).toLocaleString("vi-VN")} ₫`);
+    lines.push(`Tổng thuế: ${fmtVndInt(t.taxTotal ?? 0)}`);
     (t.taxes || []).forEach((x) => {
       if ((x.amount ?? 0) > 0.005) {
-        lines.push(`${x.label}: ${(x.amount ?? 0).toLocaleString("vi-VN")} ₫`);
+        lines.push(`${x.label}: ${fmtVndInt(x.amount ?? 0)}`);
       }
     });
   } else {
     lines.push("Không phát sinh tiền thuế (0 ₫) trên đơn này.");
   }
   lines.push(
-    `Tổng thanh toán: ${(t.grandTotal ?? order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫`,
+    `Tổng thanh toán: ${fmtVndInt(t.grandTotal ?? order.totalPrice ?? 0)}`,
   );
   return lines.join("\n");
 }
@@ -763,7 +770,7 @@ const OrderDetailDialog = ({
                       : "Tạm tính (chưa gồm thuế)"}
                   </span>
                   <span className="tabular-nums font-medium">
-                    {(tax.netAmount ?? 0).toLocaleString("vi-VN")} ₫
+                    {fmtVndInt(tax.netAmount ?? 0)}
                   </span>
                 </div>
                 {(tax.taxes || []).map((taxLine, i) => (
@@ -778,7 +785,7 @@ const OrderDetailDialog = ({
                         : ""}
                     </span>
                     <span className="tabular-nums">
-                      {(taxLine.amount ?? 0).toLocaleString("vi-VN")} ₫
+                      {fmtVndInt(taxLine.amount ?? 0)}
                     </span>
                   </div>
                 ))}
@@ -790,16 +797,13 @@ const OrderDetailDialog = ({
                 <div className="flex justify-between text-muted-foreground">
                   <span>Tổng thuế</span>
                   <span className="tabular-nums">
-                    {(tax.taxTotal ?? 0).toLocaleString("vi-VN")} ₫
+                    {fmtVndInt(tax.taxTotal ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between font-semibold text-base pt-2 border-t border-sky-200/90 dark:border-sky-800/60">
                   <span>Tổng thanh toán</span>
                   <span className="tabular-nums text-sky-900 dark:text-sky-100">
-                    {(tax.grandTotal ?? order.totalPrice ?? 0).toLocaleString(
-                      "vi-VN",
-                    )}{" "}
-                    ₫
+                    {fmtVndInt(tax.grandTotal ?? order.totalPrice ?? 0)}
                   </span>
                 </div>
               </>
@@ -813,7 +817,7 @@ const OrderDetailDialog = ({
                 <div className="flex justify-between font-semibold text-base pt-1">
                   <span>Tổng cộng</span>
                   <span className="tabular-nums">
-                    {(order.totalPrice ?? 0).toLocaleString("vi-VN")} ₫
+                    {fmtVndInt(order.totalPrice ?? 0)}
                   </span>
                 </div>
               </>
@@ -1294,13 +1298,17 @@ const OrderListPage = () => {
         },
       },
       {
-        accessorKey: "totalAmount",
+        id: "totalQuantity",
         header: "SL",
-        cell: ({ row }) => (
-          <span className="text-sm tabular-nums">
-            {row.original.totalAmount ?? 0}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const items = row.original.items ?? [];
+          const qty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+          return (
+            <span className="text-sm tabular-nums">
+              {Number.isFinite(qty) ? qty : 0}
+            </span>
+          );
+        },
       },
       {
         id: "taxSnapshot",

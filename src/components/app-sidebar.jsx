@@ -3,7 +3,6 @@ import { HelpCircleIcon, StoreIcon, ShoppingCart } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
-import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +16,7 @@ import { useShop } from "@/hooks/useShop";
 import { useShopPermissions } from "@/hooks/useShopPermissions";
 import { filterNavByShopPermissions } from "@/utils/navPermissionMap";
 import { PERM } from "@/constants/shopPermissions";
+import SystemSupportContact from "@/components/common/SystemSupportContact.jsx";
 
 export function AppSidebar({ navItems, ...props }) {
   const { user } = useAuth();
@@ -58,11 +58,6 @@ export function AppSidebar({ navItems, ...props }) {
     return items.filter((i) => i.allow !== false);
   }, [isOwner, shopRole, selectedShopId]);
 
-  const userData = {
-    name: user?.fullName || "Người dùng",
-    email: user?.email || "email@example.com",
-    avatar: user?.avatarUrl ? user.avatarUrl : null,
-  };
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       {shops.length > 0 && (
@@ -77,7 +72,9 @@ export function AppSidebar({ navItems, ...props }) {
       </SidebarContent>
       <SidebarFooter>
         <NavSecondary items={navSecondary} />
-        <NavUser user={userData} />
+        <div className="mt-2">
+          <SystemSupportContact compact />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

@@ -145,7 +145,7 @@ export default function BranchForm({
   const ReadOnlyValue = ({
     value,
     variant = "single", // "single" | "multi"
-    className = "min-h-[2.75rem]",
+    className,
   }) => {
     const text = value ?? "-";
 
@@ -156,13 +156,21 @@ export default function BranchForm({
 
     return (
       <div
-        className={`border border-gray-200 rounded-md bg-gray-50 px-3 py-2 text-gray-800 flex items-center justify-between gap-2 ${className}`}
+        className={cn(
+          "flex justify-between gap-2 rounded-md border border-input bg-muted/50 px-3 text-sm text-foreground",
+          variant === "multi"
+            ? "min-h-[5rem] items-start py-2"
+            : "h-9 items-center",
+          className,
+        )}
       >
-        <div className={`text-sm ${textClass}`}>{text}</div>
+        <div className={cn("min-w-0 flex-1", textClass)}>{text}</div>
 
         {value && (
-          <Copy
-            className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400 cursor-pointer hover:text-gray-600"
+          <button
+            type="button"
+            className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Sao chép"
             onClick={(e) => {
               e.stopPropagation();
               navigator.clipboard
@@ -170,7 +178,9 @@ export default function BranchForm({
                 .then(() => toast.success("Đã sao chép!"))
                 .catch(() => toast.error("Không thể sao chép"));
             }}
-          />
+          >
+            <Copy className="h-4 w-4" />
+          </button>
         )}
       </div>
     );
@@ -222,23 +232,23 @@ export default function BranchForm({
             />
 
             {/* Quốc gia & Số điện thoại */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="countryCode"
                 render={() => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Quốc gia</FormLabel>
                     <FormControl>
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-h-9 items-center gap-3">
                         <img
                           src={getFlagUrl(country.code)}
                           alt={country.name}
-                          className="w-8 h-5 rounded-sm"
+                          className="h-5 w-8 shrink-0 rounded-sm object-cover ring-1 ring-border"
                         />
                         <ReadOnlyValue
                           value={`${country.name} (${country.dialCode})`}
-                          className="flex-1"
+                          className="min-w-0 flex-1"
                         />
                       </div>
                     </FormControl>
@@ -251,7 +261,7 @@ export default function BranchForm({
                 control={form.control}
                 name="phone"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Số điện thoại</FormLabel>
                     {isReadOnly ? (
                       <FormControl>
@@ -261,13 +271,18 @@ export default function BranchForm({
                       </FormControl>
                     ) : (
                       <FormControl>
-                        <div className="flex">
-                          <span className="px-3 py-1 bg-gray-200 border border-r-0 rounded-l-md text-gray-700 text-sm">
+                        <div className="flex rounded-md shadow-xs">
+                          <span
+                            className="flex h-9 shrink-0 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm tabular-nums text-muted-foreground"
+                            aria-hidden
+                          >
                             {country.dialCode}
                           </span>
                           <Input
                             placeholder="Nhập số điện thoại"
-                            className="rounded-l-none"
+                            className="rounded-l-none border-l-0 focus-visible:z-10"
+                            inputMode="tel"
+                            autoComplete="tel"
                             {...field}
                           />
                         </div>

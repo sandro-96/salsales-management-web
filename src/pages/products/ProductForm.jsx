@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm, useFieldArray, useWatch, useFormContext } from "react-hook-form";
+import {
+  useForm,
+  useFieldArray,
+  useWatch,
+  useFormContext,
+} from "react-hook-form";
 import { format } from "date-fns";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,6 +45,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,11 +73,7 @@ const formatVND = (val) =>
   val != null && val !== 0 ? Number(val).toLocaleString("vi-VN") + " ₫" : "-";
 
 // ── ReadOnly display ─────────────────────────────────────────────────────────
-function ReadOnlyValue({
-  value,
-  variant = "single",
-  className = "min-h-[2.75rem]",
-}) {
+function ReadOnlyValue({ value, variant = "single", className }) {
   const text = value != null && value !== "" ? String(value) : "-";
   const textClass =
     variant === "multi"
@@ -79,12 +81,20 @@ function ReadOnlyValue({
       : "truncate whitespace-nowrap";
   return (
     <div
-      className={`border border-gray-200 rounded-md bg-gray-50 px-3 py-2 text-gray-800 flex items-center justify-between gap-2 ${className}`}
+      className={cn(
+        "flex justify-between gap-2 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-foreground",
+        variant === "multi"
+          ? "min-h-[5rem] items-start"
+          : "min-h-[2.75rem] items-center",
+        className,
+      )}
     >
-      <div className={`text-sm ${textClass}`}>{text}</div>
+      <div className={cn("min-w-0 flex-1", textClass)}>{text}</div>
       {value != null && value !== "" && (
-        <Copy
-          className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400 cursor-pointer hover:text-gray-600"
+        <button
+          type="button"
+          className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label="Sao chép"
           onClick={(e) => {
             e.stopPropagation();
             navigator.clipboard
@@ -92,7 +102,9 @@ function ReadOnlyValue({
               .then(() => toast.success("Đã sao chép!"))
               .catch(() => toast.error("Không thể sao chép"));
           }}
-        />
+        >
+          <Copy className="h-4 w-4" />
+        </button>
       )}
     </div>
   );
@@ -154,7 +166,8 @@ function VariantCard({
 }) {
   const { setValue, getValues } = useFormContext();
   const [variantFileInputKey, setVariantFileInputKey] = useState(0);
-  const imageUrls = useWatch({ control, name: `variants.${nestIndex}.images` }) ?? [];
+  const imageUrls =
+    useWatch({ control, name: `variants.${nestIndex}.images` }) ?? [];
   const pending = variantMedia[fieldId] ?? { files: [], previews: [] };
   const pendingCount = pending.files?.length ?? 0;
   const urlCount = Array.isArray(imageUrls) ? imageUrls.length : 0;
@@ -201,7 +214,9 @@ function VariantCard({
     if (selected.length > remaining) {
       toast.warning(`Chỉ thêm ${remaining} ảnh cho biến thể này.`);
     }
-    const invalid = toProcess.filter((f) => !allowedImageTypes.includes(f.type));
+    const invalid = toProcess.filter(
+      (f) => !allowedImageTypes.includes(f.type),
+    );
     if (invalid.length) {
       toast.error("Chỉ hỗ trợ JPG, PNG hoặc WEBP.");
       return;
@@ -383,11 +398,7 @@ function VariantCard({
                 key={`u-${i}-${url}`}
                 className="relative size-16 rounded-md overflow-hidden border bg-muted"
               >
-                <img
-                  src={url}
-                  alt=""
-                  className="size-full object-cover"
-                />
+                <img src={url} alt="" className="size-full object-cover" />
                 {!isReadOnly && (
                   <button
                     type="button"
@@ -746,10 +757,11 @@ export default function ProductForm({
   } = form;
 
   const watchedName = useWatch({ control: form.control, name: "name" });
-  const watchedAssignedToppings = useWatch({
-    control: form.control,
-    name: "assignedToppingIds",
-  }) ?? [];
+  const watchedAssignedToppings =
+    useWatch({
+      control: form.control,
+      name: "assignedToppingIds",
+    }) ?? [];
 
   useEffect(() => {
     if (!selectedShopId || !toppingsFeatureOn) {
@@ -856,9 +868,7 @@ export default function ProductForm({
     }
     if (entry.category) {
       form.setValue("category", entry.category, { shouldDirty: true });
-      setCategoryMode(
-        isCustomCategory(entry.category) ? "custom" : "select",
-      );
+      setCategoryMode(isCustomCategory(entry.category) ? "custom" : "select");
     }
     if (entry.description != null) {
       form.setValue("description", entry.description, { shouldDirty: true });
@@ -1026,8 +1036,10 @@ export default function ProductForm({
           return acc;
         }, {});
         const fieldId = variantFields[i]?.id;
-        const pending = fieldId ? variantMedia[fieldId]?.files ?? [] : [];
-        let imgList = [...(Array.isArray(images) ? images : []).filter(Boolean)];
+        const pending = fieldId ? (variantMedia[fieldId]?.files ?? []) : [];
+        let imgList = [
+          ...(Array.isArray(images) ? images : []).filter(Boolean),
+        ];
         if (pending.length > 0) {
           const res = await uploadStagedVariantImages(selectedShopId, pending);
           const newUrls = res.data?.data ?? [];
@@ -1217,7 +1229,8 @@ export default function ProductForm({
                     (field.value || "").trim().length >= 2 && (
                       <div className="absolute z-30 mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
                         <p className="px-2 py-1.5 text-[10px] text-muted-foreground border-b">
-                          Catalog hệ thống — chọn để điền nhanh tên, mã vạch, ảnh…
+                          Catalog hệ thống — chọn để điền nhanh tên, mã vạch,
+                          ảnh…
                         </p>
                         {nameCatalogHits.map((p) => (
                           <button
@@ -1257,7 +1270,8 @@ export default function ProductForm({
             )}
             {isCreate && !isReadOnly && (
               <p className="text-[11px] text-muted-foreground">
-                Gõ từ khoá để tìm trong catalog hệ thống; chọn dòng để điền nhanh form (tránh nhập trùng).
+                Gõ từ khoá để tìm trong catalog hệ thống; chọn dòng để điền
+                nhanh form (tránh nhập trùng).
               </p>
             )}
             <FormMessage />
@@ -1381,11 +1395,16 @@ export default function ProductForm({
                         );
                         return;
                       }
-                      if (digits.length === 12 && isValidStandardGs1Barcode(digits)) {
+                      if (
+                        digits.length === 12 &&
+                        isValidStandardGs1Barcode(digits)
+                      ) {
                         try {
                           const canon = resolveBarcodeForSave(digits);
                           if (canon && canon !== (field.value ?? "")) {
-                            form.setValue("barcode", canon, { shouldDirty: true });
+                            form.setValue("barcode", canon, {
+                              shouldDirty: true,
+                            });
                             toast.info(
                               "Đã chuẩn hoá UPC-12 → EAN-13 (thêm 0 đầu) để đồng bộ với catalog.",
                             );
@@ -1397,12 +1416,6 @@ export default function ProductForm({
                     }}
                   />
                 </FormControl>
-              )}
-              {!isReadOnly && (
-                <p className="text-[11px] text-muted-foreground">
-                  EAN-8 / UPC-12 / EAN-13 / GTIN-14: hệ thống kiểm tra checksum; UPC-12
-                  hợp lệ được lưu dạng EAN-13. Mã nội bộ (không đủ chuẩn) vẫn nhập được.
-                </p>
               )}
               <FormMessage />
             </FormItem>
@@ -1478,11 +1491,7 @@ export default function ProductForm({
           <FormItem>
             <FormLabel>Mô tả sản phẩm</FormLabel>
             {isReadOnly ? (
-              <ReadOnlyValue
-                value={field.value}
-                variant="multi"
-                className="min-h-[5rem]"
-              />
+              <ReadOnlyValue value={field.value} variant="multi" />
             ) : (
               <FormControl>
                 <Textarea
@@ -1503,15 +1512,17 @@ export default function ProductForm({
         control={form.control}
         name="active"
         render={({ field }) => (
-          <FormItem className="flex items-center gap-3">
-            <FormLabel className="mt-0">Kích hoạt sản phẩm</FormLabel>
-            <FormControl>
-              <Switch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-                disabled={isReadOnly}
-              />
-            </FormControl>
+          <FormItem>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
+              <FormLabel className="mt-0">Kích hoạt sản phẩm</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={isReadOnly}
+                />
+              </FormControl>
+            </div>
           </FormItem>
         )}
       />
@@ -1522,7 +1533,7 @@ export default function ProductForm({
         name="trackInventory"
         render={({ field }) => (
           <FormItem className="flex flex-col gap-1">
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
               <FormLabel className="mt-0">Theo dõi tồn kho</FormLabel>
               <FormControl>
                 <Switch
@@ -1540,8 +1551,8 @@ export default function ProductForm({
             )}
             {!isReadOnly && watchedSellByWeight && (
               <p className="text-xs text-muted-foreground pl-0 max-w-xl">
-                Sản phẩm bán theo cân/trọng lượng sẽ <b>không theo dõi tồn kho</b>{" "}
-                theo mặc định.
+                Sản phẩm bán theo cân/trọng lượng sẽ{" "}
+                <b>không theo dõi tồn kho</b> theo mặc định.
               </p>
             )}
           </FormItem>
@@ -1554,7 +1565,7 @@ export default function ProductForm({
         name="sellByWeight"
         render={({ field }) => (
           <FormItem className="flex flex-col gap-1">
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
               <FormLabel className="mt-0">Bán theo cân / trọng lượng</FormLabel>
               <FormControl>
                 <Switch
@@ -1567,8 +1578,8 @@ export default function ProductForm({
             {!isReadOnly && (
               <p className="text-xs text-muted-foreground pl-0 max-w-xl">
                 Bật khi sản phẩm bán theo cân/trọng lượng (rau củ, thịt, nước
-                ép…). Tại POS sẽ nhập số cân thay vì số lượng; giá nhân với
-                khối lượng theo đơn vị đã chọn ở trên (ví dụ 30.000 ₫/kg).
+                ép…). Tại POS sẽ nhập số cân thay vì số lượng; giá nhân với khối
+                lượng theo đơn vị đã chọn ở trên (ví dụ 30.000 ₫/kg).
               </p>
             )}
           </FormItem>
@@ -1710,14 +1721,14 @@ export default function ProductForm({
         <div>
           <span className="text-sm font-semibold">Topping áp dụng</span>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Chọn từ danh mục topping chung của shop (nút &quot;Cài đặt topping&quot;
-            trên trang sản phẩm).
+            Chọn từ danh mục topping chung của shop (nút &quot;Cài đặt
+            topping&quot; trên trang sản phẩm).
           </p>
         </div>
         {!shopToppingCatalog.length ? (
           <div className="text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-md px-3 py-2 dark:text-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10">
-            Chưa có topping trong danh mục shop. Hãy mở &quot;Cài đặt topping&quot;
-            trên trang sản phẩm.
+            Chưa có topping trong danh mục shop. Hãy mở &quot;Cài đặt
+            topping&quot; trên trang sản phẩm.
           </div>
         ) : (
           <div className="flex flex-col gap-2 border rounded-md p-3">
@@ -1990,7 +2001,7 @@ export default function ProductForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleSubmit)}
-        className="w-full flex flex-col gap-6 h-full justify-between p-1"
+        className="flex h-full w-full min-h-0 flex-col justify-between gap-6"
       >
         {ProductInfoSection()}
 

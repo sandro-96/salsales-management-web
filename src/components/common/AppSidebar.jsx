@@ -34,6 +34,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useShop } from "@/hooks/useShop";
 import { ShopSwitcher } from "../shop-switcher";
+import SystemSupportContact from "@/components/common/SystemSupportContact.jsx";
 
 export function AppSidebar({ navItems, ...props }) {
   const { logout, user } = useAuth();
@@ -133,6 +134,10 @@ export function AppSidebar({ navItems, ...props }) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        <div className="mt-3">
+          <SystemSupportContact compact />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

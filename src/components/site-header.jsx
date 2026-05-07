@@ -6,6 +6,7 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import HeaderUserMenu from "@/components/common/HeaderUserMenu.jsx";
 
 export function SiteHeader() {
   const { theme, setTheme } = useTheme();
@@ -22,7 +23,7 @@ export function SiteHeader() {
           className="mx-2 data-[orientation=vertical]:h-4"
         />
         <Breadcrumbs />
-        <div className="ml-auto flex items-center">
+        <div className="ml-auto flex min-w-0 items-center gap-2">
           <Button
             type="button"
             variant="ghost"
@@ -40,6 +41,7 @@ export function SiteHeader() {
             )}
           </Button>
           <NotificationBell />
+          <HeaderUserMenu />
         </div>
       </div>
     </header>

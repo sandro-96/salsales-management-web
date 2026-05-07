@@ -27,6 +27,7 @@ import {
   Package,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useShop } from "../../hooks/useShop.js";
 import {
   importProductQuantity,
@@ -250,31 +251,49 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent
+        className={cn(
+          "flex max-h-[min(90vh,680px)] flex-col gap-4 overflow-hidden sm:max-w-md",
+        )}
+      >
+        <DialogHeader className="shrink-0 space-y-1.5 text-left">
           <DialogTitle className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${config.bgColor}`}>
-              <IconComp className={`h-5 w-5 ${config.color}`} />
+            <div className={cn("rounded-lg p-2", config.bgColor)}>
+              <IconComp className={cn("h-5 w-5", config.color)} />
             </div>
             {config.title}
           </DialogTitle>
           <DialogDescription>{config.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className={`flex items-center gap-3 p-3 rounded-lg border ${config.borderColor} ${config.bgColor}/30`}>
-            <div className="w-10 h-10 rounded-md border overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-gutter:stable]">
+          <div
+            className={cn(
+              "flex flex-wrap items-center gap-3 rounded-lg border p-3",
+              config.borderColor,
+              config.bgColor,
+            )}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
               {product.images?.[0] ? (
-                <img src={product.images[0]} alt={product.productName || product.name} className="w-full h-full object-cover" />
+                <img
+                  src={product.images[0]}
+                  alt={product.productName || product.name}
+                  className="h-full w-full object-cover"
+                />
               ) : (
-                <Package className="w-5 h-5 text-gray-400" />
+                <Package className="h-5 w-5 text-muted-foreground" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{product.productName || product.name}</p>
-              <p className="text-xs text-muted-foreground font-mono">{product.sku || "—"}</p>
+            <div className="min-w-0 flex-1 basis-[min(100%,12rem)]">
+              <p className="truncate text-sm font-medium">
+                {product.productName || product.name}
+              </p>
+              <p className="font-mono text-xs text-muted-foreground">
+                {product.sku || "—"}
+              </p>
             </div>
-            <Badge variant="outline" className="shrink-0">
+            <Badge variant="outline" className="shrink-0 whitespace-nowrap">
               Tồn:{" "}
               {currentStock === null
                 ? "—"
@@ -304,12 +323,17 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="inv-quantity">
-              {sellByWeight
-                ? `${actionType === "EXPORT" ? "Trọng lượng xuất" : "Trọng lượng nhập"} (${product?.unit || "kg"})`
-                : config.quantityLabel}
+            <Label
+              htmlFor="inv-quantity"
+              className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline"
+            >
+              <span>
+                {sellByWeight
+                  ? `${actionType === "EXPORT" ? "Trọng lượng xuất" : "Trọng lượng nhập"} (${product?.unit || "kg"})`
+                  : config.quantityLabel}
+              </span>
               {isAdjustmentForWeight && (
-                <span className="ml-2 text-xs text-amber-600">
+                <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
                   (SP cân chưa hỗ trợ set tồn tuyệt đối — sẽ cộng thêm)
                 </span>
               )}
@@ -362,12 +386,12 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="shrink-0 gap-2 sm:justify-end">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Hủy
           </Button>
           <Button onClick={handleSubmit} disabled={submitting || quantity === ""}>
-            {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+            {submitting && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
             {config.buttonLabel}
           </Button>
         </DialogFooter>
