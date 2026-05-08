@@ -91,6 +91,7 @@ const ShopSettingsPage = () => {
   const showSubscriptionStatus = isOwner;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const navigate = useNavigate();
 
   const shopTypes = enums?.shopTypes || [];
@@ -129,6 +130,7 @@ const ShopSettingsPage = () => {
     setToppingsEnabled(selectedShop.toppingsEnabled === true);
     setLogoFile(null);
     setLogoPreview(null);
+    setAttemptedSubmit(false);
   }, [selectedShop]);
 
   useEffect(() => {
@@ -169,6 +171,7 @@ const ShopSettingsPage = () => {
   };
 
   const handleSubmit = async () => {
+    setAttemptedSubmit(true);
     if (!name.trim()) {
       toast.error("Tên cửa hàng không được để trống.");
       return;
@@ -403,12 +406,13 @@ const ShopSettingsPage = () => {
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Name */}
-          <FieldWrapper label="Tên cửa hàng" icon={Store}>
+          <FieldWrapper label="Tên cửa hàng *" icon={Store}>
             {isEditMode ? (
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nhập tên cửa hàng"
+                aria-invalid={attemptedSubmit && !name.trim()}
               />
             ) : (
               <FieldValue>{selectedShop.name}</FieldValue>

@@ -82,6 +82,7 @@ export default function PromotionFormModal({
   const [applyAll, setApplyAll] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
@@ -89,6 +90,7 @@ export default function PromotionFormModal({
 
   useEffect(() => {
     if (!open) return;
+    setAttemptedSubmit(false);
     if (promotion) {
       setName(promotion.name || "");
       setDiscountType(promotion.discountType || "PERCENT");
@@ -192,6 +194,7 @@ export default function PromotionFormModal({
   };
 
   const handleSubmit = async () => {
+    setAttemptedSubmit(true);
     if (!validate()) return;
 
     const payload = {
@@ -265,22 +268,30 @@ export default function PromotionFormModal({
         >
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="promo-name">Tên khuyến mãi *</Label>
+            <Label
+              htmlFor="promo-name"
+              className={attemptedSubmit && !name.trim() ? "text-destructive" : undefined}
+            >
+              Tên khuyến mãi *
+            </Label>
             <Input
               id="promo-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="VD: Giảm giá mùa hè"
               autoFocus
+              aria-invalid={attemptedSubmit && !name.trim()}
             />
           </div>
 
           {/* Discount type + value */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Loại giảm giá *</Label>
+              <Label className={attemptedSubmit && !discountType ? "text-destructive" : undefined}>
+                Loại giảm giá *
+              </Label>
               <Select value={discountType} onValueChange={setDiscountType}>
-                <SelectTrigger>
+                <SelectTrigger aria-invalid={attemptedSubmit && !discountType}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
@@ -290,7 +301,14 @@ export default function PromotionFormModal({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="promo-value">
+              <Label
+                htmlFor="promo-value"
+                className={
+                  attemptedSubmit && (!discountValue || Number(discountValue) <= 0)
+                    ? "text-destructive"
+                    : undefined
+                }
+              >
                 Giá trị giảm *{" "}
                 {discountType === "PERCENT" ? "(max 100%)" : "(VNĐ)"}
               </Label>
@@ -301,6 +319,7 @@ export default function PromotionFormModal({
                 formatted={discountType === "AMOUNT"}
                 max={discountType === "PERCENT" ? 100 : undefined}
                 placeholder={discountType === "PERCENT" ? "VD: 15" : "VD: 50000"}
+                aria-invalid={attemptedSubmit && (!discountValue || Number(discountValue) <= 0)}
               />
             </div>
           </div>
@@ -308,7 +327,9 @@ export default function PromotionFormModal({
           {/* Date range */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Ngày bắt đầu *</Label>
+              <Label className={attemptedSubmit && !startDate ? "text-destructive" : undefined}>
+                Ngày bắt đầu *
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -316,7 +337,9 @@ export default function PromotionFormModal({
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !startDate && "text-muted-foreground",
+                      attemptedSubmit && !startDate && "border-destructive aria-invalid:border-destructive",
                     )}
+                    aria-invalid={attemptedSubmit && !startDate}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {startDate
@@ -341,7 +364,9 @@ export default function PromotionFormModal({
               </Popover>
             </div>
             <div className="space-y-2">
-              <Label>Ngày kết thúc *</Label>
+              <Label className={attemptedSubmit && !endDate ? "text-destructive" : undefined}>
+                Ngày kết thúc *
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -349,7 +374,9 @@ export default function PromotionFormModal({
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !endDate && "text-muted-foreground",
+                      attemptedSubmit && !endDate && "border-destructive aria-invalid:border-destructive",
                     )}
+                    aria-invalid={attemptedSubmit && !endDate}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {endDate
@@ -516,7 +543,7 @@ export default function PromotionFormModal({
             {readOnly ? "Đóng" : "Hủy"}
           </Button>
           {!readOnly && (
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button onClick={handleSubmit} disabled={submitting} variant="success">
               {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               {isEdit ? "Lưu thay đổi" : "Tạo khuyến mãi"}
             </Button>

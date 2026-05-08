@@ -418,7 +418,7 @@ export default function TaxPolicyPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Tên hiển thị</Label>
+                <Label>Tên hiển thị *</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -597,7 +597,7 @@ export default function TaxPolicyPage() {
               </div>
             </div>
 
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} variant="success">
               {submitting ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : null}

@@ -216,7 +216,7 @@ export default function BranchForm({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tên chi nhánh</FormLabel>
+                  <FormLabel>Tên chi nhánh *</FormLabel>
                   {isReadOnly ? (
                     <FormControl>
                       <ReadOnlyValue value={field.value} />
@@ -260,9 +260,9 @@ export default function BranchForm({
               <FormField
                 control={form.control}
                 name="phone"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem className="min-w-0">
-                    <FormLabel>Số điện thoại</FormLabel>
+                    <FormLabel>Số điện thoại *</FormLabel>
                     {isReadOnly ? (
                       <FormControl>
                         <ReadOnlyValue
@@ -271,18 +271,24 @@ export default function BranchForm({
                       </FormControl>
                     ) : (
                       <FormControl>
-                        <div className="flex rounded-md shadow-xs">
+                        <div
+                          className={cn(
+                            "flex rounded-md shadow-xs border border-input overflow-hidden focus-within:ring-ring/45 focus-within:ring-[3px] focus-within:ring-inset focus-within:border-ring",
+                            fieldState.error && "border-destructive",
+                          )}
+                        >
                           <span
-                            className="flex h-9 shrink-0 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm tabular-nums text-muted-foreground"
+                            className="flex h-9 shrink-0 items-center bg-muted px-3 text-sm tabular-nums text-muted-foreground"
                             aria-hidden
                           >
                             {country.dialCode}
                           </span>
                           <Input
                             placeholder="Nhập số điện thoại"
-                            className="rounded-l-none border-l-0 focus-visible:z-10"
+                            className="flex-1 rounded-none border-0 shadow-none focus-visible:ring-0 focus-visible:border-transparent"
                             inputMode="tel"
                             autoComplete="tel"
+                            aria-invalid={!!fieldState.error}
                             {...field}
                           />
                         </div>
@@ -300,7 +306,7 @@ export default function BranchForm({
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Địa chỉ</FormLabel>
+                  <FormLabel>Địa chỉ *</FormLabel>
                   {isReadOnly ? (
                     <FormControl>
                       <ReadOnlyValue value={field.value} variant="multi" />

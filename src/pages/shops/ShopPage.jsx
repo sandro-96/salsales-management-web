@@ -41,7 +41,7 @@ function pickOptionLabel(options, value) {
 }
 
 const ShopPage = () => {
-  const { shops, setSelectedShop, isOwner } = useShop();
+  const { shops, setSelectedShop } = useShop();
   const { enums, fetchEnums } = useAuth();
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
@@ -82,7 +82,7 @@ const ShopPage = () => {
             Bạn chưa có cửa hàng nào. Hãy bắt đầu bằng cách tạo cửa hàng đầu
             tiên để quản lý chi nhánh, sản phẩm và đơn hàng.
           </p>
-          <Button onClick={() => navigate("/shops/create")}>
+          <Button onClick={() => navigate("/shops/create")} variant="success">
             <Plus className="h-4 w-4 mr-1" /> Tạo cửa hàng đầu tiên
           </Button>
         </div>
@@ -101,7 +101,7 @@ const ShopPage = () => {
               {shops.length} cửa hàng
             </p>
           </div>
-          <Button onClick={() => navigate("create")} size="sm">
+          <Button onClick={() => navigate("create")} size="sm" variant="success">
             <Plus className="h-4 w-4 mr-1" /> Tạo cửa hàng
           </Button>
         </div>
@@ -134,6 +134,7 @@ const ShopPage = () => {
               (shop.industry && INDUSTRY_LABELS[shop.industry]) || shop.industry;
             const roleLabel =
               (shop.role && SHOP_ROLE_LABELS[shop.role]) || shop.role;
+            const isShopOwner = shop.role === "OWNER";
 
             return (
               <Card
@@ -218,7 +219,7 @@ const ShopPage = () => {
                       )}
                     </div>
 
-                    {isOwner && shop.subscriptionStatus != null && (
+                    {isShopOwner && shop.subscriptionStatus != null && (
                       <div className="flex items-start gap-2 text-xs pt-2 border-t text-muted-foreground">
                         <Clock className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/70" />
                         <span>

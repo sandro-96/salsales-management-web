@@ -138,7 +138,7 @@ export default function CreateTicketModal({ open, onOpenChange, shopId, onCreate
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Hủy
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} variant="success">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Gửi yêu cầu
             </Button>

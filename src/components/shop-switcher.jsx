@@ -22,10 +22,10 @@ import { useNavigate } from "react-router-dom";
 import { formatSubscriptionLine } from "@/constants/subscriptionStatus.js";
 
 export function ShopSwitcher() {
-  const { selectedShop, shops, setSelectedShop, isOwner } = useShop();
+  const { selectedShop, shops, setSelectedShop } = useShop();
   const navigate = useNavigate();
   if (!selectedShop) return null;
-  const selectedSubLine = isOwner
+  const selectedSubLine = selectedShop.role === "OWNER"
     ? formatSubscriptionLine(
         selectedShop.subscriptionStatus,
         selectedShop.subscriptionDaysRemaining,
@@ -80,7 +80,7 @@ export function ShopSwitcher() {
               }}
             >
               {shops.map((shop, index) => {
-                const subLine = isOwner
+                const subLine = shop.role === "OWNER"
                   ? formatSubscriptionLine(
                       shop.subscriptionStatus,
                       shop.subscriptionDaysRemaining,

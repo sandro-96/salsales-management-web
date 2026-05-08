@@ -1205,7 +1205,7 @@ export default function ProductForm({
       <FormField
         control={form.control}
         name="name"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             <FormLabel>
               Tên sản phẩm <span className="text-red-500">*</span>
@@ -1218,6 +1218,7 @@ export default function ProductForm({
                   <Input
                     placeholder="Nhập tên — gợi ý từ catalog hệ thống (chuẩn hoá)"
                     autoComplete="off"
+                    aria-invalid={!!fieldState.error}
                     {...field}
                   />
                   {isCreate && nameCatalogLoading && (

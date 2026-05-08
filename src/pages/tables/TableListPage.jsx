@@ -569,6 +569,7 @@ const TableListPage = () => {
                   setFormOpen(true);
                 }}
                 size="sm"
+                variant="success"
               >
                 <Plus className="h-4 w-4 mr-1" /> Thêm bàn
               </Button>

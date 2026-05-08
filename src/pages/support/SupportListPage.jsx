@@ -331,7 +331,7 @@ const SupportListPage = () => {
           <h1 className="text-2xl font-bold tracking-tight">Hỗ trợ</h1>
           <p className="text-muted-foreground text-sm">Quản lý yêu cầu hỗ trợ từ nhân viên.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => setCreateOpen(true)} variant="success">
           <Plus className="mr-2 h-4 w-4" />
           Tạo yêu cầu
         </Button>

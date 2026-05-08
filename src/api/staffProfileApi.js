@@ -31,3 +31,12 @@ export const exportStaffProfiles = (shopId, params = {}) =>
     params,
     responseType: "blob",
   });
+
+export const getStaffShopOverview = (shopId, params = {}) =>
+  axiosInstance.get(`${BASE}/${shopId}/staff-profiles/overview`, { params });
+
+export const getStaffMemberOverview = (shopId, userOrProfileId, params = {}) =>
+  axiosInstance.get(
+    `${BASE}/${shopId}/staff-profiles/${userOrProfileId}/overview`,
+    { params },
+  );

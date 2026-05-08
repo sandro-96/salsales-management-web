@@ -21,8 +21,8 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
 
-  /* Brand */
-  --primary: oklch(0.205 0 0);
+  /* Brand — xanh lá (đồng bộ CTA / nút gửi form) */
+  --primary: oklch(0.52 0.14 155);
   --primary-foreground: oklch(0.985 0 0);
 
   --secondary: oklch(0.97 0 0);
@@ -48,10 +48,10 @@
   --info: oklch(0.62 0.18 245);
   --info-foreground: oklch(0.985 0 0);
 
-  /* Form / outline */
+  /* Form / outline — viền input & focus ring xanh da trời */
   --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --input: oklch(0.82 0.055 245);
+  --ring: oklch(0.62 0.18 245);
 
   /* Sidebar */
   --sidebar: oklch(0.985 0 0);
@@ -75,9 +75,9 @@
   --popover: oklch(0.205 0.006 285);
   --popover-foreground: oklch(0.985 0 0);
 
-  /* Brand — đảo nghịch so với light */
-  --primary: oklch(0.92 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* Brand — xanh sáng trên nền tối */
+  --primary: oklch(0.72 0.16 155);
+  --primary-foreground: oklch(0.145 0 0);
 
   --secondary: oklch(0.269 0.005 285);
   --secondary-foreground: oklch(0.985 0 0);
@@ -102,10 +102,10 @@
   --info: oklch(0.7 0.18 245);
   --info-foreground: oklch(0.145 0 0);
 
-  /* Form / outline — viền dùng alpha để mềm mắt */
+  /* Form / outline */
   --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.556 0 0);
+  --input: oklch(0.55 0.12 245 / 0.42);
+  --ring: oklch(0.7 0.18 245);
 
   /* Sidebar — tối hơn card 1 chút để tách lớp */
   --sidebar: oklch(0.18 0.006 285);

@@ -103,6 +103,7 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState("");
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const branchVariantList = useMemo(() => {
     return product?.branchVariants?.length ? product.branchVariants : [];
@@ -110,6 +111,7 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
 
   useEffect(() => {
     if (open) {
+      setAttemptedSubmit(false);
       setQuantity("");
       setNote("");
       const pre = product?.__preselectVariantId;
@@ -150,6 +152,7 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
   const isAdjustmentForWeight = sellByWeight && actionType === "ADJUSTMENT";
 
   const handleSubmit = async () => {
+    setAttemptedSubmit(true);
     const qty = Number(quantity);
     if (actionType !== "ADJUSTMENT" && (!qty || qty <= 0)) {
       toast.error(
@@ -305,9 +308,12 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
 
           {!sellByWeight && branchVariantList.length > 1 && (
             <div className="space-y-2">
-              <Label>Biến thể</Label>
+              <Label>Biến thể *</Label>
               <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
-                <SelectTrigger className="h-9">
+                <SelectTrigger
+                  className="h-9"
+                  aria-invalid={attemptedSubmit && !effectiveVariantId}
+                >
                   <SelectValue placeholder="Chọn biến thể" />
                 </SelectTrigger>
                 <SelectContent>
@@ -390,7 +396,11 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Hủy
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || quantity === ""}>
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || quantity === ""}
+            variant="success"
+          >
             {submitting && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
             {config.buttonLabel}
           </Button>

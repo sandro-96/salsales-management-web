@@ -46,9 +46,11 @@ export default function CustomerFormModal({
   const [note, setNote] = useState("");
   const [branchId, setBranchId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setAttemptedSubmit(false);
     if (customer) {
       setName(customer.name || "");
       setPhone(customer.phone || "");
@@ -79,6 +81,7 @@ export default function CustomerFormModal({
   };
 
   const handleSubmit = async () => {
+    setAttemptedSubmit(true);
     if (!validate()) return;
 
     const payload = {
@@ -143,7 +146,12 @@ export default function CustomerFormModal({
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-2">
           <div className="space-y-2">
-            <Label htmlFor="cust-name">Tên khách hàng *</Label>
+            <Label
+              htmlFor="cust-name"
+              className={attemptedSubmit && !name.trim() ? "text-destructive" : undefined}
+            >
+              Tên khách hàng *
+            </Label>
             <Input
               id="cust-name"
               value={name}
@@ -151,6 +159,7 @@ export default function CustomerFormModal({
               placeholder="VD: Nguyễn Văn A"
               autoFocus
               disabled={readOnly}
+              aria-invalid={attemptedSubmit && !name.trim()}
             />
           </div>
 
@@ -235,7 +244,7 @@ export default function CustomerFormModal({
             {readOnly ? "Đóng" : "Hủy"}
           </Button>
           {!readOnly && (
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button onClick={handleSubmit} disabled={submitting} variant="success">
               {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               {isEdit ? "Lưu thay đổi" : "Thêm khách hàng"}
             </Button>

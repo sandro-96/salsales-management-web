@@ -58,6 +58,12 @@ const OverviewPage = lazy(() => import("../pages/OverviewPage"));
 const ProductListPage = lazy(() => import("../pages/products/ProductListPage"));
 const ProductPage = lazy(() => import("../pages/products/ProductPage.jsx"));
 const StaffListPage = lazy(() => import("../pages/staffs/StaffListPage"));
+const StaffDashboardPage = lazy(
+  () => import("../pages/staffs/StaffDashboardPage"),
+);
+const StaffOverviewPage = lazy(
+  () => import("../pages/staffs/StaffOverviewPage"),
+);
 const OrderListPage = lazy(() => import("../pages/orders/OrderListPage"));
 const CustomerListPage = lazy(
   () => import("../pages/customers/CustomerListPage"),
@@ -241,6 +247,20 @@ export const routeConfig = [
         element: <StaffListPage />,
         title: "Nhân sự",
         breadcrumb: "Nhân sự",
+        shopPermissionAny: [PERM.SHOP_USER_VIEW],
+      },
+      {
+        path: "staffs/dashboard",
+        element: <StaffDashboardPage />,
+        title: "Tổng quan nhân sự",
+        breadcrumb: "Tổng quan nhân sự",
+        shopPermissionAny: [PERM.SHOP_USER_VIEW],
+      },
+      {
+        path: "staffs/:id",
+        element: <StaffOverviewPage />,
+        title: "Hồ sơ nhân sự",
+        breadcrumb: "Hồ sơ nhân sự",
         shopPermissionAny: [PERM.SHOP_USER_VIEW],
       },
       {

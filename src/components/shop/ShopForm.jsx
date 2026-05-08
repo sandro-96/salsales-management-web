@@ -291,7 +291,7 @@ export default function ShopForm({
                 }
                 return (
                   <FormItem>
-                    <FormLabel>Tên cửa hàng</FormLabel>
+                    <FormLabel>Tên cửa hàng *</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -511,7 +511,7 @@ export default function ShopForm({
 
                   return (
                     <FormItem>
-                      <FormLabel>Số điện thoại</FormLabel>
+                      <FormLabel>Số điện thoại *</FormLabel>
                       <FormControl>
                         <div className="flex">
                           <span className="px-3 py-2 bg-gray-200 border border-r-0 rounded-l-md text-gray-700 text-xs">
@@ -554,7 +554,7 @@ export default function ShopForm({
 
                 return (
                   <FormItem>
-                    <FormLabel>Địa chỉ</FormLabel>
+                    <FormLabel>Địa chỉ *</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Nhập địa chỉ chi tiết"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { toast } from "sonner";
@@ -11,6 +11,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
+  BarChart3,
+  Eye,
   MoreHorizontal,
   Plus,
   Loader2,
@@ -78,6 +80,7 @@ const formatDate = (dateStr) => {
 };
 
 const StaffListPage = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { selectedShopId, branches, isOwner, shopRole } = useShop();
   const shopId = selectedShopId;
@@ -229,6 +232,13 @@ const StaffListPage = () => {
   const handleOpenProfile = (staff) => {
     setEditingStaff(staff);
     setProfileModalOpen(true);
+  };
+
+  const handleNavigateOverview = (staff) => {
+    if (!staff) return;
+    const id = staff.external ? staff.id : staff.userId;
+    if (!id) return;
+    navigate(`/staffs/${id}`);
   };
 
   const handleExportProfiles = async () => {
@@ -384,11 +394,20 @@ const StaffListPage = () => {
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  handleNavigateOverview(staff);
+                }}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Xem chi tiết
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
                   handleOpenProfile(staff);
                 }}
               >
                 <FileUser className="h-4 w-4 mr-2" />
-                Hồ sơ nhân sự
+                Sửa hồ sơ nhanh
               </DropdownMenuItem>
               {!staff.external && canManageStaff && (
                 <DropdownMenuItem
@@ -498,6 +517,17 @@ const StaffListPage = () => {
                 variant="outline"
                 size="sm"
                 className="cursor-pointer"
+                onClick={() => navigate("/staffs/dashboard")}
+              >
+                <BarChart3 className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Tổng quan</span>
+              </Button>
+            )}
+            {canManageStaff && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
                 onClick={handleExportProfiles}
               >
                 <FileDown className="h-4 w-4 sm:mr-1" />
@@ -568,7 +598,7 @@ const StaffListPage = () => {
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
                     className="cursor-pointer"
-                    onClick={() => handleOpenProfile(row.original)}
+                    onClick={() => handleNavigateOverview(row.original)}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>

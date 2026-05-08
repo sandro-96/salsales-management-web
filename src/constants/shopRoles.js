@@ -28,8 +28,8 @@ export const SHOP_ROLE_LABELS = {
 };
 
 export const SHOP_ROLE_BADGE_VARIANT = {
-  [SHOP_ROLE.OWNER]: "default",
-  [SHOP_ROLE.MANAGER]: "secondary",
-  [SHOP_ROLE.STAFF]: "outline",
-  [SHOP_ROLE.CASHIER]: "outline",
+  [SHOP_ROLE.OWNER]: "roleOwner",
+  [SHOP_ROLE.MANAGER]: "roleManager",
+  [SHOP_ROLE.STAFF]: "roleStaff",
+  [SHOP_ROLE.CASHIER]: "roleCashier",
 };

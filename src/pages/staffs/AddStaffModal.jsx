@@ -28,21 +28,26 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState(SHOP_ROLES_ASSIGNABLE[1]?.value ?? "STAFF");
   const [submitting, setSubmitting] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const emailTrimmed = email.trim();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailInvalid = attemptedSubmit && (!emailTrimmed || !emailRegex.test(emailTrimmed));
+  const roleInvalid = attemptedSubmit && !role;
 
   useEffect(() => {
     if (open) {
       setEmail("");
       setRole(SHOP_ROLES_ASSIGNABLE[1]?.value ?? "STAFF");
+      setAttemptedSubmit(false);
     }
   }, [open]);
 
   const validate = () => {
-    if (!email.trim()) {
+    if (!emailTrimmed) {
       toast.error("Email không được để trống.");
       return false;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
+    if (!emailRegex.test(emailTrimmed)) {
       toast.error("Email không hợp lệ.");
       return false;
     }
@@ -54,6 +59,7 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
   };
 
   const handleSubmit = async () => {
+    setAttemptedSubmit(true);
     if (!validate()) return;
 
     setSubmitting(true);
@@ -96,7 +102,12 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="staff-email">Email *</Label>
+            <Label
+              htmlFor="staff-email"
+              className={emailInvalid ? "text-destructive" : undefined}
+            >
+              Email *
+            </Label>
             <Input
               id="staff-email"
               type="email"
@@ -104,6 +115,7 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
               autoFocus
+              aria-invalid={emailInvalid}
             />
             <p className="text-xs text-muted-foreground">
               Người dùng phải đã đăng ký tài khoản trên hệ thống.
@@ -111,9 +123,11 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
           </div>
 
           <div className="space-y-2">
-            <Label>Vai trò *</Label>
+            <Label className={roleInvalid ? "text-destructive" : undefined}>
+              Vai trò *
+            </Label>
             <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
+              <SelectTrigger aria-invalid={roleInvalid}>
                 <SelectValue placeholder="Chọn vai trò" />
               </SelectTrigger>
               <SelectContent className="bg-background">
@@ -131,7 +145,7 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Hủy
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
+          <Button onClick={handleSubmit} disabled={submitting} variant="success">
             {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
             Thêm nhân viên
           </Button>

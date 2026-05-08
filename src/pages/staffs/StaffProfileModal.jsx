@@ -525,7 +525,7 @@ export default function StaffProfileModal({
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Hủy
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || loading}>
+          <Button onClick={handleSubmit} disabled={submitting || loading} variant="success">
             {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
             {isNewExternal ? "Thêm nhân viên" : "Lưu hồ sơ"}
           </Button>

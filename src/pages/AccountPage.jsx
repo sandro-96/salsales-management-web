@@ -340,7 +340,7 @@ const AccountPage = () => {
               <CardContent className="space-y-5">
                 {/* Name row */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <FieldWrapper label="Họ" error={errors.lastName}>
+                  <FieldWrapper label="Họ *" error={errors.lastName}>
                     {isEditMode ? (
                       <Input
                         {...register("lastName", {
@@ -365,7 +365,7 @@ const AccountPage = () => {
                       <FieldValue>{user?.middleName}</FieldValue>
                     )}
                   </FieldWrapper>
-                  <FieldWrapper label="Tên" error={errors.firstName}>
+                  <FieldWrapper label="Tên *" error={errors.firstName}>
                     {isEditMode ? (
                       <Input
                         {...register("firstName", {
