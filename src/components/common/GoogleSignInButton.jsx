@@ -1,25 +1,117 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+
+const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
+/** Mặc định: /login — phải trùng tuyệt đối một mục trong Authorized redirect URIs. */
+const REDIRECT_PATH = "/login";
+const STORAGE_NONCE = "google_oidc_nonce";
+const STORAGE_STATE = "google_oidc_state";
+
+/**
+ * Phải trùng ký tự với Google Console (gồm http/https, host, cổng, path).
+ * - VITE_GOOGLE_OAUTH_REDIRECT_URI: URL đầy đủ (khi reverse proxy / domain cố định).
+ * Mặc định dùng origin của tab hiện tại (nonce/state OAuth trong sessionStorage gắn với origin).
+ */
+function buildRedirectUri() {
+  const configured = import.meta.env.VITE_GOOGLE_OAUTH_REDIRECT_URI?.trim();
+  if (configured) return configured;
+  const origin = window.location.origin;
+  const href = new URL(REDIRECT_PATH, `${origin}/`).href;
+  return href.replace(/\/+$/, "");
+}
+
+/** Chuẩn /login (bỏ / thừa) để redirect_uri khớp mục đã khai báo. */
+function normalizeLoginPathForOAuth() {
+  const trimmed = window.location.pathname.replace(/\/+$/, "") || "/";
+  if (trimmed === "/login" && window.location.pathname !== "/login") {
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.origin}/login${window.location.search}`,
+    );
+  }
+}
+
+function parseHashParams() {
+  const raw = window.location.hash?.replace(/^#/, "") ?? "";
+  if (!raw) return null;
+  return new URLSearchParams(raw);
+}
+
+function parseJwtPayload(idToken) {
+  try {
+    const parts = idToken.split(".");
+    if (parts.length < 2) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 ? "=".repeat(4 - (b64.length % 4)) : "";
+    const json = atob(b64 + pad);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Nút Google tĩnh (HTML + SVG) — không dùng gsi/client, không iframe/renderButton.
+ * Mở trang đăng nhập Google (redirect); sau khi đăng nhập, Google chuyển về /login#id_token=...
+ */
+export function consumeGoogleOAuthReturn(callback) {
+  const params = parseHashParams();
+  if (!params) return false;
+  const idToken = params.get("id_token");
+  const oauthError = params.get("error");
+  if (oauthError) {
+    sessionStorage.removeItem(STORAGE_NONCE);
+    sessionStorage.removeItem(STORAGE_STATE);
+    callback({
+      error: oauthError,
+      errorDescription: params.get("error_description") || "",
+    });
+    return true;
+  }
+  if (!idToken) return false;
+
+  const storedNonce = sessionStorage.getItem(STORAGE_NONCE);
+  const storedState = sessionStorage.getItem(STORAGE_STATE);
+  sessionStorage.removeItem(STORAGE_NONCE);
+  sessionStorage.removeItem(STORAGE_STATE);
+
+  const state = params.get("state");
+  if (storedState && state !== storedState) {
+    callback({ error: "state_mismatch" });
+    return true;
+  }
+
+  const payload = parseJwtPayload(idToken);
+  if (storedNonce && payload?.nonce !== storedNonce) {
+    callback({ error: "nonce_mismatch" });
+    return true;
+  }
+
+  callback({ credential: idToken });
+  return true;
+}
+
+export function clearOAuthHashFromUrl() {
+  if (!window.location.hash) return;
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${window.location.search}`,
+  );
+}
 
 const GoogleSignInButton = ({
-  callback,
   text = "signup_with",
   className = "",
 }) => {
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const initializedRef = useRef(false);
-  const callbackRef = useRef(callback);
-
-  useEffect(() => {
-    callbackRef.current = callback;
-  }, [callback]);
 
   const label =
-    text === "signin_with" ? "Sign in with Google" : "Sign up with Google";
+    text === "signin_with" ? "Đăng nhập với Google" : "Đăng ký với Google";
 
-  useEffect(() => {
+  const handleClick = () => {
+    setError("");
     const clientId = import.meta.env.VITE_APP_GOOGLE_CLIENT_ID;
-
     if (!clientId) {
       setError(
         "Không tìm thấy Google Client ID. Vui lòng kiểm tra cấu hình môi trường.",
@@ -27,56 +119,54 @@ const GoogleSignInButton = ({
       return;
     }
 
-    const initGoogleSignIn = () => {
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (response) => {
-          setLoading(false);
-          callbackRef.current?.(response);
-        },
-        cancel_on_tap_outside: true,
-      });
-      initializedRef.current = true;
-    };
+    const nonce = crypto.randomUUID();
+    const state = crypto.randomUUID();
+    sessionStorage.setItem(STORAGE_NONCE, nonce);
+    sessionStorage.setItem(STORAGE_STATE, state);
 
-    if (window.google?.accounts?.id) {
-      initGoogleSignIn();
-    } else {
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.defer = true;
-      script.onload = initGoogleSignIn;
-      document.body.appendChild(script);
-      return () => {
-        if (document.body.contains(script)) document.body.removeChild(script);
-      };
-    }
-  }, []);
+    normalizeLoginPathForOAuth();
 
-  const handleClick = () => {
-    if (!initializedRef.current) return;
-    setLoading(true);
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        setLoading(false);
+    const redirectUri = buildRedirectUri();
+    if (import.meta.env.DEV) {
+      // Dán đúng chuỗi này vào Google Cloud Console → Authorized redirect URIs (cả localhost và 127.0.0.1 nếu dùng cả hai).
+      console.info("[Google OAuth] redirect_uri =", redirectUri);
+      const h = window.location.hostname;
+      if (h === "127.0.0.1" || h === "[::1]") {
+        console.warn(
+          "[Google OAuth] Bạn đang dùng",
+          h,
+          "— hãy thêm redirect URI này vào Google Console, hoặc mở app bằng localhost cùng cổng và chỉ khai báo URI localhost.",
+        );
       }
+    }
+    const q = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "id_token",
+      scope: "openid email profile",
+      nonce,
+      state,
+      prompt: "select_account",
     });
+
+    window.location.assign(`${GOOGLE_AUTH}?${q.toString()}`);
   };
 
   return (
-    <div>
-      {error && <p className="text-red-500 dark:text-red-400 text-sm mb-3">{error}</p>}
+    <div className={["w-full", className].filter(Boolean).join(" ")}>
+      {error ? (
+        <p className="text-red-500 dark:text-red-400 text-sm mb-3">{error}</p>
+      ) : null}
       <button
         type="button"
         onClick={handleClick}
-        disabled={loading}
-        className={`flex items-center justify-center gap-3 w-full border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors disabled:opacity-60 dark:bg-card dark:border-border dark:text-foreground dark:hover:bg-muted ${className}`}
+        className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/80 dark:bg-card dark:hover:bg-muted/60"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 48 48"
-          className="w-5 h-5 shrink-0"
+          className="h-5 w-5 shrink-0"
+          aria-hidden
         >
           <path
             fill="#4285F4"
@@ -95,7 +185,7 @@ const GoogleSignInButton = ({
             d="M24 10.7c3.3 0 6.2 1.1 8.5 3.3l6.4-6.4C34.9 4 29.9 2 24 2 15.3 2 7.7 6.5 4 13.4l7.3 5.6C13.1 14.7 18.1 10.7 24 10.7z"
           />
         </svg>
-        {loading ? "Đang xử lý..." : label}
+        {label}
       </button>
     </div>
   );

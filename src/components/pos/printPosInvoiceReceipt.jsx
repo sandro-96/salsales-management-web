@@ -19,10 +19,38 @@ export function printPosInvoiceReceipt(props) {
   );
   doc.close();
   iframe.onload = () => {
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    setTimeout(() => {
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-    }, 800);
+    const win = iframe.contentWindow;
+    const d = iframe.contentDocument;
+    const imgs = d ? Array.from(d.images || []) : [];
+
+    const runPrint = () => {
+      win?.focus();
+      win?.print();
+      setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 800);
+    };
+
+    if (imgs.length === 0) {
+      runPrint();
+      return;
+    }
+
+    Promise.all(
+      imgs.map(
+        (img) =>
+          img.complete && img.naturalWidth > 0
+            ? Promise.resolve()
+            : new Promise((resolve) => {
+                const done = () => resolve();
+                img.addEventListener("load", done, { once: true });
+                img.addEventListener("error", done, { once: true });
+              }),
+      ),
+    )
+      .catch(() => {})
+      .finally(() => {
+        requestAnimationFrame(() => runPrint());
+      });
   };
 }

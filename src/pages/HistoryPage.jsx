@@ -1,13 +1,26 @@
-import React from 'react';
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
 const HistoryPage = () => {
-    
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
-            <div className="bg-white p-8 rounded-lg shadow w-full max-w-md">
-                <h2 className="text-xl font-semibold mb-4 text-center">Lịch sử</h2>
-                {/* Add more shop details or actions here */}
-            </div>
-        </div>
-    );
-}
+  return (
+    <div className="flex min-h-full w-full flex-col items-center justify-center bg-muted/40 px-4 py-10 dark:bg-muted/15">
+      <Card className="w-full max-w-md border shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-center text-xl">Lịch sử</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-sm text-muted-foreground">
+            Nội dung lịch sử sẽ được cập nhật tại đây.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 export default HistoryPage;

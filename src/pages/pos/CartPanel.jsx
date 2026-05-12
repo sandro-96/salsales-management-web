@@ -49,6 +49,7 @@ export function CartPanel({
   removeFromCart,
   clearCart,
   onCheckout,
+  checkoutDisabled,
   hideHeader,
   selectedCustomer,
   onCustomerSearch,
@@ -611,7 +612,7 @@ export function CartPanel({
       {canPay ? (
         <Button
           className="w-full h-11 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-200 disabled:text-emerald-900 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:disabled:bg-emerald-500/30 dark:disabled:text-emerald-100"
-          disabled={cart.length === 0}
+          disabled={checkoutDisabled ?? cart.length === 0}
           onClick={onCheckout}
         >
           <ShoppingCart className="h-4 w-4 mr-2" />

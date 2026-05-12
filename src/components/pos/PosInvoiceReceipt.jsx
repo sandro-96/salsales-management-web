@@ -323,6 +323,41 @@ export function PosInvoiceReceipt({
         </div>
       ) : null}
 
+      {!isDraft && order?.paymentProofImageUrl ? (
+        <div
+          style={{
+            marginTop: "10px",
+            paddingTop: "10px",
+            borderTop: "1px dashed #ccc",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "10px",
+              fontWeight: 700,
+              color: "#333",
+              marginBottom: "6px",
+            }}
+          >
+            Chứng từ thanh toán
+          </div>
+          <img
+            src={order.paymentProofImageUrl}
+            alt=""
+            style={{
+              display: "block",
+              width: "100%",
+              maxWidth: "320px",
+              maxHeight: "220px",
+              margin: "0 auto",
+              objectFit: "contain",
+              border: "1px solid #ddd",
+              borderRadius: "4px",
+            }}
+          />
+        </div>
+      ) : null}
+
       <div style={{ ...rowStyle, marginTop: "4px" }}>
         <span style={labelMuted}>Trạng thái</span>
         <span style={{ fontWeight: order?.paid ? 600 : 500 }}>

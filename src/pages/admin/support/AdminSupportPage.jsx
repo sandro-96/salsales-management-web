@@ -258,7 +258,7 @@ const AdminSupportPage = () => {
       ),
       cell: ({ row }) => (
         <span className="font-mono text-xs truncate max-w-[120px] block">
-          {row.original.shopId}
+          {row.original.shopId || "—"}
         </span>
       ),
       size: 140,

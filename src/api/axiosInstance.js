@@ -12,6 +12,15 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     config.headers = config.headers ?? {};
+    // FormData cần boundary do trình duyệt/axios gắn — bỏ default application/json
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      if (typeof config.headers.delete === "function") {
+        config.headers.delete("Content-Type");
+      } else {
+        delete config.headers["Content-Type"];
+        delete config.headers["content-type"];
+      }
+    }
     const token = localStorage.getItem("accessToken");
     if (token) {
       // Axios v1 may use AxiosHeaders; support both plain object & set()

@@ -52,6 +52,11 @@ export function ShopSwitcher() {
               <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
                 <span className="truncate w-full font-medium leading-tight">
                   {selectedShop.name}
+                  {selectedShop.active === false ? (
+                    <span className="ml-1.5 text-[10px] font-normal text-destructive">
+                      (Đã khóa)
+                    </span>
+                  ) : null}
                 </span>
                 {selectedSubLine ? (
                   <span className="truncate w-full text-[10px] leading-tight text-muted-foreground">
@@ -80,6 +85,7 @@ export function ShopSwitcher() {
               }}
             >
               {shops.map((shop, index) => {
+                const locked = shop.active === false;
                 const subLine = shop.role === "OWNER"
                   ? formatSubscriptionLine(
                       shop.subscriptionStatus,
@@ -104,6 +110,11 @@ export function ShopSwitcher() {
                   <div className="min-w-0 flex-1 flex flex-col items-start gap-0.5">
                     <span className="truncate w-full font-medium leading-tight">
                       {shop.name}
+                      {locked ? (
+                        <span className="ml-1.5 text-[10px] font-normal text-destructive">
+                          (Đã khóa)
+                        </span>
+                      ) : null}
                     </span>
                     {subLine ? (
                       <span className="truncate w-full text-[10px] leading-tight text-muted-foreground">

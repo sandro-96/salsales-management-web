@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   flexRender,
@@ -25,6 +25,8 @@ import {
   Plus,
   Percent,
   Pencil,
+  ImagePlus,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +45,7 @@ import {
   filterOrders,
   cancelOrder,
   confirmPayment,
+  uploadOrderPaymentProof,
   updateOrderStatus,
   patchOrderFulfillment,
 } from "../../api/orderApi.js";
@@ -312,10 +315,13 @@ const OrderDetailDialog = ({
   order,
   shopId,
   canEdit,
+  canUploadPaymentProof,
   onSaved,
   onOrderPatched,
 }) => {
   const [saving, setSaving] = useState(false);
+  const [proofUploading, setProofUploading] = useState(false);
+  const proofFileRef = useRef(null);
   const [form, setForm] = useState({
     note: "",
     customerId: "",
@@ -367,6 +373,28 @@ const OrderDetailDialog = ({
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePaymentProofSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !order?.id || !shopId) return;
+    setProofUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await uploadOrderPaymentProof(order.id, shopId, fd);
+      const updated = res.data?.data;
+      toast.success("Đã cập nhật ảnh chứng từ thanh toán.");
+      if (updated && onOrderPatched) onOrderPatched(updated);
+      onSaved?.();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Không thể tải lên ảnh chứng từ.",
+      );
+    } finally {
+      setProofUploading(false);
     }
   };
 
@@ -456,7 +484,17 @@ const OrderDetailDialog = ({
               order.shippingMethod ||
               order.trackingNumber ||
               order.externalOrderRef) && (
-              <div className="rounded-md border p-3 space-y-1 text-sm">
+              <details
+                className="group rounded-md border open:bg-background"
+                key={`ro-fulfill-${order.id}`}
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm hover:bg-muted/40 rounded-md [&::-webkit-details-marker]:hidden">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Giao hàng &amp; tham chiếu
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+                </summary>
+                <div className="border-t px-3 py-2 space-y-1 text-sm">
                 {order.note && (
                   <p>
                     <span className="text-muted-foreground">Ghi chú: </span>
@@ -491,14 +529,27 @@ const OrderDetailDialog = ({
                     <span className="font-mono">{order.trackingNumber}</span>
                   </p>
                 )}
-              </div>
+                </div>
+              </details>
             )}
 
           {canEdit && (
-            <div className="rounded-md border p-3 space-y-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                Giao hàng & tham chiếu (lưu được cả đơn đã thanh toán)
-              </p>
+            <details
+              className="group rounded-md border open:bg-background"
+              key={`ed-fulfill-${order.id}`}
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm hover:bg-muted/40 rounded-md [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0 text-left">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Giao hàng &amp; tham chiếu
+                  </span>
+                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground leading-snug">
+                    Lưu được cả đơn đã thanh toán — bấm để mở và chỉnh
+                  </span>
+                </div>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+              </summary>
+              <div className="border-t p-3 space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Ghi chú</Label>
                 <Textarea
@@ -601,7 +652,8 @@ const OrderDetailDialog = ({
                   />
                 </div>
               </div>
-            </div>
+              </div>
+            </details>
           )}
 
           <div className="rounded-md border">
@@ -831,6 +883,62 @@ const OrderDetailDialog = ({
                 ` — ${new Date(order.paymentTime).toLocaleString("vi-VN")}`}
             </div>
           )}
+
+          {order.paid &&
+            (order.paymentMethod === "Transfer" ||
+              order.paymentProofImageUrl) && (
+              <div className="rounded-md border p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Ảnh chứng từ chuyển khoản
+                </p>
+                {order.paymentProofImageUrl ? (
+                  <a
+                    href={order.paymentProofImageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img
+                      src={order.paymentProofImageUrl}
+                      alt="Chứng từ thanh toán"
+                      className="max-h-44 w-auto rounded-md border object-contain bg-muted/20"
+                    />
+                  </a>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">
+                    Chưa có ảnh đính kèm.
+                  </p>
+                )}
+                {canUploadPaymentProof ? (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <input
+                      ref={proofFileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handlePaymentProofSelected}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs gap-1.5"
+                      disabled={proofUploading}
+                      onClick={() => proofFileRef.current?.click()}
+                    >
+                      {proofUploading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ImagePlus className="h-3.5 w-3.5" />
+                      )}
+                      {order.paymentProofImageUrl
+                        ? "Thay ảnh chứng từ"
+                        : "Thêm ảnh chứng từ"}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            )}
         </div>
 
         {canEdit && order.status !== "CANCELLED" && (
@@ -887,6 +995,7 @@ const OrderListPage = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentProofFile, setPaymentProofFile] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [payingOrderId, setPayingOrderId] = useState(null);
   const [payingOrderSnapshot, setPayingOrderSnapshot] = useState(null);
@@ -1144,6 +1253,7 @@ const OrderListPage = () => {
     setPayingOrderSnapshot(order);
     setPayingOrderId(order.id);
     setPaymentMethod("Cash");
+    setPaymentProofFile(null);
     setPaymentDialogOpen(true);
   }, []);
 
@@ -1171,10 +1281,27 @@ const OrderListPage = () => {
         paymentId,
         paymentMethod,
       );
+      if (
+        paymentMethod === "Transfer" &&
+        paymentProofFile &&
+        payingOrderId
+      ) {
+        try {
+          const fd = new FormData();
+          fd.append("file", paymentProofFile);
+          await uploadOrderPaymentProof(payingOrderId, selectedShopId, fd);
+        } catch (upErr) {
+          console.error(upErr);
+          toast.warning(
+            "Đã xác nhận thanh toán nhưng chưa tải lên được ảnh chứng từ. Bạn có thể bổ sung trong chi tiết đơn.",
+          );
+        }
+      }
       toast.success("Thanh toán thành công.");
       setPaymentDialogOpen(false);
       setPayingOrderSnapshot(null);
       setPayingOrderId(null);
+      setPaymentProofFile(null);
       fetchOrders();
     } catch (err) {
       toast.error(
@@ -1674,6 +1801,7 @@ const OrderListPage = () => {
         order={selectedOrder}
         shopId={selectedShopId}
         canEdit={canUpdate}
+        canUploadPaymentProof={canPay}
         onSaved={fetchOrders}
         onOrderPatched={(o) => setSelectedOrder(o)}
       />
@@ -1686,6 +1814,7 @@ const OrderListPage = () => {
             setPaymentDialogOpen(false);
             setPayingOrderSnapshot(null);
             setPayingOrderId(null);
+            setPaymentProofFile(null);
           }
         }}
       >
@@ -1702,7 +1831,13 @@ const OrderListPage = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+            <Select
+              value={paymentMethod}
+              onValueChange={(v) => {
+                setPaymentMethod(v);
+                if (v !== "Transfer") setPaymentProofFile(null);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -1714,6 +1849,26 @@ const OrderListPage = () => {
                 ))}
               </SelectContent>
             </Select>
+            {paymentMethod === "Transfer" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">
+                  Ảnh chứng từ CK (tuỳ chọn)
+                </Label>
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) =>
+                    setPaymentProofFile(e.target.files?.[0] ?? null)
+                  }
+                  className="text-xs cursor-pointer"
+                />
+                {paymentProofFile && (
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {paymentProofFile.name}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"

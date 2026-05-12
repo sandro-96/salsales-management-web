@@ -40,12 +40,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { useShop } from "../../hooks/useShop.js";
 import { getStaffMemberOverview } from "../../api/staffProfileApi.js";
 import {
   attendanceCheckIn,
   attendanceCheckOut,
+  attendanceManualSession,
   attendanceStaffMonthSummary,
 } from "../../api/attendanceApi.js";
 import {
@@ -101,6 +103,19 @@ const formatMinutes = (m) => {
   return h > 0 ? `${h}h ${min}m` : `${min}m`;
 };
 
+const localYmd = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const normalizeDatetimeLocal = (v) => {
+  if (!v || typeof v !== "string") return null;
+  const t = v.trim();
+  return t.length === 16 ? `${t}:00` : t;
+};
+
 const InfoRow = ({ icon: Icon, label, value }) => (
   <div className="flex items-start gap-3">
     <div className="mt-0.5 text-muted-foreground">
@@ -137,7 +152,7 @@ const PlaceholderCard = ({ title, phase, description }) => (
 const StaffOverviewPage = () => {
   const navigate = useNavigate();
   const { id: routeId } = useParams();
-  const { selectedShopId, branches } = useShop();
+  const { selectedShopId, branches, shopRole } = useShop();
   const shopId = selectedShopId;
 
   const [data, setData] = useState(null);
@@ -146,6 +161,12 @@ const StaffOverviewPage = () => {
   const [attendanceMonth, setAttendanceMonth] = useState(null);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
+  const [manualWorkDate, setManualWorkDate] = useState("");
+  const [manualCheckIn, setManualCheckIn] = useState("");
+  const [manualCheckOut, setManualCheckOut] = useState("");
+  const [manualReplaceDay, setManualReplaceDay] = useState(true);
+  const [manualNote, setManualNote] = useState("");
+  const [manualSubmitting, setManualSubmitting] = useState(false);
 
   const [leaveList, setLeaveList] = useState([]);
   const [leaveLoading, setLeaveLoading] = useState(false);
@@ -274,6 +295,20 @@ const StaffOverviewPage = () => {
 
   const staffRef = profile ? (profile.external ? profile.id : profile.userId) : null;
   const staffType = profile ? (profile.external ? "EXTERNAL" : "SYSTEM") : null;
+
+  const canManageAttendanceManual =
+    shopRole === "OWNER" || shopRole === "MANAGER";
+
+  useEffect(() => {
+    if (!staffRef) return;
+    const d = localYmd(new Date());
+    setManualWorkDate(d);
+    setManualCheckIn(`${d}T08:00`);
+    setManualCheckOut(`${d}T17:00`);
+    setManualReplaceDay(true);
+    setManualNote("");
+  }, [staffRef]);
+
   const todayEntry = useMemo(() => {
     const entries = attendanceMonth?.entries;
     if (!Array.isArray(entries)) return null;
@@ -323,6 +358,38 @@ const StaffOverviewPage = () => {
       toast.error(err.response?.data?.message || "Không thể check-out.");
     } finally {
       setAttendanceSubmitting(false);
+    }
+  };
+
+  const handleManualAttendanceSave = async () => {
+    if (!shopId || !staffRef || !staffType) return;
+    if (!manualWorkDate || !manualCheckIn) {
+      toast.error("Vui lòng chọn ngày làm việc và giờ vào.");
+      return;
+    }
+    setManualSubmitting(true);
+    try {
+      const payload = {
+        staffRef,
+        staffType,
+        workDate: manualWorkDate,
+        checkInAt: normalizeDatetimeLocal(manualCheckIn),
+        replaceDay: manualReplaceDay,
+      };
+      const co = normalizeDatetimeLocal(manualCheckOut);
+      if (co) payload.checkOutAt = co;
+      if (manualNote.trim()) payload.note = manualNote.trim();
+
+      await attendanceManualSession(shopId, payload);
+      toast.success("Đã lưu giờ chấm công.");
+      fetchAttendance();
+    } catch (err) {
+      console.error("Manual attendance error:", err);
+      toast.error(
+        err.response?.data?.message || "Không thể lưu giờ chấm công.",
+      );
+    } finally {
+      setManualSubmitting(false);
     }
   };
 
@@ -632,6 +699,13 @@ const StaffOverviewPage = () => {
                 </CardTitle>
                 <CardDescription>
                   Check-in / check-out theo ca (nhiều lượt trong ngày) và tự cộng tổng giờ.
+                  {canManageAttendanceManual ? (
+                    <>
+                      {" "}
+                      Owner/Manager có thể nhập giờ vào — giờ ra theo ngày (khi nhân viên không
+                      tiện mở app).
+                    </>
+                  ) : null}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -682,6 +756,98 @@ const StaffOverviewPage = () => {
                         </Button>
                       </div>
                     </div>
+
+                    {canManageAttendanceManual ? (
+                      <div className="rounded-md border bg-muted/30 p-3 space-y-3">
+                        <div className="text-sm font-medium">
+                          Nhập giờ chấm công (quản lý)
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Dùng khi nhân viên không thể bấm check-in/check-out trên app. Có thể chọn
+                          ngày trong quá khứ và chỉnh sửa theo thực tế ca làm.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="manual-work-date" className="text-xs">
+                              Ngày làm việc
+                            </Label>
+                            <Input
+                              id="manual-work-date"
+                              type="date"
+                              value={manualWorkDate}
+                              onChange={(e) => setManualWorkDate(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1.5 sm:col-span-2 grid sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="manual-in" className="text-xs">
+                                Giờ vào
+                              </Label>
+                              <Input
+                                id="manual-in"
+                                type="datetime-local"
+                                value={manualCheckIn}
+                                onChange={(e) => setManualCheckIn(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="manual-out" className="text-xs">
+                                Giờ ra (tuỳ chọn)
+                              </Label>
+                              <Input
+                                id="manual-out"
+                                type="datetime-local"
+                                value={manualCheckOut}
+                                onChange={(e) => setManualCheckOut(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="manual-note" className="text-xs">
+                            Ghi chú (tuỳ chọn)
+                          </Label>
+                          <Textarea
+                            id="manual-note"
+                            rows={2}
+                            className="text-sm resize-none"
+                            value={manualNote}
+                            onChange={(e) => setManualNote(e.target.value)}
+                            placeholder="VD: ca sáng cửa hàng, bù giờ..."
+                          />
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            id="manual-replace"
+                            checked={manualReplaceDay}
+                            onCheckedChange={(v) => setManualReplaceDay(v === true)}
+                            className="mt-0.5"
+                          />
+                          <Label
+                            htmlFor="manual-replace"
+                            className="text-xs font-normal leading-snug cursor-pointer"
+                          >
+                            Ghi đè toàn bộ ca trong ngày đã chọn (xóa các session chấm công trước
+                            đó trong ngày đó).
+                          </Label>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={manualSubmitting || !manualWorkDate || !manualCheckIn}
+                          onClick={handleManualAttendanceSave}
+                        >
+                          {manualSubmitting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Đang lưu...
+                            </>
+                          ) : (
+                            "Lưu giờ chấm công"
+                          )}
+                        </Button>
+                      </div>
+                    ) : null}
 
                     <div className="grid grid-cols-3 gap-2">
                       <div className="rounded-md border p-2">

@@ -627,14 +627,7 @@ export default function BillingPage() {
             </div>
           )}
         </div>
-      ) : (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
-          <AlertTriangle className="inline h-4 w-4 mr-1 align-text-bottom" />
-          Chưa cấu hình tài khoản nhận (env{" "}
-          <code className="text-xs">BILLING_ACCOUNT_NUMBER</code>,{" "}
-          <code className="text-xs">BILLING_ACCOUNT_HOLDER</code>, …). Liên hệ quản trị hệ thống.
-        </div>
-      )}
+      ) : null}
 
       <Card>
         <CardHeader className="gap-2">

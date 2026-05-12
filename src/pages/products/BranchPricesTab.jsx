@@ -445,10 +445,16 @@ export default function BranchPricesTab({
                                 Thời điểm
                               </th>
                               <th className="text-right px-2 py-1.5 font-medium">
-                                Giá cũ
+                                Giá bán cũ
                               </th>
                               <th className="text-right px-2 py-1.5 font-medium">
-                                Giá mới
+                                Giá bán mới
+                              </th>
+                              <th className="text-right px-2 py-1.5 font-medium">
+                                Giá vốn cũ
+                              </th>
+                              <th className="text-right px-2 py-1.5 font-medium">
+                                Giá vốn mới
                               </th>
                               <th className="text-left px-2 py-1.5 font-medium">
                                 Lý do
@@ -483,6 +489,22 @@ export default function BranchPricesTab({
                                   <td className="px-2 py-1.5 text-right font-medium">
                                     {h.newPrice != null
                                       ? Number(h.newPrice).toLocaleString(
+                                          "vi-VN",
+                                        ) + " ₫"
+                                      : "-"}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right text-muted-foreground">
+                                    {h.oldCostPrice != null &&
+                                    h.oldCostPrice !== undefined
+                                      ? Number(h.oldCostPrice).toLocaleString(
+                                          "vi-VN",
+                                        ) + " ₫"
+                                      : "-"}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right font-medium">
+                                    {h.newCostPrice != null &&
+                                    h.newCostPrice !== undefined
+                                      ? Number(h.newCostPrice).toLocaleString(
                                           "vi-VN",
                                         ) + " ₫"
                                       : "-"}

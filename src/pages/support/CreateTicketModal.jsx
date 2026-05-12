@@ -40,7 +40,7 @@ const PRIORITIES = [
   { value: "URGENT", label: "Khẩn cấp" },
 ];
 
-export default function CreateTicketModal({ open, onOpenChange, shopId, onCreated }) {
+export default function CreateTicketModal({ open, onOpenChange, onCreated }) {
   const [loading, setLoading] = useState(false);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -62,7 +62,7 @@ export default function CreateTicketModal({ open, onOpenChange, shopId, onCreate
     }
     setLoading(true);
     try {
-      const res = await createTicket(shopId, { subject, message, category, priority });
+      const res = await createTicket({ subject, message, category, priority });
       if (res.data?.success) {
         toast.success("Tạo ticket hỗ trợ thành công.");
         resetForm();

@@ -37,14 +37,13 @@ import {
 } from "@/constants/supportTicketStatus.js";
 
 /**
- * Adapter mặc định cho trang hỗ trợ phía shop. Nhận shopId + ticketId.
- * AdminSupportPage truyền adapter riêng (không cần shopId).
+ * Adapter mặc định: API `/api/user/support` (không shopId). AdminSupportPage truyền adapter riêng.
  */
 const defaultAdapter = {
-  getTicket: (shopId, ticketId) => defaultGetTicket(shopId, ticketId),
-  reply: (shopId, ticketId, data) => defaultReplyToTicket(shopId, ticketId, data),
-  updateStatus: (shopId, ticketId, data) =>
-    defaultUpdateTicketStatus(shopId, ticketId, data),
+  getTicket: (_shopId, ticketId) => defaultGetTicket(ticketId),
+  reply: (_shopId, ticketId, data) => defaultReplyToTicket(ticketId, data),
+  updateStatus: (_shopId, ticketId, data) =>
+    defaultUpdateTicketStatus(ticketId, data),
 };
 
 const PRIORITY_MAP = {
@@ -226,6 +225,9 @@ export default function TicketDetailModal({
   const currentId = user?.id;
   const isReplyMine = (reply) => currentId && reply.userId === currentId;
   const isOriginalMine = currentId && ticket?.userId === currentId;
+  const canChangeStatus =
+    Boolean(isManager) ||
+    Boolean(ticket && currentId && ticket.userId === currentId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -256,7 +258,7 @@ export default function TicketDetailModal({
                 </span>
               </div>
 
-              {isManager && (
+              {canChangeStatus && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-muted-foreground">Chuyển trạng thái:</span>
                   <Select

@@ -42,6 +42,67 @@ const ShopProvider = ({ children }) => {
     localStorage.removeItem(branchIdKey);
   }, [storageKeys]);
 
+  const fetchShops = useCallback(async (preferredShopId) => {
+    let shopList = [];
+    try {
+      const res = await axiosInstance.get("/shop/my?page=0&size=1000");
+      shopList = res.data.data.content || [];
+      setShops(shopList);
+
+      const isShopOpen = (s) => s && s.active !== false;
+      const { shopIdKey, branchIdKey } = storageKeys();
+      const fromStorage = localStorage.getItem(shopIdKey);
+
+      const targetId =
+        typeof preferredShopId === "string" &&
+        preferredShopId &&
+        shopList.some((s) => s.id === preferredShopId)
+          ? preferredShopId
+          : fromStorage;
+
+      const validSavedShop = shopList.find((s) => s.id === targetId);
+
+      if (validSavedShop) {
+        setSelectedShopIdState(validSavedShop.id);
+        setSelectedShopState(validSavedShop);
+        setSelectedRole(validSavedShop.role);
+        setSelectedIndustry(validSavedShop.industry);
+        localStorage.setItem(shopIdKey, validSavedShop.id);
+      } else {
+        const firstActive = shopList.find(isShopOpen);
+
+        if (firstActive) {
+          setSelectedShopIdState(firstActive.id);
+          setSelectedShopState(firstActive);
+          setSelectedRole(firstActive.role);
+          setSelectedIndustry(firstActive.industry);
+          localStorage.setItem(shopIdKey, firstActive.id);
+        } else if (shopList.length > 0) {
+          const first = shopList[0];
+          setSelectedShopIdState(first.id);
+          setSelectedShopState(first);
+          setSelectedRole(first.role);
+          setSelectedIndustry(first.industry);
+          localStorage.setItem(shopIdKey, first.id);
+        } else {
+          setSelectedShopIdState(null);
+          setSelectedShopState(null);
+          setSelectedRole(null);
+          setSelectedIndustry(null);
+          localStorage.removeItem(shopIdKey);
+          localStorage.removeItem(branchIdKey);
+          console.log("Người dùng không có cửa hàng nào.");
+        }
+      }
+      console.log("Đã tải danh sách cửa hàng:", shopList);
+    } catch (err) {
+      console.error("Lỗi khi tải danh sách cửa hàng", err);
+    } finally {
+      setIsShopContextReady(true);
+    }
+    return shopList;
+  }, [storageKeys]);
+
   const setSelectedShopId = useCallback(
     (id) => {
       setSelectedShopIdState(id);
@@ -114,58 +175,6 @@ const ShopProvider = ({ children }) => {
     },
     [selectedShopId, storageKeys],
   );
-
-  const fetchShops = useCallback(async (preferredShopId) => {
-    let shopList = [];
-    try {
-      const res = await axiosInstance.get("/shop/my?page=0&size=1000");
-      shopList = res.data.data.content || [];
-      setShops(shopList);
-
-      const { shopIdKey } = storageKeys();
-      const fromStorage = localStorage.getItem(shopIdKey);
-      const targetId =
-        typeof preferredShopId === "string" &&
-        preferredShopId &&
-        shopList.some((s) => s.id === preferredShopId)
-          ? preferredShopId
-          : fromStorage;
-
-      const validSavedShop = shopList.find((s) => s.id === targetId);
-      if (validSavedShop) {
-        setSelectedShopIdState(validSavedShop.id);
-        setSelectedShopState(validSavedShop);
-        setSelectedRole(validSavedShop.role);
-        setSelectedIndustry(validSavedShop.industry);
-        localStorage.setItem(shopIdKey, validSavedShop.id);
-      } else {
-        if (shopList.length > 0 && !selectedShopId) {
-          const firstShop = shopList[0];
-          setSelectedShopIdState(firstShop.id);
-          setSelectedShopState(firstShop);
-          setSelectedRole(firstShop.role);
-          setSelectedIndustry(firstShop.industry);
-          localStorage.setItem(shopIdKey, firstShop.id);
-          console.log(
-            "Cửa hàng đã chọn không hợp lệ, chuyển sang cửa hàng đầu tiên.",
-          );
-        } else if (shopList.length === 0) {
-          setSelectedShopIdState(null);
-          setSelectedShopState(null);
-          setSelectedRole(null);
-          setSelectedIndustry(null);
-          localStorage.removeItem(shopIdKey);
-          console.log("Người dùng không có cửa hàng nào.");
-        }
-      }
-      console.log("Đã tải danh sách cửa hàng:", shopList);
-    } catch (err) {
-      console.error("Lỗi khi tải danh sách cửa hàng", err);
-    } finally {
-      setIsShopContextReady(true);
-    }
-    return shopList;
-  }, [selectedShopId, storageKeys]);
 
   const fetchBranches = useCallback(
     async (shopIdParam) => {

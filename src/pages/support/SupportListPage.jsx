@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useSearchParams } from "react-router-dom";
-import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -44,7 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
 
-import { getTickets, getMyTickets, deleteTicket } from "../../api/supportApi.js";
+import { listMyTickets, deleteTicket } from "../../api/supportApi.js";
 import CreateTicketModal from "./CreateTicketModal.jsx";
 import TicketDetailModal from "./TicketDetailModal.jsx";
 import {
@@ -79,10 +78,7 @@ const formatDate = (d) => {
 const SupportListPage = () => {
   const { user } = useAuth();
   const { subscribe, connected } = useWebSocket();
-  const { selectedShopId, isOwner, shopRole } = useShop();
   const isMobile = useIsMobile();
-  const shopId = selectedShopId;
-  const isManager = isOwner || shopRole === "MANAGER";
   const { confirm } = useAlertDialog();
 
   const [tickets, setTickets] = useState([]);
@@ -117,7 +113,6 @@ const SupportListPage = () => {
   const [statusFilter, setStatusFilter] = useState("__all__");
   const [categoryFilter, setCategoryFilter] = useState("__all__");
   const [keyword, setKeyword] = useState("");
-  const [viewMode, setViewMode] = useState("all"); // "all" for managers, "my" for staff
 
   // Mobile: reduce columns so the table fits nicely.
   useEffect(() => {
@@ -130,7 +125,6 @@ const SupportListPage = () => {
   }, [isMobile]);
 
   const fetchTickets = useCallback(async (silent = false) => {
-    if (!shopId) return;
     try {
       if (!silent) setLoading(true);
       const params = {
@@ -141,8 +135,7 @@ const SupportListPage = () => {
       if (categoryFilter !== "__all__") params.category = categoryFilter;
       if (keyword.trim()) params.keyword = keyword.trim();
 
-      const fetcher = (isManager && viewMode === "all") ? getTickets : getMyTickets;
-      const res = await fetcher(shopId, params);
+      const res = await listMyTickets(params);
       const data = res.data?.data;
 
       if (data && typeof data === "object" && "content" in data) {
@@ -159,7 +152,7 @@ const SupportListPage = () => {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [shopId, pagination, statusFilter, categoryFilter, keyword, viewMode, isManager]);
+  }, [pagination, statusFilter, categoryFilter, keyword]);
 
   useEffect(() => {
     fetchTickets(false);
@@ -167,16 +160,15 @@ const SupportListPage = () => {
 
   /** Danh sách ticket cập nhật realtime khi có thông báo WS (đổi trạng thái / reply). */
   useEffect(() => {
-    if (!shopId || !user?.id || !connected) return;
+    if (!user?.id || !connected) return;
     return subscribe(`/topic/notifications/${user.id}`, (message) => {
       if (message.type !== WebSocketMessageTypes.NOTIFICATION || !message.data) return;
       const d = message.data;
       if (d.referenceType !== "TICKET") return;
       if (!TICKET_LIST_WS_TYPES.has(d.type)) return;
-      if (d.shopId && d.shopId !== shopId) return;
       fetchTickets(true);
     });
-  }, [shopId, user?.id, connected, subscribe, fetchTickets]);
+  }, [user?.id, connected, subscribe, fetchTickets]);
 
   const handleDelete = async (ticket) => {
     const ok = await confirm(
@@ -185,7 +177,7 @@ const SupportListPage = () => {
     );
     if (!ok) return;
     try {
-      const res = await deleteTicket(shopId, ticket.id);
+      const res = await deleteTicket(ticket.id);
       if (res.data?.success) {
         toast.success("Xóa ticket thành công.");
         fetchTickets();
@@ -291,17 +283,15 @@ const SupportListPage = () => {
               >
                 Xem chi tiết
               </DropdownMenuItem>
-              {isManager && (
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={(e) => {
-                    e.stopPropagation();
-                    handleDelete(row.original);
-                  }}
-                >
-                  Xóa
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={(e) => {
+                  e.stopPropagation();
+                  handleDelete(row.original);
+                }}
+              >
+                Xóa
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -329,7 +319,9 @@ const SupportListPage = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Hỗ trợ</h1>
-          <p className="text-muted-foreground text-sm">Quản lý yêu cầu hỗ trợ từ nhân viên.</p>
+          <p className="text-muted-foreground text-sm">
+            Liên hệ đội ngũ quản trị hệ thống; không gắn với cửa hàng cụ thể.
+          </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} variant="success">
           <Plus className="mr-2 h-4 w-4" />
@@ -366,15 +358,6 @@ const SupportListPage = () => {
             ))}
           </SelectContent>
         </Select>
-        {isManager && (
-          <Select value={viewMode} onValueChange={(v) => { setViewMode(v); setPagination((p) => ({ ...p, pageIndex: 0 })); }}>
-            <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả ticket</SelectItem>
-              <SelectItem value="my">Ticket của tôi</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
       </div>
 
       {/* Table */}
@@ -429,16 +412,15 @@ const SupportListPage = () => {
       <CreateTicketModal
         open={createOpen}
         onOpenChange={setCreateOpen}
-        shopId={shopId}
         onCreated={fetchTickets}
       />
 
       <TicketDetailModal
         open={detailOpen}
         onOpenChange={handleDetailOpenChange}
-        shopId={shopId}
+        shopId={null}
         ticketId={detailTicketId}
-        isManager={isManager}
+        isManager={false}
         onUpdated={fetchTickets}
       />
     </div>

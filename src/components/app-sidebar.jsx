@@ -20,7 +20,7 @@ import SystemSupportContact from "@/components/common/SystemSupportContact.jsx";
 
 export function AppSidebar({ navItems, ...props }) {
   const { user } = useAuth();
-  const { shops, selectedShopId, isOwner, shopRole } = useShop();
+  const { shops, selectedShopId } = useShop();
   const { hasShopPermission, hasAnyShopPermission, hasAllShopPermissions } =
     useShopPermissions();
   const permHelpers = React.useMemo(
@@ -51,12 +51,10 @@ export function AppSidebar({ navItems, ...props }) {
         label: "Hỗ trợ",
         to: "/support",
         icon: HelpCircleIcon,
-        // /support backend dùng @RequireRole (OWNER/MANAGER); ẩn với role khác.
-        allow: isOwner || shopRole === "MANAGER" || !selectedShopId,
       },
     ];
     return items.filter((i) => i.allow !== false);
-  }, [isOwner, shopRole, selectedShopId]);
+  }, []);
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>

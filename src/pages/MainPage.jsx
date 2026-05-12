@@ -1,14 +1,26 @@
-// create file src/pages/MainPage.jsx
-import React from 'react';
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
 const MainPage = () => {
-    
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
-            <div className="bg-white p-8 rounded-lg shadow w-full max-w-md">
-                <h2 className="text-xl font-semibold mb-4 text-center">Trang chủ</h2>
-                {/* Add more shop details or actions here */}
-            </div>
-        </div>
-    );
-}
+  return (
+    <div className="flex min-h-full w-full flex-col items-center justify-center bg-muted/40 px-4 py-10 dark:bg-muted/15">
+      <Card className="w-full max-w-md border shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-center text-xl">Trang chủ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-sm text-muted-foreground">
+            Chọn mục từ menu để bắt đầu làm việc.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 export default MainPage;

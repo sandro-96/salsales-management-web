@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Search,
   Plus,
@@ -17,6 +17,7 @@ import {
   Eye,
   Printer,
   ChevronsLeftRight,
+  ImagePlus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,7 @@ import { cn } from "@/lib/utils";
 
 export function PosPageShell(props) {
   const [cartAsideWide, setCartAsideWide] = useState(false);
+  const transferProofInputRef = useRef(null);
 
   const {
     activePromotions,
@@ -145,11 +147,15 @@ export function PosPageShell(props) {
     moveTableOpen,
     moveToTableId,
     openCheckoutInvoicePreview,
+    openPosCheckout,
+    shopPosWriteBlocked,
     openOrderByCode,
     orderLookupInput,
     orderLookupSubmitting,
     orderTabs,
     paymentMethod,
+    transferPaymentProofFile,
+    setTransferPaymentProofFile,
     pointsToRedeem,
     postSaleName,
     postSaleOpen,
@@ -497,7 +503,7 @@ export function PosPageShell(props) {
         <OrderTabBar {...tabBarProps} />
         <CartPanel
           {...cartPanelProps}
-          onCheckout={() => setCheckoutOpen(true)}
+          onCheckout={openPosCheckout}
         />
       </aside>
 
@@ -523,7 +529,7 @@ export function PosPageShell(props) {
             {...cartPanelProps}
             onCheckout={() => {
               setCartOpen(false);
-              setCheckoutOpen(true);
+              openPosCheckout();
             }}
             hideHeader
           />
@@ -817,6 +823,52 @@ export function PosPageShell(props) {
                 })}
               </div>
             </div>
+
+            {paymentMethod === "Transfer" && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Tuỳ chọn: đính kèm ảnh chụp màn hình chuyển khoản thành công để lưu
+                  cùng đơn hàng.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    ref={transferProofInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      setTransferPaymentProofFile(e.target.files?.[0] ?? null);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5"
+                    onClick={() => transferProofInputRef.current?.click()}
+                  >
+                    <ImagePlus className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate max-w-[200px]">
+                      {transferPaymentProofFile
+                        ? transferPaymentProofFile.name
+                        : "Chọn ảnh chứng từ"}
+                    </span>
+                  </Button>
+                  {transferPaymentProofFile ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-8 text-muted-foreground"
+                      onClick={() => setTransferPaymentProofFile(null)}
+                    >
+                      Bỏ ảnh
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
@@ -841,7 +893,10 @@ export function PosPageShell(props) {
             >
               Hủy
             </Button>
-            <Button onClick={handleCheckout} disabled={submitting}>
+            <Button
+              onClick={handleCheckout}
+              disabled={submitting || shopPosWriteBlocked}
+            >
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Xác nhận
             </Button>

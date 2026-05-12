@@ -1,24 +1,21 @@
 import axiosInstance from "./axiosInstance";
 
-const BASE = "/shops";
+/** Ticket hỗ trợ user ↔ admin, không gắn shop (`/api/user/support`). */
+const BASE = "/user/support";
 
-export const createTicket = (shopId, data) =>
-  axiosInstance.post(`${BASE}/${shopId}/support`, data);
+export const createTicket = (data) => axiosInstance.post(BASE, data);
 
-export const getTickets = (shopId, params = {}) =>
-  axiosInstance.get(`${BASE}/${shopId}/support`, { params });
+export const listMyTickets = (params = {}) =>
+  axiosInstance.get(BASE, { params });
 
-export const getMyTickets = (shopId, params = {}) =>
-  axiosInstance.get(`${BASE}/${shopId}/support/my`, { params });
+export const getTicket = (ticketId) =>
+  axiosInstance.get(`${BASE}/${ticketId}`);
 
-export const getTicket = (shopId, ticketId) =>
-  axiosInstance.get(`${BASE}/${shopId}/support/${ticketId}`);
+export const replyToTicket = (ticketId, data) =>
+  axiosInstance.post(`${BASE}/${ticketId}/reply`, data);
 
-export const replyToTicket = (shopId, ticketId, data) =>
-  axiosInstance.post(`${BASE}/${shopId}/support/${ticketId}/reply`, data);
+export const updateTicketStatus = (ticketId, data) =>
+  axiosInstance.put(`${BASE}/${ticketId}/status`, data);
 
-export const updateTicketStatus = (shopId, ticketId, data) =>
-  axiosInstance.put(`${BASE}/${shopId}/support/${ticketId}/status`, data);
-
-export const deleteTicket = (shopId, ticketId) =>
-  axiosInstance.delete(`${BASE}/${shopId}/support/${ticketId}`);
+export const deleteTicket = (ticketId) =>
+  axiosInstance.delete(`${BASE}/${ticketId}`);

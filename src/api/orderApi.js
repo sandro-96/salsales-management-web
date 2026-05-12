@@ -77,6 +77,15 @@ export const confirmPayment = (orderId, shopId, paymentId, paymentMethod) =>
   });
 
 /**
+ * Ảnh chứng từ thanh toán (CK) — tuỳ chọn, đơn đã thanh toán.
+ * POST /api/orders/{orderId}/payment-proof?shopId=
+ */
+export const uploadOrderPaymentProof = (orderId, shopId, formData) =>
+  axiosInstance.post(`/orders/${orderId}/payment-proof`, formData, {
+    params: { shopId },
+  });
+
+/**
  * 🔄 Cập nhật trạng thái đơn hàng
  * PUT /api/orders/{id}/status?shopId={shopId}&status={status}
  */

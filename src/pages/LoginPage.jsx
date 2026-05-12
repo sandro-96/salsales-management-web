@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { Link, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../hooks/useAuth";
 import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
-import GoogleSignInButton from "../components/common/GoogleSignInButton.jsx";
+import GoogleSignInButton, {
+  consumeGoogleOAuthReturn,
+  clearOAuthHashFromUrl,
+} from "../components/common/GoogleSignInButton.jsx";
 import { toast } from "sonner";
 
 const LoginPage = () => {
@@ -12,6 +15,7 @@ const LoginPage = () => {
   const [formValue, setFormValue] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const oauthReturnHandledRef = useRef(false);
 
   const handleChange = (e) => {
     setFormValue({ ...formValue, [e.target.name]: e.target.value });
@@ -74,10 +78,38 @@ const LoginPage = () => {
     }
   };
 
+  useEffect(() => {
+    if (oauthReturnHandledRef.current) return;
+    const handled = consumeGoogleOAuthReturn((result) => {
+      clearOAuthHashFromUrl();
+      if (result.error) {
+        if (result.error === "access_denied") {
+          toast.info("Bạn đã hủy đăng nhập Google.");
+        } else if (
+          result.error === "state_mismatch" ||
+          result.error === "nonce_mismatch"
+        ) {
+          toast.error("Phiên đăng nhập Google không hợp lệ. Vui lòng thử lại.");
+        } else {
+          const desc = result.errorDescription?.replace(/\+/g, " ");
+          toast.error(
+            desc || `Đăng nhập Google thất bại (${result.error}).`,
+          );
+        }
+        return;
+      }
+      if (result.credential) {
+        void handleGoogleSignIn({ credential: result.credential });
+      }
+    });
+    if (handled) oauthReturnHandledRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ đọc hash một lần khi vào /login sau redirect
+  }, []);
+
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
-      <div className="flex-1 p-6 md:p-12 flex flex-col gap-2 justify-center w-full md:max-w-lg md:mx-auto relative">
-        <div className="grid w-full max-w-sm grid-cols-1 gap-4 mx-auto">
+    <div className="flex flex-col md:flex-row min-h-[100dvh] min-h-screen overflow-x-hidden bg-background text-foreground">
+      <div className="flex-1 px-4 py-8 sm:px-6 sm:py-12 md:p-12 flex flex-col gap-2 justify-center w-full md:max-w-lg md:mx-auto relative">
+        <div className="grid w-full max-w-md grid-cols-1 gap-4 mx-auto">
           {loading && <LoadingOverlay text="Đang xử lý..." />}
           <h1 className="text-3xl coiny-regular text-blue-900 dark:text-blue-300">SỔ THU CHI</h1>
           <div className="flex flex-col gap-3">
@@ -161,11 +193,7 @@ const LoginPage = () => {
               </span>
               <hr className="flex-grow border-t border-border" />
             </div>
-            <GoogleSignInButton
-              callback={handleGoogleSignIn}
-              text="signin_with"
-              className="w-full"
-            />
+            <GoogleSignInButton text="signin_with" className="w-full" />
           </form>
         </div>
       </div>
