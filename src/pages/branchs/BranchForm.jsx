@@ -30,6 +30,18 @@ import { getFlagUrl } from "@/utils/commonUtils";
 import { cn } from "@/lib/utils"; // giả sử bạn có utils cn cho className
 import { useShopPermissions } from "@/hooks/useShopPermissions.js";
 import { PERM } from "@/constants/shopPermissions.js";
+import BranchTimePopover from "@/components/branch/BranchTimePopover.jsx";
+
+/** Chuẩn hóa LocalTime từ API (vd. "09:30:00") thành giá trị cho input type="time". */
+function toTimeInputValue(value) {
+  if (value == null || value === "") return "";
+  if (typeof value === "string") {
+    const m = value.match(/^(\d{1,2}):(\d{2})/);
+    if (m) return `${m[1].padStart(2, "0")}:${m[2]}`;
+    return value;
+  }
+  return "";
+}
 
 const formSchema = z
   .object({
@@ -123,20 +135,28 @@ export default function BranchForm({
   } = form;
 
   useEffect(() => {
-    if (branch) {
-      reset({
-        ...branch,
-        openingDate: branch.openingDate
-          ? new Date(branch.openingDate)
-          : undefined,
-        capacity: branch.capacity ?? undefined,
-        countryCode: shop?.countryCode || "VN",
-        taxRegistrationNumber: branch.taxRegistrationNumber ?? "",
-        wifiSsid: branch.wifiSsid ?? "",
-        wifiPassword: branch.wifiPassword ?? "",
-      });
-    }
-  }, [branch, reset, shop]);
+    if (!branch) return;
+    reset({
+      name: branch.name ?? "",
+      address: branch.address ?? "",
+      phone: branch.phone ?? "",
+      countryCode: shop?.countryCode || "VN",
+      openingDate: branch.openingDate
+        ? new Date(branch.openingDate)
+        : undefined,
+      openingTime: toTimeInputValue(branch.openingTime),
+      closingTime: toTimeInputValue(branch.closingTime),
+      managerName: branch.managerName ?? "",
+      managerPhone: branch.managerPhone ?? "",
+      capacity: branch.capacity ?? undefined,
+      description: branch.description ?? "",
+      taxRegistrationNumber: branch.taxRegistrationNumber ?? "",
+      wifiSsid: branch.wifiSsid ?? "",
+      wifiPassword: branch.wifiPassword ?? "",
+      isDefault: branch.default ?? false,
+      active: branch.active !== false,
+    });
+  }, [branch, reset, shop?.countryCode]);
 
   const country =
     COUNTRIES.find((c) => c.code === form.watch("countryCode")) || COUNTRIES[0];
@@ -157,10 +177,10 @@ export default function BranchForm({
     return (
       <div
         className={cn(
-          "flex justify-between gap-2 rounded-md border border-input bg-muted/50 px-3 text-sm text-foreground",
+          "flex justify-between gap-2 rounded-md border border-input bg-muted/50 px-3.5 text-sm text-foreground",
           variant === "multi"
-            ? "min-h-[5rem] items-start py-2"
-            : "h-9 items-center",
+            ? "min-h-[5rem] items-start py-2.5"
+            : "min-h-10 h-10 items-center",
           className,
         )}
       >
@@ -190,11 +210,20 @@ export default function BranchForm({
     const trimmedMst = data.taxRegistrationNumber?.trim?.() ?? "";
     const wifiSsid = data.wifiSsid?.trim?.() ?? "";
     const wifiPassword = data.wifiPassword?.trim?.() ?? "";
+    const toLocalTimePayload = (t) => {
+      const s = typeof t === "string" ? t.trim() : "";
+      if (!s) return undefined;
+      const m = s.match(/^(\d{2}):(\d{2})$/);
+      if (m) return `${m[1]}:${m[2]}:00`;
+      return s;
+    };
     const submitData = {
       ...data,
       openingDate: data.openingDate
         ? data.openingDate.toISOString().split("T")[0]
         : undefined,
+      openingTime: toLocalTimePayload(data.openingTime),
+      closingTime: toLocalTimePayload(data.closingTime),
       taxRegistrationNumber: trimmedMst || null,
       wifiSsid: wifiSsid || null,
       wifiPassword: wifiPassword || null,
@@ -206,10 +235,10 @@ export default function BranchForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleSubmit)}
-        className="w-full h-full flex flex-col gap-6"
+        className="w-full min-h-0 flex flex-col gap-8"
       >
         <div className="flex gap-8 items-start justify-center w-full">
-          <div className="flex flex-col gap-6 w-full md:max-w-2xl">
+          <div className="flex flex-col gap-7 w-full md:max-w-2xl">
             {/* Tên chi nhánh */}
             <FormField
               control={form.control}
@@ -223,7 +252,11 @@ export default function BranchForm({
                     </FormControl>
                   ) : (
                     <FormControl>
-                      <Input placeholder="Nhập tên chi nhánh" {...field} />
+                      <Input
+                        placeholder="Nhập tên chi nhánh"
+                        className="h-10 px-3.5 py-2"
+                        {...field}
+                      />
                     </FormControl>
                   )}
                   <FormMessage />
@@ -270,29 +303,30 @@ export default function BranchForm({
                         />
                       </FormControl>
                     ) : (
-                      <FormControl>
-                        <div
-                          className={cn(
-                            "flex rounded-md shadow-xs border border-input overflow-hidden focus-within:ring-ring/45 focus-within:ring-[3px] focus-within:ring-inset focus-within:border-ring",
-                            fieldState.error && "border-destructive",
-                          )}
+                      <div
+                        className={cn(
+                          "flex min-h-10 w-full min-w-0 rounded-md border bg-background transition-[color,box-shadow]",
+                          fieldState.error
+                            ? "border-destructive ring-2 ring-destructive/25"
+                            : "border-input focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/35",
+                        )}
+                      >
+                        <span
+                          className="flex min-h-10 shrink-0 items-center border-r border-input bg-muted/80 px-3.5 text-sm tabular-nums text-muted-foreground"
+                          aria-hidden
                         >
-                          <span
-                            className="flex h-9 shrink-0 items-center bg-muted px-3 text-sm tabular-nums text-muted-foreground"
-                            aria-hidden
-                          >
-                            {country.dialCode}
-                          </span>
+                          {country.dialCode}
+                        </span>
+                        <FormControl>
                           <Input
                             placeholder="Nhập số điện thoại"
-                            className="flex-1 rounded-none border-0 shadow-none focus-visible:ring-0 focus-visible:border-transparent"
+                            className="h-10 min-h-10 flex-1 min-w-0 rounded-none border-0 bg-transparent px-3.5 py-2 shadow-none focus-visible:ring-0 focus-visible:border-0 focus-visible:outline-none md:text-sm"
                             inputMode="tel"
                             autoComplete="tel"
-                            aria-invalid={!!fieldState.error}
                             {...field}
                           />
-                        </div>
-                      </FormControl>
+                        </FormControl>
+                      </div>
                     )}
                     <FormMessage />
                   </FormItem>
@@ -316,6 +350,7 @@ export default function BranchForm({
                       <Textarea
                         rows={3}
                         placeholder="Nhập địa chỉ chi tiết"
+                        className="min-h-[88px] px-3.5 py-2.5 text-sm md:text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -436,8 +471,8 @@ export default function BranchForm({
               />
             </div>
 
-            {/* Giờ mở / đóng cửa */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Giờ mở / đóng cửa — Popover 24h, không dùng input[type=time] (native UI chồng field) */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="openingTime"
@@ -447,7 +482,14 @@ export default function BranchForm({
                     {isReadOnly ? (
                       <ReadOnlyValue value={field.value || "-"} />
                     ) : (
-                      <Input type="time" {...field} value={field.value || ""} />
+                      <FormControl>
+                        <BranchTimePopover
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                        />
+                      </FormControl>
                     )}
                     <FormMessage />
                   </FormItem>
@@ -462,7 +504,14 @@ export default function BranchForm({
                     {isReadOnly ? (
                       <ReadOnlyValue value={field.value || "-"} />
                     ) : (
-                      <Input type="time" {...field} value={field.value || ""} />
+                      <FormControl>
+                        <BranchTimePopover
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                        />
+                      </FormControl>
                     )}
                     <FormMessage />
                   </FormItem>
@@ -503,22 +552,52 @@ export default function BranchForm({
                 )}
               />
             </div>
-            <div className="rounded-lg border border-dashed border-muted-foreground/25 p-4 space-y-4 bg-muted/20">
-              <p className="text-sm font-medium flex items-center gap-2">
-                <Wifi className="h-4 w-4" />
-                Wi‑Fi khách (in trên hóa đơn)
-              </p>
-              <p className="text-xs text-muted-foreground -mt-2">
-                Nếu nhập, tên mạng và mật khẩu sẽ xuất hiện trên bill in từ POS
-                hoặc mục in lại đơn.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* Mô tả — đặt trước Wi‑Fi để luôn thấy rõ; full width */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mô tả chi nhánh (tùy chọn)</FormLabel>
+                  {isReadOnly ? (
+                    <ReadOnlyValue value={field.value} variant="multi" />
+                  ) : (
+                    <FormControl>
+                      <Textarea
+                        rows={4}
+                        placeholder="Ghi chú đặc điểm chi nhánh..."
+                        className="min-h-[100px] px-3.5 py-2.5 text-sm md:text-sm"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-5 space-y-5">
+              <div className="space-y-1">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Wifi className="h-4 w-4 shrink-0" />
+                  Wi‑Fi khách (in trên hóa đơn)
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Nếu nhập, tên mạng và mật khẩu sẽ xuất hiện trên bill in từ POS
+                  hoặc mục in lại đơn.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
                 <FormField
                   control={form.control}
                   name="wifiSsid"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tên Wi‑Fi (SSID)</FormLabel>
+                    <FormItem className="space-y-2">
+                      <FormLabel className="text-foreground">
+                        Tên Wi‑Fi (SSID)
+                      </FormLabel>
                       {isReadOnly ? (
                         <FormControl>
                           <ReadOnlyValue value={field.value} />
@@ -528,6 +607,7 @@ export default function BranchForm({
                           <Input
                             placeholder="Ví dụ: MilkTea_Guest"
                             maxLength={64}
+                            className="h-10 px-3.5"
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -541,8 +621,10 @@ export default function BranchForm({
                   control={form.control}
                   name="wifiPassword"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mật khẩu Wi‑Fi</FormLabel>
+                    <FormItem className="space-y-2">
+                      <FormLabel className="text-foreground">
+                        Mật khẩu Wi‑Fi
+                      </FormLabel>
                       {isReadOnly ? (
                         <FormControl>
                           <ReadOnlyValue value={field.value} />
@@ -554,6 +636,7 @@ export default function BranchForm({
                             placeholder="Để trống nếu không có"
                             maxLength={128}
                             autoComplete="new-password"
+                            className="h-10 px-3.5"
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -565,27 +648,6 @@ export default function BranchForm({
                 />
               </div>
             </div>
-
-            {/* Mô tả */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mô tả chi nhánh (tùy chọn)</FormLabel>
-                  {isReadOnly ? (
-                    <ReadOnlyValue value={field.value} variant="multi" />
-                  ) : (
-                    <Textarea
-                      rows={4}
-                      placeholder="Ghi chú đặc điểm chi nhánh..."
-                      {...field}
-                    />
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
         </div>
 

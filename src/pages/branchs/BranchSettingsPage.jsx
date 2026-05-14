@@ -16,7 +16,12 @@ import {
   Loader2,
   Building2,
   ArrowLeft,
+  Calendar,
+  Clock,
+  FileText,
+  Wifi,
 } from "lucide-react";
+import { format, isValid, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -66,10 +71,11 @@ const BranchSettingsPage = () => {
   }, [selectedShop, navigate]);
 
   /* ── Fetch branch ───────────────────────────────────────────────────────── */
-  const fetchBranch = useCallback(async () => {
+  const fetchBranch = useCallback(async (options = {}) => {
+    const { silent = false } = options;
     if (!slug || !selectedShop) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await getBranchBySlug(slug, selectedShop.id);
       if (res.data.success) {
         setBranch(res.data.data);
@@ -82,7 +88,7 @@ const BranchSettingsPage = () => {
       setBranch(null);
       toast.error("Đã xảy ra lỗi khi tải chi nhánh.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [slug, selectedShop]);
 
@@ -116,8 +122,8 @@ const BranchSettingsPage = () => {
       );
       if (res.data.success) {
         toast.success("Cập nhật chi nhánh thành công.");
-        setBranch(res.data.data);
         await fetchBranches?.();
+        await fetchBranch({ silent: true });
         setEditSheetOpen(false);
       } else {
         toast.error(res.data.message || "Cập nhật chi nhánh thất bại.");
@@ -186,6 +192,21 @@ const BranchSettingsPage = () => {
   }
 
   /* ── Service card definitions ───────────────────────────────────────────── */
+  const formatBranchDate = (value) => {
+    if (value == null || value === "") return null;
+    const d = typeof value === "string" ? parseISO(value) : new Date(value);
+    return isValid(d) ? format(d, "dd/MM/yyyy") : null;
+  };
+
+  const formatBranchTime = (value) => {
+    if (value == null || value === "") return null;
+    if (typeof value === "string") {
+      const m = value.match(/^(\d{1,2}):(\d{2})/);
+      return m ? `${m[1].padStart(2, "0")}:${m[2]}` : value;
+    }
+    return String(value);
+  };
+
   const services = [
     {
       id: "products",
@@ -223,12 +244,14 @@ const BranchSettingsPage = () => {
 
   /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
-    <div className="p-6 flex flex-col gap-6 h-full overflow-y-auto">
+    <div className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 sm:gap-6 sm:p-6">
       {/* Branch info header card */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 p-5 border rounded-xl bg-card shadow-sm">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight">{branch.name}</h1>
+      <div className="flex min-w-0 max-w-full flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:p-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h1 className="min-w-0 break-words text-xl font-bold tracking-tight sm:text-2xl">
+              {branch.name}
+            </h1>
             {branch.default && (
               <Badge
                 variant="outline"
@@ -247,17 +270,91 @@ const BranchSettingsPage = () => {
               {branch.active ? "Hoạt động" : "Tạm ngưng"}
             </Badge>
           </div>
-          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+          <div className="flex flex-col gap-2 text-sm text-muted-foreground">
             {branch.address && (
-              <span className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                {branch.address}
+              <span className="flex items-start gap-2 min-w-0">
+                <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span className="min-w-0 break-words">{branch.address}</span>
               </span>
             )}
             {branch.phone && (
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-2">
                 <Phone className="h-3.5 w-3.5 shrink-0" />
                 {branch.phone}
+              </span>
+            )}
+            <span className="flex items-start gap-2">
+              <Calendar className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span className="text-foreground/90 min-w-0">
+                Ngày khai trương:{" "}
+                <span className="font-medium text-foreground">
+                  {formatBranchDate(branch.openingDate) ?? "Chưa cập nhật"}
+                </span>
+              </span>
+            </span>
+            <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-foreground/90">
+                Giờ mở cửa:{" "}
+                <span className="font-medium text-foreground tabular-nums">
+                  {formatBranchTime(branch.openingTime) ?? "Chưa cập nhật"}
+                </span>
+                <span className="mx-1 text-muted-foreground">–</span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {formatBranchTime(branch.closingTime) ?? "Chưa cập nhật"}
+                </span>
+                <span className="ml-1 text-xs text-muted-foreground">(24h)</span>
+              </span>
+            </span>
+            <span className="flex items-start gap-2 min-w-0">
+              <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span className="text-foreground/90 min-w-0">
+                Mô tả:{" "}
+                <span className="font-medium text-foreground break-words">
+                  {branch.description?.trim()
+                    ? branch.description.trim()
+                    : "Chưa cập nhật"}
+                </span>
+              </span>
+            </span>
+            <span className="flex items-start gap-2 min-w-0">
+              <Wifi className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span className="text-foreground/90 min-w-0">
+                Wi‑Fi khách (bill):{" "}
+                <span className="font-medium text-foreground break-all">
+                  {branch.wifiSsid?.trim()
+                    ? branch.wifiSsid.trim()
+                    : "Chưa cập nhật"}
+                </span>
+                {branch.wifiSsid?.trim() && branch.wifiPassword ? (
+                  <span className="text-muted-foreground"> · đã có mật khẩu</span>
+                ) : null}
+              </span>
+            </span>
+            {branch.managerName && (
+              <span className="flex items-center gap-2">
+                <Users className="h-3.5 w-3.5 shrink-0" />
+                <span className="text-foreground/90">
+                  Quản lý:{" "}
+                  <span className="font-medium text-foreground">
+                    {branch.managerName}
+                  </span>
+                  {branch.managerPhone ? (
+                    <span className="tabular-nums">
+                      {" "}
+                      · {branch.managerPhone}
+                    </span>
+                  ) : null}
+                </span>
+              </span>
+            )}
+            {branch.capacity != null && branch.capacity > 0 && (
+              <span className="text-foreground/90">
+                Sức chứa:{" "}
+                <span className="font-medium text-foreground">
+                  {branch.capacity}
+                </span>{" "}
+                chỗ
               </span>
             )}
           </div>
@@ -288,7 +385,7 @@ const BranchSettingsPage = () => {
       </div>
 
       {/* Service cards grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {services.map((svc) => {
           const Icon = svc.icon;
           const isActive = activeService === svc.id;
@@ -307,10 +404,10 @@ const BranchSettingsPage = () => {
                 if (svc.id === "staffs") navigate(`/staffs${qp}`);
               }}
               className={[
-                "relative rounded-xl border p-4 flex flex-col gap-3 transition-all select-none",
+                "relative flex min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border p-4 transition-all select-none sm:p-5",
                 svc.available
                   ? isActive
-                    ? "cursor-pointer border-primary shadow-md bg-primary/5"
+                    ? "cursor-pointer border-2 border-primary shadow-md bg-primary/5 ring-1 ring-primary/20"
                     : "cursor-pointer bg-card hover:border-primary/50 hover:shadow-sm"
                   : "opacity-55 cursor-not-allowed bg-muted/40",
               ].join(" ")}
@@ -334,8 +431,8 @@ const BranchSettingsPage = () => {
                 <Icon className="h-5 w-5" />
               </div>
 
-              <div className="flex flex-col gap-0.5">
-                <div className="font-semibold text-sm">{svc.title}</div>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <div className="truncate text-sm font-semibold">{svc.title}</div>
                 {svc.count != null && (
                   <div className="text-2xl font-bold tabular-nums leading-tight">
                     {svc.count}
@@ -367,10 +464,10 @@ const BranchSettingsPage = () => {
 
       {/* Active service panel */}
       {activeService === "products" && (
-        <div className="flex flex-col gap-3 border rounded-xl p-5 bg-card shadow-sm">
-          <h3 className="text-base font-semibold">
-            Sản phẩm chi nhánh{" "}
-            <span className="text-xs text-muted-foreground font-normal">
+        <div className="flex min-w-0 max-w-full flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+          <h3 className="min-w-0 text-base font-semibold">
+            <span className="break-words">Sản phẩm chi nhánh </span>
+            <span className="text-xs font-normal text-muted-foreground">
               — {branch.name}
             </span>
           </h3>
@@ -384,14 +481,14 @@ const BranchSettingsPage = () => {
 
       {/* Edit Branch Sheet */}
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-        <SheetContent className="sm:max-w-[540px] overflow-hidden flex flex-col">
-          <SheetHeader className="shrink-0">
+        <SheetContent className="sm:max-w-xl w-full overflow-hidden flex flex-col gap-0 p-0">
+          <SheetHeader className="shrink-0 px-6 pt-6 pb-2 border-b border-border/60">
             <SheetTitle>Cài đặt chi nhánh</SheetTitle>
             <SheetDescription className="sr-only">
               Chỉnh sửa thông tin chi nhánh
             </SheetDescription>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <div className="flex-1 overflow-y-auto px-6 py-6 pb-8">
             <BranchForm
               mode="edit"
               branch={branch}

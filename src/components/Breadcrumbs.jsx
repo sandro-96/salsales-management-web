@@ -16,8 +16,8 @@ export default function Breadcrumbs() {
   if (breadcrumbs.length <= 0) return null;
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="min-w-0">
         {breadcrumbs.map((bc, i) => {
           const isLast = i === breadcrumbs.length - 1;
           return (

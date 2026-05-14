@@ -312,7 +312,7 @@ export default function BranchProductPanel({
             placeholder="Tìm kiếm sản phẩm..."
             value={keyword}
             onChange={(e) => handleKeywordChange(e.target.value)}
-            className="max-w-xs"
+            className="max-w-xs min-w-[200px] h-10 px-3.5"
           />
           <DataTableViewOptions table={table} />
         </div>
