@@ -30,6 +30,8 @@ import {
   Copy,
   Percent,
   IdCard,
+  ShoppingBag,
+  ExternalLink,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -110,6 +112,8 @@ const ShopSettingsPage = () => {
   const [countryCode, setCountryCode] = useState("VN");
   const [active, setActive] = useState(true);
   const [toppingsEnabled, setToppingsEnabled] = useState(false);
+  const [onlineSalesEnabled, setOnlineSalesEnabled] = useState(false);
+  const [togglingOnline, setTogglingOnline] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
 
@@ -128,6 +132,7 @@ const ShopSettingsPage = () => {
     setCountryCode(selectedShop.countryCode || "VN");
     setActive(selectedShop.active !== false);
     setToppingsEnabled(selectedShop.toppingsEnabled === true);
+    setOnlineSalesEnabled(selectedShop.onlineSalesEnabled === true);
     setLogoFile(null);
     setLogoPreview(null);
     setAttemptedSubmit(false);
@@ -192,6 +197,7 @@ const ShopSettingsPage = () => {
         countryCode,
         active,
         toppingsEnabled,
+        onlineSalesEnabled,
       };
       const formData = new FormData();
       formData.append(
@@ -265,6 +271,75 @@ const ShopSettingsPage = () => {
     }
   };
 
+  const storefrontUrl =
+    selectedShop?.slug && typeof window !== "undefined"
+      ? `${window.location.origin}/s/${selectedShop.slug}`
+      : "";
+
+  const copyStorefrontUrl = () => {
+    if (!storefrontUrl) return;
+    navigator.clipboard
+      .writeText(storefrontUrl)
+      .then(() => toast.success("Đã sao chép link bán hàng!"))
+      .catch(() => toast.error("Không thể sao chép."));
+  };
+
+  const toggleOnlineSales = async (nextValue) => {
+    if (!selectedShop) return;
+    if (!selectedShop.slug) {
+      toast.error("Cửa hàng chưa có slug, không thể bật bán online.");
+      return;
+    }
+    try {
+      setTogglingOnline(true);
+      const data = {
+        name: selectedShop.name || "",
+        type: selectedShop.type,
+        businessModel: selectedShop.businessModel,
+        address: selectedShop.address || "",
+        phone: selectedShop.phone || "",
+        taxRegistrationNumber: selectedShop.taxRegistrationNumber || null,
+        zaloPageUrl: selectedShop.zaloPageUrl || null,
+        facebookUrl: selectedShop.facebookUrl || null,
+        tiktokUrl: selectedShop.tiktokUrl || null,
+        shopeeUrl: selectedShop.shopeeUrl || null,
+        countryCode: selectedShop.countryCode || "VN",
+        active: selectedShop.active !== false,
+        toppingsEnabled: selectedShop.toppingsEnabled === true,
+        onlineSalesEnabled: nextValue,
+      };
+      const formData = new FormData();
+      formData.append(
+        "shop",
+        new Blob([JSON.stringify(data)], { type: "application/json" }),
+      );
+      const res = await axiosInstance.put(
+        `/shop/${selectedShop.id}`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      if (res.data.success) {
+        const response = res.data.data;
+        response.role = selectedShop.role;
+        setSelectedShop(response);
+        setOnlineSalesEnabled(response.onlineSalesEnabled === true);
+        await fetchShops();
+        toast.success(
+          nextValue
+            ? "Đã bật chế độ bán hàng online!"
+            : "Đã tắt chế độ bán hàng online.",
+        );
+      } else {
+        toast.error(res.data.message || "Cập nhật thất bại.");
+      }
+    } catch (err) {
+      toast.error("Đã xảy ra lỗi khi cập nhật.");
+      console.error("Error toggling online sales:", err);
+    } finally {
+      setTogglingOnline(false);
+    }
+  };
+
   if (!selectedShop) return null;
 
   const country = COUNTRIES.find((c) => c.code === (isEditMode ? countryCode : selectedShop.countryCode)) || COUNTRIES[0];
@@ -301,6 +376,90 @@ const ShopSettingsPage = () => {
             <Button variant="secondary" size="sm" className="shrink-0" asChild>
               <Link to="/tax-policies">Mở cài đặt thuế</Link>
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {canManageTax && (
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-primary" />
+              Bán hàng online (Storefront)
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Khi bật, cửa hàng sẽ có một trang bán hàng công khai theo slug.
+              Khách (guest) có thể truy cập trực tiếp để xem sản phẩm và đặt
+              đơn COD — không cần đăng nhập.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {onlineSalesEnabled ? "Đang bật" : "Đang tắt"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Đơn đặt từ storefront sẽ vào danh sách đơn với nhãn “Online”.
+                </p>
+              </div>
+              <Switch
+                checked={onlineSalesEnabled}
+                onCheckedChange={(v) => toggleOnlineSales(v)}
+                disabled={togglingOnline || !selectedShop?.slug}
+                className="shrink-0"
+              />
+            </div>
+
+            {!selectedShop?.slug && (
+              <p className="text-xs text-amber-600">
+                Cửa hàng chưa có slug. Slug sẽ được tạo tự động từ tên — vui
+                lòng kiểm tra lại thông tin cửa hàng.
+              </p>
+            )}
+
+            {onlineSalesEnabled && storefrontUrl && (
+              <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5" /> Đường dẫn bán hàng công khai
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={storefrontUrl}
+                    readOnly
+                    className="font-mono text-xs h-9"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={copyStorefrontUrl}
+                    title="Sao chép"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    title="Xem storefront"
+                  >
+                    <a
+                      href={storefrontUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Chia sẻ link này lên Zalo, Facebook, namecard… để khách đặt
+                  hàng online.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

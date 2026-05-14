@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 import "./global.css";
+import "./i18n";
 import AuthProvider from "./contexts/AuthProvider.jsx";
 import ShopProvider from "./contexts/ShopProvider.jsx";
 import WebSocketProvider from "./contexts/WebSocketProvider.jsx";

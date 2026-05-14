@@ -9,28 +9,28 @@ import {
 
 export const otherWebNav = {
   admin: [
-    { to: "/dashboard", icon: Home, label: "Dashboard" },
-    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
-    { to: "/users", icon: Users, label: "Người dùng" },
+    { to: "/dashboard", icon: Home, labelKey: "nav.dashboard" },
+    { to: "/tasks", icon: CheckSquare, labelKey: "nav.tasks" },
+    { to: "/users", icon: Users, labelKey: "nav.users" },
   ],
   manager: [
-    { to: "/dashboard", icon: Home, label: "Dashboard" },
-    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
-    { to: "/users", icon: Users, label: "Người dùng" },
-    { to: "/reports", icon: BarChart, label: "Báo cáo" },
+    { to: "/dashboard", icon: Home, labelKey: "nav.dashboard" },
+    { to: "/tasks", icon: CheckSquare, labelKey: "nav.tasks" },
+    { to: "/users", icon: Users, labelKey: "nav.users" },
+    { to: "/reports", icon: BarChart, labelKey: "nav.reports" },
   ],
   staff: [
-    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
+    { to: "/tasks", icon: CheckSquare, labelKey: "nav.tasks" },
   ],
 };
 
 export const otherPosNav = {
   admin: [
-    { to: "/dashboard", icon: Home, label: "Dashboard" },
-    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
+    { to: "/dashboard", icon: Home, labelKey: "nav.dashboard" },
+    { to: "/tasks", icon: CheckSquare, labelKey: "nav.tasks" },
   ],
   staff: [
-    { to: "/tasks", icon: CheckSquare, label: "Công việc" },
-    { to: "/settings", icon: Settings, label: "Cài đặt" },
+    { to: "/tasks", icon: CheckSquare, labelKey: "nav.tasks" },
+    { to: "/settings", icon: Settings, labelKey: "nav.settings" },
   ],
 };

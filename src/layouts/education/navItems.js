@@ -12,36 +12,36 @@ import {
 
 export const educationWebNav = {
   admin: [
-    { to: "/courses", icon: BookOpen, label: "Khóa học" },
-    { to: "/teachers", icon: Presentation, label: "Giảng viên" },
-    { to: "/students", icon: GraduationCap, label: "Học viên" },
-    { to: "/schedule", icon: Calendar, label: "Lịch học" },
+    { to: "/courses", icon: BookOpen, labelKey: "nav.courses" },
+    { to: "/teachers", icon: Presentation, labelKey: "nav.teachers" },
+    { to: "/students", icon: GraduationCap, labelKey: "nav.students" },
+    { to: "/schedule", icon: Calendar, labelKey: "nav.schedule" },
   ],
   manager: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/courses", icon: BookOpen, label: "Khóa học" },
-    { to: "/teachers", icon: Presentation, label: "Giảng viên" },
-    { to: "/students", icon: GraduationCap, label: "Học viên" },
-    { to: "/schedule", icon: Calendar, label: "Lịch học" },
-    { to: "/reports", icon: BarChart, label: "Báo cáo" },
-    { to: "/staffs", icon: Users, label: "Nhân sự" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/courses", icon: BookOpen, labelKey: "nav.courses" },
+    { to: "/teachers", icon: Presentation, labelKey: "nav.teachers" },
+    { to: "/students", icon: GraduationCap, labelKey: "nav.students" },
+    { to: "/schedule", icon: Calendar, labelKey: "nav.schedule" },
+    { to: "/reports", icon: BarChart, labelKey: "nav.reports" },
+    { to: "/staffs", icon: Users, labelKey: "nav.staff" },
   ],
   staff: [
-    { to: "/courses", icon: BookOpen, label: "Khóa học" },
-    { to: "/schedule", icon: Calendar, label: "Lịch học" },
-    { to: "/students", icon: GraduationCap, label: "Học viên" },
+    { to: "/courses", icon: BookOpen, labelKey: "nav.courses" },
+    { to: "/schedule", icon: Calendar, labelKey: "nav.schedule" },
+    { to: "/students", icon: GraduationCap, labelKey: "nav.students" },
   ],
 };
 
 export const educationPosNav = {
   admin: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/students", icon: GraduationCap, label: "Học viên" },
-    { to: "/schedule", icon: Calendar, label: "Lịch học" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/students", icon: GraduationCap, labelKey: "nav.students" },
+    { to: "/schedule", icon: Calendar, labelKey: "nav.schedule" },
   ],
   staff: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/schedule", icon: Calendar, label: "Lịch học" },
-    { to: "/settings", icon: Settings, label: "Cài đặt" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/schedule", icon: Calendar, labelKey: "nav.schedule" },
+    { to: "/settings", icon: Settings, labelKey: "nav.settings" },
   ],
 };

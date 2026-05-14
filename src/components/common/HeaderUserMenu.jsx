@@ -6,6 +6,7 @@ import {
   UserCircleIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -23,10 +24,11 @@ import { cn } from "@/lib/utils";
 export default function HeaderUserMenu({ className }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const currentPath = window.location.pathname;
 
-  const name = user?.fullName || "Người dùng";
-  const email = user?.email || "email@example.com";
+  const name = user?.fullName || t("header.userMenu.fallbackName");
+  const email = user?.email || t("header.userMenu.fallbackEmail");
   const avatar = user?.avatarUrl || null;
   const initials =
     name
@@ -89,7 +91,7 @@ export default function HeaderUserMenu({ className }) {
             )}
           >
             <UserCircleIcon className="mr-2 h-4 w-4" />
-            Tài khoản
+            {t("header.userMenu.account")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => navigate("/billing")}
@@ -98,7 +100,7 @@ export default function HeaderUserMenu({ className }) {
             )}
           >
             <CreditCardIcon className="mr-2 h-4 w-4" />
-            Gói dịch vụ
+            {t("header.userMenu.billing")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => navigate("/notifications")}
@@ -108,14 +110,14 @@ export default function HeaderUserMenu({ className }) {
             )}
           >
             <BellIcon className="mr-2 h-4 w-4" />
-            Thông báo
+            {t("header.userMenu.notifications")}
           </DropdownMenuItem>
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={logout}>
           <LogOutIcon className="mr-2 h-4 w-4" />
-          Đăng xuất
+          {t("header.userMenu.logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

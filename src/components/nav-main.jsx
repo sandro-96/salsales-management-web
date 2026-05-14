@@ -1,47 +1,55 @@
-import { MailIcon, PlusCircleIcon } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { NavLink, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { cn, isActiveNavPath } from "@/lib/utils";
 
-export function NavMain({ items }) {
-  const navigate = useNavigate();
+export function NavMain({ items, groupLabel }) {
+  const { pathname } = useLocation();
   const { isMobile, setOpenMobile } = useSidebar();
-  const currentPath = window.location.pathname;
+  const { t } = useTranslation();
 
   return (
     <SidebarGroup>
+      {groupLabel ? (
+        <SidebarGroupLabel className="text-xs font-medium text-muted-foreground">
+          {groupLabel}
+        </SidebarGroupLabel>
+      ) : null}
       <SidebarGroupContent className="flex flex-col gap-2">
         <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem
-              key={item.label}
-              onClick={() => {
-                navigate(item.to);
-                if (isMobile) setOpenMobile(false);
-              }}
-              className={cn(
-                "rounded-md",
-                item.to === currentPath && "bg-accent text-accent-foreground"
-              )}
-            >
-              <SidebarMenuButton
-                tooltip={item.label}
-                className="cursor-pointer"
-              >
-                {item.icon && <item.icon />}
-                <span>{item.label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {items.map((item) => {
+            const to = item.to;
+            if (!to) return null;
+            const active = isActiveNavPath(pathname, to, item.end);
+            const label = item.labelKey ? t(item.labelKey) : item.label;
+            return (
+              <SidebarMenuItem key={to}>
+                <SidebarMenuButton asChild isActive={active} tooltip={label}>
+                  <NavLink
+                    to={to}
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => {
+                      if (isMobile) setOpenMobile(false);
+                    }}
+                    className={cn(
+                      "no-underline outline-none ring-sidebar-ring focus-visible:ring-2",
+                    )}
+                  >
+                    {item.icon && <item.icon />}
+                    <span>{label}</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

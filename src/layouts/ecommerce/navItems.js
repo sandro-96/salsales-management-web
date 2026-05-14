@@ -12,37 +12,37 @@ import {
 
 export const ecommerceWebNav = {
   admin: [
-    { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
-    { to: "/products", icon: Package, label: "Sản phẩm" },
-    { to: "/customers", icon: Users, label: "Khách hàng" },
-    { to: "/inventory", icon: Store, label: "Kho hàng" },
-    { to: "/promotions", icon: Tag, label: "Khuyến mãi" },
+    { to: "/orders", icon: ShoppingCart, labelKey: "nav.orders" },
+    { to: "/products", icon: Package, labelKey: "nav.products" },
+    { to: "/customers", icon: Users, labelKey: "nav.customers" },
+    { to: "/inventory", icon: Store, labelKey: "nav.inventoryEcommerce" },
+    { to: "/promotions", icon: Tag, labelKey: "nav.promotions" },
   ],
   manager: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
-    { to: "/products", icon: Package, label: "Sản phẩm" },
-    { to: "/customers", icon: Users, label: "Khách hàng" },
-    { to: "/inventory", icon: Store, label: "Kho hàng" },
-    { to: "/promotions", icon: Tag, label: "Khuyến mãi" },
-    { to: "/reports", icon: BarChart3, label: "Báo cáo" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/orders", icon: ShoppingCart, labelKey: "nav.orders" },
+    { to: "/products", icon: Package, labelKey: "nav.products" },
+    { to: "/customers", icon: Users, labelKey: "nav.customers" },
+    { to: "/inventory", icon: Store, labelKey: "nav.inventoryEcommerce" },
+    { to: "/promotions", icon: Tag, labelKey: "nav.promotions" },
+    { to: "/reports", icon: BarChart3, labelKey: "nav.reports" },
   ],
   staff: [
-    { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
-    { to: "/products", icon: Package, label: "Sản phẩm" },
-    { to: "/customers", icon: Users, label: "Khách hàng" },
+    { to: "/orders", icon: ShoppingCart, labelKey: "nav.orders" },
+    { to: "/products", icon: Package, labelKey: "nav.products" },
+    { to: "/customers", icon: Users, labelKey: "nav.customers" },
   ],
 };
 
 export const ecommercePosNav = {
   admin: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/orders", icon: ShoppingCart, label: "Đơn hàng" },
-    { to: "/products", icon: Package, label: "Sản phẩm" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/orders", icon: ShoppingCart, labelKey: "nav.orders" },
+    { to: "/products", icon: Package, labelKey: "nav.products" },
   ],
   staff: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/products", icon: Package, label: "Sản phẩm" },
-    { to: "/settings", icon: Settings, label: "Cài đặt" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/products", icon: Package, labelKey: "nav.products" },
+    { to: "/settings", icon: Settings, labelKey: "nav.settings" },
   ],
 };

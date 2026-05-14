@@ -11,34 +11,34 @@ import {
 
 export const healthcareWebNav = {
   admin: [
-    { to: "/appointments", icon: CalendarCheck, label: "Lịch hẹn" },
-    { to: "/doctors", icon: Stethoscope, label: "Bác sĩ" },
-    { to: "/patients", icon: User, label: "Bệnh nhân" },
+    { to: "/appointments", icon: CalendarCheck, labelKey: "nav.appointments" },
+    { to: "/doctors", icon: Stethoscope, labelKey: "nav.doctors" },
+    { to: "/patients", icon: User, labelKey: "nav.patients" },
   ],
   manager: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/appointments", icon: CalendarCheck, label: "Lịch hẹn" },
-    { to: "/doctors", icon: Stethoscope, label: "Bác sĩ" },
-    { to: "/patients", icon: User, label: "Bệnh nhân" },
-    { to: "/reports", icon: BarChart, label: "Báo cáo" },
-    { to: "/staffs", icon: Users, label: "Nhân sự" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/appointments", icon: CalendarCheck, labelKey: "nav.appointments" },
+    { to: "/doctors", icon: Stethoscope, labelKey: "nav.doctors" },
+    { to: "/patients", icon: User, labelKey: "nav.patients" },
+    { to: "/reports", icon: BarChart, labelKey: "nav.reports" },
+    { to: "/staffs", icon: Users, labelKey: "nav.staff" },
   ],
   staff: [
-    { to: "/appointments", icon: CalendarCheck, label: "Lịch hẹn" },
-    { to: "/patients", icon: User, label: "Bệnh nhân" },
-    { to: "/doctors", icon: Stethoscope, label: "Bác sĩ" },
+    { to: "/appointments", icon: CalendarCheck, labelKey: "nav.appointments" },
+    { to: "/patients", icon: User, labelKey: "nav.patients" },
+    { to: "/doctors", icon: Stethoscope, labelKey: "nav.doctors" },
   ],
 };
 
 export const healthcarePosNav = {
   admin: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/appointments", icon: CalendarCheck, label: "Lịch hẹn" },
-    { to: "/patients", icon: User, label: "Bệnh nhân" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/appointments", icon: CalendarCheck, labelKey: "nav.appointments" },
+    { to: "/patients", icon: User, labelKey: "nav.patients" },
   ],
   staff: [
-    { to: "/overview", icon: Home, label: "Tổng quan" },
-    { to: "/appointments", icon: CalendarCheck, label: "Lịch hẹn" },
-    { to: "/settings", icon: Settings, label: "Cài đặt" },
+    { to: "/overview", icon: Home, labelKey: "nav.overview" },
+    { to: "/appointments", icon: CalendarCheck, labelKey: "nav.appointments" },
+    { to: "/settings", icon: Settings, labelKey: "nav.settings" },
   ],
 };

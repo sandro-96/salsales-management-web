@@ -4,12 +4,15 @@ import Breadcrumbs from "./Breadcrumbs";
 import NotificationBell from "./common/NotificationBell";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import HeaderUserMenu from "@/components/common/HeaderUserMenu.jsx";
+import LanguageSwitcher from "@/components/common/LanguageSwitcher.jsx";
 
 export function SiteHeader() {
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -30,8 +33,7 @@ export function SiteHeader() {
             type="button"
             variant="ghost"
             size="icon"
-            className="mr-1"
-            aria-label="Đổi chế độ sáng/tối"
+            aria-label={t("theme.toggle")}
             onClick={() =>
               setTheme(theme === "dark" ? "light" : "dark")
             }
@@ -42,6 +44,7 @@ export function SiteHeader() {
               <Moon className="h-4 w-4" />
             )}
           </Button>
+          <LanguageSwitcher />
           <NotificationBell />
           <HeaderUserMenu />
         </div>

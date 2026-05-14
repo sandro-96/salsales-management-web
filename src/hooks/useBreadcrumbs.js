@@ -1,15 +1,21 @@
 // src/hooks/useBreadcrumbs.js
 import { useLocation, useParams, matchRoutes } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { routeConfig } from "../routes/routeConfig.jsx";
 
 export const useBreadcrumbs = () => {
   const location = useLocation();
   const params = useParams();
+  const { t } = useTranslation();
   const matches = matchRoutes(routeConfig, location.pathname);
   if (!matches) return [];
 
   return matches
     .map(({ route, pathname }) => {
+      const key = route.breadcrumbKey ?? route.titleKey;
+      if (key) {
+        return { title: t(key), path: pathname };
+      }
       const bc = route.breadcrumb ?? route.title;
       if (!bc) return null;
       const label = typeof bc === "function" ? bc(params) : bc;

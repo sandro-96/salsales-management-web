@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useShop } from "../hooks/useShop";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "sonner";
 import { format, subDays, startOfMonth } from "date-fns";
-import { vi } from "date-fns/locale";
+import { vi, enUS } from "date-fns/locale";
 import {
   Loader2,
   DollarSign,
@@ -49,10 +50,19 @@ import {
 } from "../api/reportApi.js";
 import { getOrders } from "../api/orderApi.js";
 
-const formatCurrency = (value) =>
-  Number(value || 0).toLocaleString("vi-VN") + "đ";
+const ORDER_STATUS_CLS = {
+  PENDING:
+    "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
+  CONFIRMED:
+    "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+  SHIPPING:
+    "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
+  COMPLETED:
+    "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+  CANCELLED: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
+};
 
-const formatNumber = (value) => Number(value || 0).toLocaleString("vi-VN");
+const RANGE_KEYS = ["7", "14", "30", "month"];
 
 const toISODate = (date) => {
   if (!date) return null;
@@ -61,58 +71,51 @@ const toISODate = (date) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const ORDER_STATUS_MAP = {
-  PENDING: {
-    label: "Chờ xử lý",
-    cls: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
-  },
-  CONFIRMED: {
-    label: "Đã xác nhận",
-    cls: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
-  },
-  SHIPPING: {
-    label: "Đang giao",
-    cls: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
-  },
-  COMPLETED: {
-    label: "Hoàn tất",
-    cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
-  },
-  CANCELLED: {
-    label: "Đã hủy",
-    cls: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
-  },
-};
-
-const RANGE_OPTIONS = [
-  { value: "7", label: "7 ngày" },
-  { value: "14", label: "14 ngày" },
-  { value: "30", label: "30 ngày" },
-  { value: "month", label: "Tháng này" },
-];
-
-const ChartTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border bg-background p-3 shadow-md text-sm">
-      <p className="font-medium mb-1">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color }}>
-          {p.name}:{" "}
-          {p.name === "Doanh thu"
-            ? formatCurrency(p.value)
-            : formatNumber(p.value)}
-        </p>
-      ))}
-    </div>
-  );
+const buildFormatters = (lang) => {
+  const localeTag = lang?.startsWith("en") ? "en-US" : "vi-VN";
+  return {
+    currency: (value) =>
+      Number(value || 0).toLocaleString(localeTag) +
+      (lang?.startsWith("en") ? " VND" : "đ"),
+    number: (value) => Number(value || 0).toLocaleString(localeTag),
+  };
 };
 
 const OverviewPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const { selectedShop, selectedShopId, branches, isOwner, shopRole } =
     useShop();
+
+  const { currency: formatCurrency, number: formatNumber } = useMemo(
+    () => buildFormatters(i18n.language),
+    [i18n.language],
+  );
+  const dateLocale = i18n.language?.startsWith("en") ? enUS : vi;
+
+  const ChartTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const revenueLabel = t("overview.chartLegend.revenue");
+    return (
+      <div className="rounded-lg border bg-background p-3 shadow-md text-sm">
+        <p className="font-medium mb-1">{label}</p>
+        {payload.map((p, i) => (
+          <p key={i} style={{ color: p.color }}>
+            {p.name}:{" "}
+            {p.name === revenueLabel
+              ? formatCurrency(p.value)
+              : formatNumber(p.value)}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  const RANGE_OPTIONS = RANGE_KEYS.map((value) => ({
+    value,
+    label: t(`overview.ranges.${value}`),
+  }));
 
   const [range, setRange] = useState("7");
   const [branchFilter, setBranchFilter] = useState("__all__");
@@ -195,11 +198,13 @@ const OverviewPage = () => {
 
       if (dailyRes?.data?.success) {
         const raw = dailyRes.data.data || [];
+        const revenueKey = t("overview.chartLegend.revenue");
+        const ordersKey = t("overview.chartLegend.orders");
         setChartData(
           raw.map((d) => ({
-            date: format(new Date(d.date), "dd/MM", { locale: vi }),
-            "Doanh thu": d.totalRevenue || 0,
-            "Đơn hàng": d.totalOrders || 0,
+            date: format(new Date(d.date), "dd/MM", { locale: dateLocale }),
+            [revenueKey]: d.totalRevenue || 0,
+            [ordersKey]: d.totalOrders || 0,
           })),
         );
       } else {
@@ -221,7 +226,7 @@ const OverviewPage = () => {
         setRecentOrders([]);
       }
     } catch {
-      toast.error("Không thể tải dữ liệu tổng quan.");
+      toast.error(t("overview.report.loadError"));
     } finally {
       setLoading(false);
     }
@@ -231,6 +236,8 @@ const OverviewPage = () => {
     branchFilter,
     recentOrdersBranchId,
     canViewReport,
+    dateLocale,
+    t,
   ]);
 
   useEffect(() => {
@@ -239,7 +246,10 @@ const OverviewPage = () => {
 
   if (!selectedShop) return null;
 
-  const rangeLabel = range === "month" ? "tháng này" : `${range} ngày qua`;
+  const rangeLabel =
+    range === "month"
+      ? t("overview.ranges.thisMonth")
+      : t("overview.ranges.lastNDays", { count: Number(range) });
 
   const rankBadgeClass = (idx) => {
     if (idx === 0)
@@ -257,7 +267,9 @@ const OverviewPage = () => {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-sky-700 via-violet-600 to-violet-700 bg-clip-text text-transparent dark:from-sky-300 dark:via-violet-400 dark:to-fuchsia-400">
-            Xin chào, {user?.fullName || "bạn"}
+            {t("overview.hello", {
+              name: user?.fullName || t("overview.you"),
+            })}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {selectedShop.name}
@@ -276,10 +288,12 @@ const OverviewPage = () => {
               onValueChange={(v) => setBranchFilter(v)}
             >
               <SelectTrigger className="w-44 h-9">
-                <SelectValue placeholder="Chi nhánh" />
+                <SelectValue placeholder={t("overview.branchPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">Tất cả chi nhánh</SelectItem>
+                <SelectItem value="__all__">
+                  {t("overview.allBranches")}
+                </SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {b.name}
@@ -318,7 +332,7 @@ const OverviewPage = () => {
               <Card className="border-emerald-200/70 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/80 to-card dark:from-emerald-950/25 dark:to-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Doanh thu
+                    {t("overview.kpi.revenue")}
                   </CardTitle>
                   <div className="rounded-lg bg-emerald-500/15 p-2 ring-1 ring-emerald-500/20">
                     <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -329,7 +343,7 @@ const OverviewPage = () => {
                     {formatCurrency(summary.totalRevenue)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Trong {rangeLabel}
+                    {t("overview.kpi.during", { range: rangeLabel })}
                   </p>
                 </CardContent>
               </Card>
@@ -337,7 +351,7 @@ const OverviewPage = () => {
               <Card className="border-sky-200/70 dark:border-sky-900/40 bg-gradient-to-br from-sky-50/80 to-card dark:from-sky-950/25 dark:to-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Đơn hàng
+                    {t("overview.kpi.orders")}
                   </CardTitle>
                   <div className="rounded-lg bg-sky-500/15 p-2 ring-1 ring-sky-500/20">
                     <ShoppingCart className="h-4 w-4 text-sky-600 dark:text-sky-400" />
@@ -348,7 +362,7 @@ const OverviewPage = () => {
                     {formatNumber(summary.totalOrders)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Trong {rangeLabel}
+                    {t("overview.kpi.during", { range: rangeLabel })}
                   </p>
                 </CardContent>
               </Card>
@@ -356,7 +370,7 @@ const OverviewPage = () => {
               <Card className="border-violet-200/70 dark:border-violet-900/40 bg-gradient-to-br from-violet-50/80 to-card dark:from-violet-950/25 dark:to-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Sản phẩm đã bán
+                    {t("overview.kpi.productsSold")}
                   </CardTitle>
                   <div className="rounded-lg bg-violet-500/15 p-2 ring-1 ring-violet-500/20">
                     <Package className="h-4 w-4 text-violet-600 dark:text-violet-400" />
@@ -367,7 +381,7 @@ const OverviewPage = () => {
                     {formatNumber(summary.totalProductsSold)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Trong {rangeLabel}
+                    {t("overview.kpi.during", { range: rangeLabel })}
                   </p>
                 </CardContent>
               </Card>
@@ -375,7 +389,7 @@ const OverviewPage = () => {
               <Card className="border-amber-200/70 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/80 to-card dark:from-amber-950/20 dark:to-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Giá trị TB/đơn
+                    {t("overview.kpi.averageOrder")}
                   </CardTitle>
                   <div className="rounded-lg bg-amber-500/15 p-2 ring-1 ring-amber-500/20">
                     <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -386,7 +400,7 @@ const OverviewPage = () => {
                     {formatCurrency(summary.averageOrderValue)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Trong {rangeLabel}
+                    {t("overview.kpi.during", { range: rangeLabel })}
                   </p>
                 </CardContent>
               </Card>
@@ -396,8 +410,7 @@ const OverviewPage = () => {
           {reportError && !summary && (
             <Card className="py-10 text-center border-amber-200/60 bg-amber-50/40 dark:border-amber-900/30 dark:bg-amber-950/15">
               <p className="text-muted-foreground text-sm">
-                Không thể tải dữ liệu báo cáo. Bạn có thể không có quyền xem báo
-                cáo.
+                {t("overview.report.permissionError")}
               </p>
             </Card>
           )}
@@ -406,9 +419,13 @@ const OverviewPage = () => {
           {chartData.length > 0 && (
             <Card className="border-sky-200/50 dark:border-sky-900/35 shadow-md bg-gradient-to-b from-sky-50/50 to-card dark:from-sky-950/20 dark:to-card overflow-hidden">
               <CardHeader>
-                <CardTitle className="text-base">Xu hướng doanh thu</CardTitle>
+                <CardTitle className="text-base">
+                  {t("overview.report.revenueTrend")}
+                </CardTitle>
                 <CardDescription>
-                  Biểu đồ doanh thu và đơn hàng theo ngày trong {rangeLabel}
+                  {t("overview.report.revenueDescription", {
+                    range: rangeLabel,
+                  })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -466,7 +483,7 @@ const OverviewPage = () => {
                       <Area
                         yAxisId="left"
                         type="monotone"
-                        dataKey="Doanh thu"
+                        dataKey={t("overview.chartLegend.revenue")}
                         stroke="hsl(var(--primary))"
                         fill="url(#revenueGradient)"
                         strokeWidth={2}
@@ -474,7 +491,7 @@ const OverviewPage = () => {
                       <Area
                         yAxisId="right"
                         type="monotone"
-                        dataKey="Đơn hàng"
+                        dataKey={t("overview.chartLegend.orders")}
                         stroke="hsl(var(--chart-2, 220 70% 50%))"
                         fill="none"
                         strokeWidth={2}
@@ -495,9 +512,13 @@ const OverviewPage = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-base">
-                      Sản phẩm bán chạy
+                      {t("overview.topProducts.title")}
                     </CardTitle>
-                    <CardDescription>Top 5 trong {rangeLabel}</CardDescription>
+                    <CardDescription>
+                      {t("overview.topProducts.topInRange", {
+                        range: rangeLabel,
+                      })}
+                    </CardDescription>
                   </div>
                   <Button
                     variant="ghost"
@@ -505,7 +526,7 @@ const OverviewPage = () => {
                     className="text-xs"
                     onClick={() => navigate("/reports")}
                   >
-                    Xem thêm
+                    {t("common.viewMore")}
                     <ArrowRight className="ml-1 h-3 w-3" />
                   </Button>
                 </CardHeader>
@@ -526,7 +547,8 @@ const OverviewPage = () => {
                             {p.productName}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatNumber(p.totalQuantitySold)} đã bán
+                            {formatNumber(p.totalQuantitySold)}{" "}
+                            {t("overview.topProducts.soldUnit")}
                           </p>
                         </div>
                         <span className="text-sm font-medium">
@@ -543,8 +565,12 @@ const OverviewPage = () => {
             <Card className="border-sky-200/40 dark:border-sky-900/30 shadow-sm bg-gradient-to-br from-sky-50/25 to-card dark:from-sky-950/15 dark:to-card">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-base">Đơn hàng gần đây</CardTitle>
-                  <CardDescription>5 đơn hàng mới nhất</CardDescription>
+                  <CardTitle className="text-base">
+                    {t("overview.recentOrders.title")}
+                  </CardTitle>
+                  <CardDescription>
+                    {t("overview.recentOrders.subtitle")}
+                  </CardDescription>
                 </div>
                 <Button
                   variant="ghost"
@@ -552,22 +578,23 @@ const OverviewPage = () => {
                   className="text-xs"
                   onClick={() => navigate("/orders")}
                 >
-                  Xem tất cả
+                  {t("common.viewAll")}
                   <ArrowRight className="ml-1 h-3 w-3" />
                 </Button>
               </CardHeader>
               <CardContent className="px-0">
                 {recentOrders.length === 0 ? (
                   <div className="py-8 text-center text-sm text-muted-foreground">
-                    Chưa có đơn hàng nào.
+                    {t("overview.recentOrders.empty")}
                   </div>
                 ) : (
                   <div className="divide-y">
                     {recentOrders.map((order) => {
-                      const statusCfg = ORDER_STATUS_MAP[order.status] || {
-                        label: order.status,
-                        cls: "",
-                      };
+                      const statusLabel = t(
+                        `overview.orderStatus.${order.status}`,
+                        { defaultValue: order.status },
+                      );
+                      const cls = ORDER_STATUS_CLS[order.status] || "";
                       return (
                         <div
                           key={order.id}
@@ -580,8 +607,12 @@ const OverviewPage = () => {
                             <p className="text-sm font-medium truncate">
                               {order.customerName ||
                                 (order.orderCode?.trim()
-                                  ? `Đơn ${order.orderCode.trim()}`
-                                  : `Đơn #${order.id?.slice(-6)}`)}
+                                  ? t("overview.recentOrders.orderCode", {
+                                      code: order.orderCode.trim(),
+                                    })
+                                  : t("overview.recentOrders.orderShort", {
+                                      id: order.id?.slice(-6),
+                                    }))}
                             </p>
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Clock className="h-3 w-3" />
@@ -589,9 +620,7 @@ const OverviewPage = () => {
                                 ? format(
                                     new Date(order.createdAt),
                                     "dd/MM HH:mm",
-                                    {
-                                      locale: vi,
-                                    },
+                                    { locale: dateLocale },
                                   )
                                 : "-"}
                             </div>
@@ -606,9 +635,9 @@ const OverviewPage = () => {
                             </p>
                             <Badge
                               variant="secondary"
-                              className={`text-[10px] ${statusCfg.cls}`}
+                              className={`text-[10px] ${cls}`}
                             >
-                              {statusCfg.label}
+                              {statusLabel}
                             </Badge>
                           </div>
                         </div>

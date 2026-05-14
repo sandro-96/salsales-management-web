@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { WebSocketMessageTypes } from "../constants/websocket";
 import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
+import LanguageSwitcher from "../components/common/LanguageSwitcher.jsx";
 
 const RegisterPage = () => {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -44,55 +47,49 @@ const RegisterPage = () => {
     };
     let isValid = true;
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!form.email) {
-      tempErrors.email = "Email không được để trống.";
+      tempErrors.email = t("auth.register.errors.emailRequired");
       isValid = false;
     } else if (!emailRegex.test(form.email)) {
-      tempErrors.email = "Email không hợp lệ.";
+      tempErrors.email = t("auth.register.errors.emailInvalid");
       isValid = false;
     }
 
-    // Password validation
     if (!form.password) {
-      tempErrors.password = "Mật khẩu không được để trống.";
+      tempErrors.password = t("auth.register.errors.passwordRequired");
       isValid = false;
     } else if (form.password.length < 6) {
-      tempErrors.password = "Mật khẩu phải từ 6 ký tự.";
+      tempErrors.password = t("auth.register.errors.passwordMin");
       isValid = false;
     }
 
-    // Confirm Password validation
     if (!form.confirmPassword) {
-      tempErrors.confirmPassword = "Xác nhận mật khẩu không được để trống.";
+      tempErrors.confirmPassword = t("auth.register.errors.confirmRequired");
       isValid = false;
     } else if (form.password !== form.confirmPassword) {
-      tempErrors.confirmPassword = "Mật khẩu không khớp.";
+      tempErrors.confirmPassword = t("auth.register.errors.confirmMismatch");
       isValid = false;
     }
 
-    // FirstName validation
     if (!form.firstName) {
-      tempErrors.firstName = "Tên không được để trống.";
+      tempErrors.firstName = t("auth.register.errors.firstNameRequired");
       isValid = false;
     } else if (form.firstName.length > 50) {
-      tempErrors.firstName = "Tên không được vượt quá 50 ký tự.";
+      tempErrors.firstName = t("auth.register.errors.firstNameMax");
       isValid = false;
     }
 
-    // LastName validation
     if (!form.lastName) {
-      tempErrors.lastName = "Họ không được để trống.";
+      tempErrors.lastName = t("auth.register.errors.lastNameRequired");
       isValid = false;
     } else if (form.lastName.length > 50) {
-      tempErrors.lastName = "Họ không được vượt quá 50 ký tự.";
+      tempErrors.lastName = t("auth.register.errors.lastNameMax");
       isValid = false;
     }
 
-    // MiddleName validation
     if (form.middleName && form.middleName.length > 50) {
-      tempErrors.middleName = "Tên đệm không được vượt quá 50 ký tự.";
+      tempErrors.middleName = t("auth.register.errors.middleNameMax");
       isValid = false;
     }
 
@@ -114,9 +111,7 @@ const RegisterPage = () => {
         middleName: form.middleName || null,
       });
       if (response.data.success) {
-        setSuccess(
-          "Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản.",
-        );
+        setSuccess(t("auth.register.successVerifyEmail"));
       }
     } catch (err) {
       const errorData = err.response?.data;
@@ -127,10 +122,13 @@ const RegisterPage = () => {
             tempErrors[field] = errorData.errors[field];
           });
         } else {
-          tempErrors.email = errorData.message || "Đăng ký thất bại.";
+          tempErrors.email =
+            errorData.message || t("auth.register.errors.registerFailed");
         }
       } else {
-        tempErrors.email = err.response?.data?.message || "Đăng ký thất bại.";
+        tempErrors.email =
+          err.response?.data?.message ||
+          t("auth.register.errors.registerFailed");
       }
       setErrors(tempErrors);
     } finally {
@@ -139,15 +137,11 @@ const RegisterPage = () => {
   };
 
   useEffect(() => {
-    console.log("🔔 Đăng ký lắng nghe xác minh tài khoản qua WebSocket");
     if (!connected || !form.email) return;
 
     const unsubscribe = subscribe(`/topic/verify/${form.email}`, (message) => {
       if (message?.type === WebSocketMessageTypes.EMAIL_VERIFIED) {
-        console.log("🔔 Nhận:", message);
-        setSuccess(
-          "Tài khoản đã được xác minh! Bạn sẽ được chuyển hướng đến trang đăng nhập.",
-        );
+        setSuccess(t("auth.register.successVerified"));
         setTimeout(() => {
           navigate("/login");
         }, 2000);
@@ -157,28 +151,41 @@ const RegisterPage = () => {
     return () => {
       if (typeof unsubscribe === "function") unsubscribe();
     };
-  }, [connected, form.email, navigate, subscribe]);
+  }, [connected, form.email, navigate, subscribe, t]);
 
   const inputClass =
     "w-full p-2 text-sm border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500";
 
   return (
     <div className="min-h-screen flex justify-center p-6 bg-background text-foreground">
-      {loading && <LoadingOverlay text="Đang xử lý..." />}
+      <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+        <LanguageSwitcher />
+      </div>
+      {loading && <LoadingOverlay text={t("auth.login.processing")} />}
       <form
         onSubmit={handleSubmit}
         className="grid w-full max-w-sm grid-cols-1 gap-4"
       >
-        <h1 className="text-3xl coiny-regular text-blue-900 dark:text-blue-300">SỔ THU CHI</h1>
-        <h2 className="text-xl font-bold text-foreground">Create your account</h2>
-        {success && <p className="text-green-600 dark:text-green-400 text-sm">{success}</p>}
+        <h1 className="text-3xl coiny-regular text-blue-900 dark:text-blue-300">
+          {t("brand.appName")}
+        </h1>
+        <h2 className="text-xl font-bold text-foreground">
+          {t("auth.register.title")}
+        </h2>
+        {success && (
+          <p className="text-green-600 dark:text-green-400 text-sm">
+            {success}
+          </p>
+        )}
         {errors && (
           <p className="text-red-500 dark:text-red-400 text-sm">
             {Object.values(errors).find((msg) => msg)}
           </p>
         )}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground">Email</label>
+          <label className="text-sm font-medium text-foreground">
+            {t("auth.register.email")}
+          </label>
           <input
             type="email"
             name="email"
@@ -191,7 +198,7 @@ const RegisterPage = () => {
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-foreground">
-              First Name
+              {t("auth.register.firstName")}
             </label>
             <input
               type="text"
@@ -205,7 +212,7 @@ const RegisterPage = () => {
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-foreground">
-              Last Name
+              {t("auth.register.lastName")}
             </label>
             <input
               type="text"
@@ -220,7 +227,7 @@ const RegisterPage = () => {
         </div>
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-foreground">
-            Middle Name (Optional)
+            {t("auth.register.middleName")}
           </label>
           <input
             type="text"
@@ -232,7 +239,9 @@ const RegisterPage = () => {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground">Password</label>
+          <label className="text-sm font-medium text-foreground">
+            {t("auth.register.password")}
+          </label>
           <input
             type="password"
             name="password"
@@ -244,7 +253,7 @@ const RegisterPage = () => {
         </div>
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-foreground">
-            Password Confirm
+            {t("auth.register.confirmPassword")}
           </label>
           <input
             type="password"
@@ -259,12 +268,15 @@ const RegisterPage = () => {
           type="submit"
           className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 font-medium dark:bg-blue-600 dark:hover:bg-blue-500"
         >
-          Create Account
+          {t("auth.register.submit")}
         </button>
         <p className="text-sm text-center text-muted-foreground mt-3">
-          Already have an account?{" "}
-          <Link to="/login" className="text-blue-600 font-bold hover:underline dark:text-blue-400">
-            Sign in
+          {t("auth.register.alreadyHave")}{" "}
+          <Link
+            to="/login"
+            className="text-blue-600 font-bold hover:underline dark:text-blue-400"
+          >
+            {t("auth.register.signIn")}
           </Link>
         </p>
       </form>

@@ -1,0 +1,327 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "loadingPage": "Loading page...",
+    "processing": "Processing...",
+    "empty": "No data",
+    "yes": "Yes",
+    "no": "No",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "reload": "Reload",
+    "viewMore": "View more",
+    "viewAll": "View all",
+    "more": "More",
+    "all": "All",
+    "goHome": "Go home"
+  },
+  "brand": {
+    "appName": "SALES BOOK"
+  },
+  "app": {
+    "documentTitleSuffix": "Sales System"
+  },
+  "language": {
+    "label": "Language",
+    "vi": "Vietnamese",
+    "en": "English",
+    "switch": "Switch language"
+  },
+  "theme": {
+    "toggle": "Toggle light/dark mode",
+    "light": "Light mode",
+    "dark": "Dark mode"
+  },
+  "nav": {
+    "groupMain": "Functions",
+    "groupOther": "Others",
+    "overview": "Overview",
+    "orders": "Orders",
+    "ordersFnb": "Orders",
+    "ordersPharmacy": "Prescriptions",
+    "products": "Products",
+    "productsFnb": "Items",
+    "productsPharmacy": "Drugs & Products",
+    "customers": "Customers",
+    "branches": "Branches",
+    "inventory": "Inventory",
+    "inventoryFnb": "Stock",
+    "inventoryEcommerce": "Warehouse",
+    "inventoryPharmacy": "Drug stock",
+    "promotions": "Promotions",
+    "reports": "Reports",
+    "staff": "Staff",
+    "tables": "Tables",
+    "pos": "Sell",
+    "posOrder": "Order",
+    "settings": "Settings",
+    "shops": "Shops",
+    "shopsLabel": "Shops",
+    "support": "Support",
+    "billing": "Subscription",
+    "search": "Search",
+    "help": "Help",
+    "home": "Home",
+    "history": "History",
+    "logout": "Sign out",
+    "courses": "Courses",
+    "teachers": "Teachers",
+    "students": "Students",
+    "schedule": "Schedule",
+    "appointments": "Appointments",
+    "doctors": "Doctors",
+    "patients": "Patients",
+    "services": "Services",
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "users": "Users"
+  },
+  "routes": {
+    "login": "Sign in",
+    "register": "Create account",
+    "registerBreadcrumb": "Sign up",
+    "verifyEmail": "Verify email",
+    "forgotPassword": "Forgot password",
+    "storefront": "Storefront",
+    "storefrontProduct": "Product",
+    "storefrontCart": "Cart",
+    "storefrontCheckout": "Checkout",
+    "storefrontSuccess": "Order success",
+    "adminHome": "Admin",
+    "adminBreadcrumb": "Admin",
+    "adminOverview": "Admin overview",
+    "adminOverviewBreadcrumb": "Overview",
+    "adminSupport": "System support",
+    "adminSupportBreadcrumb": "Support",
+    "adminShops": "Shop list",
+    "adminShopsBreadcrumb": "Shops",
+    "adminShopDetail": "Shop detail",
+    "adminShopDetailBreadcrumb": "Detail",
+    "adminUsers": "User list",
+    "adminUsersBreadcrumb": "Users",
+    "adminUserDetail": "User detail",
+    "adminUserDetailBreadcrumb": "Detail",
+    "adminBilling": "Billing & Subscriptions",
+    "adminBillingBreadcrumb": "Billing",
+    "adminCatalog": "Catalog",
+    "adminBroadcast": "Broadcast",
+    "adminAudit": "Audit log",
+    "adminAuditBreadcrumb": "Audit",
+    "adminSecurity": "Account security",
+    "adminSecurityBreadcrumb": "Security",
+    "adminNotifications": "Notifications (admin)",
+    "unauthorized": "Not authorized",
+    "unauthorizedBreadcrumb": "Forbidden",
+    "overview": "Overview",
+    "products": "Products",
+    "staff": "Staff",
+    "staffDashboard": "Staff dashboard",
+    "staffProfile": "Staff profile",
+    "orders": "Orders",
+    "customers": "Customers",
+    "inventory": "Inventory",
+    "reports": "Reports",
+    "tables": "Tables",
+    "promotions": "Promotions",
+    "taxPolicy": "Tax policy",
+    "taxPolicyBreadcrumb": "Tax",
+    "account": "Account",
+    "home": "Home",
+    "history": "History",
+    "support": "Support",
+    "notifications": "Notifications",
+    "billing": "Subscription",
+    "pos": "Sell",
+    "branches": "Branches",
+    "branchSettings": "Branch settings",
+    "branchCreate": "Create branch",
+    "shops": "Shops",
+    "shopDetail": "Shop detail",
+    "shopCreate": "Create shop",
+    "errorPage": "Error page",
+    "notFound": "Page not found"
+  },
+  "header": {
+    "userMenu": {
+      "fallbackName": "User",
+      "fallbackEmail": "email@example.com",
+      "account": "Account",
+      "billing": "Subscription",
+      "notifications": "Notifications",
+      "logout": "Sign out"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "markAllRead": "Mark all read",
+      "empty": "No new notifications.",
+      "viewAll": "View all notifications"
+    }
+  },
+  "storefront": {
+    "header": {
+      "subtitle": "Order online · Cash on delivery",
+      "cart": "Cart"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "noAccount": "Not having an account?",
+      "signUp": "Sign up for free today.",
+      "email": "Email address",
+      "emailPlaceholder": "Email",
+      "password": "Password",
+      "passwordPlaceholder": "Password",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot your password?",
+      "submit": "Sign in",
+      "processing": "Processing ...",
+      "orContinue": "Or continue with",
+      "success": "Signed in successfully!",
+      "failure": "Sign in failed.",
+      "googleSuccess": "Signed in with Google successfully!",
+      "googleFailure": "Google sign in failed.",
+      "googleCancelled": "You cancelled Google sign in.",
+      "googleInvalid": "Google sign in session is invalid. Please try again.",
+      "googleErrorGeneric": "Google sign in failed ({{code}})."
+    },
+    "register": {
+      "title": "Create your account",
+      "email": "Email",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "middleName": "Middle name (optional)",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "submit": "Create account",
+      "alreadyHave": "Already have an account?",
+      "signIn": "Sign in",
+      "successVerifyEmail": "Sign up successful. Please check your email to verify your account.",
+      "successVerified": "Your account is verified! You will be redirected to the sign in page.",
+      "errors": {
+        "emailRequired": "Email is required.",
+        "emailInvalid": "Email is invalid.",
+        "passwordRequired": "Password is required.",
+        "passwordMin": "Password must be at least 6 characters.",
+        "confirmRequired": "Password confirmation is required.",
+        "confirmMismatch": "Passwords do not match.",
+        "firstNameRequired": "First name is required.",
+        "firstNameMax": "First name must not exceed 50 characters.",
+        "lastNameRequired": "Last name is required.",
+        "lastNameMax": "Last name must not exceed 50 characters.",
+        "middleNameMax": "Middle name must not exceed 50 characters.",
+        "registerFailed": "Sign up failed."
+      }
+    },
+    "forgot": {
+      "title": "Forgot password",
+      "placeholder": "Enter your email",
+      "submit": "Send request",
+      "success": "Password reset request sent. Please check your email.",
+      "failure": "Request failed.",
+      "generalError": "Something went wrong. Please try again."
+    },
+    "verify": {
+      "title": "Verify email",
+      "verifying": "Verifying...",
+      "missingToken": "Verification token not found.",
+      "success": "Verified successfully! Close this tab or return to the sign in page.",
+      "failure": "Verification failed."
+    }
+  },
+  "error": {
+    "notFound": {
+      "code": "404",
+      "message": "The page you requested does not exist.",
+      "back": "Back to home"
+    },
+    "unauthorized": {
+      "code": "403",
+      "message": "You don't have permission to access this page.",
+      "back": "Back",
+      "home": "Go home"
+    },
+    "generic": {
+      "title": "Error",
+      "message": "Something went wrong. Please try again.",
+      "back": "Back to home"
+    }
+  },
+  "main": {
+    "title": "Home",
+    "description": "Pick a menu item to get started."
+  },
+  "history": {
+    "title": "History",
+    "description": "History content will appear here."
+  },
+  "overview": {
+    "hello": "Hi, {{name}}",
+    "you": "there",
+    "branchPlaceholder": "Branch",
+    "allBranches": "All branches",
+    "ranges": {
+      "7": "7 days",
+      "14": "14 days",
+      "30": "30 days",
+      "month": "This month",
+      "lastNDays": "the last {{count}} days",
+      "thisMonth": "this month"
+    },
+    "kpi": {
+      "revenue": "Revenue",
+      "orders": "Orders",
+      "productsSold": "Products sold",
+      "averageOrder": "Avg. order value",
+      "during": "During {{range}}"
+    },
+    "report": {
+      "loadError": "Unable to load overview data.",
+      "permissionError": "Unable to load report. You may not have permission to view reports.",
+      "revenueTrend": "Revenue trend",
+      "revenueDescription": "Daily revenue and orders chart in {{range}}"
+    },
+    "topProducts": {
+      "title": "Best sellers",
+      "topInRange": "Top 5 in {{range}}",
+      "soldUnit": "sold"
+    },
+    "recentOrders": {
+      "title": "Recent orders",
+      "subtitle": "5 latest orders",
+      "empty": "No orders yet.",
+      "orderCode": "Order {{code}}",
+      "orderShort": "Order #{{id}}"
+    },
+    "orderStatus": {
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "SHIPPING": "Shipping",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "chartLegend": {
+      "revenue": "Revenue",
+      "orders": "Orders"
+    }
+  },
+  "shop": {
+    "kickedTitle": "You were removed from the shop",
+    "kickedMessage": "The shop owner has removed you from this store. Press “Reload” to refresh permissions and menu.",
+    "switcherLabel": "Shops",
+    "locked": "(Locked)",
+    "addShop": "Add shop"
+  },
+  "loading": {
+    "default": "Loading..."
+  }
+}

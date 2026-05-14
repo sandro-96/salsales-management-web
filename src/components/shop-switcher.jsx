@@ -19,11 +19,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useShop } from "@/hooks/useShop";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { formatSubscriptionLine } from "@/constants/subscriptionStatus.js";
 
 export function ShopSwitcher() {
   const { selectedShop, shops, setSelectedShop } = useShop();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   if (!selectedShop) return null;
   const selectedSubLine = selectedShop.role === "OWNER"
     ? formatSubscriptionLine(
@@ -54,7 +56,7 @@ export function ShopSwitcher() {
                   {selectedShop.name}
                   {selectedShop.active === false ? (
                     <span className="ml-1.5 text-[10px] font-normal text-destructive">
-                      (Đã khóa)
+                      {t("shop.locked")}
                     </span>
                   ) : null}
                 </span>
@@ -74,7 +76,7 @@ export function ShopSwitcher() {
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-muted-foreground text-xs">
-              Shops
+              {t("nav.shopsLabel")}
             </DropdownMenuLabel>
 
             <DropdownMenuRadioGroup
@@ -112,7 +114,7 @@ export function ShopSwitcher() {
                       {shop.name}
                       {locked ? (
                         <span className="ml-1.5 text-[10px] font-normal text-destructive">
-                          (Đã khóa)
+                          {t("shop.locked")}
                         </span>
                       ) : null}
                     </span>
@@ -138,7 +140,9 @@ export function ShopSwitcher() {
               <div className="bg-background flex size-6 items-center justify-center rounded-md border">
                 <Plus className="size-4" />
               </div>
-              <div className="text-muted-foreground font-medium">Add shop</div>
+              <div className="text-muted-foreground font-medium">
+                {t("shop.addShop")}
+              </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

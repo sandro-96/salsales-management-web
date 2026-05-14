@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { format, isToday, isYesterday } from "date-fns";
-import { vi } from "date-fns/locale";
+import { enUS, vi } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Bell, Check, CheckCheck, Loader2, Trash2 } from "lucide-react";
 
@@ -37,36 +38,30 @@ const NOTIFICATION_TYPE_ICON = {
   SYSTEM: "⚙️",
 };
 
-const NOTIFICATION_TYPE_LABEL = {
-  ORDER_CREATED: "Đơn hàng mới",
-  ORDER_UPDATED: "Cập nhật đơn",
-  ORDER_PAID: "Thanh toán",
-  STAFF_ADDED: "Nhân viên mới",
-  STAFF_REMOVED: "Xóa nhân viên",
-  TICKET_CREATED: "Ticket mới",
-  TICKET_REPLIED: "Phản hồi ticket",
-  TICKET_STATUS_CHANGED: "Cập nhật ticket",
-  SYSTEM: "Hệ thống",
-};
-
-const groupByDate = (notifications) => {
+function groupByDate(notifications, t, dateLocale) {
   const groups = {};
   notifications.forEach((n) => {
     const date = new Date(n.createdAt);
     let key;
-    if (isToday(date)) key = "Hôm nay";
-    else if (isYesterday(date)) key = "Hôm qua";
-    else key = format(date, "dd/MM/yyyy", { locale: vi });
+    if (isToday(date)) key = t("pages.notifications.today");
+    else if (isYesterday(date)) key = t("pages.notifications.yesterday");
+    else key = format(date, "dd/MM/yyyy", { locale: dateLocale });
 
     if (!groups[key]) groups[key] = [];
     groups[key].push(n);
   });
   return groups;
-};
+}
 
 const NotificationPage = () => {
   const { user } = useAuth();
   const { subscribe, connected } = useWebSocket();
+  const { t, i18n } = useTranslation();
+
+  const dateFnsLocale = useMemo(
+    () => (i18n.language?.startsWith("en") ? enUS : vi),
+    [i18n.language],
+  );
 
   const [notifications, setNotifications] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -96,11 +91,11 @@ const NotificationPage = () => {
       }
     } catch (err) {
       console.error("Fetch notifications error:", err);
-      toast.error("Không thể tải thông báo.");
+      toast.error(t("pages.notifications.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [user?.id, page, readFilter]);
+  }, [user?.id, page, readFilter, t]);
 
   useEffect(() => {
     fetchNotifications();
@@ -135,10 +130,10 @@ const NotificationPage = () => {
     try {
       await markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      toast.success("Đã đánh dấu tất cả đã đọc.");
+      toast.success(t("pages.notifications.markAllSuccess"));
     } catch (err) {
       console.error("Mark all read error:", err);
-      toast.error("Thao tác thất bại.");
+      toast.error(t("pages.notifications.markAllFail"));
     }
   };
 
@@ -149,32 +144,41 @@ const NotificationPage = () => {
       setTotalCount((c) => c - 1);
     } catch (err) {
       console.error("Delete notification error:", err);
-      toast.error("Xóa thông báo thất bại.");
+      toast.error(t("pages.notifications.deleteFail"));
     }
   };
 
   const formatTime = (d) => {
     if (!d) return "";
     try {
-      return format(new Date(d), "HH:mm", { locale: vi });
+      return format(new Date(d), "HH:mm", { locale: dateFnsLocale });
     } catch {
       return "";
     }
   };
 
-  const grouped = groupByDate(notifications);
+  const grouped = useMemo(
+    () => groupByDate(notifications, t, dateFnsLocale),
+    [notifications, t, dateFnsLocale],
+  );
   const totalPages = Math.ceil(totalCount / pageSize);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const typeLabel = (type) =>
+    t(`pages.notifications.types.${type}`, { defaultValue: type });
+
   return (
     <div className="flex-1 flex flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto w-full">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Thông báo</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t("pages.notifications.title")}
+          </h1>
           <p className="text-muted-foreground text-sm">
-            {totalCount} thông báo
-            {unreadCount > 0 ? `, ${unreadCount} chưa đọc` : ""}
+            {t("pages.notifications.count", { count: totalCount })}
+            {unreadCount > 0
+              ? t("pages.notifications.countUnread", { count: unreadCount })
+              : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -189,21 +193,26 @@ const NotificationPage = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Tất cả</SelectItem>
-              <SelectItem value="false">Chưa đọc</SelectItem>
-              <SelectItem value="true">Đã đọc</SelectItem>
+              <SelectItem value="__all__">
+                {t("pages.notifications.filterAll")}
+              </SelectItem>
+              <SelectItem value="false">
+                {t("pages.notifications.filterUnread")}
+              </SelectItem>
+              <SelectItem value="true">
+                {t("pages.notifications.filterRead")}
+              </SelectItem>
             </SelectContent>
           </Select>
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
               <CheckCheck className="mr-1 h-4 w-4" />
-              Đọc tất cả
+              {t("pages.notifications.markAll")}
             </Button>
           )}
         </div>
       </div>
 
-      {/* Notification list */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -213,10 +222,11 @@ const NotificationPage = () => {
           <div className="rounded-full bg-muted p-4 mb-4">
             <Bell className="h-10 w-10 text-muted-foreground/40" />
           </div>
-          <h3 className="text-lg font-medium mb-1">Không có thông báo nào</h3>
+          <h3 className="text-lg font-medium mb-1">
+            {t("pages.notifications.emptyTitle")}
+          </h3>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Khi có thông báo mới từ đơn hàng, nhân sự hoặc hỗ trợ, chúng sẽ hiển
-            thị ở đây.
+            {t("pages.notifications.emptyDesc")}
           </p>
         </Card>
       ) : (
@@ -250,7 +260,7 @@ const NotificationPage = () => {
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline" className="text-[10px] h-5">
-                            {NOTIFICATION_TYPE_LABEL[n.type] || n.type}
+                            {typeLabel(n.type)}
                           </Badge>
                         </div>
                       </div>
@@ -278,7 +288,7 @@ const NotificationPage = () => {
                             e.stopPropagation();
                             handleMarkRead(n);
                           }}
-                          title="Đánh dấu đã đọc"
+                          title={t("pages.notifications.markReadTitle")}
                         >
                           <Check className="h-3.5 w-3.5" />
                         </Button>
@@ -291,7 +301,7 @@ const NotificationPage = () => {
                           e.stopPropagation();
                           handleDelete(n);
                         }}
-                        title="Xóa"
+                        title={t("pages.notifications.deleteTitle")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -304,7 +314,6 @@ const NotificationPage = () => {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
           <Button
@@ -313,10 +322,13 @@ const NotificationPage = () => {
             disabled={page === 0}
             onClick={() => setPage((p) => p - 1)}
           >
-            Trang trước
+            {t("pages.notifications.prevPage")}
           </Button>
           <span className="text-sm text-muted-foreground">
-            Trang {page + 1} / {totalPages}
+            {t("pages.notifications.pageOf", {
+              current: page + 1,
+              total: totalPages,
+            })}
           </span>
           <Button
             variant="outline"
@@ -324,7 +336,7 @@ const NotificationPage = () => {
             disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}
           >
-            Trang sau
+            {t("pages.notifications.nextPage")}
           </Button>
         </div>
       )}

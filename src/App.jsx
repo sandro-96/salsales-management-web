@@ -1,6 +1,7 @@
 // src/App.jsx
 import { Routes, Route, useLocation } from "react-router-dom";
 import { Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import { routeConfig } from "./routes/routeConfig.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import GuestOnlyRoute from "./routes/GuestOnlyRoute";
@@ -14,7 +15,13 @@ import BranchFormModal from "./pages/branchs/BranchFormModal.jsx";
 import { Toaster } from "@/components/ui/sonner";
 
 function renderRoute(route) {
-  let element = <RouteWithTitle element={route.element} title={route.title} />;
+  let element = (
+    <RouteWithTitle
+      element={route.element}
+      title={route.title}
+      titleKey={route.titleKey}
+    />
+  );
 
   if (
     route.shopPermission ||
@@ -83,10 +90,11 @@ function renderRoute(route) {
 
 function App() {
   const location = useLocation();
+  const { t } = useTranslation();
   const state = location.state;
   return (
     <ErrorBoundaryWithNavigate>
-      <Suspense fallback={<Loading text="Đang tải trang..." fullScreen />}>
+      <Suspense fallback={<Loading text={t("common.loadingPage")} fullScreen />}>
         <Toaster position="top-right" />
         <Routes location={state?.background || location}>
           {routeConfig.map(renderRoute)}

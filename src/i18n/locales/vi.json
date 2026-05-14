@@ -1,0 +1,327 @@
+{
+  "common": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "create": "Tạo mới",
+    "search": "Tìm kiếm",
+    "loading": "Đang tải...",
+    "loadingPage": "Đang tải trang...",
+    "processing": "Đang xử lý...",
+    "empty": "Không có dữ liệu",
+    "yes": "Có",
+    "no": "Không",
+    "back": "Quay lại",
+    "next": "Tiếp",
+    "submit": "Gửi",
+    "reload": "Tải lại",
+    "viewMore": "Xem thêm",
+    "viewAll": "Xem tất cả",
+    "more": "Thêm",
+    "all": "Tất cả",
+    "goHome": "Về trang chủ"
+  },
+  "brand": {
+    "appName": "SỔ THU CHI"
+  },
+  "app": {
+    "documentTitleSuffix": "Sales System"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "Tiếng Anh",
+    "switch": "Đổi ngôn ngữ"
+  },
+  "theme": {
+    "toggle": "Đổi chế độ sáng/tối",
+    "light": "Chế độ sáng",
+    "dark": "Chế độ tối"
+  },
+  "nav": {
+    "groupMain": "Chức năng",
+    "groupOther": "Khác",
+    "overview": "Tổng quan",
+    "orders": "Đơn hàng",
+    "ordersFnb": "Đơn hàng",
+    "ordersPharmacy": "Đơn thuốc",
+    "products": "Sản phẩm",
+    "productsFnb": "Sản phẩm",
+    "productsPharmacy": "Thuốc & Sản phẩm",
+    "customers": "Khách hàng",
+    "branches": "Chi nhánh",
+    "inventory": "Tồn kho",
+    "inventoryFnb": "Kho",
+    "inventoryEcommerce": "Kho hàng",
+    "inventoryPharmacy": "Kho thuốc",
+    "promotions": "Khuyến mãi",
+    "reports": "Báo cáo",
+    "staff": "Nhân sự",
+    "tables": "Bàn",
+    "pos": "Bán hàng",
+    "posOrder": "Gọi món",
+    "settings": "Cài đặt",
+    "shops": "Cửa hàng",
+    "shopsLabel": "Shops",
+    "support": "Hỗ trợ",
+    "billing": "Gói dịch vụ",
+    "search": "Tìm kiếm",
+    "help": "Trợ giúp",
+    "home": "Trang chủ",
+    "history": "Lịch sử",
+    "logout": "Đăng xuất",
+    "courses": "Khóa học",
+    "teachers": "Giảng viên",
+    "students": "Học viên",
+    "schedule": "Lịch học",
+    "appointments": "Lịch hẹn",
+    "doctors": "Bác sĩ",
+    "patients": "Bệnh nhân",
+    "services": "Dịch vụ",
+    "dashboard": "Dashboard",
+    "tasks": "Công việc",
+    "users": "Người dùng"
+  },
+  "routes": {
+    "login": "Đăng nhập",
+    "register": "Đăng ký tài khoản",
+    "registerBreadcrumb": "Đăng ký",
+    "verifyEmail": "Xác thực email",
+    "forgotPassword": "Quên mật khẩu",
+    "storefront": "Cửa hàng",
+    "storefrontProduct": "Sản phẩm",
+    "storefrontCart": "Giỏ hàng",
+    "storefrontCheckout": "Thanh toán",
+    "storefrontSuccess": "Đặt hàng thành công",
+    "adminHome": "Trang quản trị",
+    "adminBreadcrumb": "Quản trị",
+    "adminOverview": "Tổng quan quản trị",
+    "adminOverviewBreadcrumb": "Tổng quan",
+    "adminSupport": "Hỗ trợ hệ thống",
+    "adminSupportBreadcrumb": "Hỗ trợ",
+    "adminShops": "Danh sách shop",
+    "adminShopsBreadcrumb": "Shops",
+    "adminShopDetail": "Chi tiết shop",
+    "adminShopDetailBreadcrumb": "Chi tiết",
+    "adminUsers": "Danh sách user",
+    "adminUsersBreadcrumb": "Users",
+    "adminUserDetail": "Chi tiết user",
+    "adminUserDetailBreadcrumb": "Chi tiết",
+    "adminBilling": "Billing & Subscriptions",
+    "adminBillingBreadcrumb": "Billing",
+    "adminCatalog": "Catalog",
+    "adminBroadcast": "Broadcast",
+    "adminAudit": "Audit log",
+    "adminAuditBreadcrumb": "Audit",
+    "adminSecurity": "Bảo mật tài khoản",
+    "adminSecurityBreadcrumb": "Bảo mật",
+    "adminNotifications": "Thông báo (admin)",
+    "unauthorized": "Không có quyền truy cập",
+    "unauthorizedBreadcrumb": "Không có quyền",
+    "overview": "Tổng quan",
+    "products": "Sản phẩm",
+    "staff": "Nhân sự",
+    "staffDashboard": "Tổng quan nhân sự",
+    "staffProfile": "Hồ sơ nhân sự",
+    "orders": "Đơn hàng",
+    "customers": "Khách hàng",
+    "inventory": "Kho hàng",
+    "reports": "Báo cáo",
+    "tables": "Bàn",
+    "promotions": "Khuyến mãi",
+    "taxPolicy": "Chính sách thuế",
+    "taxPolicyBreadcrumb": "Thuế",
+    "account": "Tài khoản",
+    "home": "Trang chủ",
+    "history": "Lịch sử",
+    "support": "Hỗ trợ",
+    "notifications": "Thông báo",
+    "billing": "Gói dịch vụ",
+    "pos": "Bán hàng",
+    "branches": "Chi nhánh",
+    "branchSettings": "Cài đặt chi nhánh",
+    "branchCreate": "Tạo chi nhánh",
+    "shops": "Cửa hàng",
+    "shopDetail": "Chi tiết cửa hàng",
+    "shopCreate": "Tạo cửa hàng",
+    "errorPage": "Trang lỗi",
+    "notFound": "Không tìm thấy trang"
+  },
+  "header": {
+    "userMenu": {
+      "fallbackName": "Người dùng",
+      "fallbackEmail": "email@example.com",
+      "account": "Tài khoản",
+      "billing": "Gói dịch vụ",
+      "notifications": "Thông báo",
+      "logout": "Đăng xuất"
+    },
+    "notifications": {
+      "title": "Thông báo",
+      "markAllRead": "Đọc tất cả",
+      "empty": "Không có thông báo mới.",
+      "viewAll": "Xem tất cả thông báo"
+    }
+  },
+  "storefront": {
+    "header": {
+      "subtitle": "Đặt hàng online · Thanh toán COD",
+      "cart": "Giỏ hàng"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Đăng nhập vào tài khoản",
+      "noAccount": "Bạn chưa có tài khoản?",
+      "signUp": "Đăng ký miễn phí ngay.",
+      "email": "Địa chỉ email",
+      "emailPlaceholder": "Email",
+      "password": "Mật khẩu",
+      "passwordPlaceholder": "Mật khẩu",
+      "rememberMe": "Ghi nhớ đăng nhập",
+      "forgotPassword": "Quên mật khẩu?",
+      "submit": "Đăng nhập",
+      "processing": "Đang xử lý...",
+      "orContinue": "Hoặc tiếp tục với",
+      "success": "Đăng nhập thành công!",
+      "failure": "Đăng nhập thất bại.",
+      "googleSuccess": "Đăng nhập bằng Google thành công!",
+      "googleFailure": "Đăng nhập Google thất bại.",
+      "googleCancelled": "Bạn đã hủy đăng nhập Google.",
+      "googleInvalid": "Phiên đăng nhập Google không hợp lệ. Vui lòng thử lại.",
+      "googleErrorGeneric": "Đăng nhập Google thất bại ({{code}})."
+    },
+    "register": {
+      "title": "Tạo tài khoản",
+      "email": "Email",
+      "firstName": "Tên",
+      "lastName": "Họ",
+      "middleName": "Tên đệm (tùy chọn)",
+      "password": "Mật khẩu",
+      "confirmPassword": "Xác nhận mật khẩu",
+      "submit": "Tạo tài khoản",
+      "alreadyHave": "Đã có tài khoản?",
+      "signIn": "Đăng nhập",
+      "successVerifyEmail": "Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản.",
+      "successVerified": "Tài khoản đã được xác minh! Bạn sẽ được chuyển hướng đến trang đăng nhập.",
+      "errors": {
+        "emailRequired": "Email không được để trống.",
+        "emailInvalid": "Email không hợp lệ.",
+        "passwordRequired": "Mật khẩu không được để trống.",
+        "passwordMin": "Mật khẩu phải từ 6 ký tự.",
+        "confirmRequired": "Xác nhận mật khẩu không được để trống.",
+        "confirmMismatch": "Mật khẩu không khớp.",
+        "firstNameRequired": "Tên không được để trống.",
+        "firstNameMax": "Tên không được vượt quá 50 ký tự.",
+        "lastNameRequired": "Họ không được để trống.",
+        "lastNameMax": "Họ không được vượt quá 50 ký tự.",
+        "middleNameMax": "Tên đệm không được vượt quá 50 ký tự.",
+        "registerFailed": "Đăng ký thất bại."
+      }
+    },
+    "forgot": {
+      "title": "Quên mật khẩu",
+      "placeholder": "Nhập email của bạn",
+      "submit": "Gửi yêu cầu",
+      "success": "Đã gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra email của bạn.",
+      "failure": "Yêu cầu thất bại.",
+      "generalError": "Có lỗi xảy ra. Vui lòng thử lại sau."
+    },
+    "verify": {
+      "title": "Xác minh email",
+      "verifying": "Đang xác minh...",
+      "missingToken": "Không tìm thấy token xác minh.",
+      "success": "Xác minh thành công! Đóng tab này hoặc quay lại trang đăng nhập.",
+      "failure": "Xác minh thất bại."
+    }
+  },
+  "error": {
+    "notFound": {
+      "code": "404",
+      "message": "Trang bạn yêu cầu không tồn tại.",
+      "back": "Quay về trang chủ"
+    },
+    "unauthorized": {
+      "code": "403",
+      "message": "Bạn không có quyền truy cập trang này.",
+      "back": "Quay lại",
+      "home": "Về trang chủ"
+    },
+    "generic": {
+      "title": "Lỗi",
+      "message": "Đã xảy ra lỗi. Vui lòng thử lại sau.",
+      "back": "Quay lại Trang chủ"
+    }
+  },
+  "main": {
+    "title": "Trang chủ",
+    "description": "Chọn mục từ menu để bắt đầu làm việc."
+  },
+  "history": {
+    "title": "Lịch sử",
+    "description": "Nội dung lịch sử sẽ được cập nhật tại đây."
+  },
+  "overview": {
+    "hello": "Xin chào, {{name}}",
+    "you": "bạn",
+    "branchPlaceholder": "Chi nhánh",
+    "allBranches": "Tất cả chi nhánh",
+    "ranges": {
+      "7": "7 ngày",
+      "14": "14 ngày",
+      "30": "30 ngày",
+      "month": "Tháng này",
+      "lastNDays": "{{count}} ngày qua",
+      "thisMonth": "tháng này"
+    },
+    "kpi": {
+      "revenue": "Doanh thu",
+      "orders": "Đơn hàng",
+      "productsSold": "Sản phẩm đã bán",
+      "averageOrder": "Giá trị TB/đơn",
+      "during": "Trong {{range}}"
+    },
+    "report": {
+      "loadError": "Không thể tải dữ liệu tổng quan.",
+      "permissionError": "Không thể tải dữ liệu báo cáo. Bạn có thể không có quyền xem báo cáo.",
+      "revenueTrend": "Xu hướng doanh thu",
+      "revenueDescription": "Biểu đồ doanh thu và đơn hàng theo ngày trong {{range}}"
+    },
+    "topProducts": {
+      "title": "Sản phẩm bán chạy",
+      "topInRange": "Top 5 trong {{range}}",
+      "soldUnit": "đã bán"
+    },
+    "recentOrders": {
+      "title": "Đơn hàng gần đây",
+      "subtitle": "5 đơn hàng mới nhất",
+      "empty": "Chưa có đơn hàng nào.",
+      "orderCode": "Đơn {{code}}",
+      "orderShort": "Đơn #{{id}}"
+    },
+    "orderStatus": {
+      "PENDING": "Chờ xử lý",
+      "CONFIRMED": "Đã xác nhận",
+      "SHIPPING": "Đang giao",
+      "COMPLETED": "Hoàn tất",
+      "CANCELLED": "Đã hủy"
+    },
+    "chartLegend": {
+      "revenue": "Doanh thu",
+      "orders": "Đơn hàng"
+    }
+  },
+  "shop": {
+    "kickedTitle": "Bạn đã bị gỡ khỏi shop",
+    "kickedMessage": "Chủ shop đã gỡ bạn khỏi cửa hàng này. Bấm “Tải lại” để cập nhật quyền và menu.",
+    "switcherLabel": "Cửa hàng",
+    "locked": "(Đã khóa)",
+    "addShop": "Thêm cửa hàng"
+  },
+  "loading": {
+    "default": "Đang tải..."
+  }
+}

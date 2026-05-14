@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { vi } from "date-fns/locale";
+import { vi, enUS } from "date-fns/locale";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ export default function NotificationBell() {
   const { selectedShopId, fetchShops, setSelectedShop } = useShop();
   const { alert } = useAlertDialog();
   const { subscribe, connected } = useWebSocket();
+  const { t, i18n } = useTranslation();
   const kickedFromShopRef = useRef(false);
 
   const [unreadCount, setUnreadCount] = useState(0);
@@ -99,19 +101,22 @@ export default function NotificationBell() {
         toast.info(message.data.title, { description: message.data.message });
         // Phát event cho các widget phụ (vd. badge hỗ trợ trong AdminLayout)
         // refresh mà không cần tự subscribe duplicate cùng topic.
-        const t = message.data.type;
-        if (t === "TICKET_CREATED" || t === "TICKET_REPLIED") {
+        const notifType = message.data.type;
+        if (
+          notifType === "TICKET_CREATED" ||
+          notifType === "TICKET_REPLIED"
+        ) {
           window.dispatchEvent(new CustomEvent("admin-support-badge-refresh"));
         }
 
         // Realtime shop membership changes
-        if (t === "STAFF_ADDED" || t === "STAFF_REMOVED") {
+        if (notifType === "STAFF_ADDED" || notifType === "STAFF_REMOVED") {
           // Refresh shop list so role/permissions update immediately
           fetchShops?.();
 
           // If user is removed from the currently selected shop, clear context + redirect.
           const removedFromSelected =
-            t === "STAFF_REMOVED" &&
+            notifType === "STAFF_REMOVED" &&
             message.data?.shopId &&
             String(message.data.shopId) === String(selectedShopId);
           if (removedFromSelected) {
@@ -131,10 +136,10 @@ export default function NotificationBell() {
 
             // Show a blocking alert so user knows why menus changed
             setTimeout(() => {
-              alert(
-                "Chủ shop đã gỡ bạn khỏi cửa hàng này. Bấm “Tải lại” để cập nhật quyền và menu.",
-                { title: "Bạn đã bị gỡ khỏi shop", confirmText: "Tải lại" },
-              ).then(() => {
+              alert(t("shop.kickedMessage"), {
+                title: t("shop.kickedTitle"),
+                confirmText: t("common.reload"),
+              }).then(() => {
                 window.location.reload();
               });
             }, 0);
@@ -153,6 +158,7 @@ export default function NotificationBell() {
     setSelectedShop,
     navigate,
     alert,
+    t,
   ]);
 
   useEffect(() => {
@@ -208,7 +214,8 @@ export default function NotificationBell() {
   const formatDate = (d) => {
     if (!d) return "";
     try {
-      return format(new Date(d), "dd/MM HH:mm", { locale: vi });
+      const dateLocale = i18n.language?.startsWith("en") ? enUS : vi;
+      return format(new Date(d), "dd/MM HH:mm", { locale: dateLocale });
     } catch {
       return "";
     }
@@ -232,7 +239,9 @@ export default function NotificationBell() {
         className="w-80 p-0 z-[100] shadow-lg border bg-popover"
       >
         <div className="flex items-center justify-between px-4 py-2.5 border-b">
-          <h4 className="text-sm font-semibold">Thông báo</h4>
+          <h4 className="text-sm font-semibold">
+            {t("header.notifications.title")}
+          </h4>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -241,7 +250,7 @@ export default function NotificationBell() {
               onClick={handleMarkAllRead}
             >
               <Check className="mr-1 h-3 w-3" />
-              Đọc tất cả
+              {t("header.notifications.markAllRead")}
             </Button>
           )}
         </div>
@@ -254,7 +263,7 @@ export default function NotificationBell() {
             <div className="py-10 text-center">
               <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">
-                Không có thông báo mới.
+                {t("header.notifications.empty")}
               </p>
             </div>
           ) : (
@@ -301,7 +310,7 @@ export default function NotificationBell() {
               navigate(notificationsRoute);
             }}
           >
-            Xem tất cả thông báo
+            {t("header.notifications.viewAll")}
           </Button>
         </div>
       </PopoverContent>

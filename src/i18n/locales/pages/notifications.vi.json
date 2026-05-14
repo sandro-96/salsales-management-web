@@ -1,0 +1,33 @@
+{
+  "title": "Thông báo",
+  "count": "{{count}} thông báo",
+  "countUnread": ", {{count}} chưa đọc",
+  "filterAll": "Tất cả",
+  "filterUnread": "Chưa đọc",
+  "filterRead": "Đã đọc",
+  "markAll": "Đọc tất cả",
+  "fetchError": "Không thể tải thông báo.",
+  "markAllSuccess": "Đã đánh dấu tất cả đã đọc.",
+  "markAllFail": "Thao tác thất bại.",
+  "deleteFail": "Xóa thông báo thất bại.",
+  "emptyTitle": "Không có thông báo nào",
+  "emptyDesc": "Khi có thông báo mới từ đơn hàng, nhân sự hoặc hỗ trợ, chúng sẽ hiển thị ở đây.",
+  "markReadTitle": "Đánh dấu đã đọc",
+  "deleteTitle": "Xóa",
+  "prevPage": "Trang trước",
+  "nextPage": "Trang sau",
+  "pageOf": "Trang {{current}} / {{total}}",
+  "today": "Hôm nay",
+  "yesterday": "Hôm qua",
+  "types": {
+    "ORDER_CREATED": "Đơn hàng mới",
+    "ORDER_UPDATED": "Cập nhật đơn",
+    "ORDER_PAID": "Thanh toán",
+    "STAFF_ADDED": "Nhân viên mới",
+    "STAFF_REMOVED": "Xóa nhân viên",
+    "TICKET_CREATED": "Ticket mới",
+    "TICKET_REPLIED": "Phản hồi ticket",
+    "TICKET_STATUS_CHANGED": "Cập nhật ticket",
+    "SYSTEM": "Hệ thống"
+  }
+}

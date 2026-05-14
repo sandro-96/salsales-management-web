@@ -1,5 +1,6 @@
 import * as React from "react";
 import { HelpCircleIcon, StoreIcon, ShoppingCart } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
@@ -11,7 +12,6 @@ import {
 } from "@/components/ui/sidebar";
 import { ShopSwitcher } from "./shop-switcher";
 import { BranchSwitcher } from "./branch-switcher";
-import { useAuth } from "@/hooks/useAuth";
 import { useShop } from "@/hooks/useShop";
 import { useShopPermissions } from "@/hooks/useShopPermissions";
 import { filterNavByShopPermissions } from "@/utils/navPermissionMap";
@@ -19,10 +19,10 @@ import { PERM } from "@/constants/shopPermissions";
 import SystemSupportContact from "@/components/common/SystemSupportContact.jsx";
 
 export function AppSidebar({ navItems, ...props }) {
-  const { user } = useAuth();
   const { shops, selectedShopId } = useShop();
   const { hasShopPermission, hasAnyShopPermission, hasAllShopPermissions } =
     useShopPermissions();
+  const { t } = useTranslation();
   const permHelpers = React.useMemo(
     () => ({ hasShopPermission, hasAnyShopPermission, hasAllShopPermissions }),
     [hasShopPermission, hasAnyShopPermission, hasAllShopPermissions],
@@ -35,7 +35,7 @@ export function AppSidebar({ navItems, ...props }) {
         {
           to: "/pos",
           icon: ShoppingCart,
-          label: "Bán hàng",
+          labelKey: "nav.pos",
           requiredAny: [PERM.ORDER_CREATE],
         },
         ...base,
@@ -46,9 +46,9 @@ export function AppSidebar({ navItems, ...props }) {
 
   const navSecondary = React.useMemo(() => {
     const items = [
-      { label: "Shops", to: "/shops", icon: StoreIcon },
+      { labelKey: "nav.shopsLabel", to: "/shops", icon: StoreIcon },
       {
-        label: "Hỗ trợ",
+        labelKey: "nav.support",
         to: "/support",
         icon: HelpCircleIcon,
       },
@@ -65,11 +65,11 @@ export function AppSidebar({ navItems, ...props }) {
         </SidebarHeader>
       )}
       <SidebarContent>
-        <NavMain items={mainNavItems} />
+        <NavMain items={mainNavItems} groupLabel={t("nav.groupMain")} />
         {/* <NavDocuments items={data.documents} /> */}
       </SidebarContent>
       <SidebarFooter>
-        <NavSecondary items={navSecondary} />
+        <NavSecondary items={navSecondary} groupLabel={t("nav.groupOther")} />
         <div className="mt-2">
           <SystemSupportContact compact />
         </div>

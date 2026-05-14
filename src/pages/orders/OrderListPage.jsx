@@ -27,12 +27,14 @@ import {
   Pencil,
   ImagePlus,
   ChevronDown,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { useBranchChannel } from "../../hooks/useBranchChannel.js";
+import { useShopChannel } from "../../hooks/useShopChannel.js";
 import { WebSocketMessageTypes } from "../../constants/websocket.js";
 import { PERM } from "../../constants/shopPermissions.js";
 import { SHOP_INDUSTRY } from "../../constants/ShopIndustry.js";
@@ -992,6 +994,7 @@ const OrderListPage = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
 
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sourceFilter, setSourceFilter] = useState("ALL");
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -1188,6 +1191,28 @@ const OrderListPage = () => {
   );
   useBranchChannel("orders", onRealtimeOrder, { branchId: effectiveBranchId });
 
+  // ── Realtime: kênh shop-level cho đơn online (storefront) ──────────────────
+  // Đơn online có thể không khớp branch hiện tại — luôn refetch để badge online
+  // và stat hiển thị chính xác trên trang đang xem.
+  const onOnlineOrderEvent = useCallback(
+    (msg) => {
+      if (msg?.type !== WebSocketMessageTypes.ONLINE_ORDER_CREATED) return;
+      const code = msg?.data?.orderCode || msg?.data?.orderId || "";
+      const customer = msg?.data?.customerName || "khách";
+      toast.info(`Có đơn online mới #${code}`, {
+        description: `Khách: ${customer}${msg?.data?.customerPhone ? " · " + msg.data.customerPhone : ""}`,
+      });
+      // Refetch trang đầu để đơn mới xuất hiện đúng vị trí.
+      if (pagination.pageIndex === 0) {
+        fetchOrders();
+      } else {
+        setTotalCount((c) => c + 1);
+      }
+    },
+    [fetchOrders, pagination.pageIndex],
+  );
+  useShopChannel("orders/online", onOnlineOrderEvent);
+
   // ── Stats ────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const total = orders.length;
@@ -1341,11 +1366,26 @@ const OrderListPage = () => {
       {
         accessorKey: "orderCode",
         header: "Mã đơn hàng",
-        cell: ({ row }) => (
-          <span className="text-sm font-mono text-muted-foreground">
-            {displayOrderCode(row.original)}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const o = row.original;
+          const isOnline = (o?.orderSource || "").toUpperCase() === "ONLINE";
+          return (
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-mono text-muted-foreground">
+                {displayOrderCode(o)}
+              </span>
+              {isOnline && (
+                <Badge
+                  className="text-[10px] gap-0.5 px-1.5 py-0 h-4 bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:border-sky-500/40"
+                  title="Đơn từ storefront online"
+                >
+                  <Globe className="h-2.5 w-2.5" />
+                  Online
+                </Badge>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "createdAt",
@@ -1596,8 +1636,18 @@ const OrderListPage = () => {
     openInvoiceDialog,
   ]);
 
+  // Client-side filter theo nguồn đơn (POS / ONLINE). BE chưa hỗ trợ
+  // filter ở query nên áp ngay trên page hiện tại — phù hợp MVP.
+  const displayedOrders = useMemo(() => {
+    if (sourceFilter === "ALL") return orders;
+    return orders.filter((o) => {
+      const src = (o?.orderSource || "POS").toUpperCase();
+      return src === sourceFilter;
+    });
+  }, [orders, sourceFilter]);
+
   const table = useReactTable({
-    data: orders,
+    data: displayedOrders,
     columns,
     manualPagination: true,
     manualSorting: true,
@@ -1689,6 +1739,20 @@ const OrderListPage = () => {
                     {cfg.label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={sourceFilter}
+              onValueChange={(v) => setSourceFilter(v)}
+            >
+              <SelectTrigger className="w-[150px]">
+                <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background">
+                <SelectItem value="ALL">Tất cả nguồn</SelectItem>
+                <SelectItem value="POS">POS / Tại quầy</SelectItem>
+                <SelectItem value="ONLINE">Đơn online</SelectItem>
               </SelectContent>
             </Select>
             {branches.length > 1 && (

@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Receipt,
   BarChart3,
+  Info,
 } from "lucide-react";
 import {
   BarChart,
@@ -22,7 +23,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Legend,
 } from "recharts";
@@ -58,6 +59,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import {
@@ -68,8 +74,11 @@ import {
   exportTopProducts,
 } from "../../api/reportApi.js";
 
-const formatCurrency = (value) =>
-  Number(value || 0).toLocaleString("vi-VN") + "đ";
+const formatCurrency = (value, { round = false } = {}) => {
+  const n = Number(value || 0);
+  const v = round ? Math.round(n) : n;
+  return v.toLocaleString("vi-VN") + "đ";
+};
 
 const formatNumber = (value) => Number(value || 0).toLocaleString("vi-VN");
 
@@ -94,19 +103,37 @@ const toISODate = (date) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const StatCard = ({ title, value, icon, description }) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">
-        {title}
-      </CardTitle>
-      {icon ? React.createElement(icon, { className: "h-4 w-4 text-muted-foreground" }) : null}
+const StatCard = ({ title, value, icon, description, hint, className }) => (
+  <Card className={cn("flex h-full min-h-0 flex-col", className)}>
+    <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
+      <div className="flex min-w-0 flex-1 items-center gap-1">
+        <CardTitle className="truncate text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
+        {hint ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="shrink-0 rounded-md text-muted-foreground outline-none ring-offset-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Giải thích chỉ số"
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-left leading-snug">
+              {hint}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
+      {icon ? React.createElement(icon, { className: "h-4 w-4 shrink-0 text-muted-foreground" }) : null}
     </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      {description && (
-        <p className="text-xs text-muted-foreground mt-1">{description}</p>
-      )}
+    <CardContent className="flex flex-1 flex-col pt-0">
+      <div className="text-2xl font-bold tabular-nums">{value}</div>
+      {description ? (
+        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{description}</p>
+      ) : null}
     </CardContent>
   </Card>
 );
@@ -235,15 +262,29 @@ const ReportListPage = () => {
     }
   };
 
+  const sortedDailyData = useMemo(
+    () =>
+      [...dailyData].sort((a, b) =>
+        String(a?.date ?? "").localeCompare(String(b?.date ?? "")),
+      ),
+    [dailyData],
+  );
+
   const chartData = useMemo(
     () =>
-      dailyData.map((d) => ({
+      sortedDailyData.map((d) => ({
         date: formatDateShort(d.date),
         "Doanh thu": d.totalRevenue,
         "Đơn hàng": d.totalOrders,
         "Sản phẩm": d.totalProductsSold,
       })),
-    [dailyData],
+    [sortedDailyData],
+  );
+
+  const chartRangeLabel = useMemo(
+    () =>
+      `${format(startDate, "dd/MM/yyyy", { locale: vi })} — ${format(endDate, "dd/MM/yyyy", { locale: vi })}`,
+    [startDate, endDate],
   );
 
   return (
@@ -358,7 +399,7 @@ const ReportListPage = () => {
         </div>
 
         {/* Summary cards */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-2 items-stretch gap-4 lg:grid-cols-5">
           <StatCard
             title="Tổng đơn hàng"
             value={formatNumber(summary?.totalOrders)}
@@ -373,7 +414,8 @@ const ReportListPage = () => {
             title="Doanh thu"
             value={formatCurrency(summary?.totalRevenue)}
             icon={DollarSign}
-            description="Tổng tiền hàng trên đơn (totalPrice); với giá đã gồm VAT thường bằng tổng thu"
+            description="Tổng tiền hàng trên đơn"
+            hint="Theo totalPrice trên đơn. Khi giá đã gồm VAT, con số này thường gần với tổng tiền thu tùy cách cấu hình thuế."
           />
           <StatCard
             title="Tổng tiền thu"
@@ -383,8 +425,9 @@ const ReportListPage = () => {
           />
           <StatCard
             title="TB / đơn hàng"
-            value={formatCurrency(summary?.averageOrderValue)}
+            value={formatCurrency(summary?.averageOrderValue, { round: true })}
             icon={TrendingUp}
+            hint="Doanh thu chia cho số đơn; làm tròn đến đồng."
           />
         </div>
 
@@ -429,8 +472,13 @@ const ReportListPage = () => {
                       Biểu đồ doanh thu theo ngày
                     </CardTitle>
                     <CardDescription>
-                      Từ {formatDateFull(dailyData[0]?.date)} đến{" "}
-                      {formatDateFull(dailyData[dailyData.length - 1]?.date)}
+                      Khoảng đã chọn: {chartRangeLabel}
+                      {sortedDailyData.length > 0 ? (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · Có dữ liệu {sortedDailyData.length} ngày
+                        </span>
+                      ) : null}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -456,7 +504,7 @@ const ReportListPage = () => {
                                 : v
                           }
                         />
-                        <Tooltip content={<CustomTooltip />} />
+                        <RechartsTooltip content={<CustomTooltip />} />
                         <Legend />
                         <Bar
                           dataKey="Doanh thu"
@@ -492,7 +540,7 @@ const ReportListPage = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {dailyData.map((d, i) => (
+                        {sortedDailyData.map((d, i) => (
                           <TableRow key={i}>
                             <TableCell className="font-medium">
                               {formatDateFull(d.date)}

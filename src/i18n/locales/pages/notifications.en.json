@@ -1,0 +1,33 @@
+{
+  "title": "Notifications",
+  "count": "{{count}} notifications",
+  "countUnread": ", {{count}} unread",
+  "filterAll": "All",
+  "filterUnread": "Unread",
+  "filterRead": "Read",
+  "markAll": "Mark all read",
+  "fetchError": "Could not load notifications.",
+  "markAllSuccess": "All marked as read.",
+  "markAllFail": "Action failed.",
+  "deleteFail": "Could not delete notification.",
+  "emptyTitle": "No notifications",
+  "emptyDesc": "When there are new updates from orders, staff, or support, they will appear here.",
+  "markReadTitle": "Mark as read",
+  "deleteTitle": "Delete",
+  "prevPage": "Previous",
+  "nextPage": "Next",
+  "pageOf": "Page {{current}} / {{total}}",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "types": {
+    "ORDER_CREATED": "New order",
+    "ORDER_UPDATED": "Order updated",
+    "ORDER_PAID": "Payment",
+    "STAFF_ADDED": "Staff added",
+    "STAFF_REMOVED": "Staff removed",
+    "TICKET_CREATED": "New ticket",
+    "TICKET_REPLIED": "Ticket reply",
+    "TICKET_STATUS_CHANGED": "Ticket status",
+    "SYSTEM": "System"
+  }
+}
