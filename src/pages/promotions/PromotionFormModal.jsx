@@ -79,6 +79,7 @@ export default function PromotionFormModal({
   const [endDate, setEndDate] = useState(null);
   const [active, setActive] = useState(true);
   const [branchId, setBranchId] = useState("");
+  const [priority, setPriority] = useState("0");
   const [applyAll, setApplyAll] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -101,6 +102,9 @@ export default function PromotionFormModal({
       setEndDate(parseLocalDateTime(promotion.endDate));
       setActive(promotion.active ?? true);
       setBranchId(promotion.branchId || "");
+      setPriority(
+        promotion.priority != null ? String(promotion.priority) : "0",
+      );
       const ids = promotion.applicableProductIds;
       if (Array.isArray(ids) && ids.length > 0) {
         setApplyAll(false);
@@ -117,6 +121,7 @@ export default function PromotionFormModal({
       setEndDate(null);
       setActive(true);
       setBranchId("");
+      setPriority("0");
       setApplyAll(true);
       setSelectedProductIds([]);
     }
@@ -201,6 +206,10 @@ export default function PromotionFormModal({
       name: name.trim(),
       discountType,
       discountValue: Number(discountValue),
+      priority: Math.max(
+        0,
+        Math.min(1_000_000, Math.floor(Number(priority)) || 0),
+      ),
       applicableProductIds:
         applyAll || selectedProductIds.length === 0
           ? null
@@ -322,6 +331,23 @@ export default function PromotionFormModal({
                 aria-invalid={attemptedSubmit && (!discountValue || Number(discountValue) <= 0)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="promo-priority">Độ ưu tiên</Label>
+            <NumericInput
+              id="promo-priority"
+              value={priority}
+              onChange={setPriority}
+              formatted={false}
+              max={1_000_000}
+              placeholder="0"
+            />
+            <p className="text-xs text-muted-foreground">
+              Khi nhiều khuyến mãi cùng thời gian và cùng áp vào một sản phẩm,
+              số cao hơn được áp dụng trước. Nếu trùng mức ưu tiên, hệ thống
+              chọn mức giảm lợi hơn cho khách.
+            </p>
           </div>
 
           {/* Date range */}

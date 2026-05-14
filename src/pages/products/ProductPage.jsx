@@ -16,6 +16,7 @@ import {
   ScanLine,
   FileSpreadsheet,
   Layers,
+  CopyPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,15 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -54,6 +64,30 @@ import ShopToppingsModal from "./ShopToppingsModal.jsx";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
 
+/** Dữ liệu clone cho form tạo mới — ProductForm xử lý qua prefill.__isClone */
+function buildProductClonePrefill(product) {
+  if (!product) return null;
+  const baseName = String(product.name ?? "").trim();
+  return {
+    __isClone: true,
+    name: baseName ? `${baseName} (bản sao)` : "",
+    sku: "",
+    barcode: "",
+    unit: product.unit ?? "",
+    category: product.category ?? "",
+    description: product.description ?? "",
+    supplierId: product.supplierId ?? "",
+    defaultPrice: Number(product.defaultPrice ?? product.price ?? 0) || 0,
+    costPrice: Number(product.costPrice ?? product.branchCostPrice ?? 0) || 0,
+    active: product.active !== false,
+    trackInventory: !!product.trackInventory,
+    sellByWeight: !!product.sellByWeight,
+    variants: Array.isArray(product.variants) ? product.variants : [],
+    images: Array.isArray(product.images) ? [...product.images] : [],
+    assignedToppingIds: [...(product.assignedToppingIds ?? [])],
+  };
+}
+
 const ProductPage = () => {
   const { selectedShopId, branches, selectedShop, fetchShops } = useShop();
   const { hasShopPermission, hasAnyShopPermission } = useShopPermissions();
@@ -76,6 +110,7 @@ const ProductPage = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [modalPrefillDefaults, setModalPrefillDefaults] = useState(null);
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [toppingsSettingsOpen, setToppingsSettingsOpen] = useState(false);
   const [createStep, setCreateStep] = useState("scan"); // "scan" | "form"
@@ -215,8 +250,25 @@ const ProductPage = () => {
     }
   };
 
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setModalPrefillDefaults(null);
+    setEditingProduct(null);
+  };
+
   const handleOpenEdit = (product) => {
+    setModalPrefillDefaults(null);
     setEditingProduct(product);
+    setModalOpen(true);
+  };
+
+  const handleCloneFromProduct = (product) => {
+    if (!canCreate) return;
+    const payload = buildProductClonePrefill(product);
+    if (!payload) return;
+    setEditingProduct(null);
+    setCreateStep("form");
+    setModalPrefillDefaults(payload);
     setModalOpen(true);
   };
 
@@ -291,7 +343,10 @@ const ProductPage = () => {
         const product = row.original;
         const checked = !!product.active;
         return (
-          <div onClick={(e) => e.stopPropagation()}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.stopPropagation()}
+          >
             <Switch
               checked={checked}
               disabled={!canUpdateStatus}
@@ -310,7 +365,10 @@ const ProductPage = () => {
         const product = row.original;
         const checked = !!product.trackInventory;
         return (
-          <div onClick={(e) => e.stopPropagation()}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.stopPropagation()}
+          >
             <Switch
               checked={checked}
               disabled={!canUpdate}
@@ -328,41 +386,51 @@ const ProductPage = () => {
       cell: ({ row }) => {
         const product = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Mở menu</span>
-                <MoreHorizontal />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-background">
-              <DropdownMenuLabel>Hành động</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenEdit(product);
-                }}
-              >
-                {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
-              </DropdownMenuItem>
-              {canDelete && (
+          <div
+            className="flex justify-end"
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.stopPropagation()}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Mở menu</span>
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background">
+                <DropdownMenuLabel>Hành động</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
-                  disabled={isSubmitting}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(product);
+                  onSelect={() => {
+                    handleOpenEdit(product);
                   }}
                 >
-                  Xóa
-                  <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
-                    ⌘⌫
-                  </DropdownMenuShortcut>
+                  {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {canCreate && (
+                  <DropdownMenuItem
+                    onSelect={() => handleCloneFromProduct(product)}
+                  >
+                    <CopyPlus className="h-4 w-4" />
+                    Tạo mới từ sản phẩm này
+                  </DropdownMenuItem>
+                )}
+                {canDelete && (
+                  <DropdownMenuItem
+                    className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
+                    disabled={isSubmitting}
+                    onSelect={() => handleDelete(product)}
+                  >
+                    Xóa
+                    <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
+                      ⌘⌫
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },
@@ -444,6 +512,7 @@ const ProductPage = () => {
                   className="cursor-pointer"
                   onClick={() => {
                     setEditingProduct(null);
+                    setModalPrefillDefaults(null);
                     setCreateStep("scan");
                     setModalOpen(true);
                   }}
@@ -457,6 +526,7 @@ const ProductPage = () => {
                   className="cursor-pointer"
                   onClick={() => {
                     setEditingProduct(null);
+                    setModalPrefillDefaults(null);
                     setCreateStep("form");
                     setModalOpen(true);
                   }}
@@ -504,23 +574,58 @@ const ProductPage = () => {
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                    className="cursor-pointer"
-                    onClick={() => handleOpenEdit(row.original)}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
+                table.getRowModel().rows.map((row) => {
+                  const product = row.original;
+                  return (
+                    <ContextMenu key={row.id}>
+                      <ContextMenuTrigger asChild>
+                        <TableRow
+                          data-state={row.getIsSelected() && "selected"}
+                          className="cursor-pointer"
+                          onClick={() => handleOpenEdit(product)}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="min-w-[11rem] bg-background">
+                        <ContextMenuLabel>Hành động</ContextMenuLabel>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          onSelect={() => handleOpenEdit(product)}
+                        >
+                          {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
+                        </ContextMenuItem>
+                        {canCreate && (
+                          <ContextMenuItem
+                            onSelect={() => handleCloneFromProduct(product)}
+                          >
+                            <CopyPlus className="h-4 w-4" />
+                            Tạo mới từ sản phẩm này
+                          </ContextMenuItem>
                         )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                        {canDelete && (
+                          <ContextMenuItem
+                            className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
+                            disabled={isSubmitting}
+                            onSelect={() => handleDelete(product)}
+                          >
+                            Xóa
+                            <ContextMenuShortcut>
+                              ⌘⌫
+                            </ContextMenuShortcut>
+                          </ContextMenuItem>
+                        )}
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell
@@ -540,11 +645,12 @@ const ProductPage = () => {
 
       <ProductFormModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={handleModalClose}
         product={editingProduct}
         shopId={shopId}
         onSuccess={fetchProducts}
         startStep={editingProduct ? undefined : createStep}
+        prefillDefaults={modalPrefillDefaults ?? undefined}
       />
 
       <ProductImportExportDialog

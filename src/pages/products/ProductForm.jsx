@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
   Copy,
+  History,
   ImagePlus,
   Loader2,
   Plus,
@@ -71,6 +72,34 @@ const isCustomCategory = (val) =>
 
 const formatVND = (val) =>
   val != null && val !== 0 ? Number(val).toLocaleString("vi-VN") + " ₫" : "-";
+
+const RECENT_PRODUCT_NAMES_KEY = "recentProductNames";
+const RECENT_PRODUCT_NAMES_MAX = 25;
+
+function loadRecentProductNames() {
+  try {
+    const raw = localStorage.getItem(RECENT_PRODUCT_NAMES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((x) => typeof x === "string" && x.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+function rememberProductName(name) {
+  const t = String(name ?? "").trim();
+  if (!t) return;
+  const prev = loadRecentProductNames();
+  const without = prev.filter((n) => n !== t);
+  const next = [t, ...without].slice(0, RECENT_PRODUCT_NAMES_MAX);
+  try {
+    localStorage.setItem(RECENT_PRODUCT_NAMES_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore quota */
+  }
+}
 
 // ── ReadOnly display ─────────────────────────────────────────────────────────
 function ReadOnlyValue({ value, variant = "single", className }) {
@@ -255,8 +284,8 @@ function VariantCard({
   };
 
   return (
-    <div className="border border-border rounded-lg p-4 flex flex-col gap-3 bg-muted/20">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm font-medium">Biến thể #{nestIndex + 1}</span>
         {!isReadOnly && (
           <button
@@ -270,7 +299,7 @@ function VariantCard({
       </div>
 
       {/* Name & SKU */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField
           control={control}
           name={`variants.${nestIndex}.name`}
@@ -317,7 +346,7 @@ function VariantCard({
       </div>
 
       {/* Price & CostPrice */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField
           control={control}
           name={`variants.${nestIndex}.price`}
@@ -370,7 +399,7 @@ function VariantCard({
 
       {/* Ảnh biến thể */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs font-medium text-muted-foreground">
             Hình ảnh biến thể ({urlCount + pendingCount}/{maxVariantImages})
           </span>
@@ -440,7 +469,7 @@ function VariantCard({
 
       {/* Attributes */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs font-medium text-muted-foreground">
             Thuộc tính
           </span>
@@ -550,6 +579,44 @@ export default function ProductForm({
   const [nameCatalogLoading, setNameCatalogLoading] = useState(false);
   const nameCatalogTimerRef = useRef(null);
 
+  const [nameHistoryOpen, setNameHistoryOpen] = useState(false);
+  const [recentNamePickList, setRecentNamePickList] = useState([]);
+  const nameHistoryWrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!nameHistoryOpen) return;
+    const onPointerDown = (e) => {
+      if (
+        nameHistoryWrapRef.current &&
+        !nameHistoryWrapRef.current.contains(e.target)
+      ) {
+        setNameHistoryOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [nameHistoryOpen]);
+
+  useEffect(() => {
+    if (!nameHistoryOpen) return;
+    const root = nameHistoryWrapRef.current?.closest(
+      "[data-product-form-scroll]",
+    );
+    if (!root) return;
+    const onScroll = () => setNameHistoryOpen(false);
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => root.removeEventListener("scroll", onScroll);
+  }, [nameHistoryOpen]);
+
+  useEffect(() => {
+    if (!nameHistoryOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setNameHistoryOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [nameHistoryOpen]);
+
   const handleSuggestSku = async () => {
     if (!selectedShopId) return;
     setSuggestingSkU(true);
@@ -653,9 +720,6 @@ export default function ProductForm({
   const savedUnit = isCreate
     ? (localStorage.getItem("lastProductUnit") ?? "")
     : "";
-  const savedActive = isCreate
-    ? localStorage.getItem("lastProductActive") !== "false"
-    : true;
   const savedTrackInventory = isCreate
     ? localStorage.getItem("lastProductTrackInventory") === "true"
     : false;
@@ -720,7 +784,7 @@ export default function ProductForm({
           supplierId: "",
           defaultPrice: 0,
           costPrice: 0,
-          active: savedActive,
+          active: true,
           trackInventory: savedTrackInventory,
           sellByWeight: false,
           reason: "",
@@ -729,9 +793,74 @@ export default function ProductForm({
         },
   });
 
-  // Apply prefill when it changes (scan-first flow)
+  // Apply prefill when it changes (scan-first flow hoặc clone từ SP có sẵn)
   useEffect(() => {
     if (!isCreate || !prefill || Object.keys(prefill).length === 0) return;
+
+    if (prefill.__isClone) {
+      const {
+        __isClone: _clone,
+        images: cloneImages,
+        variants: cloneVariants,
+        ...cloneRest
+      } = prefill;
+      const normalizedVariants = (cloneVariants ?? []).map((v) => {
+        let attrs = [];
+        const raw = v?.attributes;
+        if (Array.isArray(raw)) {
+          attrs = raw
+            .filter((a) => a && typeof a === "object")
+            .map((a) => ({
+              key: String(a.key ?? "").trim(),
+              value: a.value != null ? String(a.value) : "",
+            }))
+            .filter((a) => a.key);
+        } else if (raw && typeof raw === "object") {
+          attrs = Object.entries(raw).map(([key, value]) => ({
+            key: String(key ?? "").trim(),
+            value: value != null ? String(value) : "",
+          }));
+        }
+        return {
+          name: v?.name ?? "",
+          sku: "",
+          price: v?.price ?? 0,
+          costPrice: v?.costPrice ?? 0,
+          images: Array.isArray(v?.images) ? [...v.images] : [],
+          attributes: attrs,
+        };
+      });
+      form.reset({
+        name: cloneRest.name ?? "",
+        sku: cloneRest.sku ?? "",
+        unit: cloneRest.unit ?? "",
+        category: cloneRest.category ?? "",
+        barcode: cloneRest.barcode ?? "",
+        description: cloneRest.description ?? "",
+        supplierId: cloneRest.supplierId ?? "",
+        defaultPrice: cloneRest.defaultPrice ?? 0,
+        costPrice: cloneRest.costPrice ?? 0,
+        active: cloneRest.active !== false,
+        trackInventory: !!cloneRest.trackInventory,
+        sellByWeight: !!cloneRest.sellByWeight,
+        reason: "",
+        variants: normalizedVariants,
+        assignedToppingIds: [...(cloneRest.assignedToppingIds ?? [])],
+      });
+      setKeptImages(
+        Array.isArray(cloneImages) ? [...cloneImages] : [],
+      );
+      setFiles([]);
+      setPreviews([]);
+      setVariantMedia({});
+      setFileInputKey(Date.now());
+      setUnitMode(isCustomUnit(cloneRest.unit) ? "custom" : "select");
+      setCategoryMode(
+        isCustomCategory(cloneRest.category) ? "custom" : "select",
+      );
+      return;
+    }
+
     if (prefill.barcode)
       form.setValue("barcode", prefill.barcode, { shouldDirty: true });
     if (prefill.name)
@@ -953,7 +1082,6 @@ export default function ProductForm({
 
   const watchedCategory = watch("category");
   const watchedUnit = watch("unit");
-  const watchedActive = watch("active");
   const watchedTrackInventory = watch("trackInventory");
   const watchedSellByWeight = watch("sellByWeight");
 
@@ -965,24 +1093,17 @@ export default function ProductForm({
     }
   }, [watchedSellByWeight, watchedTrackInventory, form, isReadOnly]);
 
-  // Persist last used category, unit, active & trackInventory for create mode
+  // Persist last used category, unit & trackInventory for create mode
   useEffect(() => {
     if (!isCreate) return;
     if (watchedCategory)
       localStorage.setItem("lastProductCategory", watchedCategory);
     if (watchedUnit) localStorage.setItem("lastProductUnit", watchedUnit);
-    localStorage.setItem("lastProductActive", String(watchedActive));
     localStorage.setItem(
       "lastProductTrackInventory",
       String(watchedTrackInventory),
     );
-  }, [
-    watchedCategory,
-    watchedUnit,
-    watchedActive,
-    watchedTrackInventory,
-    isCreate,
-  ]);
+  }, [watchedCategory, watchedUnit, watchedTrackInventory, isCreate]);
 
   useEffect(() => {
     if (product) {
@@ -1060,6 +1181,7 @@ export default function ProductForm({
         },
         files,
       );
+      rememberProductName(data.name);
       setVariantMedia({});
     } catch (e) {
       console.error(e);
@@ -1200,16 +1322,73 @@ export default function ProductForm({
 
   // ── Product info section (shared) ──────────────────────────────────────────
   const ProductInfoSection = () => (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-5">
       {/* Tên */}
       <FormField
         control={form.control}
         name="name"
         render={({ field, fieldState }) => (
           <FormItem>
-            <FormLabel>
-              Tên sản phẩm <span className="text-red-500">*</span>
-            </FormLabel>
+            <div className="relative z-10" ref={nameHistoryWrapRef}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                <FormLabel className="sm:mt-0.5">
+                  Tên sản phẩm <span className="text-red-500">*</span>
+                </FormLabel>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    aria-expanded={nameHistoryOpen}
+                    className="flex shrink-0 items-center gap-1 self-start text-xs text-muted-foreground transition-colors hover:text-primary sm:self-auto"
+                    onClick={() => {
+                      if (!nameHistoryOpen) {
+                        setRecentNamePickList(loadRecentProductNames());
+                      }
+                      setNameHistoryOpen((o) => !o);
+                    }}
+                  >
+                    <History className="h-3 w-3" />
+                    Đã nhập
+                  </button>
+                )}
+              </div>
+              {nameHistoryOpen && !isReadOnly && (
+                <div
+                  className="absolute right-0 top-full z-40 mt-1 w-[min(calc(100vw-2rem),20rem)] max-w-[min(100%,calc(100vw-2rem))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                  role="listbox"
+                >
+                  <p className="border-b px-2.5 py-1.5 text-[10px] text-muted-foreground">
+                    Tên đã nhập trước đó (theo máy)
+                  </p>
+                  <div className="max-h-52 touch-pan-y overflow-y-auto overscroll-y-contain">
+                    {recentNamePickList.length === 0 ? (
+                      <p className="px-3 py-3 text-xs text-muted-foreground">
+                        Chưa có. Sau khi lưu sản phẩm thành công, tên sẽ xuất hiện
+                        ở đây để chọn nhanh.
+                      </p>
+                    ) : (
+                      recentNamePickList.map((n, idx) => (
+                        <button
+                          key={`${idx}-${n.slice(0, 48)}`}
+                          type="button"
+                          className="flex w-full items-start gap-2 px-2.5 py-2 text-left text-sm hover:bg-muted"
+                          title={n}
+                          role="option"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            field.onChange(n);
+                            setNameHistoryOpen(false);
+                          }}
+                        >
+                          <span className="line-clamp-2 min-w-0 flex-1">
+                            {n}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             {isReadOnly ? (
               <ReadOnlyValue value={field.value} />
             ) : (
@@ -1281,13 +1460,13 @@ export default function ProductForm({
       />
 
       {/* SKU & Barcode */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
         <FormField
           control={form.control}
           name="sku"
           render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center justify-between">
+            <FormItem className="min-w-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <FormLabel>
                   Mã SKU <span className="text-red-500">*</span>
                 </FormLabel>
@@ -1299,7 +1478,7 @@ export default function ProductForm({
                     title={
                       !watchedCategory ? "Chọn danh mục trước để gợi ý SKU" : ""
                     }
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex shrink-0 items-center gap-1 self-start text-xs text-muted-foreground transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 sm:self-auto"
                   >
                     <Sparkles className="w-3 h-3" />
                     {suggestingSkU
@@ -1331,11 +1510,11 @@ export default function ProductForm({
           control={form.control}
           name="barcode"
           render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center justify-between">
+            <FormItem className="min-w-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <FormLabel>Mã vạch (Barcode)</FormLabel>
                 {!isReadOnly && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:shrink-0 sm:justify-end">
                     {/* Scan button only in edit mode — create uses scan-first flow in modal */}
                     {!isCreate && (
                       <button
@@ -1425,13 +1604,13 @@ export default function ProductForm({
       </div>
 
       {/* Danh mục & Đơn vị */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
         {CategoryField()}
         {UnitField()}
       </div>
 
       {/* Giá mặc định shop & Giá vốn */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
         <FormField
           control={form.control}
           name="defaultPrice"
@@ -1498,6 +1677,7 @@ export default function ProductForm({
                 <Textarea
                   rows={3}
                   placeholder="Mô tả chi tiết sản phẩm..."
+                  className="min-h-[88px] resize-y"
                   {...field}
                   value={field.value ?? ""}
                 />
@@ -1508,34 +1688,16 @@ export default function ProductForm({
         )}
       />
 
-      {/* Kích hoạt sản phẩm */}
-      <FormField
-        control={form.control}
-        name="active"
-        render={({ field }) => (
-          <FormItem>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
-              <FormLabel className="mt-0">Kích hoạt sản phẩm</FormLabel>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={isReadOnly}
-                />
-              </FormControl>
-            </div>
-          </FormItem>
-        )}
-      />
-
       {/* Theo dõi tồn kho */}
       <FormField
         control={form.control}
         name="trackInventory"
         render={({ field }) => (
           <FormItem className="flex flex-col gap-1">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
-              <FormLabel className="mt-0">Theo dõi tồn kho</FormLabel>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:items-center">
+              <FormLabel className="mt-0.5 leading-snug sm:mt-0">
+                Theo dõi tồn kho
+              </FormLabel>
               <FormControl>
                 <Switch
                   checked={field.value}
@@ -1566,8 +1728,10 @@ export default function ProductForm({
         name="sellByWeight"
         render={({ field }) => (
           <FormItem className="flex flex-col gap-1">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
-              <FormLabel className="mt-0">Bán theo cân / trọng lượng</FormLabel>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:items-center">
+              <FormLabel className="mt-0.5 leading-snug sm:mt-0">
+                Bán theo cân / trọng lượng
+              </FormLabel>
               <FormControl>
                 <Switch
                   checked={field.value}
@@ -1768,11 +1932,11 @@ export default function ProductForm({
   };
 
   const VariantsSection = () => (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold">
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <span className="min-w-0 text-sm font-semibold">
           Biến thể sản phẩm{" "}
-          <span className="text-xs text-muted-foreground font-normal">
+          <span className="text-xs font-normal text-muted-foreground">
             ({variantFields.length})
           </span>
         </span>
@@ -1792,7 +1956,7 @@ export default function ProductForm({
                 attributes: [],
               })
             }
-            className="flex items-center gap-1 h-8 text-xs"
+            className="flex h-9 w-full shrink-0 items-center justify-center gap-1 text-xs sm:h-8 sm:w-auto"
           >
             <Plus className="w-3.5 h-3.5" />
             Thêm biến thể
@@ -1801,7 +1965,7 @@ export default function ProductForm({
       </div>
 
       {variantFields.length === 0 ? (
-        <div className="flex items-center justify-center h-14 border border-dashed rounded-md text-muted-foreground text-sm">
+        <div className="flex h-16 items-center justify-center rounded-md border border-dashed px-3 text-center text-sm text-muted-foreground">
           {isReadOnly
             ? "Không có biến thể"
             : 'Chưa có biến thể. Nhấn "Thêm biến thể" để bắt đầu.'}
@@ -1839,16 +2003,16 @@ export default function ProductForm({
   );
 
   const ImageUploadSection = () => (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <span className="min-w-0 text-sm font-medium leading-snug">
           Hình ảnh sản phẩm{" "}
-          <span className="text-xs text-muted-foreground">
+          <span className="block text-xs font-normal text-muted-foreground sm:inline">
             (JPG, PNG, WEBP — tối đa {MAX_IMAGES} ảnh, mỗi ảnh ≤ 2MB)
           </span>
         </span>
         {!isReadOnly && keptImages.length + files.length < MAX_IMAGES && (
-          <label className="cursor-pointer">
+          <label className="cursor-pointer shrink-0 self-start sm:self-auto">
             <input
               key={fileInputKey}
               type="file"
@@ -1935,7 +2099,7 @@ export default function ProductForm({
 
   // ── Action buttons ─────────────────────────────────────────────────────────
   const ActionButtons = () => (
-    <div className="flex justify-end gap-2 pt-2 border-t sticky bottom-0 bg-background pb-1">
+    <div className="sticky bottom-0 z-40 -mx-4 mt-auto flex flex-col gap-2 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:mx-0 sm:flex-row sm:justify-end sm:px-6 sm:pb-4 sm:pt-3 [&_button]:w-full sm:[&_button]:w-auto">
       {mode === "view" ? (
         <>
           <Button variant="outline" type="button" onClick={() => onCancel?.()}>
@@ -2002,7 +2166,7 @@ export default function ProductForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleSubmit)}
-        className="flex h-full w-full min-h-0 flex-col justify-between gap-6"
+        className="flex min-h-full w-full flex-col gap-6"
       >
         {ProductInfoSection()}
 

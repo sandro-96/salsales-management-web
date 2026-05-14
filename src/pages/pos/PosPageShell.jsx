@@ -57,7 +57,7 @@ import { PosTaxBreakdown } from "./PosTaxBreakdown";
 import { ALL_CATEGORY, PAYMENT_METHODS } from "./posConstants";
 import {
   formatDiscount,
-  getBestPromo,
+  getWinningPromo,
   calcDiscountedPrice,
 } from "./posPromotionUtils";
 import {
@@ -118,7 +118,6 @@ export function PosPageShell(props) {
 
   const {
     activePromotions,
-    addToCart,
     cancelToppingPicker,
     cart,
     confirmToppingPickerSelection,
@@ -364,7 +363,11 @@ export function PosPageShell(props) {
                 const inCartQty = cart
                   .filter((c) => c.productId === product.productId)
                   .reduce((s, c) => s + c.quantity, 0);
-                const promo = getBestPromo(promoMap, product.productId);
+                const promo = getWinningPromo(
+                  promoMap,
+                  product.productId,
+                  product.price,
+                );
                 const discountedPrice = calcDiscountedPrice(
                   product.price,
                   promo,

@@ -71,7 +71,7 @@ export default function ProductFormModal({
     [effectivePrefillDefaults, prefill],
   );
 
-  // Reset on open/product change
+  // Reset on open/product / create options change
   useEffect(() => {
     if (open) {
       setMode(product ? "view" : "create");
@@ -83,7 +83,7 @@ export default function ProductFormModal({
       stopCamera();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, product]);
+  }, [open, product, startStep, prefillDefaults]);
 
   // Start/stop camera when step changes
   useEffect(() => {
@@ -217,12 +217,18 @@ export default function ProductFormModal({
     <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
       <DialogContent
         className={cn(
-          "flex flex-col",
-          step === "scan" ? "sm:max-w-[480px]" : "sm:max-w-[720px] h-[90vh]",
+          step === "scan"
+            ? "flex max-h-[min(90dvh,720px)] flex-col gap-4 overflow-y-auto p-4 sm:max-w-[480px] sm:p-6"
+            : "flex h-[min(92dvh,900px)] max-h-[min(92dvh,900px)] w-[min(100%,calc(100vw-1rem))] max-w-[760px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[760px]",
         )}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0">
+        <DialogHeader
+          className={cn(
+            "shrink-0 text-left",
+            step === "form" && "border-b border-border bg-background px-4 pb-3 pt-4 sm:px-6 sm:pt-5",
+          )}
+        >
           <DialogTitle>
             {step === "scan"
               ? "Quét mã vạch sản phẩm"
@@ -337,7 +343,11 @@ export default function ProductFormModal({
 
         {/* ─── FORM STEP ──────────────────────────────────────────────── */}
         {step === "form" && (
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]">
+          <div
+            data-product-form-scroll
+            className="flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain bg-background px-4 pt-4 pb-0 sm:px-6 sm:pt-4"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             <ProductForm
               mode={mode}
               product={product}

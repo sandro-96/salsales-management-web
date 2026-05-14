@@ -213,6 +213,17 @@ const PromotionListPage = () => {
       ),
     },
     {
+      accessorKey: "priority",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Ưu tiên" />
+      ),
+      cell: ({ row }) => (
+        <span className="tabular-nums text-sm font-medium">
+          {row.original.priority ?? 0}
+        </span>
+      ),
+    },
+    {
       accessorKey: "discountType",
       header: "Loại giảm giá",
       cell: ({ row }) => {

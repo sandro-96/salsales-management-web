@@ -37,7 +37,7 @@ import { ALL_CATEGORY } from "./posConstants";
 import { cartFromOrderItems, createEmptyTab } from "./posCartUtils";
 import {
   buildPromotionMap,
-  getBestPromo,
+  getWinningPromo,
   calcDiscountedPrice,
   formatDiscount,
 } from "./posPromotionUtils";
@@ -1112,7 +1112,7 @@ export function usePosPage() {
         }
       }
 
-      const promo = getBestPromo(promoMap, product.productId);
+      const promo = getWinningPromo(promoMap, product.productId, combinedBase);
       const discountedPrice = calcDiscountedPrice(combinedBase, promo);
       const hasDiscount = promo && discountedPrice < combinedBase;
       const vName = hasVars ? variantCatalogName(product, variantId) : "";

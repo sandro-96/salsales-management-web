@@ -17,6 +17,12 @@ import { getTables } from "../../api/tableApi";
 import { getPromotions } from "../../api/promotionApi";
 import { createOrder } from "../../api/orderApi";
 import { normalizeToppingIdList } from "../pos/posProductUtils";
+import {
+  buildPromotionMap,
+  getWinningPromo,
+  calcDiscountedPrice,
+  formatDiscount,
+} from "../pos/posPromotionUtils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,52 +52,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-function buildPromotionMap(promotions, branchId) {
-  const now = new Date();
-  const active = promotions.filter((p) => {
-    if (!p.active) return false;
-    if (p.startDate && new Date(p.startDate) > now) return false;
-    if (p.endDate && new Date(p.endDate) < now) return false;
-    if (p.branchId && p.branchId !== branchId) return false;
-    return true;
-  });
-
-  const map = new Map();
-  for (const promo of active) {
-    const ids = promo.applicableProductIds;
-    if (!ids || ids.length === 0) {
-      map.set("__SHOP_WIDE__", [...(map.get("__SHOP_WIDE__") || []), promo]);
-    } else {
-      for (const pid of ids) {
-        if (!map.has(pid)) map.set(pid, []);
-        map.get(pid).push(promo);
-      }
-    }
-  }
-  return map;
-}
-
-function getBestPromo(promoMap, productId) {
-  const specific = promoMap.get(productId) || [];
-  const shopWide = promoMap.get("__SHOP_WIDE__") || [];
-  const all = [...specific, ...shopWide];
-  return all.length > 0 ? all[0] : null;
-}
-
-function calcDiscountedPrice(basePrice, promo) {
-  if (!promo) return basePrice;
-  if (promo.discountType === "PERCENT") {
-    return basePrice * (1 - promo.discountValue / 100);
-  }
-  return Math.max(0, basePrice - promo.discountValue);
-}
-
-function formatDiscount(promo) {
-  if (!promo) return "";
-  if (promo.discountType === "PERCENT") return `-${promo.discountValue}%`;
-  return `-${promo.discountValue.toLocaleString("vi-VN")}₫`;
-}
 
 function hasBranchVariants(product) {
   return Array.isArray(product?.branchVariants) && product.branchVariants.length > 0;
@@ -172,7 +132,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
     }
   }, [open, branchId, fetchBranchData]);
 
-  const promoMap = useMemo(
+  const { promoMap } = useMemo(
     () => buildPromotionMap(promotions, branchId),
     [promotions, branchId],
   );
@@ -235,7 +195,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
           return prev;
         }
 
-        const promo = getBestPromo(promoMap, product.productId);
+        const promo = getWinningPromo(promoMap, product.productId, basePrice);
         const discountedPrice = calcDiscountedPrice(basePrice, promo);
         const hasDiscount = promo && discountedPrice < basePrice;
         const vName = hasVars ? variantCatalogName(product, variantId) : "";
@@ -429,7 +389,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                       </div>
                     ) : (
                       filteredProducts.map((p) => {
-                        const promo = getBestPromo(promoMap, p.productId);
+                        const promo = getWinningPromo(promoMap, p.productId, p.price);
                         const discounted = calcDiscountedPrice(p.price, promo);
                         const hasPromo = promo && discounted < p.price;
 
