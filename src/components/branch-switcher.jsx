@@ -15,10 +15,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useShop } from "@/hooks/useShop";
+import { useTranslation } from "react-i18next";
 
 export function BranchSwitcher() {
   const { branches, selectedBranch, selectedBranchId, setSelectedBranchId } =
     useShop();
+  const { t } = useTranslation();
 
   // Don't render if shop has only 1 branch — no point switching
   if (!branches || branches.length <= 1) return null;
@@ -33,7 +35,9 @@ export function BranchSwitcher() {
                 <GitBranch className="size-3.5 text-muted-foreground" />
               </div>
               <span className="truncate text-sm grow-1">
-                {selectedBranch ? selectedBranch.name : "Tất cả chi nhánh"}
+                {selectedBranch
+                  ? selectedBranch.name
+                  : t("nav.allBranches")}
               </span>
               <ChevronDown className="opacity-50" />
             </SidebarMenuButton>
@@ -46,7 +50,7 @@ export function BranchSwitcher() {
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-muted-foreground text-xs">
-              Chi nhánh
+              {t("nav.branchLabel")}
             </DropdownMenuLabel>
 
             <DropdownMenuRadioGroup
@@ -63,7 +67,7 @@ export function BranchSwitcher() {
                 <div className="flex size-6 items-center justify-center rounded-md border bg-muted">
                   <Store className="size-3.5 text-muted-foreground" />
                 </div>
-                Tất cả chi nhánh
+                {t("nav.allBranches")}
               </DropdownMenuRadioItem>
 
               <DropdownMenuSeparator />

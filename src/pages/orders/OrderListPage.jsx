@@ -51,6 +51,8 @@ import { getPaymentMethodLabel } from "../../utils/posHelpers.js";
 import {
   getOrders,
   filterOrders,
+  countOnlinePendingOrders,
+  countPosPendingOrders,
   cancelOrder,
   confirmPayment,
   uploadOrderPaymentProof,
@@ -86,6 +88,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -97,6 +107,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
@@ -292,28 +303,44 @@ const OrderStatusBadge = ({ status }) => {
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
 
-const StatCard = ({ icon, label, value, iconClassName, loading }) => {
+const StatCard = ({ icon, label, value, valueTitle, iconClassName, loading }) => {
   const IconComp = icon;
+  const displayTitle =
+    valueTitle ??
+    (typeof value === "string" || typeof value === "number" ? String(value) : undefined);
+
   return (
-    <Card className="py-4 gap-3">
-      <CardContent className="flex items-center gap-4">
+    <Card className="py-0 gap-0 overflow-hidden min-w-0">
+      <CardContent
+        className={cn(
+          "p-2.5 sm:p-4",
+          "flex flex-col items-center justify-center gap-1 text-center min-w-0",
+          "sm:flex-row sm:items-center sm:gap-3 sm:text-left",
+        )}
+      >
         <div
-          className={`flex items-center justify-center h-11 w-11 rounded-xl shrink-0 ${iconClassName}`}
+          className={cn(
+            "flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-lg sm:rounded-xl",
+            iconClassName,
+          )}
         >
-          <IconComp className="h-5 w-5" />
+          <IconComp className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 w-full sm:flex-1 overflow-hidden">
           {loading ? (
-            <>
-              <Skeleton className="h-6 w-16 mb-1" />
-              <Skeleton className="h-3 w-24" />
-            </>
+            <div className="flex flex-col items-center gap-1 sm:items-start">
+              <Skeleton className="h-5 w-14 sm:h-6 sm:w-16" />
+              <Skeleton className="h-2.5 w-16 sm:h-3 sm:w-24" />
+            </div>
           ) : (
             <>
-              <p className="text-2xl font-bold tracking-tight leading-none">
+              <p
+                className="text-base sm:text-2xl font-bold tabular-nums tracking-tight leading-tight max-w-full"
+                title={displayTitle}
+              >
                 {value}
               </p>
-              <p className="text-xs text-muted-foreground mt-1 truncate">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate max-w-full leading-tight">
                 {label}
               </p>
             </>
@@ -1044,6 +1071,10 @@ const OrderListPage = () => {
 
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
+  /** Lọc chi nhánh trên trang đơn — với ONLINE mặc định ALL (mọi CN). */
+  const [ordersBranchFilter, setOrdersBranchFilter] = useState("ALL");
+  const [onlinePendingCount, setOnlinePendingCount] = useState(0);
+  const [posPendingCount, setPosPendingCount] = useState(0);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -1057,21 +1088,60 @@ const OrderListPage = () => {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [invoicePayload, setInvoicePayload] = useState(null);
 
-  // Branch deeplink: /orders?branchId=...
+  // Deeplink: /orders?branchId=... | ?source=ONLINE
   useEffect(() => {
+    const src = searchParams.get("source");
+    if (src === "ONLINE" || src === "POS") {
+      setSourceFilter(src);
+      if (src === "ONLINE") setOrdersBranchFilter("ALL");
+    }
     const bid = searchParams.get("branchId");
     if (!bid) return;
     if (!Array.isArray(branches) || branches.length === 0) return;
     const ok = branches.some((b) => b.id === bid);
     if (!ok) return;
-    if (selectedBranchId === bid) return;
-    setSelectedBranchId(bid);
+    setOrdersBranchFilter(bid);
+    if (src !== "ONLINE") setSelectedBranchId(bid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, branches]);
+
+  useEffect(() => {
+    if (sourceFilter === "ONLINE") return;
+    if (selectedBranchId) setOrdersBranchFilter(selectedBranchId);
+    else if (branches.length === 1) setOrdersBranchFilter(branches[0]?.id ?? "ALL");
+    else setOrdersBranchFilter("ALL");
+  }, [sourceFilter, selectedBranchId, branches]);
 
   const effectiveBranchId = useMemo(
     () => selectedBranchId ?? (branches.length === 1 ? branches[0]?.id : null),
     [selectedBranchId, branches],
+  );
+
+  const branchNameById = useMemo(() => {
+    const map = new Map();
+    (branches || []).forEach((b) => {
+      if (b?.id) map.set(b.id, b.name);
+    });
+    return map;
+  }, [branches]);
+
+  const showOnlineBranchColumn =
+    sourceFilter === "ONLINE" && branches.length > 1;
+
+  const applySourceFilter = useCallback(
+    (next) => {
+      setSourceFilter(next);
+      setPagination((p) => ({ ...p, pageIndex: 0 }));
+      if (next === "ONLINE") {
+        setOrdersBranchFilter("ALL");
+        navigate("/orders?source=ONLINE", { replace: true });
+      } else if (next === "POS") {
+        navigate("/orders?source=POS", { replace: true });
+      } else {
+        navigate("/orders", { replace: true });
+      }
+    },
+    [navigate],
   );
 
   // Load tables để hiển thị tên bàn — chỉ shop FNB (có màn Quản lý bàn)
@@ -1150,6 +1220,37 @@ const OrderListPage = () => {
   // ── Fetch ────────────────────────────────────────────────────────────────
   const { connected: wsConnected } = useWebSocket();
 
+  const listBranchIdForFetch = useMemo(() => {
+    if (ordersBranchFilter && ordersBranchFilter !== "ALL") {
+      return ordersBranchFilter;
+    }
+    return effectiveBranchId;
+  }, [ordersBranchFilter, effectiveBranchId]);
+
+  const fetchSourcePendingCounts = useCallback(async () => {
+    if (!selectedShopId) return;
+    const branchParams = listBranchIdForFetch
+      ? { branchId: listBranchIdForFetch }
+      : {};
+    try {
+      const [onlineRes, posRes] = await Promise.all([
+        countOnlinePendingOrders(selectedShopId),
+        countPosPendingOrders(selectedShopId, branchParams),
+      ]);
+      const onlineData = onlineRes.data?.data;
+      const posData = posRes.data?.data;
+      setOnlinePendingCount(
+        onlineData?.page?.totalElements ?? onlineData?.totalElements ?? 0,
+      );
+      setPosPendingCount(
+        posData?.page?.totalElements ?? posData?.totalElements ?? 0,
+      );
+    } catch {
+      setOnlinePendingCount(0);
+      setPosPendingCount(0);
+    }
+  }, [selectedShopId, listBranchIdForFetch]);
+
   const fetchOrders = useCallback(async ({ silent = false } = {}) => {
     if (!selectedShopId) return;
     if (!silent) setLoading(true);
@@ -1159,7 +1260,16 @@ const OrderListPage = () => {
         size: pagination.pageSize,
         sort: "createdAt,desc",
       };
-      if (effectiveBranchId) params.branchId = effectiveBranchId;
+
+      if (sourceFilter === "ONLINE") {
+        params.orderSource = "ONLINE";
+        if (ordersBranchFilter && ordersBranchFilter !== "ALL") {
+          params.branchId = ordersBranchFilter;
+        }
+      } else {
+        if (sourceFilter === "POS") params.orderSource = "POS";
+        if (listBranchIdForFetch) params.branchId = listBranchIdForFetch;
+      }
 
       const res =
         statusFilter === "ALL"
@@ -1180,11 +1290,23 @@ const OrderListPage = () => {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [selectedShopId, effectiveBranchId, pagination, statusFilter, t]);
+  }, [
+    selectedShopId,
+    listBranchIdForFetch,
+    ordersBranchFilter,
+    pagination,
+    statusFilter,
+    sourceFilter,
+    t,
+  ]);
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    fetchSourcePendingCounts();
+  }, [fetchSourcePendingCounts]);
 
   useRealtimePollFallback({
     enabled: !!selectedShopId,
@@ -1202,6 +1324,8 @@ const OrderListPage = () => {
       const matchesStatusFilter = (order) =>
         statusFilter === "ALL" || order?.status === statusFilter;
 
+      const refreshPendingBadges = () => fetchSourcePendingCounts();
+
       if (t === WebSocketMessageTypes.ORDER_CREATED) {
         if (!payload?.id) return;
         if (!matchesStatusFilter(payload)) return;
@@ -1213,6 +1337,7 @@ const OrderListPage = () => {
           return [payload, ...prev].slice(0, pagination.pageSize);
         });
         setTotalCount((c) => c + 1);
+        refreshPendingBadges();
         return;
       }
 
@@ -1240,6 +1365,7 @@ const OrderListPage = () => {
         setSelectedOrder((cur) =>
           cur?.id === payload.id ? { ...cur, ...payload } : cur,
         );
+        refreshPendingBadges();
         return;
       }
 
@@ -1251,9 +1377,15 @@ const OrderListPage = () => {
           setTotalCount((c) => Math.max(0, c - 1));
           return prev.filter((o) => o.id !== removedId);
         });
+        refreshPendingBadges();
       }
     },
-    [statusFilter, pagination.pageIndex, pagination.pageSize],
+    [
+      statusFilter,
+      pagination.pageIndex,
+      pagination.pageSize,
+      fetchSourcePendingCounts,
+    ],
   );
   useBranchChannel("orders", onRealtimeOrder, { branchId: effectiveBranchId });
 
@@ -1273,15 +1405,28 @@ const OrderListPage = () => {
             ? ` · ${msg.data.customerPhone}`
             : "",
         }),
+        action: {
+          label: t("pages.orders.list.viewOnlineOrders"),
+          onClick: () => applySourceFilter("ONLINE"),
+        },
       });
-      // Refetch trang đầu để đơn mới xuất hiện đúng vị trí.
-      if (pagination.pageIndex === 0) {
-        fetchOrders();
-      } else {
-        setTotalCount((c) => c + 1);
+      fetchSourcePendingCounts();
+      if (sourceFilter === "ONLINE") {
+        if (pagination.pageIndex === 0) {
+          fetchOrders({ silent: true });
+        } else {
+          setTotalCount((c) => c + 1);
+        }
       }
     },
-    [fetchOrders, pagination.pageIndex, t],
+    [
+      applySourceFilter,
+      fetchOrders,
+      fetchSourcePendingCounts,
+      pagination.pageIndex,
+      sourceFilter,
+      t,
+    ],
   );
   useShopChannel("orders/online", onOnlineOrderEvent);
 
@@ -1314,6 +1459,7 @@ const OrderListPage = () => {
         await cancelOrder(order.id, selectedShopId);
         toast.success(t("pages.orders.list.cancelSuccess"));
         fetchOrders();
+        fetchSourcePendingCounts();
       } catch (err) {
         toast.error(
           err.response?.data?.message || t("pages.orders.list.cancelFail"),
@@ -1322,7 +1468,7 @@ const OrderListPage = () => {
         setSubmitting(false);
       }
     },
-    [confirm, selectedShopId, fetchOrders, t],
+    [confirm, selectedShopId, fetchOrders, fetchSourcePendingCounts, t],
   );
 
   const handleStatusChange = useCallback(
@@ -1338,6 +1484,7 @@ const OrderListPage = () => {
           }),
         );
         fetchOrders();
+        fetchSourcePendingCounts();
       } catch (err) {
         toast.error(
           err.response?.data?.message || t("pages.orders.list.statusUpdateFail"),
@@ -1346,7 +1493,7 @@ const OrderListPage = () => {
         setSubmitting(false);
       }
     },
-    [selectedShopId, fetchOrders, t],
+    [selectedShopId, fetchOrders, fetchSourcePendingCounts, t],
   );
 
   const openPaymentDialog = useCallback((order) => {
@@ -1401,6 +1548,7 @@ const OrderListPage = () => {
       setPayingOrderId(null);
       setPaymentProofFile(null);
       fetchOrders();
+      fetchSourcePendingCounts();
     } catch (err) {
       toast.error(
         err.response?.data?.message || t("pages.orders.list.paymentConfirmFail"),
@@ -1409,6 +1557,111 @@ const OrderListPage = () => {
       setSubmitting(false);
     }
   };
+
+  const renderOrderActions = useCallback(
+    (order, { Item, Label, Separator, variant }) => {
+      const isTerminal =
+        order.status === "CANCELLED" || order.status === "COMPLETED";
+      const act = (handler) =>
+        variant === "context"
+          ? { onSelect: () => handler() }
+          : { onClick: () => handler() };
+
+      return (
+        <>
+          <Label>{t("pages.orders.list.actions")}</Label>
+          <Separator />
+          <Item
+            {...act(() => {
+              setSelectedOrder(order);
+              setDetailOpen(true);
+            })}
+          >
+            <Eye className="h-4 w-4 mr-2" /> {t("pages.orders.list.viewDetail")}
+          </Item>
+
+          {!order.paid && !isTerminal && canUpdate && (
+            <Item {...act(() => goEditOrderOnPos(order))}>
+              <Pencil className="h-4 w-4 mr-2 text-primary" />
+              {t("pages.orders.list.editOnPos")}
+            </Item>
+          )}
+
+          <Item
+            {...act(() => openInvoiceDialog(order))}
+            disabled={!order?.items || order.items.length === 0}
+          >
+            <Printer className="h-4 w-4 mr-2" />{" "}
+            {t("pages.orders.list.reprintBill")}
+          </Item>
+
+          {!order.paid && !isTerminal && canPay && (
+            <Item {...act(() => openPaymentDialog(order))}>
+              <CreditCard className="h-4 w-4 mr-2 text-emerald-600" />{" "}
+              {t("pages.orders.list.pay")}
+            </Item>
+          )}
+
+          {order.status === "PENDING" && canUpdate && (
+            <Item
+              {...act(() => handleStatusChange(order, "CONFIRMED"))}
+              disabled={submitting}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2 text-blue-600" />{" "}
+              {t("pages.orders.list.confirm")}
+            </Item>
+          )}
+
+          {order.status === "CONFIRMED" && canUpdate && (
+            <Item
+              {...act(() => handleStatusChange(order, "SHIPPING"))}
+              disabled={submitting}
+            >
+              <Truck className="h-4 w-4 mr-2 text-violet-600" />{" "}
+              {t("pages.orders.list.ship")}
+            </Item>
+          )}
+
+          {(order.status === "SHIPPING" || order.status === "CONFIRMED") &&
+            canUpdate && (
+              <Item
+                {...act(() => handleStatusChange(order, "COMPLETED"))}
+                disabled={submitting}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />{" "}
+                {t("pages.orders.list.complete")}
+              </Item>
+            )}
+
+          {!order.paid && !isTerminal && canCancel && (
+            <>
+              <Separator />
+              <Item
+                className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
+                {...act(() => handleCancel(order))}
+                disabled={submitting}
+              >
+                <XCircle className="h-4 w-4 mr-2" />{" "}
+                {t("pages.orders.list.cancelOrder")}
+              </Item>
+            </>
+          )}
+        </>
+      );
+    },
+    [
+      t,
+      canUpdate,
+      canCancel,
+      canPay,
+      submitting,
+      handleCancel,
+      handleStatusChange,
+      openPaymentDialog,
+      goEditOrderOnPos,
+      openInvoiceDialog,
+    ],
+  );
 
   // ── Columns ──────────────────────────────────────────────────────────────
   const columns = useMemo(() => {
@@ -1438,6 +1691,21 @@ const OrderListPage = () => {
       },
     };
 
+    const branchColumn = {
+      id: "branch",
+      header: t("pages.orders.list.colBranch"),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const bid = row.original?.branchId;
+        if (!bid) return <span className="text-muted-foreground">—</span>;
+        return (
+          <span className="text-sm truncate max-w-[120px] block">
+            {branchNameById.get(bid) || shortId(bid)}
+          </span>
+        );
+      },
+    };
+
     return [
       {
         accessorKey: "orderCode",
@@ -1463,6 +1731,7 @@ const OrderListPage = () => {
           );
         },
       },
+      ...(showOnlineBranchColumn ? [branchColumn] : []),
       {
         accessorKey: "createdAt",
         header: ({ column }) => (
@@ -1614,95 +1883,25 @@ const OrderListPage = () => {
         enableHiding: false,
         cell: ({ row }) => {
           const order = row.original;
-          const isTerminal =
-            order.status === "CANCELLED" || order.status === "COMPLETED";
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onContextMenu={(e) => e.stopPropagation()}
+                >
                   <span className="sr-only">{t("pages.orders.list.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background w-48">
-                <DropdownMenuLabel>{t("pages.orders.list.actions")}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSelectedOrder(order);
-                    setDetailOpen(true);
-                  }}
-                >
-                  <Eye className="h-4 w-4 mr-2" /> {t("pages.orders.list.viewDetail")}
-                </DropdownMenuItem>
-
-                {!order.paid && !isTerminal && canUpdate && (
-                  <DropdownMenuItem onClick={() => goEditOrderOnPos(order)}>
-                    <Pencil className="h-4 w-4 mr-2 text-primary" />
-                    {t("pages.orders.list.editOnPos")}
-                  </DropdownMenuItem>
-                )}
-
-                <DropdownMenuItem
-                  onClick={() => openInvoiceDialog(order)}
-                  disabled={!order?.items || order.items.length === 0}
-                >
-                  <Printer className="h-4 w-4 mr-2" />{" "}
-                  {t("pages.orders.list.reprintBill")}
-                </DropdownMenuItem>
-
-                {!order.paid && !isTerminal && canPay && (
-                  <DropdownMenuItem onClick={() => openPaymentDialog(order)}>
-                    <CreditCard className="h-4 w-4 mr-2 text-emerald-600" />{" "}
-                    {t("pages.orders.list.pay")}
-                  </DropdownMenuItem>
-                )}
-
-                {order.status === "PENDING" && canUpdate && (
-                  <DropdownMenuItem
-                    onClick={() => handleStatusChange(order, "CONFIRMED")}
-                    disabled={submitting}
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-600" />{" "}
-                    {t("pages.orders.list.confirm")}
-                  </DropdownMenuItem>
-                )}
-
-                {order.status === "CONFIRMED" && canUpdate && (
-                  <DropdownMenuItem
-                    onClick={() => handleStatusChange(order, "SHIPPING")}
-                    disabled={submitting}
-                  >
-                    <Truck className="h-4 w-4 mr-2 text-violet-600" />{" "}
-                    {t("pages.orders.list.ship")}
-                  </DropdownMenuItem>
-                )}
-
-                {(order.status === "SHIPPING" ||
-                  order.status === "CONFIRMED") &&
-                  canUpdate && (
-                    <DropdownMenuItem
-                      onClick={() => handleStatusChange(order, "COMPLETED")}
-                      disabled={submitting}
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />{" "}
-                      {t("pages.orders.list.complete")}
-                    </DropdownMenuItem>
-                  )}
-
-                {!order.paid && !isTerminal && canCancel && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
-                      onClick={() => handleCancel(order)}
-                      disabled={submitting}
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />{" "}
-                      {t("pages.orders.list.cancelOrder")}
-                    </DropdownMenuItem>
-                  </>
-                )}
+                {renderOrderActions(order, {
+                  Item: DropdownMenuItem,
+                  Label: DropdownMenuLabel,
+                  Separator: DropdownMenuSeparator,
+                  variant: "dropdown",
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           );
@@ -1721,17 +1920,19 @@ const OrderListPage = () => {
     goEditOrderOnPos,
     tableNameById,
     openInvoiceDialog,
+    renderOrderActions,
+    showOnlineBranchColumn,
+    branchNameById,
     t,
     numberLocale,
   ]);
 
-  // Client-side filter theo nguồn đơn (POS / ONLINE). BE chưa hỗ trợ
-  // filter ở query nên áp ngay trên page hiện tại — phù hợp MVP.
+  // POS: lọc client trên trang hiện tại; ONLINE: đã lọc server-side.
   const displayedOrders = useMemo(() => {
-    if (sourceFilter === "ALL") return orders;
+    if (sourceFilter !== "POS") return orders;
     return orders.filter((o) => {
       const src = (o?.orderSource || "POS").toUpperCase();
-      return src === sourceFilter;
+      return src === "POS";
     });
   }, [orders, sourceFilter]);
 
@@ -1776,7 +1977,7 @@ const OrderListPage = () => {
         </div>
 
         {/* ── Stat Cards ──────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 min-w-0">
           <StatCard
             icon={ShoppingCart}
             label={t("pages.orders.list.stats.total")}
@@ -1801,7 +2002,15 @@ const OrderListPage = () => {
           <StatCard
             icon={CreditCard}
             label={t("pages.orders.list.stats.revenue")}
-            value={stats.revenue.toLocaleString(numberLocale) + " ₫"}
+            value={
+              <span className="inline-flex items-baseline justify-center sm:justify-start gap-0.5 max-w-full min-w-0 w-full whitespace-nowrap">
+                <span className="truncate">
+                  {stats.revenue.toLocaleString(numberLocale)}
+                </span>
+                <span className="shrink-0">₫</span>
+              </span>
+            }
+            valueTitle={`${stats.revenue.toLocaleString(numberLocale)} ₫`}
             iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300"
             loading={loading && orders.length === 0}
           />
@@ -1832,36 +2041,58 @@ const OrderListPage = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Select
-              value={sourceFilter}
-              onValueChange={(v) => setSourceFilter(v)}
-            >
-              <SelectTrigger className="w-[150px]">
-                <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                <SelectItem value="ALL">
-                  {t("pages.orders.list.filterAllSource")}
-                </SelectItem>
-                <SelectItem value="POS">
-                  {t("pages.orders.list.sourcePos")}
-                </SelectItem>
-                <SelectItem value="ONLINE">
-                  {t("pages.orders.list.sourceOnline")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex rounded-lg border bg-muted/50 p-0.5">
+              {[
+                { value: "ALL", label: t("pages.orders.list.sourceTabAll") },
+                {
+                  value: "POS",
+                  label: t("pages.orders.list.sourceTabPos"),
+                  badge: posPendingCount,
+                },
+                {
+                  value: "ONLINE",
+                  label: t("pages.orders.list.sourceTabOnline"),
+                  badge: onlinePendingCount,
+                },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => applySourceFilter(tab.value)}
+                  className={cn(
+                    "relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5",
+                    sourceFilter === tab.value
+                      ? "bg-background shadow-sm text-foreground ring-1 ring-border"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {tab.value === "ONLINE" ? (
+                    <Globe className="h-3.5 w-3.5 shrink-0" />
+                  ) : null}
+                  {tab.label}
+                  {tab.badge > 0 ? (
+                    <span className="rounded-full bg-amber-500 text-white text-[10px] font-bold min-w-[1.125rem] h-[1.125rem] px-1 inline-flex items-center justify-center">
+                      {tab.badge > 99 ? "99+" : tab.badge}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
             {branches.length > 1 && (
               <Select
-                value={selectedBranchId ?? "ALL"}
-                onValueChange={(v) =>
-                  setSelectedBranchId(v === "ALL" ? null : v)
-                }
+                value={ordersBranchFilter}
+                onValueChange={(v) => {
+                  setOrdersBranchFilter(v);
+                  setPagination((p) => ({ ...p, pageIndex: 0 }));
+                }}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue
-                    placeholder={t("pages.orders.list.allBranches")}
+                    placeholder={
+                      sourceFilter === "ONLINE"
+                        ? t("pages.orders.list.onlineBranchFilter")
+                        : t("pages.orders.list.allBranches")
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
@@ -1879,6 +2110,21 @@ const OrderListPage = () => {
             <DataTableViewOptions table={table} />
           </div>
         </div>
+
+        {sourceFilter === "ONLINE" && branches.length > 1 && (
+          <div className="rounded-lg border border-sky-200/80 bg-sky-50/60 dark:border-sky-800/40 dark:bg-sky-950/25 px-4 py-3 text-sm text-sky-950 dark:text-sky-100 flex gap-2 items-start">
+            <Globe className="h-4 w-4 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              {ordersBranchFilter === "ALL"
+                ? t("pages.orders.list.onlineScopeBanner")
+                : t("pages.orders.list.onlineScopeBannerBranch", {
+                    branch:
+                      branchNameById.get(ordersBranchFilter) ||
+                      ordersBranchFilter,
+                  })}
+            </p>
+          </div>
+        )}
 
         {/* ── Table ───────────────────────────────────────────────── */}
         <div className="relative overflow-hidden rounded-md border">
@@ -1912,33 +2158,49 @@ const OrderListPage = () => {
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="cursor-pointer"
-                    onClick={() => {
-                      setSelectedOrder(row.original);
-                      setDetailOpen(true);
-                    }}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        onClick={(e) => {
-                          const cid = cell.column.id;
-                          if (cid === "actions" || cid === "taxSnapshot") {
-                            e.stopPropagation();
-                          }
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                table.getRowModel().rows.map((row) => {
+                  const order = row.original;
+                  const rowEl = (
+                    <TableRow
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setDetailOpen(true);
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          onClick={(e) => {
+                            const cid = cell.column.id;
+                            if (cid === "actions" || cid === "taxSnapshot") {
+                              e.stopPropagation();
+                            }
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+
+                  return (
+                    <ContextMenu key={row.id}>
+                      <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
+                      <ContextMenuContent className="min-w-[12rem] bg-background w-48">
+                        {renderOrderActions(order, {
+                          Item: ContextMenuItem,
+                          Label: ContextMenuLabel,
+                          Separator: ContextMenuSeparator,
+                          variant: "context",
+                        })}
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell

@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   flexRender,
@@ -32,6 +33,8 @@ import {
   EyeOff,
   ChevronRight,
   ChevronDown,
+  RefreshCw,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,7 +42,11 @@ import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
 import { getBranchProducts } from "../../api/productApi.js";
-import { getTransactionHistory } from "../../api/inventoryApi.js";
+import {
+  getInventorySummary,
+  getTransactionHistory,
+} from "../../api/inventoryApi.js";
+import { InventoryStatCards } from "@/components/inventory/InventoryStatCards.jsx";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +77,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { cn } from "@/lib/utils";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -83,49 +99,56 @@ import {
   listFilterSelectWrap,
   listProductSelectWrap,
   listSearchWrap,
+  listToolbarActions,
   listToolbarFilters,
 } from "@/components/table/listPageLayout.js";
 
 import InventoryActionModal from "./InventoryActionModal.jsx";
 
-// ─── Stat Card ───────────────────────────────────────────────────────────────
+function InventoryStockContextMenu({ product, canManage, openAction, t, children }) {
+  if (product.trackInventory === false) {
+    return children;
+  }
 
-const StatCard = ({ icon, label, value, sub, iconClassName, loading }) => {
-  const IconComp = icon;
+  const isSub = product._isVariantRow;
+  const lineQty = isSub
+    ? (product._displayQty ?? 0)
+    : (product.quantity ?? 0);
+  const pre = isSub ? product._variantId || null : null;
+
   return (
-    <Card className="py-4 gap-3">
-      <CardContent className="flex items-center gap-4">
-        <div
-          className={`flex items-center justify-center h-11 w-11 rounded-xl shrink-0 ${iconClassName}`}
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+      <ContextMenuContent className="min-w-[11rem] bg-background">
+        <ContextMenuLabel>
+          {t("pages.inventory.list.actionsInventory")}
+        </ContextMenuLabel>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          disabled={!canManage}
+          onSelect={() => openAction(product, "IMPORT", pre)}
         >
-          <IconComp className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          {loading ? (
-            <>
-              <Skeleton className="h-6 w-16 mb-1" />
-              <Skeleton className="h-3 w-24" />
-            </>
-          ) : (
-            <>
-              <p className="text-2xl font-bold tracking-tight leading-none">
-                {value}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1 truncate">
-                {label}
-              </p>
-            </>
-          )}
-        </div>
-        {sub && !loading && (
-          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
-            {sub}
-          </span>
-        )}
-      </CardContent>
-    </Card>
+          <PackagePlus className="h-4 w-4 mr-2 text-emerald-600" />
+          {t("pages.inventory.list.import")}
+        </ContextMenuItem>
+        <ContextMenuItem
+          disabled={!canManage || lineQty <= 0}
+          onSelect={() => openAction(product, "EXPORT", pre)}
+        >
+          <PackageMinus className="h-4 w-4 mr-2 text-orange-600" />
+          {t("pages.inventory.list.export")}
+        </ContextMenuItem>
+        <ContextMenuItem
+          disabled={!canManage}
+          onSelect={() => openAction(product, "ADJUSTMENT", pre)}
+        >
+          <SlidersHorizontal className="h-4 w-4 mr-2 text-blue-600" />
+          {t("pages.inventory.list.adjustment")}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
-};
+}
 
 // ─── Stock Status Badge ──────────────────────────────────────────────────────
 
@@ -273,6 +296,9 @@ const InventoryListPage = () => {
   const [actionType, setActionType] = useState("IMPORT");
   const [actionProduct, setActionProduct] = useState(null);
   const [activeTab, setActiveTab] = useState("stock");
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [historyProducts, setHistoryProducts] = useState([]);
 
   // ── Keyword debounce ─────────────────────────────────────────────────────
   const handleKeywordChange = (value) => {
@@ -298,6 +324,9 @@ const InventoryListPage = () => {
         params.sortDir = sorting[0].desc ? "DESC" : "ASC";
       }
       if (debouncedKeyword) params.keyword = debouncedKeyword;
+      if (stockFilter && stockFilter !== "ALL") {
+        params.stockStatus = stockFilter;
+      }
 
       const res = await getBranchProducts(
         selectedShopId,
@@ -318,11 +347,64 @@ const InventoryListPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, selectedBranchId, pagination, sorting, debouncedKeyword, t]);
+  }, [
+    selectedShopId,
+    selectedBranchId,
+    pagination,
+    sorting,
+    debouncedKeyword,
+    stockFilter,
+    t,
+  ]);
+
+  const fetchSummary = useCallback(async () => {
+    if (!selectedShopId || !selectedBranchId) return;
+    setSummaryLoading(true);
+    try {
+      const res = await getInventorySummary(selectedShopId, selectedBranchId, {
+        keyword: debouncedKeyword || undefined,
+      });
+      setSummary(res.data?.data ?? null);
+    } catch {
+      setSummary(null);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [selectedShopId, selectedBranchId, debouncedKeyword]);
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+    fetchSummary();
+  }, [fetchProducts, fetchSummary]);
+
+  useEffect(() => {
+    if (activeTab !== "history" || !selectedShopId || !selectedBranchId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getBranchProducts(selectedShopId, selectedBranchId, {
+          page: 0,
+          size: 200,
+          stockStatus: "ALL",
+        });
+        const data = res.data?.data;
+        const list =
+          data && typeof data === "object" && "content" in data
+            ? (data.content ?? [])
+            : Array.isArray(data)
+              ? data
+              : [];
+        if (!cancelled) {
+          setHistoryProducts(list.filter((p) => p.trackInventory !== false));
+        }
+      } catch {
+        if (!cancelled) setHistoryProducts([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, selectedShopId, selectedBranchId]);
 
   // ── Fetch transactions ───────────────────────────────────────────────────
   const fetchTransactions = useCallback(async () => {
@@ -362,39 +444,33 @@ const InventoryListPage = () => {
     if (activeTab === "history") fetchTransactions();
   }, [activeTab, fetchTransactions]);
 
-  // ── Computed stats ───────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const tracked = products.filter((p) => p.trackInventory !== false);
-    const totalProducts = tracked.length;
-    const totalStock = tracked.reduce((sum, p) => sum + (p.quantity ?? 0), 0);
-    const lowStock = tracked.filter(
-      (p) => p.quantity > 0 && p.minQuantity > 0 && p.quantity <= p.minQuantity,
-    ).length;
-    const outOfStock = tracked.filter((p) => (p.quantity ?? 0) <= 0).length;
-    const notTracked = products.length - tracked.length;
-    return { totalProducts, totalStock, lowStock, outOfStock, notTracked };
-  }, [products]);
+  const hasActiveFilters = Boolean(debouncedKeyword) || stockFilter !== "ALL";
 
-  // ── Filtered products ────────────────────────────────────────────────────
-  const filteredProducts = useMemo(() => {
-    if (stockFilter === "ALL") return products;
-    if (stockFilter === "NOT_TRACKED")
-      return products.filter((p) => p.trackInventory === false);
-    const tracked = products.filter((p) => p.trackInventory !== false);
-    if (stockFilter === "LOW_STOCK")
-      return tracked.filter(
-        (p) =>
-          p.quantity > 0 && p.minQuantity > 0 && p.quantity <= p.minQuantity,
-      );
-    if (stockFilter === "OUT_OF_STOCK")
-      return tracked.filter((p) => (p.quantity ?? 0) <= 0);
-    if (stockFilter === "IN_STOCK")
-      return tracked.filter(
-        (p) =>
-          p.quantity > 0 && (p.minQuantity <= 0 || p.quantity > p.minQuantity),
-      );
-    return products;
-  }, [products, stockFilter]);
+  const clearFilters = useCallback(() => {
+    setKeyword("");
+    setDebouncedKeyword("");
+    setStockFilter("ALL");
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    fetchProducts();
+    fetchSummary();
+    if (activeTab === "history" && txProductFilter !== "ALL") {
+      fetchTransactions();
+    }
+  }, [
+    fetchProducts,
+    fetchSummary,
+    activeTab,
+    txProductFilter,
+    fetchTransactions,
+  ]);
+
+  const selectedHistoryProduct = useMemo(
+    () => historyProducts.find((p) => p.id === txProductFilter),
+    [historyProducts, txProductFilter],
+  );
 
   // ── Filtered transactions (client-side type filter) ─────────────────────
   const filteredTransactions = useMemo(() => {
@@ -403,12 +479,26 @@ const InventoryListPage = () => {
   }, [transactions, txTypeFilter]);
 
   const stockTreeData = useMemo(
-    () => buildStockTreeRows(filteredProducts),
-    [filteredProducts],
+    () => buildStockTreeRows(products),
+    [products],
   );
 
-  /** Mặc định mở nhóm biến thể; `true` = expand all (TanStack Table). */
-  const [stockExpanded, setStockExpanded] = useState(true);
+  /** Mặc định thu gọn biến thể; `{ [rowId]: true }` hoặc `true` = mở tất cả. */
+  const [stockExpanded, setStockExpanded] = useState({});
+
+  useEffect(() => {
+    setStockExpanded({});
+  }, [products, debouncedKeyword, stockFilter, pagination.pageIndex]);
+
+  const toggleExpandAllVariants = useCallback(() => {
+    setStockExpanded((prev) => (prev === true ? {} : true));
+  }, []);
+
+  const handleStockRowClick = useCallback((row) => {
+    if (row.original._isVariantRow) return;
+    if (!row.getCanExpand()) return;
+    row.toggleExpanded();
+  }, []);
 
   // ── Action handlers ──────────────────────────────────────────────────────
   const openAction = useCallback((product, type, preselectVariantId = null) => {
@@ -448,7 +538,11 @@ const InventoryListPage = () => {
                       ? t("pages.inventory.list.collapseVariants")
                       : t("pages.inventory.list.expandVariants")
                   }
-                  onClick={row.getToggleExpandedHandler()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    row.getToggleExpandedHandler()(e);
+                  }}
+                  onContextMenu={(e) => e.stopPropagation()}
                 >
                   {row.getIsExpanded() ? (
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -508,21 +602,6 @@ const InventoryListPage = () => {
                 </p>
               )}
             </div>
-          );
-        },
-      },
-      {
-        accessorKey: "sku",
-        header: "SKU",
-        cell: ({ row }) => {
-          const isSub = row.original._isVariantRow;
-          const sku = isSub
-            ? row.original._displaySku || row.original.sku
-            : row.original.sku;
-          return (
-            <span className="text-sm text-muted-foreground font-mono">
-              {sku || "—"}
-            </span>
           );
         },
       },
@@ -634,7 +713,11 @@ const InventoryListPage = () => {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onContextMenu={(e) => e.stopPropagation()}
+                >
                   <span className="sr-only">{t("pages.inventory.list.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -744,9 +827,6 @@ const InventoryListPage = () => {
           <div>
             <p className="text-sm font-medium">
               {row.original.productName || "—"}
-            </p>
-            <p className="text-xs text-muted-foreground font-mono">
-              {row.original.sku || ""}
             </p>
             {row.original.variantId && (
               <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -897,48 +977,16 @@ const InventoryListPage = () => {
           </div>
         ) : (
           <>
-            {/* ── Stat Cards ────────────────────────────────────────────── */}
-            <div
-              className={`grid grid-cols-2 ${stats.notTracked > 0 ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-3`}
-            >
-              <StatCard
-                icon={Package}
-                label={t("pages.inventory.list.statTracked")}
-                value={stats.totalProducts.toLocaleString(numberLocale)}
-                iconClassName="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300"
-                loading={loading && products.length === 0}
-              />
-              <StatCard
-                icon={Warehouse}
-                label={t("pages.inventory.list.statTotalStock")}
-                value={stats.totalStock.toLocaleString(numberLocale)}
-                iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300"
-                loading={loading && products.length === 0}
-              />
-              <StatCard
-                icon={AlertTriangle}
-                label={t("pages.inventory.list.statLowStock")}
-                value={stats.lowStock}
-                iconClassName="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300"
-                loading={loading && products.length === 0}
-              />
-              <StatCard
-                icon={PackageX}
-                label={t("pages.inventory.list.statOutOfStock")}
-                value={stats.outOfStock}
-                iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"
-                loading={loading && products.length === 0}
-              />
-              {stats.notTracked > 0 && (
-                <StatCard
-                  icon={EyeOff}
-                  label={t("pages.inventory.list.statNotTracked")}
-                  value={stats.notTracked}
-                  iconClassName="bg-gray-100 text-gray-500"
-                  loading={loading && products.length === 0}
-                />
-              )}
-            </div>
+            <InventoryStatCards
+              summary={summary}
+              activeFilter={stockFilter}
+              loading={summaryLoading && !summary}
+              numberLocale={numberLocale}
+              onFilterChange={(key) => {
+                setStockFilter(key);
+                setPagination((p) => ({ ...p, pageIndex: 0 }));
+              }}
+            />
 
             {/* ── Tabs ──────────────────────────────────────────────────── */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -965,35 +1013,53 @@ const InventoryListPage = () => {
                         className="pl-9 w-full"
                       />
                     </div>
-                    <Select
-                      value={stockFilter}
-                      onValueChange={(v) => {
-                        setStockFilter(v);
-                        setPagination((p) => ({ ...p, pageIndex: 0 }));
-                      }}
-                    >
-                      <SelectTrigger className={listFilterSelectWrap}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background">
-                          <SelectItem value="ALL">
-                            {t("pages.inventory.list.filterAll")}
-                          </SelectItem>
-                          <SelectItem value="IN_STOCK">
-                            {t("pages.inventory.list.filterInStock")}
-                          </SelectItem>
-                          <SelectItem value="LOW_STOCK">
-                            {t("pages.inventory.list.filterLowStock")}
-                          </SelectItem>
-                          <SelectItem value="OUT_OF_STOCK">
-                            {t("pages.inventory.list.filterOutOfStock")}
-                          </SelectItem>
-                          <SelectItem value="NOT_TRACKED">
-                            {t("pages.inventory.list.filterNotTracked")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    <DataTableViewOptions table={stockTable} />
+                    <div className={listToolbarActions}>
+                      {hasActiveFilters && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={clearFilters}
+                        >
+                          <X className="h-4 w-4" />
+                          {t("pages.inventory.list.clearFilters")}
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={toggleExpandAllVariants}
+                      >
+                        {stockExpanded === true ? (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            {t("pages.inventory.list.collapseAllVariants")}
+                          </>
+                        ) : (
+                          <>
+                            <ChevronRight className="h-4 w-4" />
+                            {t("pages.inventory.list.expandAllVariants")}
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={handleRefresh}
+                        disabled={loading || summaryLoading}
+                      >
+                        <RefreshCw
+                          className={`h-4 w-4 ${loading || summaryLoading ? "animate-spin" : ""}`}
+                        />
+                        {t("pages.inventory.list.refresh")}
+                      </Button>
+                      <DataTableViewOptions table={stockTable} />
+                    </div>
                   </div>
 
                   {/* Table */}
@@ -1031,33 +1097,57 @@ const InventoryListPage = () => {
                             </TableCell>
                           </TableRow>
                         ) : stockTable.getRowModel().rows?.length ? (
-                          stockTable.getRowModel().rows.map((row) => (
-                            <TableRow
-                              key={row.id}
-                              data-state={row.getIsSelected() && "selected"}
-                              className={
-                                row.depth > 0
-                                  ? "bg-muted/20 hover:bg-muted/30"
-                                  : undefined
-                              }
-                            >
-                              {row.getVisibleCells().map((cell) => (
-                                <TableCell key={cell.id}>
-                                  {flexRender(
-                                    cell.column.columnDef.cell,
-                                    cell.getContext(),
-                                  )}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))
+                          stockTable.getRowModel().rows.map((row) => {
+                            const product = row.original;
+                            const rowEl = (
+                              <TableRow
+                                data-state={row.getIsSelected() && "selected"}
+                                className={cn(
+                                  product.trackInventory !== false &&
+                                    "cursor-pointer",
+                                  row.depth > 0
+                                    ? "bg-muted/20 hover:bg-muted/30"
+                                    : undefined,
+                                )}
+                                onClick={() => handleStockRowClick(row)}
+                              >
+                                {row.getVisibleCells().map((cell) => (
+                                  <TableCell
+                                    key={cell.id}
+                                    onClick={
+                                      cell.column.id === "actions"
+                                        ? (e) => e.stopPropagation()
+                                        : undefined
+                                    }
+                                  >
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext(),
+                                    )}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            );
+
+                            return (
+                              <InventoryStockContextMenu
+                                key={row.id}
+                                product={product}
+                                canManage={canManage}
+                                openAction={openAction}
+                                t={t}
+                              >
+                                {rowEl}
+                              </InventoryStockContextMenu>
+                            );
+                          })
                         ) : (
                           <TableRow>
                             <TableCell
                               colSpan={stockColumns.length}
                               className="h-24 text-center text-muted-foreground"
                             >
-                              {stockFilter !== "ALL"
+                              {stockFilter !== "ALL" || debouncedKeyword
                                 ? t("pages.inventory.list.emptyFilter")
                                 : t("pages.inventory.list.emptyBranch")}
                             </TableCell>
@@ -1074,9 +1164,33 @@ const InventoryListPage = () => {
               {/* ──── History Tab ────────────────────────────────────────── */}
               <TabsContent value="history">
                 <div className="flex flex-col gap-4">
+                  {txProductFilter === "ALL" ? (
+                    <Card className="border-dashed bg-muted/30">
+                      <CardContent className="py-4 flex gap-3 items-start">
+                        <History className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-sm">
+                            {t("pages.inventory.list.historyBannerTitle")}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                            {t("pages.inventory.list.historyBannerDesc")}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : selectedHistoryProduct ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("pages.inventory.list.historyViewing", {
+                        name:
+                          selectedHistoryProduct.productName ||
+                          selectedHistoryProduct.name,
+                      })}
+                    </p>
+                  ) : null}
+
                   {/* Toolbar */}
                   <div className={listToolbarFilters}>
-                    {products.length > 0 && (
+                    {historyProducts.length > 0 && (
                       <Select
                         value={txProductFilter}
                         onValueChange={(v) => {
@@ -1094,17 +1208,14 @@ const InventoryListPage = () => {
                           />
                         </SelectTrigger>
                         <SelectContent className="bg-background">
-                          <SelectItem value="ALL" disabled>
+                          <SelectItem value="ALL">
                             {t("pages.inventory.list.selectProduct")}
                           </SelectItem>
-                          {products
-                            .filter((p) => p.trackInventory !== false)
-                            .map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.productName || p.name}{" "}
-                                {p.sku ? `(${p.sku})` : ""}
-                              </SelectItem>
-                            ))}
+                          {historyProducts.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.productName || p.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     )}
@@ -1218,6 +1329,7 @@ const InventoryListPage = () => {
         actionType={actionType}
         onSuccess={() => {
           fetchProducts();
+          fetchSummary();
           if (activeTab === "history") fetchTransactions();
         }}
       />

@@ -1,0 +1,16 @@
+{
+  "title": "Liên hệ hệ thống",
+  "subtitle": "Kênh hỗ trợ chính thức của {{brand}}. Liên hệ trong giờ làm việc để được phản hồi nhanh nhất.",
+  "phone": "Điện thoại",
+  "email": "Email",
+  "zalo": "Zalo",
+  "hours": "Giờ hỗ trợ",
+  "hoursValue": "8:30 – 17:30 (Thứ 2 – Thứ 6)",
+  "call": "Gọi ngay",
+  "sendEmail": "Gửi email",
+  "openZalo": "Chat Zalo",
+  "ticketsTitle": "Yêu cầu hỗ trợ kỹ thuật",
+  "ticketsDesc": "Báo lỗi, góp ý tính năng hoặc theo dõi phiếu đã gửi — dùng mục phiếu hỗ trợ.",
+  "ticketsCta": "Mở phiếu hỗ trợ",
+  "empty": "Chưa cấu hình thông tin liên hệ. Vui lòng liên hệ quản trị hệ thống."
+}

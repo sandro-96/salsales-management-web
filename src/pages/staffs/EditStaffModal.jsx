@@ -264,17 +264,17 @@ export default function EditStaffModal({
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="sm:max-w-[640px] max-h-[90vh] flex flex-col"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[640px] sm:p-6"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0">
+        <DialogHeader className="shrink-0 space-y-1.5 text-left">
           <DialogTitle>{t("pages.staffs.editModal.title")}</DialogTitle>
           <DialogDescription>
             {t("pages.staffs.editModal.description", { name: staffName })}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-5 pr-1 py-2">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
           <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
             {staff.avatarUrl ? (
               <img
@@ -395,7 +395,7 @@ export default function EditStaffModal({
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {t("pages.staffs.editModal.cancel")}
           </Button>

@@ -63,6 +63,16 @@
   "nav": {
     "groupMain": "Functions",
     "groupOther": "Others",
+    "group": {
+      "sales": "Sales",
+      "catalog": "Products & stock",
+      "people": "Customers & staff",
+      "business": "Operations",
+      "other": "More"
+    },
+    "allBranches": "All branches",
+    "branchLabel": "Branch",
+    "selectShopHint": "Select a shop above to open the menu.",
     "overview": "Overview",
     "orders": "Orders",
     "ordersFnb": "Orders",
@@ -85,6 +95,8 @@
     "settings": "Settings",
     "shops": "Shops",
     "shopsLabel": "Shops",
+    "contact": "Contact",
+    "supportTickets": "Support tickets",
     "support": "Support",
     "billing": "Subscription",
     "search": "Search",
@@ -156,6 +168,8 @@
     "account": "Account",
     "home": "Home",
     "history": "History",
+    "contact": "Contact",
+    "supportTickets": "Support tickets",
     "support": "Support",
     "notifications": "Notifications",
     "billing": "Subscription",
@@ -324,6 +338,16 @@
       "title": "Error",
       "message": "Something went wrong. Please try again.",
       "back": "Back to home"
+    },
+    "page": {
+      "eyebrow": "Something went wrong",
+      "boundaryTitle": "Application error",
+      "boundaryMessage": "An unexpected error occurred while loading this page.",
+      "hint": "Try reloading the page. If it keeps happening, go home or sign in again.",
+      "retry": "Reload page",
+      "goBack": "Go back",
+      "goHome": "Go home",
+      "technicalDetails": "Technical details"
     }
   },
   "main": {
@@ -337,8 +361,24 @@
   "overview": {
     "hello": "Hi, {{name}}",
     "you": "there",
+    "refresh": "Refresh",
     "branchPlaceholder": "Branch",
     "allBranches": "All branches",
+    "quickActions": {
+      "title": "Quick actions",
+      "pos": "POS",
+      "posDesc": "Open checkout",
+      "orders": "Orders",
+      "ordersDesc": "View & manage",
+      "products": "Products",
+      "productsDesc": "Catalog & prices",
+      "reports": "Reports",
+      "reportsDesc": "Detailed analytics"
+    },
+    "staffWelcome": {
+      "title": "Shop overview",
+      "desc": "You can see recent orders and shortcuts below. Revenue reports are available to owners and managers."
+    },
     "ranges": {
       "7": "7 days",
       "14": "14 days",
@@ -358,12 +398,14 @@
       "loadError": "Unable to load overview data.",
       "permissionError": "Unable to load report. You may not have permission to view reports.",
       "revenueTrend": "Revenue trend",
-      "revenueDescription": "Daily revenue and orders chart in {{range}}"
+      "revenueDescription": "Daily revenue and orders chart in {{range}}",
+      "chartEmpty": "No data in this period. Try another range or create a new order."
     },
     "topProducts": {
       "title": "Best sellers",
       "topInRange": "Top 5 in {{range}}",
-      "soldUnit": "sold"
+      "soldUnit": "sold",
+      "empty": "No product sales in this period."
     },
     "recentOrders": {
       "title": "Recent orders",

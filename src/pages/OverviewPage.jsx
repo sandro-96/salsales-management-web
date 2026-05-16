@@ -7,14 +7,12 @@ import { toast } from "sonner";
 import { format, subDays, startOfMonth } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
 import {
-  Loader2,
-  DollarSign,
   ShoppingCart,
-  Package,
-  TrendingUp,
   Crown,
   ArrowRight,
   Clock,
+  RefreshCw,
+  BarChart3,
 } from "lucide-react";
 import {
   AreaChart,
@@ -42,6 +40,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { OverviewQuickActions } from "@/components/overview/OverviewQuickActions";
+import { OverviewKpiCards } from "@/components/overview/OverviewKpiCards";
+import {
+  OverviewChartSkeleton,
+  OverviewKpiSkeleton,
+  OverviewListSkeleton,
+} from "@/components/overview/OverviewPageSkeleton";
 
 import {
   getReportSummary,
@@ -120,6 +126,7 @@ const OverviewPage = () => {
   const [range, setRange] = useState("7");
   const [branchFilter, setBranchFilter] = useState("__all__");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [summary, setSummary] = useState(null);
   const [chartData, setChartData] = useState([]);
@@ -148,9 +155,9 @@ const OverviewPage = () => {
     return { startDate: toISODate(startDate), endDate: toISODate(now) };
   }, [range]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async ({ silent = false } = {}) => {
     if (!selectedShopId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setReportError(false);
 
     const { startDate, endDate } = buildDateRange();
@@ -244,7 +251,30 @@ const OverviewPage = () => {
     fetchData();
   }, [fetchData]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData({ silent: true });
+    setRefreshing(false);
+  }, [fetchData]);
+
+  const openOrder = useCallback(
+    (order) => {
+      const q = new URLSearchParams();
+      if (order.orderCode?.trim()) {
+        q.set("orderCode", order.orderCode.trim());
+      } else if (order.id) {
+        q.set("orderId", order.id);
+      }
+      navigate(q.toString() ? `/orders?${q.toString()}` : "/orders");
+    },
+    [navigate],
+  );
+
   if (!selectedShop) return null;
+
+  const roleLabel =
+    shopRole &&
+    t(`pages.shops.role.${shopRole}`, { defaultValue: shopRole });
 
   const rangeLabel =
     range === "month"
@@ -262,26 +292,38 @@ const OverviewPage = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 min-h-full bg-gradient-to-br from-sky-50/50 via-background to-violet-50/40 dark:from-sky-950/20 dark:via-background dark:to-violet-950/20">
-      {/* ── Header ────────────────────────────────────────────────── */}
+    <div className="p-4 md:p-6 space-y-5 md:space-y-6 min-h-full bg-muted/20">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-sky-700 via-violet-600 to-violet-700 bg-clip-text text-transparent dark:from-sky-300 dark:via-violet-400 dark:to-fuchsia-400">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {t("overview.hello", {
               name: user?.fullName || t("overview.you"),
             })}
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {selectedShop.name}
+          <p className="text-muted-foreground text-sm mt-1 flex flex-wrap items-center gap-2">
+            <span className="truncate">{selectedShop.name}</span>
             {shopRole && (
-              <Badge variant="outline" className="ml-2 text-xs">
+              <Badge variant="outline" className="text-xs shrink-0">
                 {isOwner && <Crown className="mr-1 h-3 w-3 inline" />}
-                {shopRole}
+                {roleLabel}
               </Badge>
             )}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 gap-1.5"
+            disabled={loading || refreshing}
+            onClick={handleRefresh}
+          >
+            <RefreshCw
+              className={cn("h-3.5 w-3.5", refreshing && "animate-spin")}
+            />
+            <span className="hidden sm:inline">{t("overview.refresh")}</span>
+          </Button>
           {branches?.length > 1 && (
             <Select
               value={branchFilter}
@@ -302,14 +344,14 @@ const OverviewPage = () => {
               </SelectContent>
             </Select>
           )}
-          <div className="flex rounded-lg border border-sky-200/70 dark:border-sky-800/40 bg-gradient-to-r from-sky-50/90 to-violet-50/70 dark:from-sky-950/40 dark:to-violet-950/30 p-0.5">
+          <div className="flex rounded-lg border bg-muted/50 p-0.5">
             {RANGE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setRange(opt.value)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   range === opt.value
-                    ? "bg-background shadow-sm text-foreground ring-1 ring-sky-200/80 dark:ring-sky-700/50"
+                    ? "bg-background shadow-sm text-foreground ring-1 ring-border"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -320,91 +362,47 @@ const OverviewPage = () => {
         </div>
       </div>
 
+      <OverviewQuickActions />
+
       {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="space-y-5">
+          {canViewReport && <OverviewKpiSkeleton />}
+          {canViewReport && <OverviewChartSkeleton />}
+          <div
+            className={cn(
+              "grid gap-6",
+              canViewReport ? "lg:grid-cols-2" : "grid-cols-1",
+            )}
+          >
+            {canViewReport && <OverviewListSkeleton />}
+            <OverviewListSkeleton />
+          </div>
         </div>
       ) : (
         <>
-          {/* ── KPI Cards ───────────────────────────────────────────── */}
+          {!canViewReport && (
+            <Card className="border-dashed bg-card/80 shadow-sm">
+              <CardContent className="py-6 flex gap-4 items-start">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold">{t("overview.staffWelcome.title")}</p>
+                  <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                    {t("overview.staffWelcome.desc")}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {summary && (
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-              <Card className="border-emerald-200/70 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/80 to-card dark:from-emerald-950/25 dark:to-card shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {t("overview.kpi.revenue")}
-                  </CardTitle>
-                  <div className="rounded-lg bg-emerald-500/15 p-2 ring-1 ring-emerald-500/20">
-                    <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(summary.totalRevenue)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("overview.kpi.during", { range: rangeLabel })}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-sky-200/70 dark:border-sky-900/40 bg-gradient-to-br from-sky-50/80 to-card dark:from-sky-950/25 dark:to-card shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {t("overview.kpi.orders")}
-                  </CardTitle>
-                  <div className="rounded-lg bg-sky-500/15 p-2 ring-1 ring-sky-500/20">
-                    <ShoppingCart className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatNumber(summary.totalOrders)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("overview.kpi.during", { range: rangeLabel })}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-violet-200/70 dark:border-violet-900/40 bg-gradient-to-br from-violet-50/80 to-card dark:from-violet-950/25 dark:to-card shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {t("overview.kpi.productsSold")}
-                  </CardTitle>
-                  <div className="rounded-lg bg-violet-500/15 p-2 ring-1 ring-violet-500/20">
-                    <Package className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatNumber(summary.totalProductsSold)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("overview.kpi.during", { range: rangeLabel })}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-amber-200/70 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/80 to-card dark:from-amber-950/20 dark:to-card shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {t("overview.kpi.averageOrder")}
-                  </CardTitle>
-                  <div className="rounded-lg bg-amber-500/15 p-2 ring-1 ring-amber-500/20">
-                    <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(summary.averageOrderValue)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("overview.kpi.during", { range: rangeLabel })}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+            <OverviewKpiCards
+              summary={summary}
+              rangeLabel={rangeLabel}
+              formatCurrency={formatCurrency}
+              formatNumber={formatNumber}
+            />
           )}
 
           {reportError && !summary && (
@@ -415,7 +413,17 @@ const OverviewPage = () => {
             </Card>
           )}
 
-          {/* ── Revenue Chart ───────────────────────────────────────── */}
+          {canViewReport && chartData.length === 0 && !reportError && (
+            <Card className="shadow-sm">
+              <CardContent className="py-14 text-center">
+                <BarChart3 className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  {t("overview.report.chartEmpty")}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {chartData.length > 0 && (
             <Card className="border-sky-200/50 dark:border-sky-900/35 shadow-md bg-gradient-to-b from-sky-50/50 to-card dark:from-sky-950/20 dark:to-card overflow-hidden">
               <CardHeader>
@@ -504,11 +512,14 @@ const OverviewPage = () => {
             </Card>
           )}
 
-          {/* ── Bottom Two-Column ────────────────────────────────────── */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Top Products */}
-            {topProducts.length > 0 && (
-              <Card className="border-violet-200/40 dark:border-violet-900/30 shadow-sm bg-gradient-to-br from-violet-50/30 to-card dark:from-violet-950/15 dark:to-card">
+          <div
+            className={cn(
+              "grid gap-6",
+              canViewReport ? "lg:grid-cols-2" : "grid-cols-1",
+            )}
+          >
+            {canViewReport && (
+              <Card className="shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-base">
@@ -531,11 +542,16 @@ const OverviewPage = () => {
                   </Button>
                 </CardHeader>
                 <CardContent className="px-0">
+                  {topProducts.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-muted-foreground px-6">
+                      {t("overview.topProducts.empty")}
+                    </p>
+                  ) : (
                   <div className="divide-y">
                     {topProducts.map((p, idx) => (
                       <div
                         key={p.productId || idx}
-                        className="flex items-center gap-3 px-6 py-3 hover:bg-violet-50/50 dark:hover:bg-violet-950/20 transition-colors"
+                        className="flex items-center gap-3 px-6 py-3 hover:bg-muted/50 transition-colors"
                       >
                         <span
                           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${rankBadgeClass(idx)}`}
@@ -551,18 +567,18 @@ const OverviewPage = () => {
                             {t("overview.topProducts.soldUnit")}
                           </p>
                         </div>
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-medium tabular-nums">
                           {formatCurrency(p.totalRevenue)}
                         </span>
                       </div>
                     ))}
                   </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Recent Orders */}
-            <Card className="border-sky-200/40 dark:border-sky-900/30 shadow-sm bg-gradient-to-br from-sky-50/25 to-card dark:from-sky-950/15 dark:to-card">
+            <Card className="shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-base">
@@ -596,9 +612,11 @@ const OverviewPage = () => {
                       );
                       const cls = ORDER_STATUS_CLS[order.status] || "";
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={order.id}
-                          className="flex items-center gap-3 px-6 py-3 hover:bg-sky-50/60 dark:hover:bg-sky-950/25 transition-colors"
+                          onClick={() => openOrder(order)}
+                          className="w-full flex items-center gap-3 px-6 py-3 hover:bg-muted/50 transition-colors text-left"
                         >
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/15 to-violet-500/15 ring-1 ring-sky-200/60 dark:ring-sky-800/50">
                             <ShoppingCart className="h-4 w-4 text-sky-600 dark:text-sky-400" />
@@ -640,7 +658,7 @@ const OverviewPage = () => {
                               {statusLabel}
                             </Badge>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>

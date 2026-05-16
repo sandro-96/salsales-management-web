@@ -1,9 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { toast } from "sonner";
-import { format, subDays } from "date-fns";
+import {
+  format,
+  subDays,
+  startOfDay,
+  differenceInCalendarDays,
+} from "date-fns";
 import { enUS, vi } from "date-fns/locale";
 import {
   Loader2,
@@ -16,7 +21,7 @@ import {
   TrendingUp,
   Receipt,
   BarChart3,
-  Info,
+  RefreshCw,
 } from "lucide-react";
 import {
   BarChart,
@@ -47,11 +52,6 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Table,
   TableBody,
   TableCell,
@@ -60,12 +60,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { ReportMetricStatCards } from "@/components/reports/ReportMetricStatCards.jsx";
+import {
+  dataTableContainer,
+  listBranchSelectWrap,
+  listFilterSelectWrap,
+  listToolbarActions,
+  listToolbarFilters,
+  listToolbarRoot,
+} from "@/components/table/listPageLayout.js";
 
 import {
   getReportSummary,
@@ -82,48 +86,25 @@ const toISODate = (date) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const StatCard = ({
-  title,
-  value,
-  icon,
-  description,
-  hint,
-  hintAria,
-  className,
-}) => (
-  <Card className={cn("flex h-full min-h-0 flex-col", className)}>
-    <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
-      <div className="flex min-w-0 flex-1 items-center gap-1">
-        <CardTitle className="truncate text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-        {hint ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="shrink-0 rounded-md text-muted-foreground outline-none ring-offset-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={hintAria}
-              >
-                <Info className="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs text-left leading-snug">
-              {hint}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
-      </div>
-      {icon ? React.createElement(icon, { className: "h-4 w-4 shrink-0 text-muted-foreground" }) : null}
-    </CardHeader>
-    <CardContent className="flex flex-1 flex-col pt-0">
-      <div className="text-2xl font-bold tabular-nums">{value}</div>
-      {description ? (
-        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{description}</p>
-      ) : null}
-    </CardContent>
-  </Card>
-);
+const DEFAULT_STATUS = "COMPLETED";
+
+const getDefaultDateRange = () => ({
+  startDate: subDays(new Date(), 30),
+  endDate: new Date(),
+});
+
+const detectDatePreset = (start, end) => {
+  const endDay = startOfDay(end);
+  const today = startOfDay(new Date());
+  if (endDay.getTime() !== today.getTime()) return null;
+  const days = differenceInCalendarDays(endDay, startOfDay(start));
+  if (days === 7) return "7";
+  if (days === 30) return "30";
+  if (days === 90) return "90";
+  return null;
+};
+
+const DATE_PRESET_KEYS = ["7", "30", "90"];
 
 const ReportListPage = () => {
   const { t, i18n } = useTranslation();
@@ -193,10 +174,15 @@ const ReportListPage = () => {
   const { selectedShopId, branches } = useShop();
   const shopId = selectedShopId;
 
-  const [startDate, setStartDate] = useState(subDays(new Date(), 30));
-  const [endDate, setEndDate] = useState(new Date());
+  const defaultRange = useMemo(() => getDefaultDateRange(), []);
+  const [startDate, setStartDate] = useState(() => defaultRange.startDate);
+  const [endDate, setEndDate] = useState(() => defaultRange.endDate);
   const [branchFilter, setBranchFilter] = useState("__all__");
-  const [statusFilter, setStatusFilter] = useState("COMPLETED");
+  const [statusFilter, setStatusFilter] = useState(DEFAULT_STATUS);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+  const startDateBlockRef = useRef(null);
+  const endDateBlockRef = useRef(null);
 
   const [summary, setSummary] = useState(null);
   const [dailyData, setDailyData] = useState([]);
@@ -238,6 +224,52 @@ const ReportListPage = () => {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  useEffect(() => {
+    if (!startDateOpen) return;
+    startDateBlockRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [startDateOpen]);
+
+  useEffect(() => {
+    if (!endDateOpen) return;
+    endDateBlockRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [endDateOpen]);
+
+  const activeDatePreset = useMemo(
+    () => detectDatePreset(startDate, endDate),
+    [startDate, endDate],
+  );
+
+  const hasActiveFilters = useMemo(() => {
+    if (branchFilter !== "__all__") return true;
+    if (statusFilter !== DEFAULT_STATUS) return true;
+    if (detectDatePreset(startDate, endDate) !== "30") return true;
+    return false;
+  }, [branchFilter, statusFilter, startDate, endDate]);
+
+  const clearFilters = () => {
+    const range = getDefaultDateRange();
+    setStartDate(range.startDate);
+    setEndDate(range.endDate);
+    setBranchFilter("__all__");
+    setStatusFilter(DEFAULT_STATUS);
+    setStartDateOpen(false);
+    setEndDateOpen(false);
+  };
+
+  const applyDatePreset = (days) => {
+    const end = new Date();
+    setEndDate(end);
+    setStartDate(subDays(end, days));
+    setStartDateOpen(false);
+    setEndDateOpen(false);
+  };
 
   useEffect(() => {
     const bid = searchParams.get("branchId");
@@ -323,165 +355,261 @@ const ReportListPage = () => {
   const orderStatusLabel = (status) =>
     t(`pages.orders.status.${status}`, { defaultValue: status });
 
+  const metricItems = useMemo(
+    () => [
+      {
+        key: "orders",
+        title: t("pages.reports.list.statOrders"),
+        value: formatNumber(summary?.totalOrders),
+        icon: ShoppingCart,
+      },
+      {
+        key: "products",
+        title: t("pages.reports.list.statProductsSold"),
+        value: formatNumber(summary?.totalProductsSold),
+        icon: Package,
+      },
+      {
+        key: "revenue",
+        title: t("pages.reports.list.statRevenue"),
+        value: formatCurrency(summary?.totalRevenue),
+        icon: DollarSign,
+        description: t("pages.reports.list.statRevenueDesc"),
+        hint: t("pages.reports.list.statRevenueHint"),
+      },
+      {
+        key: "amount",
+        title: t("pages.reports.list.statAmount"),
+        value: formatCurrency(summary?.totalAmount),
+        icon: Receipt,
+        description: t("pages.reports.list.statAmountDesc"),
+      },
+      {
+        key: "avg",
+        title: t("pages.reports.list.statAvgOrder"),
+        value: formatCurrency(summary?.averageOrderValue, { round: true }),
+        icon: TrendingUp,
+        hint: t("pages.reports.list.statAvgOrderHint"),
+      },
+    ],
+    [t, summary, formatNumber, formatCurrency],
+  );
+
   return (
-    <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("pages.reports.list.title")}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("pages.reports.list.subtitle")}
-            </p>
+    <div className="h-full min-w-0 flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
+      <div className="flex flex-col gap-4 min-w-0">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-primary shrink-0" />
+            {t("pages.reports.list.title")}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t("pages.reports.list.subtitle")}
+          </p>
+        </div>
+
+        <div className={listToolbarRoot}>
+          <div className={cn(listToolbarFilters, "flex-col items-stretch")}>
+            <div className="flex flex-wrap gap-1 rounded-lg border border-primary/20 bg-primary/[0.06] p-1 w-full sm:w-auto">
+              {DATE_PRESET_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => applyDatePreset(Number(key))}
+                  className={cn(
+                    "flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                    activeDatePreset === key
+                      ? "bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/40"
+                      : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
+                  )}
+                >
+                  {t(`pages.reports.list.preset${key}d`)}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full min-w-0">
+              <div ref={startDateBlockRef} className="space-y-1.5 min-w-0">
+                <span className="text-xs text-muted-foreground">
+                  {t("pages.reports.list.fromDate")}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal text-sm",
+                    !startDate && "text-muted-foreground",
+                  )}
+                  aria-expanded={startDateOpen}
+                  onClick={() => {
+                    setEndDateOpen(false);
+                    setStartDateOpen((v) => !v);
+                  }}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                  {startDate
+                    ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
+                    : t("pages.reports.list.fromDate")}
+                </Button>
+                {startDateOpen && (
+                  <div className="flex justify-center overflow-x-auto rounded-md border bg-popover shadow-sm">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(d) => {
+                        if (d) {
+                          d.setHours(0, 0, 0, 0);
+                          setStartDate(d);
+                          if (endDate && d > endDate) setEndDate(d);
+                          setStartDateOpen(false);
+                        }
+                      }}
+                      locale={dateLocale}
+                      className="p-2 sm:p-3"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div ref={endDateBlockRef} className="space-y-1.5 min-w-0">
+                <span className="text-xs text-muted-foreground">
+                  {t("pages.reports.list.toDate")}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal text-sm",
+                    !endDate && "text-muted-foreground",
+                  )}
+                  aria-expanded={endDateOpen}
+                  onClick={() => {
+                    setStartDateOpen(false);
+                    setEndDateOpen((v) => !v);
+                  }}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                  {endDate
+                    ? format(endDate, "dd/MM/yyyy", { locale: dateLocale })
+                    : t("pages.reports.list.toDate")}
+                </Button>
+                {endDateOpen && (
+                  <div className="flex justify-center overflow-x-auto rounded-md border bg-popover shadow-sm">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(d) => {
+                        if (d) {
+                          d.setHours(0, 0, 0, 0);
+                          setEndDate(d);
+                          setEndDateOpen(false);
+                        }
+                      }}
+                      disabled={(d) => startDate && d < startDate}
+                      locale={dateLocale}
+                      className="p-2 sm:p-3"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full">
+              {branches?.length > 0 && (
+                <Select value={branchFilter} onValueChange={setBranchFilter}>
+                  <SelectTrigger className={listBranchSelectWrap}>
+                    <Warehouse className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="__all__">
+                      {t("pages.reports.list.allBranches")}
+                    </SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className={listFilterSelectWrap}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  <SelectItem value="__all__">
+                    {t("pages.reports.list.allStatuses")}
+                  </SelectItem>
+                  <SelectItem value="COMPLETED">
+                    {orderStatusLabel("COMPLETED")}
+                  </SelectItem>
+                  <SelectItem value="PENDING">
+                    {orderStatusLabel("PENDING")}
+                  </SelectItem>
+                  <SelectItem value="CONFIRMED">
+                    {orderStatusLabel("CONFIRMED")}
+                  </SelectItem>
+                  <SelectItem value="CANCELLED">
+                    {orderStatusLabel("CANCELLED")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className={listToolbarActions}>
+            {hasActiveFilters && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 shrink-0"
+                onClick={clearFilters}
+              >
+                {t("pages.reports.list.clearFilters")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 shrink-0"
+              disabled={loading}
+              onClick={fetchAll}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {t("pages.reports.list.refresh")}
+            </Button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[150px] justify-start text-left font-normal text-sm",
-                  !startDate && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate
-                  ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
-                  : t("pages.reports.list.fromDate")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={(d) => d && setStartDate(d)}
-                locale={dateLocale}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+        <ReportMetricStatCards
+          items={metricItems}
+          loading={loading && !summary}
+          hintAria={t("pages.reports.list.metricHintAria")}
+        />
 
-          <span className="text-muted-foreground">—</span>
+        <Tabs defaultValue="daily" className="w-full min-w-0">
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[150px] justify-start text-left font-normal text-sm",
-                  !endDate && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate
-                  ? format(endDate, "dd/MM/yyyy", { locale: dateLocale })
-                  : t("pages.reports.list.toDate")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={endDate}
-                onSelect={(d) => d && setEndDate(d)}
-                disabled={(d) => startDate && d < startDate}
-                locale={dateLocale}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-
-          {branches?.length > 0 && (
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger className="w-[180px]">
-                <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                <SelectItem value="__all__">
-                  {t("pages.reports.list.allBranches")}
-                </SelectItem>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[170px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-background">
-              <SelectItem value="__all__">
-                {t("pages.reports.list.allStatuses")}
-              </SelectItem>
-              <SelectItem value="COMPLETED">
-                {orderStatusLabel("COMPLETED")}
-              </SelectItem>
-              <SelectItem value="PENDING">
-                {orderStatusLabel("PENDING")}
-              </SelectItem>
-              <SelectItem value="CONFIRMED">
-                {orderStatusLabel("CONFIRMED")}
-              </SelectItem>
-              <SelectItem value="CANCELLED">
-                {orderStatusLabel("CANCELLED")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {loading && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 items-stretch gap-4 lg:grid-cols-5">
-          <StatCard
-            title={t("pages.reports.list.statOrders")}
-            value={formatNumber(summary?.totalOrders)}
-            icon={ShoppingCart}
-          />
-          <StatCard
-            title={t("pages.reports.list.statProductsSold")}
-            value={formatNumber(summary?.totalProductsSold)}
-            icon={Package}
-          />
-          <StatCard
-            title={t("pages.reports.list.statRevenue")}
-            value={formatCurrency(summary?.totalRevenue)}
-            icon={DollarSign}
-            description={t("pages.reports.list.statRevenueDesc")}
-            hint={t("pages.reports.list.statRevenueHint")}
-            hintAria={t("pages.reports.list.metricHintAria")}
-          />
-          <StatCard
-            title={t("pages.reports.list.statAmount")}
-            value={formatCurrency(summary?.totalAmount)}
-            icon={Receipt}
-            description={t("pages.reports.list.statAmountDesc")}
-          />
-          <StatCard
-            title={t("pages.reports.list.statAvgOrder")}
-            value={formatCurrency(summary?.averageOrderValue, { round: true })}
-            icon={TrendingUp}
-            hint={t("pages.reports.list.statAvgOrderHint")}
-            hintAria={t("pages.reports.list.metricHintAria")}
-          />
-        </div>
-
-        <Tabs defaultValue="daily" className="w-full">
           <div className="flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="daily">
+            <TabsList className="bg-muted/50">
+              <TabsTrigger
+                value="daily"
+                className="data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-300"
+              >
                 <BarChart3 className="h-4 w-4 mr-1.5" />
                 {t("pages.reports.list.tabDaily")}
               </TabsTrigger>
-              <TabsTrigger value="top-products">
+              <TabsTrigger
+                value="top-products"
+                className="data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-700 dark:data-[state=active]:text-violet-300"
+              >
                 <TrendingUp className="h-4 w-4 mr-1.5" />
                 {t("pages.reports.list.tabTopProducts")}
               </TabsTrigger>
@@ -507,9 +635,10 @@ const ReportListPage = () => {
 
             {dailyData.length > 0 ? (
               <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">
+                <Card className="overflow-hidden border-l-[3px] border-l-emerald-500/60">
+                  <CardHeader className="bg-emerald-500/[0.05] pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                       {t("pages.reports.list.chartTitle")}
                     </CardTitle>
                     <CardDescription>
@@ -525,7 +654,7 @@ const ReportListPage = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={350}>
+                    <ResponsiveContainer width="100%" height={280} className="sm:!h-[350px]">
                       <BarChart data={chartData}>
                         <CartesianGrid
                           strokeDasharray="3 3"
@@ -552,7 +681,7 @@ const ReportListPage = () => {
                         <Bar
                           dataKey="revenue"
                           name={chartRevenueLabel}
-                          fill="hsl(var(--chart-1, 220 70% 50%))"
+                          fill="#10b981"
                           radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
@@ -560,13 +689,15 @@ const ReportListPage = () => {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">
+                <Card className="overflow-hidden border-l-[3px] border-l-sky-500/60">
+                  <CardHeader className="bg-sky-500/[0.05] pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-sky-600 dark:text-sky-400 shrink-0" />
                       {t("pages.reports.list.dailyDetailTitle")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
+                    <div className={dataTableContainer}>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -577,10 +708,10 @@ const ReportListPage = () => {
                           <TableHead className="text-right">
                             {t("pages.reports.list.colProducts")}
                           </TableHead>
-                          <TableHead className="text-right">
+                          <TableHead className="text-right text-emerald-600 dark:text-emerald-400">
                             {t("pages.reports.list.colRevenue")}
                           </TableHead>
-                          <TableHead className="text-right">
+                          <TableHead className="text-right text-teal-600 dark:text-teal-400">
                             {t("pages.reports.list.colAmount")}
                           </TableHead>
                         </TableRow>
@@ -597,16 +728,17 @@ const ReportListPage = () => {
                             <TableCell className="text-right">
                               {formatNumber(d.totalProductsSold)}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right font-medium text-emerald-600 dark:text-emerald-400">
                               {formatCurrency(d.totalRevenue)}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right font-medium text-teal-600 dark:text-teal-400">
                               {formatCurrency(d.totalAmount)}
                             </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
+                    </div>
                   </CardContent>
                 </Card>
               </>
@@ -642,9 +774,10 @@ const ReportListPage = () => {
             </div>
 
             {topProducts.length > 0 ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
+              <Card className="overflow-hidden border-l-[3px] border-l-violet-500/60">
+                <CardHeader className="bg-violet-500/[0.05] pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Package className="h-4 w-4 text-violet-600 dark:text-violet-400 shrink-0" />
                     {t("pages.reports.list.topProductsTitle")}
                   </CardTitle>
                   <CardDescription>
@@ -652,7 +785,8 @@ const ReportListPage = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
+                    <div className={dataTableContainer}>
+                    <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[50px] text-center">
@@ -662,7 +796,7 @@ const ReportListPage = () => {
                         <TableHead className="text-right">
                           {t("pages.reports.list.colQtySold")}
                         </TableHead>
-                        <TableHead className="text-right">
+                        <TableHead className="text-right text-emerald-600 dark:text-emerald-400">
                           {t("pages.reports.list.colRevenue")}
                         </TableHead>
                       </TableRow>
@@ -696,13 +830,14 @@ const ReportListPage = () => {
                           <TableCell className="text-right">
                             {formatNumber(p.totalQuantitySold)}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right font-medium text-emerald-600 dark:text-emerald-400">
                             {formatCurrency(p.totalRevenue)}
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                    </div>
                 </CardContent>
               </Card>
             ) : (

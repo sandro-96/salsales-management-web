@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -19,11 +19,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -78,6 +73,8 @@ export default function StaffProfileModal({
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
   const [note, setNote] = useState("");
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const startDateBlockRef = useRef(null);
 
   const contractLabel = (type) =>
     t(`pages.staffs.contractType.${type}`, { defaultValue: type });
@@ -101,6 +98,21 @@ export default function StaffProfileModal({
     setEmergencyContactPhone("");
     setNote("");
   };
+
+  useEffect(() => {
+    if (!open) {
+      setStartDateOpen(false);
+      return;
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!startDateOpen) return;
+    startDateBlockRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [startDateOpen]);
 
   useEffect(() => {
     if (!open || !shopId) return;
@@ -218,10 +230,10 @@ export default function StaffProfileModal({
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="sm:max-w-[640px] max-h-[90vh] flex flex-col"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[640px] sm:p-6"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0">
+        <DialogHeader className="shrink-0 space-y-1.5 text-left">
           <DialogTitle>
             {isNewExternal
               ? t("pages.staffs.profileModal.titleNewExternal")
@@ -239,7 +251,7 @@ export default function StaffProfileModal({
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto space-y-6 pr-1 py-2">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
             {!isNewExternal && staff && (
               <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
                 {staff.avatarUrl ? (
@@ -280,7 +292,7 @@ export default function StaffProfileModal({
                 <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                   {t("pages.staffs.profileModal.sectionPersonal")}
                 </h4>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5 col-span-2">
                     <Label htmlFor="sp-fullname">
                       {t("pages.staffs.profileModal.fullNameLabel")}{" "}
@@ -324,7 +336,7 @@ export default function StaffProfileModal({
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {t("pages.staffs.profileModal.sectionWork")}
               </h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5 col-span-2">
                   <Label>{t("pages.staffs.profileModal.branchLabel")}</Label>
                   <Select value={branchId} onValueChange={setBranchId}>
@@ -378,33 +390,45 @@ export default function StaffProfileModal({
                     placeholder={t("pages.staffs.profileModal.levelPlaceholder")}
                   />
                 </div>
-                <div className="space-y-1.5">
+                <div
+                  ref={startDateBlockRef}
+                  className="space-y-1.5 min-w-0 col-span-1 sm:col-span-2"
+                >
                   <Label>{t("pages.staffs.profileModal.startDateLabel")}</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground",
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate
-                          ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
-                          : t("pages.staffs.profileModal.startDatePlaceholder")}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        locale={dateLocale}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground",
+                    )}
+                    aria-expanded={startDateOpen}
+                    onClick={() => setStartDateOpen((v) => !v)}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                    {startDate
+                      ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
+                      : t("pages.staffs.profileModal.startDatePlaceholder")}
+                  </Button>
+                  {startDateOpen && (
+                    <div className="w-full rounded-md border bg-popover shadow-sm">
+                      <div className="flex justify-center overflow-x-auto p-1">
+                        <Calendar
+                          mode="single"
+                          selected={startDate}
+                          onSelect={(d) => {
+                            if (d) {
+                              d.setHours(0, 0, 0, 0);
+                              setStartDate(d);
+                              setStartDateOpen(false);
+                            }
+                          }}
+                          locale={dateLocale}
+                          className="p-2 sm:p-3 [--cell-size:1.65rem] sm:[--cell-size:2rem]"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -413,7 +437,7 @@ export default function StaffProfileModal({
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {t("pages.staffs.profileModal.sectionContractSalary")}
               </h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>{t("pages.staffs.profileModal.contractTypeLabel")}</Label>
                   <Select value={contractType} onValueChange={setContractType}>
@@ -467,7 +491,7 @@ export default function StaffProfileModal({
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {t("pages.staffs.profileModal.sectionBank")}
               </h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="sp-bank">
                     {t("pages.staffs.profileModal.bankNameLabel")}
@@ -512,7 +536,7 @@ export default function StaffProfileModal({
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {t("pages.staffs.profileModal.sectionEmergency")}
               </h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="sp-ec-name">
                     {t("pages.staffs.profileModal.emergencyNameLabel")}
@@ -556,7 +580,7 @@ export default function StaffProfileModal({
           </div>
         )}
 
-        <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {t("pages.staffs.profileModal.cancel")}
           </Button>

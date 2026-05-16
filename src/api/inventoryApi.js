@@ -89,3 +89,13 @@ export const getTransactionHistory = (shopId, branchId, branchProductId, params 
     `/shops/${shopId}/inventory/branches/${branchId}/products/${branchProductId}/history`,
     { params },
   );
+
+/**
+ * Thống kê tồn kho theo chi nhánh (toàn bộ, không theo trang).
+ * GET /api/shops/{shopId}/inventory/branches/{branchId}/summary
+ */
+export const getInventorySummary = (shopId, branchId, params = {}) =>
+  axiosInstance.get(
+    `/shops/${shopId}/inventory/branches/${branchId}/summary`,
+    { params },
+  );

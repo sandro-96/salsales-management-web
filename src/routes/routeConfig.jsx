@@ -83,6 +83,7 @@ const ErrorPage = lazy(() => import("../pages/ErrorPage"));
 const SupportListPage = lazy(
   () => import("../pages/support/SupportListPage"),
 );
+const ContactPage = lazy(() => import("../pages/contact/ContactPage.jsx"));
 const NotificationPage = lazy(
   () => import("../pages/notifications/NotificationPage"),
 );
@@ -384,6 +385,12 @@ export const routeConfig = [
         element: <HistoryPage />,
         titleKey: "routes.history",
         breadcrumbKey: "routes.history",
+      },
+      {
+        path: "contact",
+        element: <ContactPage />,
+        titleKey: "routes.contact",
+        breadcrumbKey: "routes.contact",
       },
       {
         path: "support",

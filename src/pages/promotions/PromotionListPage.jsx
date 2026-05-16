@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
@@ -16,11 +16,13 @@ import {
   MoreHorizontal,
   Plus,
   Loader2,
-  Percent,
   DollarSign,
   Tag,
   Warehouse,
   Globe,
+  Search,
+  RefreshCw,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,14 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -53,10 +63,11 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
+import { PromotionListStatCards } from "@/components/promotions/PromotionListStatCards.jsx";
 import {
   dataTableContainer,
   listBranchSelectWrap,
-  listInputGrow,
+  listSearchWrap,
   listToolbarActions,
   listToolbarFilters,
   listToolbarRoot,
@@ -65,29 +76,37 @@ import {
 import { getPromotions, deletePromotion } from "../../api/promotionApi.js";
 import PromotionFormModal from "./PromotionFormModal.jsx";
 
-const getPromotionStatus = (promo, t) => {
-  if (!promo.active)
-    return {
-      label: t("pages.promotions.list.statusPaused"),
-      variant: "secondary",
-    };
+const getPromotionStatusKey = (promo) => {
+  if (!promo.active) return "PAUSED";
   const now = new Date();
   const start = new Date(promo.startDate);
   const end = new Date(promo.endDate);
-  if (now < start)
-    return {
+  if (now < start) return "UPCOMING";
+  if (now > end) return "EXPIRED";
+  return "ACTIVE";
+};
+
+const getPromotionStatus = (promo, t) => {
+  const key = getPromotionStatusKey(promo);
+  const map = {
+    PAUSED: {
+      label: t("pages.promotions.list.statusPaused"),
+      variant: "secondary",
+    },
+    UPCOMING: {
       label: t("pages.promotions.list.statusUpcoming"),
       variant: "outline",
-    };
-  if (now > end)
-    return {
+    },
+    EXPIRED: {
       label: t("pages.promotions.list.statusExpired"),
       variant: "destructive",
-    };
-  return {
-    label: t("pages.promotions.list.statusActive"),
-    variant: "default",
+    },
+    ACTIVE: {
+      label: t("pages.promotions.list.statusActive"),
+      variant: "default",
+    },
   };
+  return map[key];
 };
 
 const formatDate = (dateStr, locale) => {
@@ -101,10 +120,18 @@ const formatDate = (dateStr, locale) => {
   });
 };
 
-const formatDiscount = (type, value, locale) => {
-  if (type === "PERCENT") return `${value}%`;
-  return Number(value).toLocaleString(locale) + "đ";
-};
+function DiscountValue({ type, value, numberLocale }) {
+  if (type === "PERCENT") {
+    return <span className="font-semibold tabular-nums">{value}%</span>;
+  }
+  const formatted = Number(value).toLocaleString(numberLocale);
+  return (
+    <span className="inline-flex items-baseline gap-0.5 max-w-full min-w-0 font-semibold tabular-nums whitespace-nowrap">
+      <span className="truncate">{formatted}</span>
+      <span className="shrink-0">đ</span>
+    </span>
+  );
+}
 
 const PromotionListPage = () => {
   const { t, i18n } = useTranslation();
@@ -116,6 +143,7 @@ const PromotionListPage = () => {
   const canUpdate = hasShopPermission(PERM.PROMOTION_UPDATE);
   const canDelete = hasShopPermission(PERM.PROMOTION_DELETE);
   const { confirm } = useAlertDialog();
+  const debounceRef = useRef(null);
 
   const branchMap = useMemo(() => {
     const map = {};
@@ -126,8 +154,10 @@ const PromotionListPage = () => {
   }, [branches]);
 
   const [promotions, setPromotions] = useState([]);
+  const [shopPromotions, setShopPromotions] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -138,10 +168,62 @@ const PromotionListPage = () => {
   const [rowSelection, setRowSelection] = useState({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [branchFilter, setBranchFilter] = useState("__all__");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+
+  const clientMode =
+    statusFilter !== "ALL" || Boolean(debouncedKeyword.trim());
+
+  const handleKeywordChange = (value) => {
+    setKeyword(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedKeyword(value);
+      setPagination((p) => ({ ...p, pageIndex: 0 }));
+    }, 400);
+  };
+
+  useEffect(() => {
+    const applyColumnVisibility = () => {
+      const w = window.innerWidth;
+      setColumnVisibility({
+        priority: w >= 1024,
+        startDate: w >= 1024,
+        endDate: w >= 1024,
+        branch: w >= 768,
+        scope: w >= 1280,
+      });
+    };
+    applyColumnVisibility();
+    window.addEventListener("resize", applyColumnVisibility);
+    return () => window.removeEventListener("resize", applyColumnVisibility);
+  }, []);
+
+  const fetchShopPromotions = useCallback(async () => {
+    if (!shopId) return;
+    setSummaryLoading(true);
+    try {
+      const params = { page: 0, size: 500, sort: "startDate,desc" };
+      if (branchFilter !== "__all__") params.branchId = branchFilter;
+      const res = await getPromotions(shopId, params);
+      const data = res.data?.data;
+      const list =
+        data && typeof data === "object" && "content" in data
+          ? (data.content ?? [])
+          : Array.isArray(data)
+            ? data
+            : [];
+      setShopPromotions(list);
+    } catch {
+      setShopPromotions([]);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [shopId, branchFilter]);
 
   const fetchPromotions = useCallback(async () => {
-    if (!shopId) return;
+    if (!shopId || clientMode) return;
     setLoading(true);
     try {
       const params = {
@@ -172,50 +254,184 @@ const PromotionListPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [shopId, pagination, sorting, branchFilter, t]);
+  }, [shopId, pagination, sorting, branchFilter, clientMode, t]);
+
+  useEffect(() => {
+    fetchShopPromotions();
+  }, [fetchShopPromotions]);
 
   useEffect(() => {
     fetchPromotions();
   }, [fetchPromotions]);
 
-  const handleDelete = async (promo) => {
-    const ok = await confirm(
-      t("pages.promotions.list.deleteConfirm", { name: promo.name }),
-      {
-        title: t("pages.promotions.list.deleteTitle"),
-        confirmText: t("pages.promotions.list.deleteConfirmBtn"),
-        cancelText: t("pages.promotions.list.cancel"),
-        variant: "destructive",
-      },
-    );
-    if (!ok) return;
-
-    setPromotions((prev) => prev.filter((p) => p.id !== promo.id));
-    setTotalCount((c) => c - 1);
-
-    try {
-      setIsSubmitting(true);
-      const res = await deletePromotion(promo.id, shopId);
-      if (res.data?.success) {
-        toast.success(t("pages.promotions.list.deleteSuccess"));
-        fetchPromotions();
-      } else {
-        toast.error(res.data?.message || t("pages.promotions.list.deleteFail"));
-        fetchPromotions();
-      }
-    } catch (err) {
-      console.error("Delete promotion error:", err);
-      toast.error(t("pages.promotions.list.deleteError"));
-      fetchPromotions();
-    } finally {
-      setIsSubmitting(false);
+  const stats = useMemo(() => {
+    const s = {
+      total: shopPromotions.length,
+      active: 0,
+      upcoming: 0,
+      expired: 0,
+      paused: 0,
+    };
+    for (const p of shopPromotions) {
+      const key = getPromotionStatusKey(p);
+      if (key === "ACTIVE") s.active += 1;
+      else if (key === "UPCOMING") s.upcoming += 1;
+      else if (key === "EXPIRED") s.expired += 1;
+      else if (key === "PAUSED") s.paused += 1;
     }
-  };
+    return s;
+  }, [shopPromotions]);
 
-  const handleOpenEdit = (promo) => {
+  const filteredList = useMemo(() => {
+    let list = shopPromotions;
+    if (statusFilter !== "ALL") {
+      list = list.filter((p) => getPromotionStatusKey(p) === statusFilter);
+    }
+    const kw = debouncedKeyword.trim().toLowerCase();
+    if (kw) {
+      list = list.filter((p) => p.name?.toLowerCase().includes(kw));
+    }
+    return list;
+  }, [shopPromotions, statusFilter, debouncedKeyword]);
+
+  const tableData = useMemo(() => {
+    if (!clientMode) {
+      if (!debouncedKeyword.trim()) return promotions;
+      const kw = debouncedKeyword.toLowerCase();
+      return promotions.filter((p) => p.name?.toLowerCase().includes(kw));
+    }
+    const start = pagination.pageIndex * pagination.pageSize;
+    return filteredList.slice(start, start + pagination.pageSize);
+  }, [
+    clientMode,
+    promotions,
+    debouncedKeyword,
+    filteredList,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
+
+  const pageCount = useMemo(() => {
+    if (clientMode) {
+      return Math.max(
+        1,
+        Math.ceil(filteredList.length / pagination.pageSize) || 1,
+      );
+    }
+    const kw = debouncedKeyword.trim();
+    if (kw) {
+      const count = promotions.filter((p) =>
+        p.name?.toLowerCase().includes(kw.toLowerCase()),
+      ).length;
+      return Math.max(1, Math.ceil(count / pagination.pageSize) || 1);
+    }
+    return Math.max(1, Math.ceil(totalCount / pagination.pageSize) || 1);
+  }, [
+    clientMode,
+    filteredList.length,
+    pagination.pageSize,
+    debouncedKeyword,
+    promotions,
+    totalCount,
+  ]);
+
+  const hasActiveFilters =
+    statusFilter !== "ALL" ||
+    Boolean(debouncedKeyword.trim()) ||
+    branchFilter !== "__all__";
+
+  const clearFilters = useCallback(() => {
+    setKeyword("");
+    setDebouncedKeyword("");
+    setStatusFilter("ALL");
+    setBranchFilter("__all__");
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    fetchShopPromotions();
+    if (!clientMode) fetchPromotions();
+  }, [fetchShopPromotions, fetchPromotions, clientMode]);
+
+  const handleOpenEdit = useCallback((promo) => {
     setEditingPromotion(promo);
     setModalOpen(true);
-  };
+  }, []);
+
+  const handleDelete = useCallback(
+    async (promo) => {
+      const ok = await confirm(
+        t("pages.promotions.list.deleteConfirm", { name: promo.name }),
+        {
+          title: t("pages.promotions.list.deleteTitle"),
+          confirmText: t("pages.promotions.list.deleteConfirmBtn"),
+          cancelText: t("pages.promotions.list.cancel"),
+          variant: "destructive",
+        },
+      );
+      if (!ok) return;
+
+      setPromotions((prev) => prev.filter((p) => p.id !== promo.id));
+      setShopPromotions((prev) => prev.filter((p) => p.id !== promo.id));
+      setTotalCount((c) => Math.max(0, c - 1));
+
+      try {
+        setIsSubmitting(true);
+        const res = await deletePromotion(promo.id, shopId);
+        if (res.data?.success) {
+          toast.success(t("pages.promotions.list.deleteSuccess"));
+          handleRefresh();
+        } else {
+          toast.error(
+            res.data?.message || t("pages.promotions.list.deleteFail"),
+          );
+          handleRefresh();
+        }
+      } catch (err) {
+        console.error("Delete promotion error:", err);
+        toast.error(t("pages.promotions.list.deleteError"));
+        handleRefresh();
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [confirm, t, shopId, handleRefresh],
+  );
+
+  const renderPromotionActions = useCallback(
+    (promo, { Item, Label, Separator }) => (
+      <>
+        <Label>{t("pages.promotions.list.actions")}</Label>
+        <Separator />
+        <Item
+          onClick={(e) => {
+            e?.stopPropagation?.();
+            handleOpenEdit(promo);
+          }}
+        >
+          {canUpdate
+            ? t("pages.promotions.list.edit")
+            : t("pages.promotions.list.viewDetail")}
+        </Item>
+        {canDelete && (
+          <Item
+            className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
+            disabled={isSubmitting}
+            onClick={(e) => {
+              e?.stopPropagation?.();
+              handleDelete(promo);
+            }}
+          >
+            {t("pages.promotions.list.delete")}
+            <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
+              ⌘⌫
+            </DropdownMenuShortcut>
+          </Item>
+        )}
+      </>
+    ),
+    [t, canUpdate, canDelete, isSubmitting, handleOpenEdit, handleDelete],
+  );
 
   const columns = useMemo(
     () => [
@@ -228,7 +444,9 @@ const PromotionListPage = () => {
           />
         ),
         cell: ({ row }) => (
-          <div className="font-medium min-w-[140px]">{row.getValue("name")}</div>
+          <div className="font-medium min-w-0 max-w-[200px] sm:max-w-none truncate">
+            {row.getValue("name")}
+          </div>
         ),
       },
       {
@@ -252,15 +470,15 @@ const PromotionListPage = () => {
           const type = row.getValue("discountType");
           const value = row.original.discountValue;
           return (
-            <div className="flex items-center gap-1.5">
-              {type === "PERCENT" ? (
-                <Percent className="h-3.5 w-3.5 text-blue-500" />
-              ) : (
-                <DollarSign className="h-3.5 w-3.5 text-green-500" />
-              )}
-              <span className="font-semibold">
-                {formatDiscount(type, value, numberLocale)}
-              </span>
+            <div className="flex items-center gap-1.5 min-w-0 max-w-[100px] sm:max-w-none">
+              {type !== "PERCENT" ? (
+                <DollarSign className="h-3.5 w-3.5 shrink-0 text-green-500" />
+              ) : null}
+              <DiscountValue
+                type={type}
+                value={value}
+                numberLocale={numberLocale}
+              />
             </div>
           );
         },
@@ -274,7 +492,7 @@ const PromotionListPage = () => {
           />
         ),
         cell: ({ row }) => (
-          <div className="text-sm">
+          <div className="text-sm whitespace-nowrap">
             {formatDate(row.getValue("startDate"), numberLocale)}
           </div>
         ),
@@ -288,7 +506,7 @@ const PromotionListPage = () => {
           />
         ),
         cell: ({ row }) => (
-          <div className="text-sm">
+          <div className="text-sm whitespace-nowrap">
             {formatDate(row.getValue("endDate"), numberLocale)}
           </div>
         ),
@@ -300,16 +518,18 @@ const PromotionListPage = () => {
           const bid = row.original.branchId;
           if (!bid) {
             return (
-              <Badge variant="outline" className="text-xs gap-1">
-                <Globe className="h-3 w-3" />
-                {t("pages.promotions.list.scopeAllShop")}
+              <Badge variant="outline" className="text-xs gap-1 max-w-full">
+                <Globe className="h-3 w-3 shrink-0" />
+                <span className="truncate">
+                  {t("pages.promotions.list.scopeAllShop")}
+                </span>
               </Badge>
             );
           }
           return (
-            <Badge variant="secondary" className="text-xs gap-1">
-              <Warehouse className="h-3 w-3" />
-              {branchMap[bid] || bid}
+            <Badge variant="secondary" className="text-xs gap-1 max-w-full">
+              <Warehouse className="h-3 w-3 shrink-0" />
+              <span className="truncate">{branchMap[bid] || bid}</span>
             </Badge>
           );
         },
@@ -349,64 +569,38 @@ const PromotionListPage = () => {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onContextMenu={(e) => e.stopPropagation()}
+                >
                   <span className="sr-only">
                     {t("pages.promotions.list.openMenu")}
                   </span>
-                  <MoreHorizontal />
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background">
-                <DropdownMenuLabel>
-                  {t("pages.promotions.list.actions")}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenEdit(promo);
-                  }}
-                >
-                  {canUpdate
-                    ? t("pages.promotions.list.edit")
-                    : t("pages.promotions.list.viewDetail")}
-                </DropdownMenuItem>
-                {canDelete && (
-                  <DropdownMenuItem
-                    className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
-                    disabled={isSubmitting}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(promo);
-                    }}
-                  >
-                    {t("pages.promotions.list.delete")}
-                    <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
-                      ⌘⌫
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                )}
+              <DropdownMenuContent align="end" className="bg-background w-48">
+                {renderPromotionActions(promo, {
+                  Item: DropdownMenuItem,
+                  Label: DropdownMenuLabel,
+                  Separator: DropdownMenuSeparator,
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           );
         },
       },
     ],
-    [t, numberLocale, branchMap, canUpdate, canDelete, isSubmitting],
+    [t, numberLocale, branchMap, renderPromotionActions],
   );
 
-  const filteredPromotions = useMemo(() => {
-    if (!keyword.trim()) return promotions;
-    const kw = keyword.toLowerCase();
-    return promotions.filter((p) => p.name?.toLowerCase().includes(kw));
-  }, [promotions, keyword]);
-
   const table = useReactTable({
-    data: filteredPromotions,
+    data: tableData,
     columns,
     manualPagination: true,
-    manualSorting: true,
-    pageCount: Math.ceil(totalCount / pagination.pageSize),
+    manualSorting: !clientMode,
+    pageCount,
     onSortingChange: (updater) => {
       setSorting(updater);
       setPagination((p) => ({ ...p, pageIndex: 0 }));
@@ -425,28 +619,45 @@ const PromotionListPage = () => {
     },
   });
 
+  const emptyMessage =
+    hasActiveFilters || clientMode
+      ? t("pages.promotions.list.emptyFilter")
+      : t("pages.promotions.list.empty");
+
   return (
-    <div className="h-full flex-1 flex-col gap-8 p-4 md:p-8 md:flex">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("pages.promotions.list.title")}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("pages.promotions.list.subtitle")}
-            </p>
-          </div>
+    <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex min-w-0">
+      <div className="flex flex-col gap-4 min-w-0">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
+            {t("pages.promotions.list.title")}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t("pages.promotions.list.subtitle")}
+          </p>
         </div>
+
+        <PromotionListStatCards
+          stats={stats}
+          activeFilter={statusFilter}
+          loading={summaryLoading && shopPromotions.length === 0}
+          numberLocale={numberLocale}
+          onFilterChange={(key) => {
+            setStatusFilter(key);
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
+        />
 
         <div className={listToolbarRoot}>
           <div className={listToolbarFilters}>
-            <Input
-              placeholder={t("pages.promotions.list.searchPlaceholder")}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className={listInputGrow}
-            />
+            <div className={listSearchWrap}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder={t("pages.promotions.list.searchPlaceholder")}
+                value={keyword}
+                onChange={(e) => handleKeywordChange(e.target.value)}
+                className="pl-9 w-full"
+              />
+            </div>
             {branches?.length > 0 && (
               <Select
                 value={branchFilter}
@@ -471,20 +682,49 @@ const PromotionListPage = () => {
                 </SelectContent>
               </Select>
             )}
-            <DataTableViewOptions table={table} />
           </div>
           <div className={listToolbarActions}>
+            {hasActiveFilters && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 shrink-0"
+                onClick={clearFilters}
+              >
+                <X className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {t("pages.promotions.list.clearFilters")}
+                </span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 shrink-0"
+              onClick={handleRefresh}
+              disabled={loading || summaryLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loading || summaryLoading ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">
+                {t("pages.promotions.list.refresh")}
+              </span>
+            </Button>
+            <DataTableViewOptions table={table} />
             {canCreate && (
               <Button
                 variant="success"
                 size="sm"
-                className="cursor-pointer"
+                className="cursor-pointer gap-1.5"
                 onClick={() => {
                   setEditingPromotion(null);
                   setModalOpen(true);
                 }}
               >
-                <Plus className="h-4 w-4 sm:mr-1" />
+                <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">
                   {t("pages.promotions.list.addPromotion")}
                 </span>
@@ -494,7 +734,7 @@ const PromotionListPage = () => {
         </div>
 
         <div className={dataTableContainer}>
-          {loading && promotions.length > 0 && (
+          {loading && tableData.length > 0 && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
@@ -517,7 +757,7 @@ const PromotionListPage = () => {
               ))}
             </TableHeader>
             <TableBody>
-              {loading && promotions.length === 0 ? (
+              {(loading || summaryLoading) && tableData.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={columns.length}
@@ -527,23 +767,45 @@ const PromotionListPage = () => {
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                    className="cursor-pointer"
-                    onClick={() => handleOpenEdit(row.original)}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                table.getRowModel().rows.map((row) => {
+                  const promo = row.original;
+                  const rowEl = (
+                    <TableRow
+                      data-state={row.getIsSelected() && "selected"}
+                      className="cursor-pointer"
+                      onClick={() => handleOpenEdit(promo)}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          onClick={
+                            cell.column.id === "actions"
+                              ? (e) => e.stopPropagation()
+                              : undefined
+                          }
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+
+                  return (
+                    <ContextMenu key={row.id}>
+                      <ContextMenuTrigger asChild>{rowEl}</ContextMenuTrigger>
+                      <ContextMenuContent className="min-w-[12rem] bg-background w-48">
+                        {renderPromotionActions(promo, {
+                          Item: ContextMenuItem,
+                          Label: ContextMenuLabel,
+                          Separator: ContextMenuSeparator,
+                        })}
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell
@@ -552,7 +814,7 @@ const PromotionListPage = () => {
                   >
                     <div className="flex flex-col items-center gap-2">
                       <Tag className="h-8 w-8 text-muted-foreground/40" />
-                      <span>{t("pages.promotions.list.empty")}</span>
+                      <span>{emptyMessage}</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -570,7 +832,7 @@ const PromotionListPage = () => {
         promotion={editingPromotion}
         shopId={shopId}
         branches={branches}
-        onSuccess={fetchPromotions}
+        onSuccess={handleRefresh}
       />
     </div>
   );

@@ -2,11 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Mail, Phone, Info, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-function envStr(key) {
-  const v = import.meta.env?.[key];
-  return typeof v === "string" ? v.trim() : "";
-}
+import { getSystemSupportConfig } from "@/utils/systemSupportConfig";
 
 function normalizeSingleLine(text) {
   if (!text) return "";
@@ -22,12 +18,6 @@ function normalizeMultiline(text) {
   return String(text).replace(/\\n/g, "\n").trim();
 }
 
-function zaloHref(raw) {
-  const digits = String(raw).replace(/\D/g, "");
-  if (!digits) return null;
-  return `https://zalo.me/${digits}`;
-}
-
 /**
  * Thông tin liên hệ hệ thống (toàn app).
  * Env: VITE_SUPPORT_NAME, VITE_SUPPORT_PHONE, VITE_SUPPORT_EMAIL,
@@ -39,14 +29,10 @@ export default function SystemSupportContact({
   variant = "card", // 'card' | 'inline'
 }) {
   const { t } = useTranslation();
-  const name = envStr("VITE_SUPPORT_NAME");
-  const phone = envStr("VITE_SUPPORT_PHONE");
-  const email = envStr("VITE_SUPPORT_EMAIL");
-  const zalo = envStr("VITE_SUPPORT_ZALO");
-  const note = envStr("VITE_SUPPORT_NOTE");
+  const { name, phone, email, zalo, zaloUrl, note, hasAny } =
+    getSystemSupportConfig();
   const noteInline = normalizeSingleLine(note);
   const noteMultiline = normalizeMultiline(note);
-  const zaloUrl = zaloHref(zalo);
 
   const title = name
     ? t("systemSupport.titleWithName", { name })
@@ -55,7 +41,7 @@ export default function SystemSupportContact({
     ? t("systemSupport.contactShortWithName", { name })
     : t("systemSupport.contactShort");
 
-  if (!name && !phone && !email && !zalo && !note) return null;
+  if (!hasAny) return null;
 
   const hoursLine = t("systemSupport.hours");
 

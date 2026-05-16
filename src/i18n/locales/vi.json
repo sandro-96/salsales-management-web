@@ -63,6 +63,16 @@
   "nav": {
     "groupMain": "Chức năng",
     "groupOther": "Khác",
+    "group": {
+      "sales": "Bán hàng",
+      "catalog": "Hàng hóa & kho",
+      "people": "Khách & nhân sự",
+      "business": "Vận hành",
+      "other": "Khác"
+    },
+    "allBranches": "Tất cả chi nhánh",
+    "branchLabel": "Chi nhánh",
+    "selectShopHint": "Chọn cửa hàng ở trên để mở menu chức năng.",
     "overview": "Tổng quan",
     "orders": "Đơn hàng",
     "ordersFnb": "Đơn hàng",
@@ -85,6 +95,8 @@
     "settings": "Cài đặt",
     "shops": "Cửa hàng",
     "shopsLabel": "Shops",
+    "contact": "Liên hệ",
+    "supportTickets": "Phiếu hỗ trợ",
     "support": "Hỗ trợ",
     "billing": "Gói dịch vụ",
     "search": "Tìm kiếm",
@@ -156,6 +168,8 @@
     "account": "Tài khoản",
     "home": "Trang chủ",
     "history": "Lịch sử",
+    "contact": "Liên hệ",
+    "supportTickets": "Phiếu hỗ trợ",
     "support": "Hỗ trợ",
     "notifications": "Thông báo",
     "billing": "Gói dịch vụ",
@@ -324,6 +338,16 @@
       "title": "Lỗi",
       "message": "Đã xảy ra lỗi. Vui lòng thử lại sau.",
       "back": "Quay lại Trang chủ"
+    },
+    "page": {
+      "eyebrow": "Đã xảy ra sự cố",
+      "boundaryTitle": "Ứng dụng gặp lỗi",
+      "boundaryMessage": "Một lỗi không mong muốn đã xảy ra khi tải trang.",
+      "hint": "Thử tải lại trang. Nếu lỗi lặp lại, quay về trang chủ hoặc đăng nhập lại.",
+      "retry": "Tải lại trang",
+      "goBack": "Quay lại",
+      "goHome": "Về trang chủ",
+      "technicalDetails": "Chi tiết kỹ thuật"
     }
   },
   "main": {
@@ -337,8 +361,24 @@
   "overview": {
     "hello": "Xin chào, {{name}}",
     "you": "bạn",
+    "refresh": "Làm mới",
     "branchPlaceholder": "Chi nhánh",
     "allBranches": "Tất cả chi nhánh",
+    "quickActions": {
+      "title": "Thao tác nhanh",
+      "pos": "Bán hàng",
+      "posDesc": "Mở quầy POS",
+      "orders": "Đơn hàng",
+      "ordersDesc": "Xem & xử lý đơn",
+      "products": "Sản phẩm",
+      "productsDesc": "Danh mục & giá",
+      "reports": "Báo cáo",
+      "reportsDesc": "Doanh thu chi tiết"
+    },
+    "staffWelcome": {
+      "title": "Tổng quan cửa hàng",
+      "desc": "Bạn có thể xem đơn hàng gần đây và dùng các lối tắt bên dưới. Báo cáo doanh thu dành cho chủ shop hoặc quản lý."
+    },
     "ranges": {
       "7": "7 ngày",
       "14": "14 ngày",
@@ -358,12 +398,14 @@
       "loadError": "Không thể tải dữ liệu tổng quan.",
       "permissionError": "Không thể tải dữ liệu báo cáo. Bạn có thể không có quyền xem báo cáo.",
       "revenueTrend": "Xu hướng doanh thu",
-      "revenueDescription": "Biểu đồ doanh thu và đơn hàng theo ngày trong {{range}}"
+      "revenueDescription": "Biểu đồ doanh thu và đơn hàng theo ngày trong {{range}}",
+      "chartEmpty": "Chưa có dữ liệu trong khoảng thời gian này. Thử chọn khoảng khác hoặc tạo đơn mới."
     },
     "topProducts": {
       "title": "Sản phẩm bán chạy",
       "topInRange": "Top 5 trong {{range}}",
-      "soldUnit": "đã bán"
+      "soldUnit": "đã bán",
+      "empty": "Chưa có sản phẩm bán trong khoảng này."
     },
     "recentOrders": {
       "title": "Đơn hàng gần đây",

@@ -95,17 +95,17 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="sm:max-w-[440px]"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[440px] sm:p-6"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0 space-y-1.5 text-left">
           <DialogTitle>{t("pages.staffs.addModal.title")}</DialogTitle>
           <DialogDescription>
             {t("pages.staffs.addModal.description")}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
           <div className="space-y-2">
             <Label
               htmlFor="staff-email"
@@ -146,7 +146,7 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {t("pages.staffs.addModal.cancel")}
           </Button>

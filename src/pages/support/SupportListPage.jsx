@@ -6,7 +6,7 @@ import {
 } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { toast } from "sonner";
@@ -408,7 +408,13 @@ const SupportListPage = () => {
             {t("pages.support.list.title")}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {t("pages.support.list.subtitle")}
+            {t("pages.support.list.subtitle")}{" "}
+            <Link
+              to="/contact"
+              className="text-primary font-medium hover:underline"
+            >
+              {t("pages.contact.title")}
+            </Link>
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} variant="success">

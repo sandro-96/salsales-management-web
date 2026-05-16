@@ -18,6 +18,9 @@ import {
   FileSpreadsheet,
   Layers,
   CopyPlus,
+  Search,
+  RefreshCw,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +52,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
@@ -59,10 +70,13 @@ import {
   listToolbarActions,
   listToolbarFilters,
   listToolbarRoot,
+  listSearchWrap,
+  listFilterSelectWrap,
 } from "@/components/table/listPageLayout.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import {
   getProducts,
+  getProductSummary,
   deleteProduct,
   toggleProductActive,
   updateProductTrackInventory,
@@ -72,7 +86,12 @@ import ProductImportExportDialog from "./ProductImportExportDialog.jsx";
 import ShopToppingsModal from "./ShopToppingsModal.jsx";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
-import { translateProductCategory } from "@/constants/productConstants.js";
+import {
+  PRODUCT_CATEGORIES,
+  translateProductCategory,
+} from "@/constants/productConstants.js";
+import { ProductListEmptyState } from "@/components/products/ProductListEmptyState.jsx";
+import { ProductListStatCards } from "@/components/products/ProductListStatCards.jsx";
 
 /** Dữ liệu clone cho form tạo mới — ProductForm xử lý qua prefill.__isClone */
 function buildProductClonePrefill(product, nameSuffix = "") {
@@ -133,7 +152,27 @@ const ProductPage = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [activeFilter, setActiveFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
+  const [statsLoading, setStatsLoading] = useState(false);
   const debounceRef = useRef(null);
+
+  const hasFilters =
+    !!debouncedKeyword ||
+    activeFilter !== "ALL" ||
+    categoryFilter !== "ALL";
+
+  const buildFilterParams = useCallback(() => {
+    const params = {};
+    if (activeFilter === "ACTIVE") params.active = true;
+    if (activeFilter === "INACTIVE") params.active = false;
+    if (categoryFilter && categoryFilter !== "ALL") {
+      params.category = categoryFilter;
+    }
+    if (debouncedKeyword) params.keyword = debouncedKeyword;
+    return params;
+  }, [activeFilter, categoryFilter, debouncedKeyword]);
 
   const handleKeywordChange = (value) => {
     setKeyword(value);
@@ -144,40 +183,85 @@ const ProductPage = () => {
     }, 400);
   };
 
-  const fetchProducts = useCallback(async () => {
+  const fetchStats = useCallback(async () => {
     if (!shopId) return;
-    setLoading(true);
-    try {
-      const params = {
-        page: pagination.pageIndex,
-        size: pagination.pageSize,
-      };
-      if (sorting.length > 0) {
-        params.sortBy = sorting[0].id;
-        params.sortDir = sorting[0].desc ? "DESC" : "ASC";
-      }
-      if (debouncedKeyword) params.keyword = debouncedKeyword;
-      const res = await getProducts(shopId, params);
-      const data = res.data?.data;
-      if (data && typeof data === "object" && "content" in data) {
-        setProducts(data.content ?? []);
-        setTotalCount(data.page?.totalElements ?? data.totalElements ?? 0);
-      } else {
-        const list = Array.isArray(data) ? data : [];
-        setProducts(list);
-        setTotalCount(list.length);
-      }
-    } catch (err) {
-      console.error("Fetch products error:", err);
-      toast.error(t("pages.products.list.fetchError"));
-    } finally {
-      setLoading(false);
+    setStatsLoading(true);
+    const params = {};
+    if (debouncedKeyword) params.keyword = debouncedKeyword;
+    if (categoryFilter && categoryFilter !== "ALL") {
+      params.category = categoryFilter;
     }
-  }, [shopId, pagination, sorting, debouncedKeyword, t]);
+    try {
+      const res = await getProductSummary(shopId, params);
+      const data = res.data?.data;
+      setStats({
+        total: data?.total ?? 0,
+        active: data?.active ?? 0,
+        inactive: data?.inactive ?? 0,
+      });
+    } catch {
+      setStats({ total: 0, active: 0, inactive: 0 });
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [shopId, debouncedKeyword, categoryFilter]);
+
+  const fetchProducts = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!shopId) return;
+      if (!silent) setLoading(true);
+      try {
+        const params = {
+          page: pagination.pageIndex,
+          size: pagination.pageSize,
+          ...buildFilterParams(),
+        };
+        if (sorting.length > 0) {
+          params.sortBy = sorting[0].id;
+          params.sortDir = sorting[0].desc ? "DESC" : "ASC";
+        }
+        const res = await getProducts(shopId, params);
+        const data = res.data?.data;
+        if (data && typeof data === "object" && "content" in data) {
+          setProducts(data.content ?? []);
+          setTotalCount(data.page?.totalElements ?? data.totalElements ?? 0);
+        } else {
+          const list = Array.isArray(data) ? data : [];
+          setProducts(list);
+          setTotalCount(list.length);
+        }
+      } catch (err) {
+        console.error("Fetch products error:", err);
+        if (!silent) toast.error(t("pages.products.list.fetchError"));
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [shopId, pagination, sorting, buildFilterParams, t],
+  );
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const clearFilters = () => {
+    setKeyword("");
+    setDebouncedKeyword("");
+    setActiveFilter("ALL");
+    setCategoryFilter("ALL");
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  };
+
+  const openAddProduct = (step = "form") => {
+    setEditingProduct(null);
+    setModalPrefillDefaults(null);
+    setCreateStep(step);
+    setModalOpen(true);
+  };
 
   const handleToggleActive = async (product) => {
     try {
@@ -194,6 +278,7 @@ const ProductPage = () => {
             ? t("pages.products.list.activated")
             : t("pages.products.list.deactivated"),
         );
+        fetchStats();
       }
     } catch {
       toast.error(t("pages.products.list.statusUpdateFail"));
@@ -250,7 +335,8 @@ const ProductPage = () => {
       const res = await deleteProduct(shopId, product.productId);
       if (res.data?.success) {
         toast.success(t("pages.products.list.deleteSuccess"));
-        fetchProducts(); // background sync, no await
+        fetchProducts();
+        fetchStats();
       } else {
         toast.error(res.data?.message || t("pages.products.list.deleteFail"));
         fetchProducts(); // revert
@@ -300,7 +386,7 @@ const ProductPage = () => {
         const images = row.getValue("images");
         const firstImg = Array.isArray(images) ? images[0] : null;
         return (
-          <div className="w-10 h-10 rounded-md border overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-md border overflow-hidden bg-muted flex items-center justify-center shrink-0">
             {firstImg ? (
               <img
                 src={firstImg}
@@ -308,7 +394,7 @@ const ProductPage = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <Package className="w-5 h-5 text-gray-400" />
+              <Package className="w-5 h-5 text-muted-foreground" />
             )}
           </div>
         );
@@ -322,13 +408,30 @@ const ProductPage = () => {
           title={t("pages.products.list.colName")}
         />
       ),
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("name")}</div>
-      ),
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <div className="min-w-0">
+            <div className="font-medium truncate flex items-center gap-2">
+              <span className="truncate">{row.getValue("name")}</span>
+              {!product.active ? (
+                <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5">
+                  {t("pages.products.list.inactiveBadge")}
+                </Badge>
+              ) : null}
+            </div>
+            {product.barcode ? (
+              <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">
+                {product.barcode}
+              </p>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "sku",
-      header: "SKU",
+      header: t("pages.products.list.colSku"),
       cell: ({ row }) => (
         <div className="text-sm text-muted-foreground font-mono">
           {row.getValue("sku") || "-"}
@@ -497,24 +600,92 @@ const ProductPage = () => {
   });
 
   return (
-    <div className="h-full flex-1 flex-col gap-8 p-4 md:p-8 md:flex">
+    <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex w-full min-w-0">
       <div className="flex flex-col gap-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {t("pages.products.list.title")}
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight">
+              {t("pages.products.list.title")}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {t("pages.products.list.subtitle")}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            disabled={loading}
+            onClick={() => fetchProducts()}
+          >
+            <RefreshCw
+              className={cn("h-4 w-4 mr-1.5", loading && "animate-spin")}
+            />
+            {t("pages.products.list.refresh")}
+          </Button>
         </div>
 
-        {/* Toolbar */}
+        <ProductListStatCards
+          stats={stats}
+          activeFilter={activeFilter}
+          loading={statsLoading}
+          numberLocale={numberLocale}
+          onFilterChange={(key) => {
+            setActiveFilter(key);
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
+        />
+
         <div className={listToolbarRoot}>
           <div className={listToolbarFilters}>
-            <Input
-              placeholder={t("pages.products.list.searchPlaceholder")}
-              value={keyword}
-              onChange={(e) => handleKeywordChange(e.target.value)}
-              className={listInputGrow}
-            />
+            <div className={cn(listSearchWrap, "relative")}>
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder={t("pages.products.list.searchPlaceholder")}
+                value={keyword}
+                onChange={(e) => handleKeywordChange(e.target.value)}
+                className={cn(listInputGrow, "pl-9 pr-9")}
+              />
+              {keyword ? (
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setKeyword("");
+                    setDebouncedKeyword("");
+                    setPagination((p) => ({ ...p, pageIndex: 0 }));
+                  }}
+                  aria-label={t("pages.products.list.clearSearch")}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+            <Select
+              value={categoryFilter}
+              onValueChange={(v) => {
+                setCategoryFilter(v);
+                setPagination((p) => ({ ...p, pageIndex: 0 }));
+              }}
+            >
+              <SelectTrigger className={listFilterSelectWrap}>
+                <SelectValue
+                  placeholder={t("pages.products.list.categoryFilter")}
+                />
+              </SelectTrigger>
+              <SelectContent className="bg-background max-h-64">
+                <SelectItem value="ALL">
+                  {t("pages.products.list.allCategories")}
+                </SelectItem>
+                {PRODUCT_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {translateProductCategory(t, c.value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <DataTableViewOptions table={table} />
           </div>
           <div className={listToolbarActions}>
@@ -550,12 +721,7 @@ const ProductPage = () => {
                   variant="outline"
                   size="sm"
                   className="cursor-pointer"
-                  onClick={() => {
-                    setEditingProduct(null);
-                    setModalPrefillDefaults(null);
-                    setCreateStep("scan");
-                    setModalOpen(true);
-                  }}
+                  onClick={() => openAddProduct("scan")}
                 >
                   <ScanLine className="h-4 w-4 sm:mr-1" />
                   <span className="hidden sm:inline">
@@ -566,12 +732,7 @@ const ProductPage = () => {
                   variant="success"
                   size="sm"
                   className="cursor-pointer"
-                  onClick={() => {
-                    setEditingProduct(null);
-                    setModalPrefillDefaults(null);
-                    setCreateStep("form");
-                    setModalOpen(true);
-                  }}
+                  onClick={() => openAddProduct("form")}
                 >
                   <PackagePlus className="h-4 w-4 sm:mr-1" />
                   <span className="hidden sm:inline">
@@ -625,7 +786,10 @@ const ProductPage = () => {
                       <ContextMenuTrigger asChild>
                         <TableRow
                           data-state={row.getIsSelected() && "selected"}
-                          className="cursor-pointer"
+                          className={cn(
+                            "cursor-pointer",
+                            !product.active && "opacity-70",
+                          )}
                           onClick={() => handleOpenEdit(product)}
                         >
                           {row.getVisibleCells().map((cell) => (
@@ -676,11 +840,13 @@ const ProductPage = () => {
                 })
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    {t("pages.products.list.empty")}
+                  <TableCell colSpan={columns.length} className="p-0">
+                    <ProductListEmptyState
+                      hasFilters={hasFilters}
+                      canCreate={canCreate}
+                      onAdd={() => openAddProduct("form")}
+                      onClearFilters={clearFilters}
+                    />
                   </TableCell>
                 </TableRow>
               )}
@@ -696,7 +862,10 @@ const ProductPage = () => {
         onClose={handleModalClose}
         product={editingProduct}
         shopId={shopId}
-        onSuccess={fetchProducts}
+        onSuccess={() => {
+          fetchProducts();
+          fetchStats();
+        }}
         startStep={editingProduct ? undefined : createStep}
         prefillDefaults={modalPrefillDefaults ?? undefined}
       />
@@ -706,7 +875,10 @@ const ProductPage = () => {
         onClose={() => setImportExportOpen(false)}
         shopId={shopId}
         branches={branches}
-        onImportSuccess={fetchProducts}
+        onImportSuccess={() => {
+          fetchProducts();
+          fetchStats();
+        }}
       />
 
       <ShopToppingsModal

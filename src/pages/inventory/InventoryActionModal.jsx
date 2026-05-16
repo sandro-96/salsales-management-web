@@ -310,9 +310,6 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
               <p className="truncate text-sm font-medium">
                 {product.productName || product.name}
               </p>
-              <p className="font-mono text-xs text-muted-foreground">
-                {product.sku || "—"}
-              </p>
             </div>
             <Badge variant="outline" className="shrink-0 whitespace-nowrap">
               {t("pages.inventory.actionModal.stockLabel")}{" "}

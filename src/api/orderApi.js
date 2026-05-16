@@ -2,8 +2,9 @@ import axiosInstance from "./axiosInstance";
 
 /**
  * 📋 Lấy danh sách đơn hàng (phân trang)
- * GET /api/orders?shopId=&branchId=&page=&size=&sort=
+ * GET /api/orders?shopId=&branchId=&orderSource=&page=&size=&sort=
  * branchId: tùy chọn — có thì chỉ đơn của chi nhánh đó; không có thì mọi chi nhánh.
+ * orderSource: POS | ONLINE — lọc server-side (khuyến nghị cho đơn online).
  */
 export const getOrders = (shopId, params = {}) =>
   axiosInstance.get("/orders", { params: { shopId, ...params } });
@@ -29,6 +30,21 @@ export const filterOrders = (shopId, status, params = {}) =>
   axiosInstance.get("/orders/filter", {
     params: { shopId, status, ...params },
   });
+
+/** Đếm đơn chờ xử lý theo nguồn (dùng phân trang, lấy totalElements). */
+export const countPendingOrdersBySource = (shopId, orderSource, params = {}) =>
+  filterOrders(shopId, "PENDING", {
+    ...params,
+    orderSource,
+    page: 0,
+    size: 1,
+  });
+
+export const countOnlinePendingOrders = (shopId, params = {}) =>
+  countPendingOrdersBySource(shopId, "ONLINE", params);
+
+export const countPosPendingOrders = (shopId, params = {}) =>
+  countPendingOrdersBySource(shopId, "POS", params);
 
 /**
  * 📊 Xem trước thuế (theo chính sách thuế hiện tại)

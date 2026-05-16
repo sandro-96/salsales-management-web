@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -26,11 +26,6 @@ import { Switch } from "@/components/ui/switch";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -92,6 +87,20 @@ export default function PromotionFormModal({
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productKeyword, setProductKeyword] = useState("");
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+  const startDateBlockRef = useRef(null);
+  const endDateBlockRef = useRef(null);
+
+  useEffect(() => {
+    if (!startDateOpen) return;
+    startDateBlockRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [startDateOpen]);
+
+  useEffect(() => {
+    if (!endDateOpen) return;
+    endDateBlockRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [endDateOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -130,6 +139,8 @@ export default function PromotionFormModal({
       setSelectedProductIds([]);
     }
     setProductKeyword("");
+    setStartDateOpen(false);
+    setEndDateOpen(false);
   }, [open, promotion]);
 
   const fetchProducts = useCallback(async () => {
@@ -257,10 +268,10 @@ export default function PromotionFormModal({
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="sm:max-w-[600px] max-h-[90vh] flex flex-col"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[600px] sm:p-6"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0">
+        <DialogHeader className="shrink-0 space-y-1.5 text-left">
           <DialogTitle>
             {readOnly
               ? t("pages.promotions.formModal.viewTitle")
@@ -275,10 +286,11 @@ export default function PromotionFormModal({
           </DialogDescription>
         </DialogHeader>
 
-        <fieldset
-          disabled={readOnly}
-          className="flex-1 overflow-y-auto space-y-5 pr-1 py-2 disabled:opacity-70"
-        >
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
+          <fieldset
+            disabled={readOnly}
+            className="m-0 min-w-0 space-y-5 border-0 p-0 pb-1 disabled:opacity-70"
+          >
           {/* Name */}
           <div className="space-y-2">
             <Label
@@ -298,7 +310,7 @@ export default function PromotionFormModal({
           </div>
 
           {/* Discount type + value */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className={attemptedSubmit && !discountType ? "text-destructive" : undefined}>
                 {t("pages.promotions.formModal.discountTypeLabel")} *
@@ -365,29 +377,33 @@ export default function PromotionFormModal({
           </div>
 
           {/* Date range */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div ref={startDateBlockRef} className="space-y-2 min-w-0 sm:col-span-2">
               <Label className={attemptedSubmit && !startDate ? "text-destructive" : undefined}>
                 {t("pages.promotions.formModal.startDateLabel")} *
               </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground",
-                      attemptedSubmit && !startDate && "border-destructive aria-invalid:border-destructive",
-                    )}
-                    aria-invalid={attemptedSubmit && !startDate}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate
-                      ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
-                      : t("pages.promotions.formModal.pickDate")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !startDate && "text-muted-foreground",
+                  attemptedSubmit && !startDate && "border-destructive aria-invalid:border-destructive",
+                )}
+                aria-expanded={startDateOpen}
+                aria-invalid={attemptedSubmit && !startDate}
+                onClick={() => {
+                  setEndDateOpen(false);
+                  setStartDateOpen((v) => !v);
+                }}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                {startDate
+                  ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
+                  : t("pages.promotions.formModal.pickDate")}
+              </Button>
+              {startDateOpen && (
+                <div className="flex justify-center overflow-hidden rounded-md border bg-popover shadow-sm">
                   <Calendar
                     mode="single"
                     selected={startDate}
@@ -395,36 +411,41 @@ export default function PromotionFormModal({
                       if (d) {
                         d.setHours(0, 0, 0, 0);
                         setStartDate(d);
+                        setStartDateOpen(false);
                       }
                     }}
                     locale={dateLocale}
-                    initialFocus
+                    className="p-3"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
+            <div ref={endDateBlockRef} className="space-y-2 min-w-0 sm:col-span-2">
               <Label className={attemptedSubmit && !endDate ? "text-destructive" : undefined}>
                 {t("pages.promotions.formModal.endDateLabel")} *
               </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground",
-                      attemptedSubmit && !endDate && "border-destructive aria-invalid:border-destructive",
-                    )}
-                    aria-invalid={attemptedSubmit && !endDate}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate
-                      ? format(endDate, "dd/MM/yyyy", { locale: dateLocale })
-                      : t("pages.promotions.formModal.pickDate")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !endDate && "text-muted-foreground",
+                  attemptedSubmit && !endDate && "border-destructive aria-invalid:border-destructive",
+                )}
+                aria-expanded={endDateOpen}
+                aria-invalid={attemptedSubmit && !endDate}
+                onClick={() => {
+                  setStartDateOpen(false);
+                  setEndDateOpen((v) => !v);
+                }}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                {endDate
+                  ? format(endDate, "dd/MM/yyyy", { locale: dateLocale })
+                  : t("pages.promotions.formModal.pickDate")}
+              </Button>
+              {endDateOpen && (
+                <div className="flex justify-center overflow-hidden rounded-md border bg-popover shadow-sm">
                   <Calendar
                     mode="single"
                     selected={endDate}
@@ -432,14 +453,15 @@ export default function PromotionFormModal({
                       if (d) {
                         d.setHours(23, 59, 59, 0);
                         setEndDate(d);
+                        setEndDateOpen(false);
                       }
                     }}
                     disabled={(d) => startDate && d < startDate}
                     locale={dateLocale}
-                    initialFocus
+                    className="p-3"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              )}
             </div>
           </div>
 
@@ -542,7 +564,7 @@ export default function PromotionFormModal({
                     </span>
                   </div>
                 )}
-                <div className="max-h-48 overflow-y-auto">
+                <div className="max-h-[min(11rem,28vh)] overflow-y-auto overscroll-contain">
                   {productsLoading ? (
                     <div className="flex items-center justify-center py-6">
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -585,9 +607,10 @@ export default function PromotionFormModal({
               </div>
             )}
           </div>
-        </fieldset>
+          </fieldset>
+        </div>
 
-        <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {readOnly
               ? t("pages.promotions.formModal.close")

@@ -108,6 +108,12 @@ const normalizeDatetimeLocal = (v) => {
   return t.length === 16 ? `${t}:00` : t;
 };
 
+/** Ghép ngày làm việc (YYYY-MM-DD) với giờ (HH:mm) cho API chấm công thủ công. */
+const combineWorkDateTime = (workDate, timeStr) => {
+  if (!workDate?.trim() || !timeStr?.trim()) return null;
+  return `${workDate.trim()}T${timeStr.trim()}`;
+};
+
 const InfoRow = ({ icon: Icon, label, value, emptyValue = "—" }) => (
   <div className="flex items-start gap-3">
     <div className="mt-0.5 text-muted-foreground">
@@ -155,8 +161,8 @@ const StaffOverviewPage = () => {
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
   const [manualWorkDate, setManualWorkDate] = useState("");
-  const [manualCheckIn, setManualCheckIn] = useState("");
-  const [manualCheckOut, setManualCheckOut] = useState("");
+  const [manualCheckInTime, setManualCheckInTime] = useState("");
+  const [manualCheckOutTime, setManualCheckOutTime] = useState("");
   const [manualReplaceDay, setManualReplaceDay] = useState(true);
   const [manualNote, setManualNote] = useState("");
   const [manualSubmitting, setManualSubmitting] = useState(false);
@@ -298,8 +304,8 @@ const StaffOverviewPage = () => {
     if (!staffRef) return;
     const d = localYmd(new Date());
     setManualWorkDate(d);
-    setManualCheckIn(`${d}T08:00`);
-    setManualCheckOut(`${d}T17:00`);
+    setManualCheckInTime("08:00");
+    setManualCheckOutTime("17:00");
     setManualReplaceDay(true);
     setManualNote("");
   }, [staffRef]);
@@ -358,20 +364,23 @@ const StaffOverviewPage = () => {
 
   const handleManualAttendanceSave = async () => {
     if (!shopId || !staffRef || !staffType) return;
-    if (!manualWorkDate || !manualCheckIn) {
+    if (!manualWorkDate || !manualCheckInTime) {
       toast.error(t("pages.staffs.overview.manualDateRequired"));
       return;
     }
+    const checkInAt = combineWorkDateTime(manualWorkDate, manualCheckInTime);
     setManualSubmitting(true);
     try {
       const payload = {
         staffRef,
         staffType,
         workDate: manualWorkDate,
-        checkInAt: normalizeDatetimeLocal(manualCheckIn),
+        checkInAt: normalizeDatetimeLocal(checkInAt),
         replaceDay: manualReplaceDay,
       };
-      const co = normalizeDatetimeLocal(manualCheckOut);
+      const co = normalizeDatetimeLocal(
+        combineWorkDateTime(manualWorkDate, manualCheckOutTime),
+      );
       if (co) payload.checkOutAt = co;
       if (manualNote.trim()) payload.note = manualNote.trim();
 
@@ -588,33 +597,62 @@ const StaffOverviewPage = () => {
                   {t("pages.staffs.overview.contactDesc")}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoRow icon={Mail} label={t("pages.staffs.overview.labelEmail")} value={profile.email} emptyValue={emptyValue} />
-                <InfoRow icon={Phone} label={t("pages.staffs.overview.labelPhone")} value={profile.phone} emptyValue={emptyValue} />
-                <InfoRow
-                  icon={MapPin}
-                  label={t("pages.staffs.overview.labelBranch")}
-                  value={branchName}
-                  emptyValue={emptyValue}
-                />
-                <InfoRow
-                  icon={Briefcase}
-                  label={t("pages.staffs.overview.labelDepartment")}
-                  value={profile.department}
-                  emptyValue={emptyValue}
-                />
-                <InfoRow
-                  icon={Briefcase}
-                  label={t("pages.staffs.overview.labelLevel")}
-                  value={profile.level}
-                  emptyValue={emptyValue}
-                />
-                <InfoRow
-                  icon={CalendarDays}
-                  label={t("pages.staffs.overview.labelStartDate")}
-                  value={profile.startDate ? formatDate(profile.startDate, numberLocale, emptyValue) : null}
-                  emptyValue={emptyValue}
-                />
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InfoRow icon={Mail} label={t("pages.staffs.overview.labelEmail")} value={profile.email} emptyValue={emptyValue} />
+                  <InfoRow icon={Phone} label={t("pages.staffs.overview.labelPhone")} value={profile.phone} emptyValue={emptyValue} />
+                  <InfoRow
+                    icon={MapPin}
+                    label={t("pages.staffs.overview.labelBranch")}
+                    value={branchName}
+                    emptyValue={emptyValue}
+                  />
+                  <InfoRow
+                    icon={Briefcase}
+                    label={t("pages.staffs.overview.labelDepartment")}
+                    value={profile.department}
+                    emptyValue={emptyValue}
+                  />
+                  <InfoRow
+                    icon={Briefcase}
+                    label={t("pages.staffs.overview.labelLevel")}
+                    value={profile.level}
+                    emptyValue={emptyValue}
+                  />
+                  <InfoRow
+                    icon={CalendarDays}
+                    label={t("pages.staffs.overview.labelStartDate")}
+                    value={profile.startDate ? formatDate(profile.startDate, numberLocale, emptyValue) : null}
+                    emptyValue={emptyValue}
+                  />
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  <p className="text-sm font-medium">
+                    {t("pages.staffs.overview.emergencyTitle")}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <InfoRow
+                      icon={Users}
+                      label={t("pages.staffs.overview.labelEmergencyContact")}
+                      value={profile.emergencyContactName}
+                      emptyValue={emptyValue}
+                    />
+                    <InfoRow
+                      icon={Phone}
+                      label={t("pages.staffs.overview.labelPhone")}
+                      value={profile.emergencyContactPhone}
+                      emptyValue={emptyValue}
+                    />
+                  </div>
+                  {profile.note ? (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">
+                        {t("pages.staffs.overview.labelNote")}
+                      </div>
+                      <div className="text-sm whitespace-pre-wrap">{profile.note}</div>
+                    </div>
+                  ) : null}
+                </div>
               </CardContent>
             </Card>
 
@@ -666,37 +704,7 @@ const StaffOverviewPage = () => {
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("pages.staffs.overview.emergencyTitle")}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <InfoRow
-                icon={Users}
-                label={t("pages.staffs.overview.labelEmergencyContact")}
-                value={profile.emergencyContactName}
-                emptyValue={emptyValue}
-              />
-              <InfoRow
-                icon={Phone}
-                label={t("pages.staffs.overview.labelPhone")}
-                value={profile.emergencyContactPhone}
-                emptyValue={emptyValue}
-              />
-              {profile.note ? (
-                <div className="sm:col-span-2">
-                  <div className="text-xs text-muted-foreground mb-1">
-                    {t("pages.staffs.overview.labelNote")}
-                  </div>
-                  <div className="text-sm whitespace-pre-wrap">
-                    {profile.note}
-                  </div>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 min-[1100px]:grid-cols-3 gap-4">
+          <div className="space-y-4 lg:space-y-6">
             <Card className="min-w-0">
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -766,7 +774,7 @@ const StaffOverviewPage = () => {
                         <p className="text-xs text-muted-foreground">
                           {t("pages.staffs.overview.manualHint")}
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                           <div className="space-y-1.5">
                             <Label htmlFor="manual-work-date" className="text-xs">
                               {t("pages.staffs.overview.manualWorkDate")}
@@ -776,31 +784,32 @@ const StaffOverviewPage = () => {
                               type="date"
                               value={manualWorkDate}
                               onChange={(e) => setManualWorkDate(e.target.value)}
+                              className="w-full min-w-0"
                             />
                           </div>
-                          <div className="space-y-1.5 sm:col-span-2 grid sm:grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <Label htmlFor="manual-in" className="text-xs">
-                                {t("pages.staffs.overview.manualCheckIn")}
-                              </Label>
-                              <Input
-                                id="manual-in"
-                                type="datetime-local"
-                                value={manualCheckIn}
-                                onChange={(e) => setManualCheckIn(e.target.value)}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label htmlFor="manual-out" className="text-xs">
-                                {t("pages.staffs.overview.manualCheckOut")}
-                              </Label>
-                              <Input
-                                id="manual-out"
-                                type="datetime-local"
-                                value={manualCheckOut}
-                                onChange={(e) => setManualCheckOut(e.target.value)}
-                              />
-                            </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="manual-in" className="text-xs">
+                              {t("pages.staffs.overview.manualCheckIn")}
+                            </Label>
+                            <Input
+                              id="manual-in"
+                              type="time"
+                              value={manualCheckInTime}
+                              onChange={(e) => setManualCheckInTime(e.target.value)}
+                              className="w-full min-w-0"
+                            />
+                          </div>
+                          <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+                            <Label htmlFor="manual-out" className="text-xs">
+                              {t("pages.staffs.overview.manualCheckOut")}
+                            </Label>
+                            <Input
+                              id="manual-out"
+                              type="time"
+                              value={manualCheckOutTime}
+                              onChange={(e) => setManualCheckOutTime(e.target.value)}
+                              className="w-full min-w-0"
+                            />
                           </div>
                         </div>
                         <div className="space-y-1.5">
@@ -833,7 +842,9 @@ const StaffOverviewPage = () => {
                         <Button
                           type="button"
                           size="sm"
-                          disabled={manualSubmitting || !manualWorkDate || !manualCheckIn}
+                          disabled={
+                            manualSubmitting || !manualWorkDate || !manualCheckInTime
+                          }
                           onClick={handleManualAttendanceSave}
                         >
                           {manualSubmitting ? (
@@ -875,10 +886,11 @@ const StaffOverviewPage = () => {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t">
-                      <div className="text-xs text-muted-foreground mb-2">
-                        {t("pages.staffs.overview.timelineToday")}
-                      </div>
+                    <div className="pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-2">
+                          {t("pages.staffs.overview.timelineToday")}
+                        </div>
                       {todayEntry?.sessions?.length ? (
                         <div className="space-y-2">
                           {todayEntry.sessions.map((s, idx) => (
@@ -906,11 +918,13 @@ const StaffOverviewPage = () => {
                           {t("pages.staffs.overview.noSessionsToday")}
                         </div>
                       )}
-
-                      <div className="text-xs text-muted-foreground mt-3 mb-2">
-                        {t("pages.staffs.overview.recent")}
                       </div>
-                      <div className="space-y-2">
+
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-2">
+                          {t("pages.staffs.overview.recent")}
+                        </div>
+                        <div className="space-y-2">
                         {(attendanceMonth?.entries || [])
                           .slice()
                           .sort((a, b) =>
@@ -936,12 +950,15 @@ const StaffOverviewPage = () => {
                             {t("pages.staffs.overview.noAttendanceRecords")}
                           </div>
                         )}
+                        </div>
                       </div>
                     </div>
                   </>
                 )}
               </CardContent>
             </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 items-start">
             <Card className="min-w-0">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
@@ -1119,6 +1136,7 @@ const StaffOverviewPage = () => {
                 )}
               </CardContent>
             </Card>
+            </div>
           </div>
 
           <Dialog open={leaveCreateOpen} onOpenChange={setLeaveCreateOpen}>

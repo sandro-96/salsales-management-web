@@ -1,0 +1,16 @@
+{
+  "title": "Contact us",
+  "subtitle": "Official {{brand}} support channel. Reach us during business hours for the fastest response.",
+  "phone": "Phone",
+  "email": "Email",
+  "zalo": "Zalo",
+  "hours": "Support hours",
+  "hoursValue": "8:30 AM – 5:30 PM (Mon – Fri)",
+  "call": "Call now",
+  "sendEmail": "Send email",
+  "openZalo": "Chat on Zalo",
+  "ticketsTitle": "Technical support requests",
+  "ticketsDesc": "Report issues, request features, or track tickets you have submitted.",
+  "ticketsCta": "Open support tickets",
+  "empty": "Contact details are not configured yet. Please contact your system administrator."
+}

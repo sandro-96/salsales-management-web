@@ -6,6 +6,10 @@ import axiosInstance from "./axiosInstance";
  * params: { category, active, minPrice, maxPrice, page, size, sortBy, sortDir, branchIds[] }
  * Dùng khi không cần tìm kiếm theo keyword (VD: load list sơ bộ, dropdown chọn sản phẩm...)
  */
+/** Thống kê SP cấp shop: total / active / inactive. */
+export const getProductSummary = (shopId, params = {}) =>
+  axiosInstance.get(`/shops/${shopId}/products/summary`, { params });
+
 export const getProducts = (shopId, params = {}) =>
   axiosInstance.get(`/shops/${shopId}/products`, {
     params,

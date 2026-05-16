@@ -23,7 +23,7 @@ export function NavSecondary({ items, groupLabel, ...props }) {
           {groupLabel}
         </SidebarGroupLabel>
       ) : null}
-      <SidebarGroupContent>
+      <SidebarGroupContent className="pb-0">
         <SidebarMenu>
           {items.map((item) => {
             const to = item.to;
@@ -43,8 +43,8 @@ export function NavSecondary({ items, groupLabel, ...props }) {
                       "no-underline outline-none ring-sidebar-ring focus-visible:ring-2",
                     )}
                   >
-                    <item.icon />
-                    <span>{label}</span>
+                    {item.icon ? <item.icon className="shrink-0" /> : null}
+                    <span className="truncate">{label}</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

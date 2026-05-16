@@ -10,6 +10,8 @@ import notificationsVi from "./locales/pages/notifications.vi.json";
 import notificationsEn from "./locales/pages/notifications.en.json";
 import supportVi from "./locales/pages/support.vi.json";
 import supportEn from "./locales/pages/support.en.json";
+import contactVi from "./locales/pages/contact.vi.json";
+import contactEn from "./locales/pages/contact.en.json";
 import ordersVi from "./locales/pages/orders.vi.json";
 import ordersEn from "./locales/pages/orders.en.json";
 import productsVi from "./locales/pages/products.vi.json";
@@ -49,6 +51,7 @@ const pagesVi = {
   storefront: storefrontVi,
   notifications: notificationsVi,
   support: supportVi,
+  contact: contactVi,
   orders: ordersVi,
   products: productsVi,
   customers: customersVi,
@@ -68,6 +71,7 @@ const pagesEn = {
   storefront: storefrontEn,
   notifications: notificationsEn,
   support: supportEn,
+  contact: contactEn,
   orders: ordersEn,
   products: productsEn,
   customers: customersEn,
