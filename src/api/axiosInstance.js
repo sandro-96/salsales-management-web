@@ -1,6 +1,10 @@
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import i18n, { LANGUAGE_STORAGE_KEY } from "@/i18n";
+import { isRetryableGetError } from "@/utils/networkError.js";
+
+const GET_RETRY_MAX = 2;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -83,6 +87,21 @@ axiosInstance.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
+
+    const method = (originalRequest.method || "get").toLowerCase();
+    const retryCount = originalRequest.__getRetryCount || 0;
+    if (
+      method === "get" &&
+      retryCount < GET_RETRY_MAX &&
+      isRetryableGetError(error) &&
+      !originalRequest.url?.includes("/auth/refresh-token")
+    ) {
+      originalRequest.__getRetryCount = retryCount + 1;
+      await sleep(400 * originalRequest.__getRetryCount);
+      return axiosInstance(originalRequest);
+    }
+
     const status = error.response?.status;
 
     // Bỏ qua logic refresh token nếu request là /auth/refresh-token

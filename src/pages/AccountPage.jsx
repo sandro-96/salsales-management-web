@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { getCurrentUser, updateProfile, changePassword } from "../api/userApi";
+import {
+  getCurrentUser,
+  updateProfile,
+  changePassword,
+  buildUpdateProfileFormData,
+} from "../api/userApi";
+import { resolveApiError } from "../utils/apiMessage.js";
 import { useAuth } from "../hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -153,17 +159,16 @@ const AccountPage = () => {
   const onProfileSubmit = async (data) => {
     try {
       setIsSubmitting(true);
-      const formData = new FormData();
       const userData = { ...data };
       if (userData.gender === "") delete userData.gender;
+      if (!String(userData.phone ?? "").trim()) {
+        delete userData.phone;
+        delete userData.countryCode;
+      }
       if (userData.birthDate instanceof Date) {
         userData.birthDate = userData.birthDate.toISOString().split("T")[0];
       }
-      formData.append(
-        "user",
-        new Blob([JSON.stringify(userData)], { type: "application/json" }),
-      );
-      if (avatarFile) formData.append("file", avatarFile);
+      const formData = buildUpdateProfileFormData(userData, avatarFile);
 
       await updateProfile(formData);
       toast.success(t("pages.accounts.toast.updateSuccess"));
@@ -172,9 +177,7 @@ const AccountPage = () => {
       loadUser();
     } catch (err) {
       const msg =
-        err.response?.data?.code === "INVALID_PHONE_NUMBER"
-          ? t("pages.accounts.toast.phoneInvalid")
-          : err.response?.data?.message || t("pages.accounts.toast.updateFail");
+        resolveApiError(t, err) || t("pages.accounts.toast.updateFail");
       toast.error(msg);
     } finally {
       setIsSubmitting(false);

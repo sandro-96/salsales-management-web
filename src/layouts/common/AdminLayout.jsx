@@ -24,6 +24,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/common/NotificationBell";
 import ImpersonationBanner from "@/components/common/ImpersonationBanner";
@@ -182,6 +183,7 @@ function useAdminSupportBadge() {
 }
 
 const AdminLayout = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { count: supportBadge } = useAdminSupportBadge();
@@ -204,8 +206,8 @@ const AdminLayout = () => {
         {/* Sidebar */}
         <aside className="hidden md:flex w-60 shrink-0 border-r bg-background flex-col overflow-hidden">
           <div className="h-14 flex items-center px-5 border-b">
-            <span className="coiny-regular text-2xl tracking-tight">
-              SỔ THU CHI
+            <span className="coiny-regular text-2xl uppercase tracking-tight">
+              {t("brand.appName")}
             </span>
           </div>
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -254,7 +256,9 @@ const AdminLayout = () => {
               <SheetContent side="left" className="p-0 gap-0">
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="h-14 flex items-center px-5 border-b shrink-0">
-                    <span className="text-2xl coiny-regular">SỔ THU CHI</span>
+                    <span className="text-2xl coiny-regular uppercase">
+                      {t("brand.appName")}
+                    </span>
                   </div>
 
                   <nav className="flex-1 min-h-0 p-3 space-y-1 overflow-y-auto">

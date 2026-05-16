@@ -13,6 +13,7 @@ import Loading from "./components/loading/Loading.jsx";
 import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
 import BranchFormModal from "./pages/branchs/BranchFormModal.jsx";
 import { Toaster } from "@/components/ui/sonner";
+import NetworkStatusBanner from "@/components/common/NetworkStatusBanner.jsx";
 
 function renderRoute(route) {
   let element = (
@@ -96,6 +97,7 @@ function App() {
     <ErrorBoundaryWithNavigate>
       <Suspense fallback={<Loading text={t("common.loadingPage")} fullScreen />}>
         <Toaster />
+        <NetworkStatusBanner />
         <Routes location={state?.background || location}>
           {routeConfig.map(renderRoute)}
         </Routes>

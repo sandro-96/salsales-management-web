@@ -36,6 +36,8 @@ import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { useBranchChannel } from "../../hooks/useBranchChannel.js";
 import { useShopChannel } from "../../hooks/useShopChannel.js";
+import { useWebSocket } from "../../hooks/useWebSocket.js";
+import { useRealtimePollFallback } from "../../hooks/useRealtimePollFallback.js";
 import { WebSocketMessageTypes } from "../../constants/websocket.js";
 import { PERM } from "../../constants/shopPermissions.js";
 import { SHOP_INDUSTRY } from "../../constants/ShopIndustry.js";
@@ -1146,9 +1148,11 @@ const OrderListPage = () => {
   );
 
   // ── Fetch ────────────────────────────────────────────────────────────────
-  const fetchOrders = useCallback(async () => {
+  const { connected: wsConnected } = useWebSocket();
+
+  const fetchOrders = useCallback(async ({ silent = false } = {}) => {
     if (!selectedShopId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const params = {
         page: pagination.pageIndex,
@@ -1172,15 +1176,21 @@ const OrderListPage = () => {
         setTotalCount(list.length);
       }
     } catch {
-      toast.error(t("pages.orders.list.fetchError"));
+      if (!silent) toast.error(t("pages.orders.list.fetchError"));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [selectedShopId, effectiveBranchId, pagination, statusFilter, t]);
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  useRealtimePollFallback({
+    enabled: !!selectedShopId,
+    connected: wsConnected,
+    onPoll: () => fetchOrders({ silent: true }),
+  });
 
   // ── Realtime: subscribe kênh order của shop+branch đang chọn ─────────────
   const onRealtimeOrder = useCallback(

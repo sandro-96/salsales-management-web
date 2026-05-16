@@ -52,6 +52,7 @@ export function CartPanel({
   clearCart,
   onCheckout,
   checkoutDisabled,
+  checkoutDisabledHint,
   hideHeader,
   selectedCustomer,
   onCustomerSearch,
@@ -565,7 +566,7 @@ export function CartPanel({
       />
     </div>
 
-    <div className="p-3 border-t space-y-2">
+    <div className="p-3 border-t space-y-2 bg-muted/20 sticky bottom-0 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.25)]">
       {totalSavings > 0 && (
         <div className="flex justify-between items-center text-xs">
           <span className="text-emerald-600 flex items-center gap-1">
@@ -618,14 +619,21 @@ export function CartPanel({
         </Button> */}
       </div>
       {canPay ? (
-        <Button
-          className="w-full h-11 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-200 disabled:text-emerald-900 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:disabled:bg-emerald-500/30 dark:disabled:text-emerald-100"
-          disabled={checkoutDisabled ?? cart.length === 0}
-          onClick={onCheckout}
-        >
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          {t("pages.pos.cart.checkoutWithCount", { count: totalItems })}
-        </Button>
+        <>
+          {checkoutDisabled && checkoutDisabledHint ? (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400 text-center px-1 leading-snug">
+              {checkoutDisabledHint}
+            </p>
+          ) : null}
+          <Button
+            className="w-full h-11 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-200 disabled:text-emerald-900 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:disabled:bg-emerald-500/30 dark:disabled:text-emerald-100"
+            disabled={checkoutDisabled ?? cart.length === 0}
+            onClick={onCheckout}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            {t("pages.pos.cart.checkoutWithCount", { count: totalItems })}
+          </Button>
+        </>
       ) : (
         <p className="text-[11px] text-muted-foreground text-center px-2">
           <Trans

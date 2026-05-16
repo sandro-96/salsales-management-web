@@ -25,16 +25,35 @@
     "goHome": "Go home"
   },
   "brand": {
-    "appName": "SALES BOOK"
+    "appName": "Sổ thu chi",
+    "heroEyebrow": "Shop management system"
   },
   "app": {
-    "documentTitleSuffix": "Sales System"
+    "documentTitleSuffix": "Sổ thu chi"
   },
   "language": {
     "label": "Language",
     "vi": "Vietnamese",
     "en": "English",
     "switch": "Switch language"
+  },
+  "network": {
+    "offline": "No internet connection — some actions are temporarily disabled.",
+    "apiUnreachable": "Cannot reach the server — will retry when the network is back.",
+    "slow": "Slow connection — actions may take longer.",
+    "realtimePaused": "Live updates paused — refreshing periodically.",
+    "retry": "Retry",
+    "errors": {
+      "offline": "No internet connection.",
+      "timeout": "The server took too long to respond. Please try again.",
+      "network": "Cannot reach the server. Check your connection and try again.",
+      "server": "Server error. Please try again later.",
+      "client": "Invalid request.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "pos": {
+      "offlineAction": "You are offline — cannot sync orders to the server. Keep the cart on this device and try again when online."
+    }
   },
   "theme": {
     "toggle": "Toggle light/dark mode",
@@ -173,6 +192,52 @@
     }
   },
   "auth": {
+    "layout": {
+      "tagline": "Clear books, smooth checkout — built for your shop.",
+      "servicesTitle": "Platform services",
+      "services": {
+        "pos": {
+          "title": "POS checkout",
+          "desc": "Counter, tables & payment"
+        },
+        "orders": {
+          "title": "Orders",
+          "desc": "Track & reprint receipts"
+        },
+        "products": {
+          "title": "Products",
+          "desc": "Prices, variants & toppings"
+        },
+        "inventory": {
+          "title": "Inventory",
+          "desc": "Stock in/out & alerts"
+        },
+        "customers": {
+          "title": "Customers",
+          "desc": "CRM & loyalty points"
+        },
+        "reports": {
+          "title": "Reports",
+          "desc": "Revenue & cash flow"
+        },
+        "branches": {
+          "title": "Branches",
+          "desc": "Multi-location"
+        },
+        "promotions": {
+          "title": "Promotions",
+          "desc": "Discounts & campaigns"
+        }
+      },
+      "industriesTitle": "Works for many industries",
+      "industries": {
+        "fnb": "F&B",
+        "retail": "Retail",
+        "healthcare": "Pharmacy",
+        "service": "Services",
+        "education": "Education"
+      }
+    },
     "login": {
       "title": "Sign in to your account",
       "noAccount": "Not having an account?",
@@ -193,6 +258,11 @@
       "googleCancelled": "You cancelled Google sign in.",
       "googleInvalid": "Google sign in session is invalid. Please try again.",
       "googleErrorGeneric": "Google sign in failed ({{code}})."
+    },
+    "google": {
+      "signInWith": "Sign in with Google",
+      "signUpWith": "Sign up with Google",
+      "missingClientId": "Google Client ID is not configured. Please check your environment settings."
     },
     "register": {
       "title": "Create your account",

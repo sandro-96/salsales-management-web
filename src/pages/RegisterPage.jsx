@@ -4,8 +4,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { WebSocketMessageTypes } from "../constants/websocket";
-import LoadingOverlay from "../components/loading/LoadingOverlay.jsx";
-import LanguageSwitcher from "../components/common/LanguageSwitcher.jsx";
+import AuthPageLayout, {
+  authInputClass,
+  authPrimaryButtonClass,
+} from "../components/auth/AuthPageLayout.jsx";
+import { cn } from "@/lib/utils";
 
 const RegisterPage = () => {
   const { t } = useTranslation();
@@ -153,134 +156,177 @@ const RegisterPage = () => {
     };
   }, [connected, form.email, navigate, subscribe, t]);
 
-  const inputClass =
-    "w-full p-2 text-sm border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const firstError = Object.values(errors).find(Boolean);
 
   return (
-    <div className="min-h-screen flex justify-center p-6 bg-background text-foreground">
-      <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
-        <LanguageSwitcher />
-      </div>
-      {loading && <LoadingOverlay text={t("auth.login.processing")} />}
-      <form
-        onSubmit={handleSubmit}
-        className="grid w-full max-w-sm grid-cols-1 gap-4"
-      >
-        <h1 className="text-3xl coiny-regular text-blue-900 dark:text-blue-300">
-          {t("brand.appName")}
-        </h1>
-        <h2 className="text-xl font-bold text-foreground">
+    <AuthPageLayout
+      loading={loading}
+      loadingText={t("auth.login.processing")}
+      tagline={t("auth.layout.tagline")}
+    >
+      <header className="mb-6 space-y-2">
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">
           {t("auth.register.title")}
         </h2>
-        {success && (
-          <p className="text-green-600 dark:text-green-400 text-sm">
-            {success}
-          </p>
-        )}
-        {errors && (
-          <p className="text-red-500 dark:text-red-400 text-sm">
-            {Object.values(errors).find((msg) => msg)}
-          </p>
-        )}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground">
-            {t("auth.register.email")}
-          </label>
-          <input
-            type="email"
-            name="email"
-            className={inputClass}
-            value={form.email}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">
-              {t("auth.register.firstName")}
-            </label>
-            <input
-              type="text"
-              name="firstName"
-              className={inputClass}
-              value={form.firstName}
-              onChange={handleChange}
-              maxLength={50}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">
-              {t("auth.register.lastName")}
-            </label>
-            <input
-              type="text"
-              name="lastName"
-              className={inputClass}
-              value={form.lastName}
-              onChange={handleChange}
-              maxLength={50}
-              required
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground">
-            {t("auth.register.middleName")}
-          </label>
-          <input
-            type="text"
-            name="middleName"
-            className={inputClass}
-            value={form.middleName}
-            maxLength={50}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground">
-            {t("auth.register.password")}
-          </label>
-          <input
-            type="password"
-            name="password"
-            className={inputClass}
-            value={form.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground">
-            {t("auth.register.confirmPassword")}
-          </label>
-          <input
-            type="password"
-            name="confirmPassword"
-            className={inputClass}
-            value={form.confirmPassword}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 font-medium dark:bg-blue-600 dark:hover:bg-blue-500"
-        >
-          {t("auth.register.submit")}
-        </button>
-        <p className="text-sm text-center text-muted-foreground mt-3">
+        <p className="text-sm text-muted-foreground">
           {t("auth.register.alreadyHave")}{" "}
           <Link
             to="/login"
-            className="text-blue-600 font-bold hover:underline dark:text-blue-400"
+            className="font-semibold text-blue-600 hover:underline dark:text-blue-400"
           >
             {t("auth.register.signIn")}
           </Link>
         </p>
+      </header>
+
+      {success ? (
+        <p
+          className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+          role="status"
+        >
+          {success}
+        </p>
+      ) : null}
+
+      {firstError && !success ? (
+        <p
+          className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {firstError}
+        </p>
+      ) : null}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="space-y-2">
+          <label htmlFor="reg-email" className="text-sm font-medium">
+            {t("auth.register.email")}
+          </label>
+          <input
+            id="reg-email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            className={cn(authInputClass, errors.email && "border-destructive")}
+            value={form.email}
+            onChange={handleChange}
+            disabled={loading}
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label htmlFor="reg-first" className="text-sm font-medium">
+              {t("auth.register.firstName")}
+            </label>
+            <input
+              id="reg-first"
+              type="text"
+              name="firstName"
+              autoComplete="given-name"
+              className={cn(
+                authInputClass,
+                errors.firstName && "border-destructive",
+              )}
+              value={form.firstName}
+              onChange={handleChange}
+              maxLength={50}
+              disabled={loading}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="reg-last" className="text-sm font-medium">
+              {t("auth.register.lastName")}
+            </label>
+            <input
+              id="reg-last"
+              type="text"
+              name="lastName"
+              autoComplete="family-name"
+              className={cn(
+                authInputClass,
+                errors.lastName && "border-destructive",
+              )}
+              value={form.lastName}
+              onChange={handleChange}
+              maxLength={50}
+              disabled={loading}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="reg-middle" className="text-sm font-medium">
+            {t("auth.register.middleName")}
+          </label>
+          <input
+            id="reg-middle"
+            type="text"
+            name="middleName"
+            autoComplete="additional-name"
+            className={cn(
+              authInputClass,
+              errors.middleName && "border-destructive",
+            )}
+            value={form.middleName}
+            maxLength={50}
+            onChange={handleChange}
+            disabled={loading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="reg-password" className="text-sm font-medium">
+            {t("auth.register.password")}
+          </label>
+          <input
+            id="reg-password"
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            className={cn(
+              authInputClass,
+              errors.password && "border-destructive",
+            )}
+            value={form.password}
+            onChange={handleChange}
+            disabled={loading}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="reg-confirm" className="text-sm font-medium">
+            {t("auth.register.confirmPassword")}
+          </label>
+          <input
+            id="reg-confirm"
+            type="password"
+            name="confirmPassword"
+            autoComplete="new-password"
+            className={cn(
+              authInputClass,
+              errors.confirmPassword && "border-destructive",
+            )}
+            value={form.confirmPassword}
+            onChange={handleChange}
+            disabled={loading}
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={cn(authPrimaryButtonClass, "mt-2")}
+        >
+          {t("auth.register.submit")}
+        </button>
       </form>
-    </div>
+    </AuthPageLayout>
   );
 };
 

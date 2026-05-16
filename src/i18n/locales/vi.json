@@ -25,16 +25,35 @@
     "goHome": "Về trang chủ"
   },
   "brand": {
-    "appName": "SỔ THU CHI"
+    "appName": "Sổ thu chi",
+    "heroEyebrow": "Phần mềm quản lý bán hàng"
   },
   "app": {
-    "documentTitleSuffix": "Sales System"
+    "documentTitleSuffix": "Sổ thu chi"
   },
   "language": {
     "label": "Ngôn ngữ",
     "vi": "Tiếng Việt",
     "en": "Tiếng Anh",
     "switch": "Đổi ngôn ngữ"
+  },
+  "network": {
+    "offline": "Không có kết nối internet — một số thao tác tạm khóa.",
+    "apiUnreachable": "Không kết nối được máy chủ — đang thử lại khi có mạng.",
+    "slow": "Mạng chậm — thao tác có thể mất thêm thời gian.",
+    "realtimePaused": "Cập nhật tức thì tạm ngắt — đang làm mới định kỳ.",
+    "retry": "Thử lại",
+    "errors": {
+      "offline": "Không có kết nối internet.",
+      "timeout": "Máy chủ phản hồi quá chậm. Vui lòng thử lại.",
+      "network": "Không kết nối được máy chủ. Kiểm tra mạng và thử lại.",
+      "server": "Máy chủ đang gặp sự cố. Thử lại sau.",
+      "client": "Yêu cầu không hợp lệ.",
+      "unknown": "Đã xảy ra lỗi. Vui lòng thử lại."
+    },
+    "pos": {
+      "offlineAction": "Mất kết nối — không thể gửi đơn lên server. Giữ giỏ hàng trên máy này và thử lại khi có mạng."
+    }
   },
   "theme": {
     "toggle": "Đổi chế độ sáng/tối",
@@ -173,6 +192,52 @@
     }
   },
   "auth": {
+    "layout": {
+      "tagline": "Ghi chép thu chi rõ ràng, bán hàng mượt mà — dành cho cửa hàng Việt.",
+      "servicesTitle": "Dịch vụ trong hệ thống",
+      "services": {
+        "pos": {
+          "title": "POS bán hàng",
+          "desc": "Quầy, bàn, thanh toán"
+        },
+        "orders": {
+          "title": "Đơn hàng",
+          "desc": "Theo dõi & in lại bill"
+        },
+        "products": {
+          "title": "Sản phẩm",
+          "desc": "Giá, biến thể, topping"
+        },
+        "inventory": {
+          "title": "Tồn kho",
+          "desc": "Nhập xuất, cảnh báo"
+        },
+        "customers": {
+          "title": "Khách hàng",
+          "desc": "CRM & tích điểm"
+        },
+        "reports": {
+          "title": "Báo cáo",
+          "desc": "Doanh thu, thu chi"
+        },
+        "branches": {
+          "title": "Chi nhánh",
+          "desc": "Đa điểm bán"
+        },
+        "promotions": {
+          "title": "Khuyến mãi",
+          "desc": "Giảm giá, ưu đãi"
+        }
+      },
+      "industriesTitle": "Phù hợp nhiều ngành",
+      "industries": {
+        "fnb": "F&B",
+        "retail": "Bán lẻ",
+        "healthcare": "Dược",
+        "service": "Dịch vụ",
+        "education": "Giáo dục"
+      }
+    },
     "login": {
       "title": "Đăng nhập vào tài khoản",
       "noAccount": "Bạn chưa có tài khoản?",
@@ -193,6 +258,11 @@
       "googleCancelled": "Bạn đã hủy đăng nhập Google.",
       "googleInvalid": "Phiên đăng nhập Google không hợp lệ. Vui lòng thử lại.",
       "googleErrorGeneric": "Đăng nhập Google thất bại ({{code}})."
+    },
+    "google": {
+      "signInWith": "Đăng nhập với Google",
+      "signUpWith": "Đăng ký với Google",
+      "missingClientId": "Không tìm thấy Google Client ID. Vui lòng kiểm tra cấu hình môi trường."
     },
     "register": {
       "title": "Tạo tài khoản",

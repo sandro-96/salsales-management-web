@@ -9,6 +9,7 @@ import "./i18n";
 import AuthProvider from "./contexts/AuthProvider.jsx";
 import ShopProvider from "./contexts/ShopProvider.jsx";
 import WebSocketProvider from "./contexts/WebSocketProvider.jsx";
+import NetworkProvider from "./contexts/NetworkProvider.jsx";
 import AlertDialogProvider from "./contexts/AlertDialogProvider";
 import { ThemeProvider } from "./components/theme-provider.jsx";
 
@@ -18,11 +19,13 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <ThemeProvider>
         <AuthProvider>
           <ShopProvider>
+            <NetworkProvider>
             <WebSocketProvider>
               <AlertDialogProvider>
                 <App />
               </AlertDialogProvider>
             </WebSocketProvider>
+            </NetworkProvider>
           </ShopProvider>
         </AuthProvider>
       </ThemeProvider>

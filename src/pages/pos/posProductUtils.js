@@ -1,3 +1,15 @@
+/** Hết tồn (không thêm được) — dùng hiển thị trên lưới POS. */
+export function isProductOutOfStock(product) {
+  if (!product || product.trackInventory === false) return false;
+  if (product.sellByWeight) {
+    return (product.stockInBaseUnits ?? 0) <= 0;
+  }
+  if (hasBranchVariants(product)) {
+    return (product.branchVariants ?? []).every((v) => (v.quantity ?? 0) < 1);
+  }
+  return (product.quantity ?? 0) < 1;
+}
+
 export function hasBranchVariants(product) {
   return (
     Array.isArray(product?.branchVariants) && product.branchVariants.length > 0

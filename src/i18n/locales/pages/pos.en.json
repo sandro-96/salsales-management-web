@@ -5,10 +5,16 @@
     "transfer": "Bank transfer",
     "shipCod": "Ship COD"
   },
+  "chrome": {
+    "dashboard": "Dashboard",
+    "selectBranchPlaceholder": "Select branch",
+    "posMode": "Point of sale"
+  },
   "branchPrompt": {
     "title": "Please select a branch",
-    "subtitle": "Choose a branch from the header to start selling.",
-    "selectPlaceholder": "Select branch"
+    "subtitle": "Choose a branch to start selling at the POS.",
+    "selectPlaceholder": "Select branch",
+    "noBranches": "No branches yet. Add a branch in shop settings."
   },
   "tabs": {
     "placedOrderFallback": "Order",
@@ -71,6 +77,10 @@
     "productCount": "{{count}} products",
     "promoBadgeShort": "{{count}} promos",
     "noProductsFound": "No products found",
+    "noProductsFoundHint": "Try another category or search term",
+    "outOfStock": "Out of stock",
+    "hasVariants": "Variants",
+    "focusSearchHint": "Press / to search",
     "stockRemaining": "Left: {{amount}} {{unit}}",
     "stockColon": "Stock:",
     "unitG": "g",

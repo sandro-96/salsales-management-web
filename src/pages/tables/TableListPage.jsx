@@ -19,6 +19,8 @@ import { useNavigate } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { useBranchChannel } from "../../hooks/useBranchChannel.js";
+import { useWebSocket } from "../../hooks/useWebSocket.js";
+import { useRealtimePollFallback } from "../../hooks/useRealtimePollFallback.js";
 import { WebSocketMessageTypes } from "../../constants/websocket.js";
 import { PERM } from "../../constants/shopPermissions.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
@@ -434,9 +436,11 @@ const TableListPage = () => {
   const [editingTable, setEditingTable] = useState(null);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
-  const fetchTables = useCallback(async () => {
+  const { connected: wsConnected } = useWebSocket();
+
+  const fetchTables = useCallback(async ({ silent = false } = {}) => {
     if (!selectedShopId || !selectedBranchId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await getTables(selectedShopId, selectedBranchId, {
         size: 200,
@@ -449,15 +453,21 @@ const TableListPage = () => {
         setTables(Array.isArray(data) ? data : []);
       }
     } catch {
-      toast.error(t("pages.tables.toast.fetchFail"));
+      if (!silent) toast.error(t("pages.tables.toast.fetchFail"));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [selectedShopId, selectedBranchId, t]);
 
   useEffect(() => {
     fetchTables();
   }, [fetchTables]);
+
+  useRealtimePollFallback({
+    enabled: !!selectedShopId && !!selectedBranchId,
+    connected: wsConnected,
+    onPoll: () => fetchTables({ silent: true }),
+  });
 
   // ── Realtime: tables channel (đồng bộ trạng thái bàn giữa các tab) ───────
   const onRealtimeTable = useCallback((msg) => {

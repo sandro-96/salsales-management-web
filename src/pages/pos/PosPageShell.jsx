@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import {
   Search,
@@ -9,7 +9,6 @@ import {
   X,
   Receipt,
   Tag,
-  Percent,
   UserRound,
   Star,
   Coins,
@@ -25,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -56,13 +54,11 @@ import { printPosInvoiceReceipt } from "../../components/pos/printPosInvoiceRece
 import { OrderTabBar } from "./OrderTabBar";
 import { CartPanel } from "./CartPanel";
 import { PosTaxBreakdown } from "./PosTaxBreakdown";
+import { PosStatusBanner } from "./PosStatusBanner";
+import { PosProductCard } from "./PosProductCard";
 import { ALL_CATEGORY } from "./posConstants";
 import { getPosPaymentMethods, posNumberLocale } from "../../utils/posHelpers";
-import {
-  formatDiscount,
-  getWinningPromo,
-  calcDiscountedPrice,
-} from "./posPromotionUtils";
+import { formatDiscount } from "./posPromotionUtils";
 import {
   activeToppings,
   hasBranchVariants,
@@ -123,6 +119,7 @@ export function PosPageShell(props) {
 
   const [cartAsideWide, setCartAsideWide] = useState(false);
   const transferProofInputRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   const {
     activePromotions,
@@ -156,6 +153,8 @@ export function PosPageShell(props) {
     openCheckoutInvoicePreview,
     openPosCheckout,
     shopPosWriteBlocked,
+    apiReachable,
+    products,
     openOrderByCode,
     orderLookupInput,
     orderLookupSubmitting,
@@ -216,8 +215,73 @@ export function PosPageShell(props) {
     updateActiveTab,
     variantPickerProduct,
   } = props;
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map();
+    counts.set(ALL_CATEGORY, products.length);
+    for (const p of products) {
+      if (p.category) {
+        counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [products]);
+
+  const selectedTableName =
+    selectedTableId && selectedTableId !== "none"
+      ? tables.find((tbl) => tbl.id === selectedTableId)?.name
+      : null;
+
+  const handleProductClick = useCallback(
+    (product) => {
+      if (hasBranchVariants(product)) {
+        if (product.branchVariants.length === 1) {
+          queueAddProductWithToppings(
+            product,
+            product.branchVariants[0].variantId,
+          );
+        } else {
+          setVariantPickerProduct(product);
+        }
+      } else {
+        queueAddProductWithToppings(product, null);
+      }
+    },
+    [queueAddProductWithToppings, setVariantPickerProduct],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const tag = e.target?.tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        e.target?.isContentEditable
+      ) {
+        return;
+      }
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const renderCategoryLabel = (cat) => {
+    const label =
+      cat === ALL_CATEGORY ? t("pages.pos.cart.allCategories") : cat;
+    const count = categoryCounts.get(cat) ?? 0;
+    return count > 0 ? `${label} (${count})` : label;
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row h-full">
+    <div className="flex flex-col h-full min-h-0">
+      <PosStatusBanner
+        apiReachable={apiReachable}
+        shopPosWriteBlocked={shopPosWriteBlocked}
+      />
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
       {/* Mobile: Category horizontal scroll */}
       <div className="lg:hidden border-b overflow-x-auto">
         <div className="flex items-center gap-1 p-2">
@@ -231,7 +295,7 @@ export function PosPageShell(props) {
                   : "bg-muted hover:bg-muted/80 text-foreground"
               }`}
             >
-              {cat === ALL_CATEGORY ? t("pages.pos.cart.allCategories") : cat}
+              {renderCategoryLabel(cat)}
             </button>
           ))}
         </div>
@@ -256,7 +320,7 @@ export function PosPageShell(props) {
                     : "hover:bg-muted text-foreground"
                 }`}
               >
-                {cat === ALL_CATEGORY ? t("pages.pos.cart.allCategories") : cat}
+                {renderCategoryLabel(cat)}
               </button>
             ))}
           </div>
@@ -291,11 +355,13 @@ export function PosPageShell(props) {
 
       {/* Center: Product grid */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        <div className="p-3 border-b flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="sticky top-0 z-10 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <div className="relative flex-1 max-w-sm min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder={t("pages.pos.cart.searchProductsPlaceholder")}
+              title={t("pages.pos.cart.focusSearchHint")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-9"
@@ -355,7 +421,28 @@ export function PosPageShell(props) {
           )}
         </div>
 
-        <ScrollArea className="flex-1">
+        {(selectedTableName || displayOrderCode || selectedCustomer) && (
+          <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2 shrink-0">
+            {selectedTableName && (
+              <Badge variant="outline" className="text-[10px] font-medium">
+                {t("pages.pos.cart.checkoutTableLine")} {selectedTableName}
+              </Badge>
+            )}
+            {displayOrderCode && (
+              <Badge variant="secondary" className="text-[10px] font-mono">
+                {displayOrderCode}
+              </Badge>
+            )}
+            {selectedCustomer && (
+              <Badge variant="outline" className="text-[10px] gap-1 max-w-[12rem] truncate">
+                <UserRound className="h-3 w-3 shrink-0" />
+                {selectedCustomer.name}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        <ScrollArea className="flex-1 min-h-0">
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 p-3">
               {Array.from({ length: 12 }).map((_, i) => (
@@ -366,128 +453,54 @@ export function PosPageShell(props) {
             <div className="flex items-center justify-center h-64 text-muted-foreground">
               <div className="text-center">
                 <UtensilsCrossed className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">{t("pages.pos.cart.noProductsFound")}</p>
+                <p className="text-sm font-medium">{t("pages.pos.cart.noProductsFound")}</p>
+                <p className="text-xs mt-1 text-muted-foreground/80">{t("pages.pos.cart.noProductsFoundHint")}</p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 p-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 p-3 pb-24 lg:pb-3">
               {filteredProducts.map((product) => {
                 const inCartQty = cart
                   .filter((c) => c.productId === product.productId)
                   .reduce((s, c) => s + c.quantity, 0);
-                const promo = getWinningPromo(
-                  promoMap,
-                  product.productId,
-                  product.price,
-                );
-                const discountedPrice = calcDiscountedPrice(
-                  product.price,
-                  promo,
-                );
-                const hasPromo = promo && discountedPrice < product.price;
-
                 return (
-                  <Card
+                  <PosProductCard
                     key={product.id}
-                    className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all overflow-hidden relative group h-full flex flex-col gap-0 p-0 py-0 shadow-sm"
-                    onClick={() => {
-                      if (hasBranchVariants(product)) {
-                        if (product.branchVariants.length === 1) {
-                          queueAddProductWithToppings(
-                            product,
-                            product.branchVariants[0].variantId,
-                          );
-                        } else {
-                          setVariantPickerProduct(product);
-                        }
-                      } else {
-                        queueAddProductWithToppings(product, null);
-                      }
-                    }}
-                  >
-                    <div className="aspect-square w-full shrink-0 bg-muted/50 relative overflow-hidden">
-                      {product.images?.[0] ? (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <UtensilsCrossed className="h-8 w-8 text-muted-foreground/40" />
-                        </div>
-                      )}
-                      {hasPromo && (
-                        <Badge className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 gap-0.5">
-                          <Percent className="h-2.5 w-2.5" />
-                          {formatDiscount(promo, numberLocale)}
-                        </Badge>
-                      )}
-                      {inCartQty > 0 && (
-                        <Badge className="absolute top-1.5 right-1.5 h-6 min-w-6 justify-center text-xs">
-                          {inCartQty}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1 p-2 pt-2">
-                      <p className="line-clamp-2 min-h-[2.625rem] text-xs font-medium leading-snug text-foreground">
-                        {product.name}
-                      </p>
-                      {hasPromo ? (
-                        <div className="mt-auto flex items-baseline gap-1.5">
-                          <span className="text-sm font-bold text-emerald-600">
-                            {discountedPrice.toLocaleString(numberLocale)} ₫
-                          </span>
-                          <span className="text-[10px] line-through text-muted-foreground">
-                            {product.price.toLocaleString(numberLocale)}₫
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="mt-auto text-sm font-bold text-primary">
-                          {product.price?.toLocaleString(numberLocale)} ₫
-                        </p>
-                      )}
-                      {product.sellByWeight &&
-                        product.trackInventory !== false && (
-                          <p className="text-[10px] text-muted-foreground tabular-nums">
-                            {t("pages.pos.cart.stockRemaining", {
-                              amount: (product.stockInBaseUnits ?? 0).toLocaleString(
-                                numberLocale,
-                              ),
-                              unit: (() => {
-                                const u = String(product.unit || "")
-                                  .trim()
-                                  .toLowerCase();
-                                if (u === "kg" || u === "g")
-                                  return t("pages.pos.cart.unitG");
-                                if (u === "l" || u === "ml")
-                                  return t("pages.pos.cart.unitMl");
-                                return u || "";
-                              })(),
-                            })}
-                          </p>
-                        )}
-                    </div>
-                  </Card>
+                    product={product}
+                    inCartQty={inCartQty}
+                    promoMap={promoMap}
+                    onSelect={handleProductClick}
+                  />
                 );
               })}
             </div>
           )}
         </ScrollArea>
 
-        {/* Mobile: Floating cart button */}
-        <div className="lg:hidden fixed bottom-4 right-4 z-50">
+        {/* Mobile: Floating cart */}
+        <div className="lg:hidden fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
+          {totalItems > 0 && (
+            <div className="rounded-xl border bg-card/95 backdrop-blur px-3 py-1.5 shadow-md text-right">
+              <p className="text-[10px] text-muted-foreground">
+                {t("pages.pos.cart.subtotal")}
+              </p>
+              <p className="text-sm font-bold tabular-nums text-emerald-600">
+                {subtotal.toLocaleString(numberLocale)} ₫
+              </p>
+            </div>
+          )}
           <Button
             size="lg"
-            className="h-14 w-14 rounded-full shadow-lg"
+            className={cn(
+              "relative h-14 min-w-14 rounded-2xl shadow-lg px-4 gap-2",
+              totalItems > 0 && "bg-emerald-600 hover:bg-emerald-700",
+            )}
             onClick={() => setCartOpen(true)}
           >
             <ShoppingCart className="h-5 w-5" />
-            {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
-                {totalItems > 99 ? "99+" : totalItems}
-              </span>
-            )}
+            {totalItems > 0 ? (
+              <span className="text-sm font-bold tabular-nums">{totalItems}</span>
+            ) : null}
             {orderTabs.length > 1 && (
               <span className="absolute -top-1 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                 {orderTabs.length}
@@ -1362,6 +1375,7 @@ export function PosPageShell(props) {
           ) : null}
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }

@@ -5,10 +5,16 @@
     "transfer": "Chuyển khoản",
     "shipCod": "Ship COD"
   },
+  "chrome": {
+    "dashboard": "Tổng quan",
+    "selectBranchPlaceholder": "Chọn chi nhánh",
+    "posMode": "Bán hàng"
+  },
   "branchPrompt": {
     "title": "Vui lòng chọn chi nhánh",
-    "subtitle": "Chọn chi nhánh từ thanh tiêu đề để bắt đầu bán hàng",
-    "selectPlaceholder": "Chọn chi nhánh"
+    "subtitle": "Chọn chi nhánh để bắt đầu bán hàng tại quầy POS.",
+    "selectPlaceholder": "Chọn chi nhánh",
+    "noBranches": "Chưa có chi nhánh nào. Thêm chi nhánh trong cài đặt cửa hàng."
   },
   "tabs": {
     "placedOrderFallback": "Đơn",
@@ -71,6 +77,10 @@
     "productCount": "{{count}} sản phẩm",
     "promoBadgeShort": "{{count}} KM",
     "noProductsFound": "Không tìm thấy sản phẩm",
+    "noProductsFoundHint": "Thử đổi danh mục hoặc từ khóa tìm kiếm",
+    "outOfStock": "Hết hàng",
+    "hasVariants": "Nhiều size",
+    "focusSearchHint": "Nhấn / để tìm nhanh",
     "stockRemaining": "Còn: {{amount}} {{unit}}",
     "stockColon": "Tồn:",
     "unitG": "g",

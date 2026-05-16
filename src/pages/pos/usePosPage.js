@@ -54,6 +54,10 @@ import { buildDraftOrderForInvoice } from "./posInvoiceDraft";
 import { getPaymentMethodLabel, posNumberLocale } from "../../utils/posHelpers";
 import { resolveInvoiceLocale } from "../../utils/invoiceLocale.js";
 import { getInvoiceT } from "../../utils/invoiceI18n.js";
+import { useNetwork } from "../../hooks/useNetwork.js";
+import { useWebSocket } from "../../hooks/useWebSocket.js";
+import { useRealtimePollFallback } from "../../hooks/useRealtimePollFallback.js";
+import { resolveApiError } from "../../utils/apiMessage.js";
 
 function isShopInactiveApiError(err) {
   const c = err?.response?.data?.code;
@@ -70,13 +74,23 @@ export function usePosPage() {
     toast.error(t("pages.pos.toast.shopLocked"));
   }, [t]);
 
-  const toastPosOrderError = useCallback((err, fallback) => {
-    if (isShopInactiveApiError(err)) {
-      toast.error(t("pages.pos.toast.shopLocked"));
-      return;
-    }
-    toast.error(err?.response?.data?.message || fallback);
+  const { apiReachable } = useNetwork();
+  const { connected: wsConnected } = useWebSocket();
+
+  const toastNetworkBlocked = useCallback(() => {
+    toast.error(t("network.pos.offlineAction"));
   }, [t]);
+
+  const toastPosOrderError = useCallback(
+    (err, fallback) => {
+      if (isShopInactiveApiError(err)) {
+        toast.error(t("pages.pos.toast.shopLocked"));
+        return;
+      }
+      toast.error(resolveApiError(t, err) || fallback);
+    },
+    [t],
+  );
   const {
     selectedShopId,
     selectedBranchId,
@@ -115,8 +129,12 @@ export function usePosPage() {
       toastShopLockedPos();
       return;
     }
+    if (!apiReachable) {
+      toastNetworkBlocked();
+      return;
+    }
     setCheckoutOpen(true);
-  }, [shopPosWriteBlocked, toastShopLockedPos]);
+  }, [shopPosWriteBlocked, toastShopLockedPos, apiReachable, toastNetworkBlocked]);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [transferPaymentProofFile, setTransferPaymentProofFile] =
     useState(null);
@@ -395,9 +413,9 @@ export function usePosPage() {
     t,
   ]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async ({ silent = false } = {}) => {
     if (!selectedShopId || !effectiveBranchId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const [prodRes, tableRes, promoRes] = await Promise.all([
         getBranchProducts(selectedShopId, effectiveBranchId, {
@@ -420,15 +438,21 @@ export function usePosPage() {
       setPromotions(promoList);
     } catch (err) {
       console.error("Failed to load POS data", err);
-      toast.error(t("pages.pos.toast.loadProductsFailed"));
+      if (!silent) toast.error(t("pages.pos.toast.loadProductsFailed"));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [selectedShopId, effectiveBranchId, t]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useRealtimePollFallback({
+    enabled: !!selectedShopId && !!effectiveBranchId,
+    connected: wsConnected,
+    onPoll: () => fetchData({ silent: true }),
+  });
 
   const fetchGroups = useCallback(async () => {
     if (!selectedShopId || !effectiveBranchId) return;
@@ -815,6 +839,10 @@ export function usePosPage() {
   const handleHoldOrder = useCallback(async () => {
     if (!selectedShopId || !effectiveBranchId) return;
     if (!Array.isArray(cart) || cart.length === 0) return;
+    if (!apiReachable) {
+      toastNetworkBlocked();
+      return;
+    }
     if (shopPosWriteBlocked) {
       toastShopLockedPos();
       return;
@@ -916,6 +944,8 @@ export function usePosPage() {
     shopPosWriteBlocked,
     toastShopLockedPos,
     toastPosOrderError,
+    toastNetworkBlocked,
+    apiReachable,
     t,
   ]);
 
@@ -1651,6 +1681,10 @@ export function usePosPage() {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+    if (!apiReachable) {
+      toastNetworkBlocked();
+      return;
+    }
     if (shopPosWriteBlocked) {
       toastShopLockedPos();
       return;
@@ -1856,10 +1890,17 @@ export function usePosPage() {
     onHoldOrder: handleHoldOrder,
     holdDisabled:
       shopPosWriteBlocked ||
+      !apiReachable ||
       !effectiveBranchId ||
       cart.length === 0 ||
       submitting,
-    checkoutDisabled: shopPosWriteBlocked || cart.length === 0,
+    checkoutDisabled:
+      shopPosWriteBlocked || !apiReachable || cart.length === 0,
+    checkoutDisabledHint: !apiReachable
+      ? t("network.pos.offlineAction")
+      : shopPosWriteBlocked
+        ? t("pages.pos.toast.shopLocked")
+        : null,
     canMoveTable:
       !shopPosWriteBlocked &&
       !!activeOrderId &&
@@ -2053,6 +2094,7 @@ export function usePosPage() {
     updateQuantity,
     updateWeight,
     variantPickerProduct,
+    apiReachable,
   };
 
 }

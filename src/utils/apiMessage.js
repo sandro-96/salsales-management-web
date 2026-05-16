@@ -1,3 +1,5 @@
+import { classifyNetworkError } from "./networkError.js";
+
 /**
  * Resolve API error/success text: prefer i18n messageKey, fall back to server message.
  * Server message is already localized when Accept-Language is sent.
@@ -13,5 +15,10 @@ export function resolveApiMessage(t, data) {
 }
 
 export function resolveApiError(t, error) {
-  return resolveApiMessage(t, error?.response?.data);
+  const apiMsg = resolveApiMessage(t, error?.response?.data);
+  if (apiMsg) return apiMsg;
+  const kind = classifyNetworkError(error);
+  const key = `network.errors.${kind}`;
+  const localized = t(key, { defaultValue: "" });
+  return localized || error?.message || "";
 }

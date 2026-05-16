@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 /** Mặc định: /login — phải trùng tuyệt đối một mục trong Authorized redirect URIs. */
@@ -104,18 +105,19 @@ const GoogleSignInButton = ({
   text = "signup_with",
   className = "",
 }) => {
+  const { t } = useTranslation();
   const [error, setError] = useState("");
 
   const label =
-    text === "signin_with" ? "Đăng nhập với Google" : "Đăng ký với Google";
+    text === "signin_with"
+      ? t("auth.google.signInWith")
+      : t("auth.google.signUpWith");
 
   const handleClick = () => {
     setError("");
     const clientId = import.meta.env.VITE_APP_GOOGLE_CLIENT_ID;
     if (!clientId) {
-      setError(
-        "Không tìm thấy Google Client ID. Vui lòng kiểm tra cấu hình môi trường.",
-      );
+      setError(t("auth.google.missingClientId"));
       return;
     }
 
@@ -160,6 +162,7 @@ const GoogleSignInButton = ({
       <button
         type="button"
         onClick={handleClick}
+        aria-label={label}
         className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/80 dark:bg-card dark:hover:bg-muted/60"
       >
         <svg

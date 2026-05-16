@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, X } from "lucide-react";
+import { Plus, Receipt, UtensilsCrossed, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 
@@ -34,13 +34,18 @@ export function OrderTabBar({
             key={tab.id}
             type="button"
             onClick={() => onSelect(tab.id)}
-            className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-t-md text-xs font-medium transition-colors shrink-0 ${
+            className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-t-md text-xs font-medium transition-colors shrink-0 max-w-[9rem] ${
               isActive
-                ? "bg-card border border-b-card text-foreground -mb-px z-10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "bg-card border border-b-card text-foreground -mb-px z-10 shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
             }`}
           >
-            <span className="truncate max-w-[80px]">{label}</span>
+            {tableName ? (
+              <UtensilsCrossed className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+            ) : codeLabel ? (
+              <Receipt className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+            ) : null}
+            <span className="truncate min-w-0">{label}</span>
             {itemCount > 0 && (
               <Badge
                 variant={isActive ? "default" : "secondary"}
