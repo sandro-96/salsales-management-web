@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import {
   Search,
   Plus,
@@ -48,13 +49,15 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 import { PosInvoiceReceipt } from "../../components/pos/PosInvoiceReceipt";
 import { printPosInvoiceReceipt } from "../../components/pos/printPosInvoiceReceipt";
 import { OrderTabBar } from "./OrderTabBar";
 import { CartPanel } from "./CartPanel";
 import { PosTaxBreakdown } from "./PosTaxBreakdown";
-import { ALL_CATEGORY, PAYMENT_METHODS } from "./posConstants";
+import { ALL_CATEGORY } from "./posConstants";
+import { getPosPaymentMethods, posNumberLocale } from "../../utils/posHelpers";
 import {
   formatDiscount,
   getWinningPromo,
@@ -67,6 +70,8 @@ import {
 } from "./posProductUtils";
 
 function ToppingPickerBody({ product, onCancel, onConfirm }) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = posNumberLocale(i18n.language);
   const tops = activeToppings(product);
   const [sel, setSel] = React.useState([]);
   const toggle = (id) => {
@@ -77,23 +82,23 @@ function ToppingPickerBody({ product, onCancel, onConfirm }) {
   return (
     <>
       <div className="space-y-2 max-h-72 overflow-y-auto py-1">
-        {tops.map((t) => (
+        {tops.map((top) => (
           <label
-            key={t.toppingId}
+            key={top.toppingId}
             className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-muted transition-colors"
           >
             <span className="flex items-center gap-2 min-w-0">
               <input
                 type="checkbox"
                 className="h-4 w-4 shrink-0 accent-primary"
-                checked={sel.includes(t.toppingId)}
-                onChange={() => toggle(t.toppingId)}
+                checked={sel.includes(top.toppingId)}
+                onChange={() => toggle(top.toppingId)}
               />
-              <span className="font-medium truncate">{t.name}</span>
+              <span className="font-medium truncate">{top.name}</span>
             </span>
             <span className="tabular-nums text-muted-foreground text-xs shrink-0">
               +
-              {Number(t.extraPrice ?? 0).toLocaleString("vi-VN")}
+              {Number(top.extraPrice ?? 0).toLocaleString(numberLocale)}
               ₫
             </span>
           </label>
@@ -101,18 +106,21 @@ function ToppingPickerBody({ product, onCancel, onConfirm }) {
       </div>
       <DialogFooter className="gap-2 sm:gap-0">
         <Button variant="outline" type="button" onClick={onCancel}>
-          Bỏ qua
+          {t("pages.pos.cart.toppingSkip")}
         </Button>
         <Button type="button" onClick={() => onConfirm(sel)}>
-          Thêm vào giỏ
+          {t("pages.pos.cart.toppingAddToCart")}
         </Button>
       </DialogFooter>
     </>
   );
 }
-import { cn } from "@/lib/utils";
 
 export function PosPageShell(props) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = posNumberLocale(i18n.language);
+  const paymentMethods = useMemo(() => getPosPaymentMethods(t), [t]);
+
   const [cartAsideWide, setCartAsideWide] = useState(false);
   const transferProofInputRef = useRef(null);
 
@@ -223,7 +231,7 @@ export function PosPageShell(props) {
                   : "bg-muted hover:bg-muted/80 text-foreground"
               }`}
             >
-              {cat === ALL_CATEGORY ? "Tất cả" : cat}
+              {cat === ALL_CATEGORY ? t("pages.pos.cart.allCategories") : cat}
             </button>
           ))}
         </div>
@@ -233,7 +241,7 @@ export function PosPageShell(props) {
       <aside className="hidden lg:flex w-48 shrink-0 border-r bg-muted/30 flex-col">
         <div className="p-3 border-b">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Danh mục
+            {t("pages.pos.cart.categoriesSidebar")}
           </p>
         </div>
         <ScrollArea className="flex-1">
@@ -248,7 +256,7 @@ export function PosPageShell(props) {
                     : "hover:bg-muted text-foreground"
                 }`}
               >
-                {cat === ALL_CATEGORY ? "Tất cả" : cat}
+                {cat === ALL_CATEGORY ? t("pages.pos.cart.allCategories") : cat}
               </button>
             ))}
           </div>
@@ -257,7 +265,7 @@ export function PosPageShell(props) {
         {activePromotions.length > 0 && (
           <div className="border-t p-3">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Khuyến mãi
+              {t("pages.pos.cart.promotionsSidebar")}
             </p>
             <div className="space-y-1.5">
               {activePromotions.slice(0, 5).map((p) => (
@@ -271,7 +279,7 @@ export function PosPageShell(props) {
                       {p.name}
                     </p>
                     <p className="text-emerald-600 font-semibold">
-                      {formatDiscount(p)}
+                      {formatDiscount(p, numberLocale)}
                     </p>
                   </div>
                 </div>
@@ -287,7 +295,7 @@ export function PosPageShell(props) {
           <div className="relative flex-1 max-w-sm min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm món ăn, SKU, barcode..."
+              placeholder={t("pages.pos.cart.searchProductsPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-9"
@@ -296,7 +304,7 @@ export function PosPageShell(props) {
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-1.5">
               <Input
-                placeholder="Mã đơn (VD: DH-...)"
+                placeholder={t("pages.pos.cart.orderCodePlaceholder")}
                 value={orderLookupInput}
                 onChange={(e) => setOrderLookupInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -318,7 +326,7 @@ export function PosPageShell(props) {
                 {orderLookupSubmitting ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  "Mở đơn"
+                  t("pages.pos.cart.openOrder")
                 )}
               </Button>
             </div>
@@ -333,12 +341,16 @@ export function PosPageShell(props) {
             )}
           </div>
           <Badge variant="secondary" className="shrink-0">
-            {filteredProducts.length} sản phẩm
+            {t("pages.pos.cart.productCount", {
+              count: filteredProducts.length,
+            })}
           </Badge>
           {activePromotions.length > 0 && (
             <Badge className="shrink-0 bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40">
               <Tag className="h-3 w-3" />
-              {activePromotions.length} KM
+              {t("pages.pos.cart.promoBadgeShort", {
+                count: activePromotions.length,
+              })}
             </Badge>
           )}
         </div>
@@ -354,7 +366,7 @@ export function PosPageShell(props) {
             <div className="flex items-center justify-center h-64 text-muted-foreground">
               <div className="text-center">
                 <UtensilsCrossed className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Không tìm thấy sản phẩm</p>
+                <p className="text-sm">{t("pages.pos.cart.noProductsFound")}</p>
               </div>
             </div>
           ) : (
@@ -408,7 +420,7 @@ export function PosPageShell(props) {
                       {hasPromo && (
                         <Badge className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 gap-0.5">
                           <Percent className="h-2.5 w-2.5" />
-                          {formatDiscount(promo)}
+                          {formatDiscount(promo, numberLocale)}
                         </Badge>
                       )}
                       {inCartQty > 0 && (
@@ -424,32 +436,35 @@ export function PosPageShell(props) {
                       {hasPromo ? (
                         <div className="mt-auto flex items-baseline gap-1.5">
                           <span className="text-sm font-bold text-emerald-600">
-                            {discountedPrice.toLocaleString("vi-VN")} ₫
+                            {discountedPrice.toLocaleString(numberLocale)} ₫
                           </span>
                           <span className="text-[10px] line-through text-muted-foreground">
-                            {product.price.toLocaleString("vi-VN")}₫
+                            {product.price.toLocaleString(numberLocale)}₫
                           </span>
                         </div>
                       ) : (
                         <p className="mt-auto text-sm font-bold text-primary">
-                          {product.price?.toLocaleString("vi-VN")} ₫
+                          {product.price?.toLocaleString(numberLocale)} ₫
                         </p>
                       )}
                       {product.sellByWeight &&
                         product.trackInventory !== false && (
                           <p className="text-[10px] text-muted-foreground tabular-nums">
-                            Còn:{" "}
-                            {(product.stockInBaseUnits ?? 0).toLocaleString(
-                              "vi-VN",
-                            )}{" "}
-                            {(() => {
-                              const u = String(product.unit || "")
-                                .trim()
-                                .toLowerCase();
-                              if (u === "kg" || u === "g") return "g";
-                              if (u === "l" || u === "ml") return "ml";
-                              return u || "";
-                            })()}
+                            {t("pages.pos.cart.stockRemaining", {
+                              amount: (product.stockInBaseUnits ?? 0).toLocaleString(
+                                numberLocale,
+                              ),
+                              unit: (() => {
+                                const u = String(product.unit || "")
+                                  .trim()
+                                  .toLowerCase();
+                                if (u === "kg" || u === "g")
+                                  return t("pages.pos.cart.unitG");
+                                if (u === "l" || u === "ml")
+                                  return t("pages.pos.cart.unitMl");
+                                return u || "";
+                              })(),
+                            })}
                           </p>
                         )}
                     </div>
@@ -497,7 +512,11 @@ export function PosPageShell(props) {
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title={cartAsideWide ? "Thu gọn giỏ hàng" : "Mở rộng giỏ hàng"}
+            title={
+              cartAsideWide
+                ? t("pages.pos.cart.narrowCartTitle")
+                : t("pages.pos.cart.wideCartTitle")
+            }
             onClick={() => setCartAsideWide((w) => !w)}
           >
             <ChevronsLeftRight className="h-4 w-4" />
@@ -519,7 +538,7 @@ export function PosPageShell(props) {
           <SheetHeader className="px-4 py-3 border-b">
             <SheetTitle className="flex items-center gap-2 text-sm">
               <ShoppingCart className="h-4 w-4" />
-              Đơn hàng
+              {t("pages.pos.cart.mobileSheetTitle")}
               {totalItems > 0 && (
                 <Badge variant="secondary" className="text-xs">
                   {totalItems}
@@ -547,10 +566,10 @@ export function PosPageShell(props) {
               <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                 <CheckCircle2 className="h-5 w-5" />
               </span>
-              Tạo đơn thành công
+              {t("pages.pos.cart.holdSuccessTitle")}
             </DialogTitle>
             <DialogDescription>
-              {holdSuccessMessage || "Đã tạo đơn thành công."}
+              {holdSuccessMessage || t("pages.pos.cart.holdSuccessDefault")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
@@ -559,7 +578,7 @@ export function PosPageShell(props) {
               variant="outline"
               onClick={() => setHoldSuccessOpen(false)}
             >
-              Tiếp tục bán hàng
+              {t("pages.pos.cart.continueSelling")}
             </Button>
             <Button
               type="button"
@@ -579,7 +598,7 @@ export function PosPageShell(props) {
                 setHoldSuccessOpen(false);
               }}
             >
-              Tạo đơn mới
+              {t("pages.pos.cart.newOrder")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -589,26 +608,32 @@ export function PosPageShell(props) {
       <Dialog open={moveTableOpen} onOpenChange={setMoveTableOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Đổi bàn</DialogTitle>
+            <DialogTitle>{t("pages.pos.cart.moveTableTitle")}</DialogTitle>
             <DialogDescription>
-              Chọn bàn đích để chuyển đơn hiện tại sang bàn khác.
+              {t("pages.pos.cart.moveTableDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label className="text-xs">Bàn đích *</Label>
+            <Label className="text-xs">{t("pages.pos.cart.destTableLabel")}</Label>
             <Select value={moveToTableId} onValueChange={setMoveToTableId}>
               <SelectTrigger className="h-9">
-                <SelectValue placeholder="Chọn bàn" />
+                <SelectValue placeholder={t("pages.pos.cart.selectTable")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Chọn bàn</SelectItem>
+                <SelectItem value="none">{t("pages.pos.cart.selectTable")}</SelectItem>
                 {tables
                   .filter(
-                    (t) => t.status === "AVAILABLE" && t.id !== selectedTableId,
+                    (tbl) =>
+                      tbl.status === "AVAILABLE" && tbl.id !== selectedTableId,
                   )
-                  .map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+                  .map((tbl) => (
+                    <SelectItem key={tbl.id} value={tbl.id}>
+                      {tbl.name}{" "}
+                      {tbl.capacity
+                        ? t("pages.pos.cart.capacitySeats", {
+                            count: tbl.capacity,
+                          })
+                        : ""}
                     </SelectItem>
                   ))}
               </SelectContent>
@@ -623,14 +648,14 @@ export function PosPageShell(props) {
                 setMoveToTableId("none");
               }}
             >
-              Hủy
+              {t("pages.pos.cart.cancel")}
             </Button>
             <Button
               type="button"
               onClick={handleConfirmMoveTable}
               disabled={!moveToTableId || moveToTableId === "none"}
             >
-              Xác nhận
+              {t("pages.pos.cart.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -642,7 +667,7 @@ export function PosPageShell(props) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5" />
-              Xác nhận thanh toán
+              {t("pages.pos.cart.checkoutConfirmTitle")}
             </DialogTitle>
           </DialogHeader>
 
@@ -670,13 +695,13 @@ export function PosPageShell(props) {
                     {item.hasDiscount && (
                       <span className="text-xs line-through text-muted-foreground mr-1.5">
                         {(item.originalPrice * item.quantity).toLocaleString(
-                          "vi-VN",
+                          numberLocale,
                         )}
                         ₫
                       </span>
                     )}
                     <span className="font-medium tabular-nums">
-                      {(item.price * item.quantity).toLocaleString("vi-VN")} ₫
+                      {(item.price * item.quantity).toLocaleString(numberLocale)} ₫
                     </span>
                   </div>
                 </div>
@@ -686,26 +711,31 @@ export function PosPageShell(props) {
             {totalSavings > 0 && (
               <div className="flex justify-between items-center px-1 text-sm">
                 <span className="text-emerald-600 flex items-center gap-1">
-                  <Tag className="h-3.5 w-3.5" /> Tổng tiết kiệm
+                  <Tag className="h-3.5 w-3.5" />{" "}
+                  {t("pages.pos.cart.checkoutTotalSavings")}
                 </span>
                 <span className="text-emerald-600 font-semibold tabular-nums">
-                  -{totalSavings.toLocaleString("vi-VN")} ₫
+                  -{totalSavings.toLocaleString(numberLocale)} ₫
                 </span>
               </div>
             )}
 
             <div className="flex justify-between items-center px-1">
-              <span className="text-sm text-muted-foreground">Tạm tính</span>
+              <span className="text-sm text-muted-foreground">
+                {t("pages.pos.cart.subtotal")}
+              </span>
               <span className="text-sm font-semibold tabular-nums">
-                {subtotal.toLocaleString("vi-VN")} ₫
+                {subtotal.toLocaleString(numberLocale)} ₫
               </span>
             </div>
 
             {pointsToRedeem > 0 && (
               <div className="flex justify-between items-center px-1 text-sm">
-                <span className="text-muted-foreground">Giảm điểm</span>
+                <span className="text-muted-foreground">
+                  {t("pages.pos.cart.pointsDiscount")}
+                </span>
                 <span className="text-emerald-600 font-semibold tabular-nums">
-                  -{(pointsToRedeem * 1000).toLocaleString("vi-VN")} ₫
+                  -{(pointsToRedeem * 1000).toLocaleString(numberLocale)} ₫
                 </span>
               </div>
             )}
@@ -717,9 +747,11 @@ export function PosPageShell(props) {
               />
               {!taxPreviewLoading && !taxPreview && totalAfterPoints > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">Tổng cộng</span>
+                  <span className="font-semibold">
+                    {t("pages.pos.cart.checkoutGrandTotal")}
+                  </span>
                   <span className="text-xl font-bold text-primary tabular-nums">
-                    {totalAfterPoints.toLocaleString("vi-VN")} ₫
+                    {totalAfterPoints.toLocaleString(numberLocale)} ₫
                   </span>
                 </div>
               )}
@@ -727,8 +759,8 @@ export function PosPageShell(props) {
 
             {selectedTableId && selectedTableId !== "none" && (
               <div className="text-sm text-muted-foreground px-1">
-                Bàn:{" "}
-                {tables.find((t) => t.id === selectedTableId)?.name ||
+                {t("pages.pos.cart.checkoutTableLine")}{" "}
+                {tables.find((tbl) => tbl.id === selectedTableId)?.name ||
                   selectedTableId}
               </div>
             )}
@@ -745,17 +777,17 @@ export function PosPageShell(props) {
                   <span className="flex items-center gap-1 text-xs text-yellow-600">
                     <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
                     {(selectedCustomer.loyaltyPoints ?? 0).toLocaleString(
-                      "vi-VN",
+                      numberLocale,
                     )}{" "}
-                    điểm
+                    {t("pages.pos.receipt.pointsSuffix")}
                   </span>
                 </div>
                 {(selectedCustomer.loyaltyPoints ?? 0) > 0 && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1 text-muted-foreground">
-                        <Coins className="h-3 w-3" /> Dùng điểm (1 điểm =
-                        1.000₫)
+                        <Coins className="h-3 w-3" />{" "}
+                        {t("pages.pos.cart.checkoutPointsHint")}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -785,11 +817,11 @@ export function PosPageShell(props) {
                           setPointsToRedeem(selectedCustomer.loyaltyPoints)
                         }
                       >
-                        Dùng hết
+                        {t("pages.pos.cart.checkoutUseAllPoints")}
                       </Button>
                       {pointsToRedeem > 0 && (
                         <span className="text-xs text-emerald-600 font-medium shrink-0">
-                          -{(pointsToRedeem * 1000).toLocaleString("vi-VN")}₫
+                          -{(pointsToRedeem * 1000).toLocaleString(numberLocale)}₫
                         </span>
                       )}
                     </div>
@@ -799,16 +831,19 @@ export function PosPageShell(props) {
             )}
 
             <div className="space-y-2">
-              <p className="text-sm font-medium">Phương thức thanh toán</p>
+              <p className="text-sm font-medium">
+                {t("pages.pos.cart.checkoutPaymentMethods")}
+              </p>
               {paymentMethod === "ShipCOD" && (
                 <p className="text-xs text-amber-700 dark:text-amber-500">
-                  Ship COD: đơn được tạo ở trạng thái chờ thu tiền khi giao. Sau
-                  khi thu, vào <span className="font-medium">Đơn hàng</span> →
-                  Thanh toán để cập nhật.
+                  <Trans
+                    i18nKey="pages.pos.cart.shipCodHint"
+                    components={{ b: <span className="font-medium" /> }}
+                  />
                 </p>
               )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {PAYMENT_METHODS.map((pm) => {
+                {paymentMethods.map((pm) => {
                   const Icon = pm.icon;
                   return (
                     <Button
@@ -830,8 +865,7 @@ export function PosPageShell(props) {
             {paymentMethod === "Transfer" && (
               <div className="rounded-md border bg-muted/30 p-3 space-y-2">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Tuỳ chọn: đính kèm ảnh chụp màn hình chuyển khoản thành công để lưu
-                  cùng đơn hàng.
+                  {t("pages.pos.cart.transferProofHint")}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
@@ -855,7 +889,7 @@ export function PosPageShell(props) {
                     <span className="truncate max-w-[200px]">
                       {transferPaymentProofFile
                         ? transferPaymentProofFile.name
-                        : "Chọn ảnh chứng từ"}
+                        : t("pages.pos.cart.pickProofImage")}
                     </span>
                   </Button>
                   {transferPaymentProofFile ? (
@@ -866,7 +900,7 @@ export function PosPageShell(props) {
                       className="text-xs h-8 text-muted-foreground"
                       onClick={() => setTransferPaymentProofFile(null)}
                     >
-                      Bỏ ảnh
+                      {t("pages.pos.cart.removeProofImage")}
                     </Button>
                   ) : null}
                 </div>
@@ -884,7 +918,7 @@ export function PosPageShell(props) {
               onClick={openCheckoutInvoicePreview}
             >
               <Eye className="h-4 w-4 mr-2" />
-              Xem trước hóa đơn
+              {t("pages.pos.cart.previewInvoice")}
             </Button>
           </div>
 
@@ -894,36 +928,34 @@ export function PosPageShell(props) {
               onClick={() => setCheckoutOpen(false)}
               disabled={submitting}
             >
-              Hủy
+              {t("pages.pos.cart.checkoutCancel")}
             </Button>
             <Button
               onClick={handleCheckout}
               disabled={submitting || shopPosWriteBlocked}
             >
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Xác nhận
+              {t("pages.pos.cart.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Xem trước hóa đơn (dự thảo, trước khi xác nhận) */}
+      {/* Invoice preview (draft) */}
       <Dialog open={invoicePreviewOpen} onOpenChange={setInvoicePreviewOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
-              Xem trước hóa đơn
+              {t("pages.pos.cart.invoicePreviewTitle")}
             </DialogTitle>
             <DialogDescription>
-              Bản dự thảo — mã đơn hàng và thời gian thật sẽ có sau khi bạn xác
-              nhận thanh toán.
+              {t("pages.pos.cart.invoicePreviewDraftDesc")}
             </DialogDescription>
           </DialogHeader>
           {taxPreviewLoading && totalAfterPoints > 0 ? (
             <p className="text-xs text-amber-700 dark:text-amber-500 px-6 pb-1 shrink-0">
-              Đang cập nhật thuế — tổng thanh toán trên hóa đơn có thể thay đổi
-              vài giây.
+              {t("pages.pos.cart.invoicePreviewTaxUpdating")}
             </p>
           ) : null}
           <ScrollArea className="flex-1 min-h-0 max-h-[55vh] px-6">
@@ -943,7 +975,7 @@ export function PosPageShell(props) {
               variant="outline"
               onClick={() => setInvoicePreviewOpen(false)}
             >
-              Đóng
+              {t("pages.pos.cart.close")}
             </Button>
             <Button
               variant="secondary"
@@ -958,7 +990,7 @@ export function PosPageShell(props) {
               }}
             >
               <Printer className="h-4 w-4 mr-2" />
-              In bản xem trước
+              {t("pages.pos.cart.printPreview")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -976,10 +1008,10 @@ export function PosPageShell(props) {
           <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Printer className="h-5 w-5" />
-              Xem trước hóa đơn
+              {t("pages.pos.cart.invoiceAfterPaymentTitle")}
             </DialogTitle>
             <DialogDescription>
-              Kiểm tra nội dung, sau đó chọn In hóa đơn.
+              {t("pages.pos.cart.invoiceAfterPaymentDesc")}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 min-h-0 max-h-[55vh] px-6">
@@ -997,7 +1029,7 @@ export function PosPageShell(props) {
                 setInvoicePayload(null);
               }}
             >
-              Đóng
+              {t("pages.pos.cart.close")}
             </Button>
             <Button
               onClick={() => {
@@ -1009,7 +1041,7 @@ export function PosPageShell(props) {
               }}
             >
               <Printer className="h-4 w-4 mr-2" />
-              In hóa đơn
+              {t("pages.pos.cart.printInvoice")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1028,30 +1060,29 @@ export function PosPageShell(props) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserRound className="h-5 w-5" />
-              Lưu khách cho đơn vừa bán
+              {t("pages.pos.cart.postSaleTitle")}
             </DialogTitle>
             <DialogDescription>
-              Điểm tích luỹ chỉ áp dụng khi đã chọn khách trước khi thanh toán.
-              Bạn có thể bỏ qua bước này.
+              {t("pages.pos.cart.postSaleDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-1">
             <div className="space-y-1.5">
-              <Label className="text-xs">Tên khách *</Label>
+              <Label className="text-xs">{t("pages.pos.cart.guestNameRequiredLabel")}</Label>
               <Input
                 className="h-9"
                 value={postSaleName}
                 onChange={(e) => setPostSaleName(e.target.value)}
-                placeholder="Họ tên"
+                placeholder={t("pages.pos.cart.guestFullNamePlaceholder")}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Số điện thoại</Label>
+              <Label className="text-xs">{t("pages.pos.cart.phoneOptionalLabel")}</Label>
               <Input
                 className="h-9"
                 value={postSalePhone}
                 onChange={(e) => setPostSalePhone(e.target.value)}
-                placeholder="Tuỳ chọn"
+                placeholder={t("pages.pos.cart.optionalPlaceholder")}
               />
             </div>
           </div>
@@ -1064,7 +1095,7 @@ export function PosPageShell(props) {
                 setPostSaleOrderId(null);
               }}
             >
-              Bỏ qua
+              {t("pages.pos.cart.skip")}
             </Button>
             <Button
               type="button"
@@ -1074,7 +1105,7 @@ export function PosPageShell(props) {
               {postSaleSaving && (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               )}
-              Tạo khách & gắn đơn
+              {t("pages.pos.cart.createCustomerAttach")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1084,24 +1115,30 @@ export function PosPageShell(props) {
       <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Ghép bàn</DialogTitle>
+            <DialogTitle>{t("pages.pos.cart.mergeTablesTitle")}</DialogTitle>
             <DialogDescription>
-              Ghép nhiều bàn thành một nhóm để quản lý nhanh trên POS. Gộp hoá
-              đơn chung (nếu cần) thực hiện ở nút{" "}
-              <span className="font-medium">Gộp bill nhóm</span> trong giỏ hàng.
+              <Trans
+                i18nKey="pages.pos.cart.mergeTablesDesc"
+                components={{ b: <span className="font-medium" /> }}
+              />
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="rounded-md border p-2 max-h-64 overflow-y-auto">
-              {tables.map((t) => {
-                const checked = groupSelectedIds.includes(t.id);
+              {tables.map((tbl) => {
+                const checked = groupSelectedIds.includes(tbl.id);
                 return (
                   <label
-                    key={t.id}
+                    key={tbl.id}
                     className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-md cursor-pointer"
                   >
                     <span className="truncate">
-                      {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+                      {tbl.name}{" "}
+                      {tbl.capacity
+                        ? t("pages.pos.cart.capacitySeats", {
+                            count: tbl.capacity,
+                          })
+                        : ""}
                     </span>
                     <input
                       type="checkbox"
@@ -1109,7 +1146,9 @@ export function PosPageShell(props) {
                       onChange={(e) => {
                         const on = e.target.checked;
                         setGroupSelectedIds((prev) =>
-                          on ? [...prev, t.id] : prev.filter((x) => x !== t.id),
+                          on
+                            ? [...prev, tbl.id]
+                            : prev.filter((x) => x !== tbl.id),
                         );
                       }}
                     />
@@ -1120,7 +1159,9 @@ export function PosPageShell(props) {
 
             {tableGroups.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Nhóm hiện có</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("pages.pos.cart.existingGroups")}
+                </p>
                 <div className="space-y-2">
                   {tableGroups.map((g) => (
                     <div
@@ -1129,13 +1170,16 @@ export function PosPageShell(props) {
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">
-                          {g.name || `Nhóm ${g.id?.slice?.(-6) || ""}`}
+                          {g.name ||
+                            t("pages.pos.cart.groupNameShort", {
+                              id: g.id?.slice?.(-6) || "",
+                            })}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
                           {(g.tableIds || [])
                             .map(
                               (id) =>
-                                tables.find((t) => t.id === id)?.name || id,
+                                tables.find((tbl) => tbl.id === id)?.name || id,
                             )
                             .join(", ")}
                         </p>
@@ -1145,7 +1189,7 @@ export function PosPageShell(props) {
                         size="sm"
                         onClick={() => handleUngroup(g.id)}
                       >
-                        Giải nhóm
+                        {t("pages.pos.cart.ungroup")}
                       </Button>
                     </div>
                   ))}
@@ -1155,9 +1199,9 @@ export function PosPageShell(props) {
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setGroupDialogOpen(false)}>
-              Đóng
+              {t("pages.pos.cart.close")}
             </Button>
-            <Button onClick={handleCreateGroup}>Tạo nhóm</Button>
+            <Button onClick={handleCreateGroup}>{t("pages.pos.cart.createGroup")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1166,25 +1210,25 @@ export function PosPageShell(props) {
       <Dialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Tách món</DialogTitle>
+            <DialogTitle>{t("pages.pos.cart.splitTitle")}</DialogTitle>
             <DialogDescription>
-              Chọn số lượng cần tách sang đơn mới (có thể gắn bàn đích).
+              {t("pages.pos.cart.splitDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label className="text-xs">Bàn đích (tuỳ chọn)</Label>
+              <Label className="text-xs">{t("pages.pos.cart.splitDestTableLabel")}</Label>
               <Select value={splitToTableId} onValueChange={setSplitToTableId}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Chọn bàn" />
+                  <SelectValue placeholder={t("pages.pos.cart.selectTable")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Không chọn bàn</SelectItem>
+                  <SelectItem value="none">{t("pages.pos.cart.noTable")}</SelectItem>
                   {tables
-                    .filter((t) => t.id !== selectedTableId)
-                    .map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name}
+                    .filter((tbl) => tbl.id !== selectedTableId)
+                    .map((tbl) => (
+                      <SelectItem key={tbl.id} value={tbl.id}>
+                        {tbl.name}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -1203,7 +1247,7 @@ export function PosPageShell(props) {
                     <div className="min-w-0">
                       <p className="text-sm truncate">{it.productName}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        Tối đa: {max}
+                        {t("pages.pos.cart.splitMax", { max })}
                       </p>
                     </div>
                     <Input
@@ -1226,9 +1270,9 @@ export function PosPageShell(props) {
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setSplitDialogOpen(false)}>
-              Đóng
+              {t("pages.pos.cart.close")}
             </Button>
-            <Button onClick={handleSplit}>Tách</Button>
+            <Button onClick={handleSplit}>{t("pages.pos.cart.splitAction")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1241,7 +1285,7 @@ export function PosPageShell(props) {
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Chọn biến thể</DialogTitle>
+            <DialogTitle>{t("pages.pos.cart.pickVariantTitle")}</DialogTitle>
             <DialogDescription className="line-clamp-2">
               {variantPickerProduct?.name}
             </DialogDescription>
@@ -1255,7 +1299,7 @@ export function PosPageShell(props) {
               const stockLabel =
                 variantPickerProduct.trackInventory === false
                   ? ""
-                  : `Tồn: ${(bv.quantity ?? 0).toLocaleString("vi-VN")}`;
+                  : `${t("pages.pos.cart.stockColon")} ${(bv.quantity ?? 0).toLocaleString(numberLocale)}`;
               const price =
                 bv.price > 0 ? bv.price : (variantPickerProduct.price ?? 0);
               return (
@@ -1275,7 +1319,7 @@ export function PosPageShell(props) {
                   <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums shrink-0">
                     {stockLabel}
                     {stockLabel ? " · " : ""}
-                    {price.toLocaleString("vi-VN")}₫
+                    {price.toLocaleString(numberLocale)}₫
                   </span>
                 </button>
               );
@@ -1286,7 +1330,7 @@ export function PosPageShell(props) {
               variant="outline"
               onClick={() => setVariantPickerProduct(null)}
             >
-              Hủy
+              {t("pages.pos.cart.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1300,7 +1344,7 @@ export function PosPageShell(props) {
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Chọn topping</DialogTitle>
+            <DialogTitle>{t("pages.pos.cart.pickToppingTitle")}</DialogTitle>
             <DialogDescription className="line-clamp-2">
               {toppingPicker?.product?.name}
               {toppingPicker?.variantId

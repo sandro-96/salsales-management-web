@@ -10,6 +10,7 @@ import {
   Percent,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 import { useShop } from "../../hooks/useShop";
 import { getBranchProducts } from "../../api/productApi";
@@ -63,7 +64,9 @@ function variantCatalogName(product, variantId) {
 }
 
 const CreateOrderModal = ({ open, onClose, onCreated }) => {
+  const { t, i18n } = useTranslation();
   const { selectedShopId, branches, selectedBranchId } = useShop();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
 
   const [branchId, setBranchId] = useState(selectedBranchId || "");
   const [products, setProducts] = useState([]);
@@ -120,11 +123,11 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         promoRes.data?.data?.content || promoRes.data?.data || [];
       setPromotions(promoList);
     } catch {
-      toast.error("Không thể tải dữ liệu chi nhánh");
+      toast.error(t("pages.orders.create.fetchBranchError"));
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, branchId]);
+  }, [selectedShopId, branchId, t]);
 
   useEffect(() => {
     if (open && branchId) {
@@ -158,7 +161,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
           ? product.branchVariants.find((v) => v.variantId === variantId)
           : null;
       if (hasVars && (!variantId || !branchVariant)) {
-        toast.error("Chọn biến thể hợp lệ.");
+        toast.error(t("pages.orders.create.invalidVariant"));
         return;
       }
 
@@ -182,7 +185,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         const existing = prev.find(lineMatch);
         if (existing) {
           if (maxStock != null && existing.quantity >= maxStock) {
-            toast.error("Không đủ tồn kho.");
+            toast.error(t("pages.orders.create.insufficientStock"));
             return prev;
           }
           return prev.map((item) =>
@@ -191,7 +194,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         }
 
         if (maxStock != null && maxStock < 1) {
-          toast.error("Hết hàng.");
+          toast.error(t("pages.orders.create.outOfStock"));
           return prev;
         }
 
@@ -219,7 +222,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         ];
       });
     },
-    [promoMap],
+    [promoMap, t],
   );
 
   const updateQuantity = (lineKey, delta) => {
@@ -234,7 +237,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             item.maxStock != null &&
             nextQty > item.maxStock
           ) {
-            toast.error("Không đủ tồn kho.");
+            toast.error(t("pages.orders.create.insufficientStock"));
             return item;
           }
           return { ...item, quantity: Math.max(0, nextQty) };
@@ -288,11 +291,12 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         }),
       };
       await createOrder(selectedShopId, branchId, orderData);
-      toast.success("Đơn hàng đã được tạo thành công!");
+      toast.success(t("pages.orders.create.createSuccess"));
       onCreated?.();
       onClose();
     } catch (err) {
-      const msg = err.response?.data?.message || "Không thể tạo đơn hàng";
+      const msg =
+        err.response?.data?.message || t("pages.orders.create.createFail");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -306,11 +310,14 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
-            Tạo đơn hàng mới
+            {t("pages.orders.create.title")}
           </DialogTitle>
           <DialogDescription>
-            Chọn chi nhánh và sản phẩm để tạo đơn hàng
-            {branchHasTables ? " (có thể gắn bàn nếu cần)" : ""}.
+            {t("pages.orders.create.description")}
+            {branchHasTables
+              ? t("pages.orders.create.descriptionWithTables")
+              : ""}
+            .
           </DialogDescription>
         </DialogHeader>
 
@@ -320,7 +327,9 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             className={`grid gap-3 ${branchHasTables ? "grid-cols-2" : "grid-cols-1"}`}
           >
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Chi nhánh *</label>
+              <label className="text-xs font-medium">
+                {t("pages.orders.create.branch")}
+              </label>
               <Select
                 value={branchId}
                 onValueChange={(v) => {
@@ -329,7 +338,9 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                 }}
               >
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Chọn chi nhánh" />
+                  <SelectValue
+                    placeholder={t("pages.orders.create.branchPlaceholder")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => (
@@ -342,19 +353,30 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             </div>
             {branchHasTables && (
               <div className="space-y-1.5">
-                <label className="text-xs font-medium">Bàn (tuỳ chọn)</label>
+                <label className="text-xs font-medium">
+                  {t("pages.orders.create.table")}
+                </label>
                 <Select
                   value={selectedTableId || "none"}
                   onValueChange={setSelectedTableId}
                 >
                   <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Không chọn bàn" />
+                    <SelectValue
+                      placeholder={t("pages.orders.create.noTable")}
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Không chọn bàn</SelectItem>
-                    {tables.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+                    <SelectItem value="none">
+                      {t("pages.orders.create.noTable")}
+                    </SelectItem>
+                    {tables.map((tbl) => (
+                      <SelectItem key={tbl.id} value={tbl.id}>
+                        {tbl.name}{" "}
+                        {tbl.capacity
+                          ? t("pages.orders.create.seats", {
+                              count: tbl.capacity,
+                            })
+                          : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -366,11 +388,13 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
           {/* Product search */}
           {branchId && (
             <div className="space-y-2">
-              <label className="text-xs font-medium">Thêm sản phẩm</label>
+              <label className="text-xs font-medium">
+                {t("pages.orders.create.addProduct")}
+              </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Tìm sản phẩm theo tên, SKU, barcode..."
+                  placeholder={t("pages.orders.create.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 h-9"
@@ -385,7 +409,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                   <div className="divide-y">
                     {filteredProducts.length === 0 ? (
                       <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                        Không tìm thấy sản phẩm
+                        {t("pages.orders.create.noProducts")}
                       </div>
                     ) : (
                       filteredProducts.map((p) => {
@@ -429,15 +453,15 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                               {hasPromo ? (
                                 <div className="text-right">
                                   <span className="text-sm font-semibold text-emerald-600 tabular-nums">
-                                    {discounted.toLocaleString("vi-VN")} ₫
+                                    {discounted.toLocaleString(numberLocale)} ₫
                                   </span>
                                   <span className="text-[10px] line-through text-muted-foreground ml-1">
-                                    {p.price?.toLocaleString("vi-VN")}₫
+                                    {p.price?.toLocaleString(numberLocale)}₫
                                   </span>
                                 </div>
                               ) : (
                                 <span className="text-sm font-semibold tabular-nums">
-                                  {p.price?.toLocaleString("vi-VN")} ₫
+                                  {p.price?.toLocaleString(numberLocale)} ₫
                                 </span>
                               )}
                               <Plus className="h-4 w-4 text-primary" />
@@ -457,22 +481,24 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium">
-                  Sản phẩm đã chọn ({cart.length})
+                  {t("pages.orders.create.selectedProducts", {
+                    count: cart.length,
+                  })}
                 </label>
               </div>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Sản phẩm</TableHead>
+                      <TableHead>{t("pages.orders.create.product")}</TableHead>
                       <TableHead className="w-[100px] text-center">
-                        Số lượng
+                        {t("pages.orders.create.qty")}
                       </TableHead>
                       <TableHead className="w-[100px] text-right">
-                        Đơn giá
+                        {t("pages.orders.create.unitPrice")}
                       </TableHead>
                       <TableHead className="w-[100px] text-right">
-                        Thành tiền
+                        {t("pages.orders.create.lineTotal")}
                       </TableHead>
                       <TableHead className="w-[40px]" />
                     </TableRow>
@@ -521,21 +547,24 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                           {item.hasDiscount ? (
                             <div>
                               <span className="text-sm tabular-nums text-emerald-600 font-medium">
-                                {item.price.toLocaleString("vi-VN")} ₫
+                                {item.price.toLocaleString(numberLocale)} ₫
                               </span>
                               <br />
                               <span className="text-[10px] line-through text-muted-foreground">
-                                {item.originalPrice.toLocaleString("vi-VN")}₫
+                                {item.originalPrice.toLocaleString(numberLocale)}
+                                ₫
                               </span>
                             </div>
                           ) : (
                             <span className="text-sm tabular-nums">
-                              {item.price.toLocaleString("vi-VN")} ₫
+                              {item.price.toLocaleString(numberLocale)} ₫
                             </span>
                           )}
                         </TableCell>
                         <TableCell className="text-right text-sm font-semibold tabular-nums">
-                          {(item.price * item.quantity).toLocaleString("vi-VN")}{" "}
+                          {(item.price * item.quantity).toLocaleString(
+                            numberLocale,
+                          )}{" "}
                           ₫
                         </TableCell>
                         <TableCell>
@@ -558,9 +587,11 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
 
           {/* Note */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Ghi chú</label>
+            <label className="text-xs font-medium">
+              {t("pages.orders.create.note")}
+            </label>
             <Textarea
-              placeholder="Ghi chú cho đơn hàng..."
+              placeholder={t("pages.orders.create.notePlaceholder")}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="min-h-[60px] resize-none text-sm"
@@ -574,19 +605,20 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             {totalSavings > 0 && (
               <div className="text-xs text-emerald-600 flex items-center gap-1">
                 <Tag className="h-3 w-3" />
-                Tiết kiệm: {totalSavings.toLocaleString("vi-VN")} ₫
+                {t("pages.orders.create.savings")}{" "}
+                {totalSavings.toLocaleString(numberLocale)} ₫
               </div>
             )}
             <div>
-              Tổng:{" "}
+              {t("pages.orders.create.total")}{" "}
               <span className="text-lg font-bold text-primary tabular-nums">
-                {subtotal.toLocaleString("vi-VN")} ₫
+                {subtotal.toLocaleString(numberLocale)} ₫
               </span>
             </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={submitting}>
-              Hủy
+              {t("pages.orders.create.cancel")}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -594,7 +626,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
               variant="success"
             >
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Tạo đơn hàng
+              {t("pages.orders.create.submit")}
             </Button>
           </div>
         </DialogFooter>
@@ -609,7 +641,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
     >
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Chọn biến thể</DialogTitle>
+          <DialogTitle>{t("pages.orders.create.variantTitle")}</DialogTitle>
           <DialogDescription className="line-clamp-2">
             {variantPickerProduct?.name}
           </DialogDescription>
@@ -620,7 +652,9 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             const stockLabel =
               variantPickerProduct.trackInventory === false
                 ? ""
-                : `Tồn: ${(bv.quantity ?? 0).toLocaleString("vi-VN")}`;
+                : t("pages.orders.create.stock", {
+                    qty: (bv.quantity ?? 0).toLocaleString(numberLocale),
+                  });
             const price =
               bv.price > 0 ? bv.price : variantPickerProduct.price ?? 0;
             return (
@@ -637,7 +671,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
                 <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums shrink-0">
                   {stockLabel}
                   {stockLabel ? " · " : ""}
-                  {price.toLocaleString("vi-VN")}₫
+                  {price.toLocaleString(numberLocale)}₫
                 </span>
               </button>
             );
@@ -645,7 +679,7 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setVariantPickerProduct(null)}>
-            Hủy
+            {t("pages.orders.create.cancel")}
           </Button>
         </DialogFooter>
       </DialogContent>

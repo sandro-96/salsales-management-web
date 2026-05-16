@@ -1,0 +1,72 @@
+{
+  "title": "Table management",
+  "branchSubtitle": "Branch: {{name}}",
+  "branchSubtitleEmpty": "Select a branch to view tables",
+  "selectBranch": "Select branch",
+  "addTable": "Add table",
+  "noBranch": {
+    "title": "No branch selected",
+    "hint": "Please select a branch to view and manage tables."
+  },
+  "stats": {
+    "total": "Total tables",
+    "available": "Available",
+    "occupied": "In service",
+    "closed": "Closed"
+  },
+  "searchPlaceholder": "Search tables...",
+  "filterAll": "All statuses",
+  "empty": {
+    "filtered": "No matching tables found.",
+    "none": "No tables yet. Add a new table to get started."
+  },
+  "status": {
+    "AVAILABLE": "Available",
+    "OCCUPIED": "In service",
+    "CLOSED": "Closed"
+  },
+  "alwaysAvailableBadge": "Always available",
+  "capacityGuests": "{{count}} seats",
+  "card": {
+    "actions": "Actions",
+    "edit": "Edit",
+    "openTable": "Open table",
+    "closeTable": "Close table",
+    "delete": "Delete table"
+  },
+  "form": {
+    "editTitle": "Edit table",
+    "createTitle": "Add table",
+    "editDesc": "Update table details.",
+    "createDesc": "Create a new table for this branch.",
+    "nameLabel": "Table name *",
+    "namePlaceholder": "e.g. Table 01",
+    "capacityLabel": "Capacity (guests)",
+    "capacityPlaceholder": "e.g. 4",
+    "noteLabel": "Note",
+    "notePlaceholder": "e.g. VIP table by the window",
+    "alwaysAvailableTitle": "Always available (never marked “In service”)",
+    "alwaysAvailableHint": "For virtual tables such as <b>Takeaway</b>: the table always shows as available, orders are not bound to the table — multiple open orders are managed in POS by tab/order.",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save changes",
+    "create": "Create table",
+    "nameRequired": "Table name is required.",
+    "updateSuccess": "Table updated successfully.",
+    "createSuccess": "Table created successfully.",
+    "genericError": "Something went wrong."
+  },
+  "confirm": {
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "deleteTitle": "Delete table",
+    "deleteConfirm": "Delete",
+    "cancel": "Cancel"
+  },
+  "toast": {
+    "fetchFail": "Could not load tables.",
+    "deleteSuccess": "Table deleted.",
+    "deleteFail": "Could not delete table.",
+    "statusUpdated": "Status updated: {{status}}",
+    "statusFail": "Could not update status."
+  }
+}

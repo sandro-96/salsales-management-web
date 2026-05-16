@@ -1,0 +1,72 @@
+{
+  "title": "Quản lý bàn",
+  "branchSubtitle": "Chi nhánh: {{name}}",
+  "branchSubtitleEmpty": "Chọn chi nhánh để xem danh sách bàn",
+  "selectBranch": "Chọn chi nhánh",
+  "addTable": "Thêm bàn",
+  "noBranch": {
+    "title": "Chưa chọn chi nhánh",
+    "hint": "Vui lòng chọn một chi nhánh để xem và quản lý bàn."
+  },
+  "stats": {
+    "total": "Tổng bàn",
+    "available": "Trống",
+    "occupied": "Đang phục vụ",
+    "closed": "Đã đóng"
+  },
+  "searchPlaceholder": "Tìm bàn...",
+  "filterAll": "Tất cả trạng thái",
+  "empty": {
+    "filtered": "Không tìm thấy bàn phù hợp.",
+    "none": "Chưa có bàn nào. Hãy thêm bàn mới."
+  },
+  "status": {
+    "AVAILABLE": "Trống",
+    "OCCUPIED": "Đang phục vụ",
+    "CLOSED": "Đã đóng"
+  },
+  "alwaysAvailableBadge": "Luôn trống",
+  "capacityGuests": "{{count}} người",
+  "card": {
+    "actions": "Thao tác",
+    "edit": "Chỉnh sửa",
+    "openTable": "Mở bàn",
+    "closeTable": "Đóng bàn",
+    "delete": "Xóa bàn"
+  },
+  "form": {
+    "editTitle": "Chỉnh sửa bàn",
+    "createTitle": "Thêm bàn mới",
+    "editDesc": "Cập nhật thông tin bàn.",
+    "createDesc": "Tạo bàn mới cho chi nhánh.",
+    "nameLabel": "Tên bàn *",
+    "namePlaceholder": "VD: Bàn 01",
+    "capacityLabel": "Sức chứa (người)",
+    "capacityPlaceholder": "VD: 4",
+    "noteLabel": "Ghi chú",
+    "notePlaceholder": "VD: Bàn VIP gần cửa sổ",
+    "alwaysAvailableTitle": "Bàn luôn trống (không chuyển sang “Đang phục vụ”)",
+    "alwaysAvailableHint": "Dùng cho các “bàn ảo” như <b>Mang đi</b>: trạng thái bàn luôn hiển thị trống, không gắn một đơn lên bàn — có thể có nhiều đơn mở cùng lúc (POS quản lý theo tab/đơn).",
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "save": "Lưu thay đổi",
+    "create": "Tạo bàn",
+    "nameRequired": "Tên bàn không được để trống.",
+    "updateSuccess": "Cập nhật bàn thành công.",
+    "createSuccess": "Tạo bàn thành công.",
+    "genericError": "Đã xảy ra lỗi."
+  },
+  "confirm": {
+    "deleteMessage": "Bạn có chắc muốn xóa \"{{name}}\"? Hành động này không thể hoàn tác.",
+    "deleteTitle": "Xóa bàn",
+    "deleteConfirm": "Xóa",
+    "cancel": "Hủy"
+  },
+  "toast": {
+    "fetchFail": "Không thể tải danh sách bàn.",
+    "deleteSuccess": "Đã xóa bàn.",
+    "deleteFail": "Không thể xóa bàn.",
+    "statusUpdated": "Đã cập nhật trạng thái: {{status}}",
+    "statusFail": "Không thể cập nhật trạng thái."
+  }
+}

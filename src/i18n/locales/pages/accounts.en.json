@@ -1,0 +1,79 @@
+{
+  "title": "Account",
+  "subtitle": "Manage your profile and security settings",
+  "tabs": {
+    "profile": "Profile",
+    "security": "Security"
+  },
+  "gender": {
+    "MALE": "Male",
+    "FEMALE": "Female",
+    "OTHER": "Other"
+  },
+  "verified": "Verified",
+  "unverified": "Not verified",
+  "nameNotSet": "Name not set",
+  "notUpdated": "Not set",
+  "edit": "Edit",
+  "cancel": "Cancel",
+  "saving": "Saving...",
+  "save": "Save changes",
+  "processing": "Processing...",
+  "profile": {
+    "personalInfo": "Personal information",
+    "lastName": "Last name",
+    "lastNameRequired": "Last name *",
+    "middleName": "Middle name",
+    "firstName": "First name",
+    "firstNameRequired": "First name *",
+    "country": "Country",
+    "selectCountry": "Select country",
+    "phone": "Phone number",
+    "address": "Address",
+    "city": "City",
+    "state": "State / Province",
+    "zipCode": "Postal code",
+    "gender": "Gender",
+    "selectGender": "Select gender",
+    "birthDate": "Date of birth",
+    "selectBirthDate": "Select date of birth",
+    "placeholders": {
+      "lastName": "Smith",
+      "middleName": "A.",
+      "firstName": "John",
+      "phone": "0912345678",
+      "address": "123 Main St",
+      "city": "Ho Chi Minh City",
+      "zipCode": "70000"
+    }
+  },
+  "validation": {
+    "lastNameRequired": "Last name is required.",
+    "firstNameRequired": "First name is required.",
+    "max50": "Maximum 50 characters.",
+    "max10": "Maximum 10 characters.",
+    "phoneInvalid": "Invalid phone number format.",
+    "required": "This field is required.",
+    "passwordMin": "At least 6 characters.",
+    "passwordMismatch": "Passwords do not match."
+  },
+  "toast": {
+    "loadFail": "Could not load account information.",
+    "updateSuccess": "Profile updated successfully!",
+    "updateFail": "Failed to update profile.",
+    "phoneInvalid": "Invalid phone number format.",
+    "passwordChangeSuccess": "Password changed successfully!",
+    "passwordSetSuccess": "Login password set. You can now sign in with email and password.",
+    "passwordChangeFail": "Failed to change password."
+  },
+  "security": {
+    "changePassword": "Change password",
+    "setPassword": "Set login password",
+    "googleOnlyHint": "You sign in with Google and do not have a local password yet. Set one below if you also want to sign in with email and password (you can still use Google).",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "setPasswordBtn": "Set password",
+    "changePasswordBtn": "Change password"
+  }
+}

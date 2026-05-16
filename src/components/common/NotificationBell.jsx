@@ -26,6 +26,10 @@ import {
   markAllAsRead,
 } from "../../api/notificationApi.js";
 import { WebSocketMessageTypes } from "../../constants/websocket.js";
+import {
+  getNotificationMessage,
+  getNotificationTitle,
+} from "../../utils/notificationI18n.js";
 
 const NOTIFICATION_TYPE_ICON = {
   ORDER_CREATED: "🛒",
@@ -36,6 +40,12 @@ const NOTIFICATION_TYPE_ICON = {
   TICKET_CREATED: "🎫",
   TICKET_REPLIED: "💬",
   TICKET_STATUS_CHANGED: "🔄",
+  BILLING_PAYMENT_SUCCESS: "✅",
+  BILLING_PAYMENT_FAILED: "❌",
+  BILLING_MANUAL_TRANSFER_PENDING: "🏦",
+  BILLING_PLAN_EXPIRING_SOON: "⏳",
+  BILLING_PLAN_EXPIRED: "⚠️",
+  BROADCAST: "📢",
   SYSTEM: "⚙️",
 };
 
@@ -98,7 +108,9 @@ export default function NotificationBell() {
       if (message.type === WebSocketMessageTypes.NOTIFICATION && message.data) {
         setUnreadCount((c) => c + 1);
         setNotifications((prev) => [message.data, ...prev].slice(0, 5));
-        toast.info(message.data.title, { description: message.data.message });
+        toast.info(getNotificationTitle(t, message.data), {
+          description: getNotificationMessage(t, message.data),
+        });
         // Phát event cho các widget phụ (vd. badge hỗ trợ trong AdminLayout)
         // refresh mà không cần tự subscribe duplicate cùng topic.
         const notifType = message.data.type;
@@ -282,14 +294,14 @@ export default function NotificationBell() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium line-clamp-1">
-                        {n.title}
+                        {getNotificationTitle(t, n)}
                       </span>
                       {!n.read && (
                         <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                      {n.message}
+                      {getNotificationMessage(t, n)}
                     </p>
                     <span className="text-xs text-muted-foreground mt-1 block">
                       {formatDate(n.createdAt)}

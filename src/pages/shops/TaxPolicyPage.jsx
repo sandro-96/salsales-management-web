@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
@@ -34,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 function formatPolicyDate(v) {
   if (v == null) return "—";
   if (typeof v === "string") return v.replace("T", " ").slice(0, 16);
@@ -44,9 +46,9 @@ function formatPolicyDate(v) {
   return String(v);
 }
 
-const emptyRule = () => ({
+const emptyRule = (t) => ({
   code: "VAT",
-  label: "Thuế GTGT",
+  label: t("pages.shops.tax.defaultVatLabel"),
   type: "PERCENT",
   value: 0.1,
   applyOnPreviousTaxes: false,
@@ -61,91 +63,106 @@ const cloneRules = (list) =>
     applyOnPreviousTaxes: !!r.applyOnPreviousTaxes,
   }));
 
-/** Mẫu thường gặp — chỉ điền sẵn form, vẫn cần bấm Lưu để tạo chính sách */
-const TAX_PRESETS = [
-  {
-    id: "vn-vat10-included",
-    label: "VAT 10% · giá đã gồm thuế",
-    hint: "Phổ biến tại VN",
-    preset: {
-      name: "VAT 10% — giá đã gồm thuế",
-      priceIncludesTax: true,
-      rules: [
-        {
-          code: "VAT",
-          label: "Thuế GTGT",
-          type: "PERCENT",
-          value: 0.1,
-          applyOnPreviousTaxes: false,
-        },
-      ],
+/** Quick templates — only pre-fill the form; Save still creates the policy */
+function getTaxPresets(t) {
+  const vatLabel = t("pages.shops.tax.defaultVatLabel");
+  return [
+    {
+      id: "vn-vat10-included",
+      label: t("pages.shops.tax.preset.vnVat10Included.label"),
+      hint: t("pages.shops.tax.preset.vnVat10Included.hint"),
+      preset: {
+        name: t("pages.shops.tax.preset.vnVat10Included.name"),
+        priceIncludesTax: true,
+        rules: [
+          {
+            code: "VAT",
+            label: vatLabel,
+            type: "PERCENT",
+            value: 0.1,
+            applyOnPreviousTaxes: false,
+          },
+        ],
+      },
     },
-  },
-  {
-    id: "vn-vat8-included",
-    label: "VAT 8% · giá đã gồm thuế",
-    hint: "Mức giảm (khi áp dụng)",
-    preset: {
-      name: "VAT 8% — giá đã gồm thuế",
-      priceIncludesTax: true,
-      rules: [
-        {
-          code: "VAT",
-          label: "Thuế GTGT",
-          type: "PERCENT",
-          value: 0.08,
-          applyOnPreviousTaxes: false,
-        },
-      ],
+    {
+      id: "vn-vat8-included",
+      label: t("pages.shops.tax.preset.vnVat8Included.label"),
+      hint: t("pages.shops.tax.preset.vnVat8Included.hint"),
+      preset: {
+        name: t("pages.shops.tax.preset.vnVat8Included.name"),
+        priceIncludesTax: true,
+        rules: [
+          {
+            code: "VAT",
+            label: vatLabel,
+            type: "PERCENT",
+            value: 0.08,
+            applyOnPreviousTaxes: false,
+          },
+        ],
+      },
     },
-  },
-  {
-    id: "vn-vat10-excluded",
-    label: "VAT 10% · giá chưa gồm thuế",
-    hint: "Cộng thuế trên giá niêm yết",
-    preset: {
-      name: "VAT 10% — giá chưa gồm thuế",
-      priceIncludesTax: false,
-      rules: [
-        {
-          code: "VAT",
-          label: "Thuế GTGT",
-          type: "PERCENT",
-          value: 0.1,
-          applyOnPreviousTaxes: false,
-        },
-      ],
+    {
+      id: "vn-vat10-excluded",
+      label: t("pages.shops.tax.preset.vnVat10Excluded.label"),
+      hint: t("pages.shops.tax.preset.vnVat10Excluded.hint"),
+      preset: {
+        name: t("pages.shops.tax.preset.vnVat10Excluded.name"),
+        priceIncludesTax: false,
+        rules: [
+          {
+            code: "VAT",
+            label: vatLabel,
+            type: "PERCENT",
+            value: 0.1,
+            applyOnPreviousTaxes: false,
+          },
+        ],
+      },
     },
-  },
-  {
-    id: "none",
-    label: "Không thuế",
-    hint: "Tổng thanh toán = tiền hàng",
-    preset: {
-      name: "Không áp dụng thuế",
-      priceIncludesTax: false,
-      rules: [],
+    {
+      id: "none",
+      label: t("pages.shops.tax.preset.none.label"),
+      hint: t("pages.shops.tax.preset.none.hint"),
+      preset: {
+        name: t("pages.shops.tax.preset.none.name"),
+        priceIncludesTax: false,
+        rules: [],
+      },
     },
-  },
-];
+  ];
+}
 
 export default function TaxPolicyPage() {
+  const { t, i18n } = useTranslation();
   const { confirm } = useAlertDialog();
   const { selectedShopId, selectedShop, branches, fetchBranches } = useShop();
   const { hasShopPermission } = useShopPermissions();
 
   const canManage = hasShopPermission(PERM.SHOP_UPDATE);
 
+  const defaultPolicyNameRef = useRef(t("pages.shops.tax.defaultPolicyName"));
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const [name, setName] = useState("VAT chuẩn");
+  const [name, setName] = useState(() => t("pages.shops.tax.defaultPolicyName"));
   const [branchId, setBranchId] = useState("");
   const [priceIncludesTax, setPriceIncludesTax] = useState(true);
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveTo, setEffectiveTo] = useState("");
-  const [rules, setRules] = useState([emptyRule()]);
+  const [rules, setRules] = useState(() => [emptyRule(t)]);
+
+  const taxPresets = useMemo(() => getTaxPresets(t), [t, i18n.language]);
+
+  useEffect(() => {
+    const nextDefault = t("pages.shops.tax.defaultPolicyName");
+    setName((current) =>
+      current === defaultPolicyNameRef.current ? nextDefault : current,
+    );
+    defaultPolicyNameRef.current = nextDefault;
+  }, [i18n.language, t]);
 
   const load = useCallback(async () => {
     if (!selectedShopId || !canManage) {
@@ -158,13 +175,13 @@ export default function TaxPolicyPage() {
       setPolicies(res.data?.data || []);
     } catch (e) {
       toast.error(
-        e.response?.data?.message || "Không tải được chính sách thuế",
+        e.response?.data?.message || t("pages.shops.tax.fetchFail"),
       );
       setPolicies([]);
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, canManage]);
+  }, [selectedShopId, canManage, t]);
 
   useEffect(() => {
     load();
@@ -180,7 +197,7 @@ export default function TaxPolicyPage() {
     );
   };
 
-  const addRule = () => setRules((prev) => [...prev, emptyRule()]);
+  const addRule = () => setRules((prev) => [...prev, emptyRule(t)]);
   const removeRule = (idx) =>
     setRules((prev) =>
       prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx),
@@ -190,7 +207,7 @@ export default function TaxPolicyPage() {
     setName(preset.name);
     setPriceIncludesTax(preset.priceIncludesTax);
     setRules(cloneRules(preset.rules));
-    toast.info("Đã áp dụng mẫu — kiểm tra phạm vi chi nhánh rồi bấm Lưu.");
+    toast.info(t("pages.shops.tax.presetApplied"));
   };
 
   const handleCreate = async (e) => {
@@ -218,18 +235,20 @@ export default function TaxPolicyPage() {
         priority: 0,
       };
       await createTaxPolicy(selectedShopId, payload);
-      toast.success("Đã tạo chính sách thuế");
-      setName("VAT chuẩn");
+      toast.success(t("pages.shops.tax.createSuccess"));
+      const resetName = t("pages.shops.tax.defaultPolicyName");
+      setName(resetName);
+      defaultPolicyNameRef.current = resetName;
       setBranchId("");
       setEffectiveFrom("");
       setEffectiveTo("");
-      setRules([emptyRule()]);
+      setRules([emptyRule(t)]);
       load();
     } catch (err) {
       const msg =
         err.response?.data?.message ||
         err.response?.data?.code ||
-        "Không tạo được chính sách";
+        t("pages.shops.tax.createFail");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -238,23 +257,25 @@ export default function TaxPolicyPage() {
 
   const handleDeactivate = async (policy) => {
     const ok = await confirm(
-      `Chính sách "${policy.name}" sẽ không còn áp dụng cho đơn mới.`,
-      { title: "Vô hiệu hóa chính sách?" },
+      t("pages.shops.tax.deactivateConfirm", { name: policy.name }),
+      { title: t("pages.shops.tax.deactivateTitle") },
     );
     if (!ok) return;
     try {
       await deactivateTaxPolicy(selectedShopId, policy.id);
-      toast.success("Đã vô hiệu hóa");
+      toast.success(t("pages.shops.tax.deactivateSuccess"));
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Thao tác thất bại");
+      toast.error(
+        err.response?.data?.message || t("pages.shops.tax.actionFail"),
+      );
     }
   };
 
   if (!selectedShopId) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
-        Chọn cửa hàng để quản lý thuế.
+        {t("pages.shops.tax.selectShop")}
       </div>
     );
   }
@@ -263,13 +284,12 @@ export default function TaxPolicyPage() {
     return (
       <div className="p-6 max-w-lg">
         <p className="text-sm text-muted-foreground">
-          Chỉ <strong>Chủ cửa hàng</strong> và <strong>Quản lý</strong> mới
-          chỉnh được chính sách thuế.
+          {t("pages.shops.tax.noPermission")}
         </p>
         <Button variant="outline" className="mt-4" asChild>
           <Link to={`/shops/${selectedShop?.slug || ""}`}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Về cài đặt cửa hàng
+            {t("pages.shops.tax.backToSettings")}
           </Link>
         </Button>
       </div>
@@ -283,16 +303,15 @@ export default function TaxPolicyPage() {
           <Button variant="ghost" size="sm" className="mb-2 -ml-2" asChild>
             <Link to={`/shops/${selectedShop?.slug || ""}`}>
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Cài đặt cửa hàng
+              {t("pages.shops.tax.backToSettings")}
             </Link>
           </Button>
           <h2 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             <Percent className="h-7 w-7" />
-            Chính sách thuế
+            {t("pages.shops.tax.title")}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Áp dụng khi tạo đơn và xem trước thuế tại POS. Ưu tiên chính sách
-            theo chi nhánh, sau đó mặc định cả shop.
+            {t("pages.shops.tax.subtitle")}
           </p>
         </div>
       </div>
@@ -301,40 +320,29 @@ export default function TaxPolicyPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <IdCard className="h-4 w-4" />
-            Mã số thuế (MST)
+            {t("pages.shops.tax.mstTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>
-            MST là mã đăng ký với cơ quan thuế, khác với tỷ lệ VAT ở dưới. Nên
-            nhập MST mặc định của pháp nhân tại{" "}
-            <Link
-              to={`/shops/${selectedShop?.slug || ""}`}
-              className="text-foreground font-medium underline underline-offset-2"
-            >
-              Cài đặt cửa hàng
-            </Link>
-            . Nếu một chi nhánh có MST riêng (địa điểm kinh doanh đăng ký khác),
-            bổ sung tại form chỉnh sửa chi nhánh — để trống ở chi nhánh thì dùng
-            MST của cửa hàng.
-          </p>
+          <p>{t("pages.shops.tax.mstDesc")}</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Đang có</CardTitle>
+          <CardTitle className="text-base">
+            {t("pages.shops.tax.existingTitle")}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Đang tải…
+              {t("pages.shops.tax.loading")}
             </div>
           ) : policies.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Chưa có chính sách nào — hệ thống dùng mặc định không thuế cho đến
-              khi bạn tạo bản ghi mới.
+              {t("pages.shops.tax.emptyPolicies")}
             </p>
           ) : (
             <ul className="divide-y rounded-md border">
@@ -346,20 +354,25 @@ export default function TaxPolicyPage() {
                   <div className="min-w-0 space-y-1">
                     <p className="font-medium">{p.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      Phạm vi:{" "}
+                      {t("pages.shops.tax.scope")}{" "}
                       {p.branchId
                         ? branches.find((b) => b.id === p.branchId)?.name ||
                           p.branchId
-                        : "Cả cửa hàng"}{" "}
-                      · Hiệu lực: {formatPolicyDate(p.effectiveFrom)} →{" "}
-                      {p.effectiveTo ? formatPolicyDate(p.effectiveTo) : "∞"}
+                        : t("pages.shops.tax.wholeShop")}{" "}
+                      · {t("pages.shops.tax.effective")}{" "}
+                      {formatPolicyDate(p.effectiveFrom)} →{" "}
+                      {p.effectiveTo
+                        ? formatPolicyDate(p.effectiveTo)
+                        : t("pages.shops.tax.effectiveForever")}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {p.active ? (
-                      <Badge>Đang dùng</Badge>
+                      <Badge>{t("pages.shops.tax.badgeActive")}</Badge>
                     ) : (
-                      <Badge variant="secondary">Đã tắt</Badge>
+                      <Badge variant="secondary">
+                        {t("pages.shops.tax.badgeInactive")}
+                      </Badge>
                     )}
                     {p.active ? (
                       <Button
@@ -369,7 +382,7 @@ export default function TaxPolicyPage() {
                         onClick={() => handleDeactivate(p)}
                       >
                         <Ban className="h-3.5 w-3.5 mr-1" />
-                        Vô hiệu
+                        {t("pages.shops.tax.deactivate")}
                       </Button>
                     ) : null}
                   </div>
@@ -382,21 +395,22 @@ export default function TaxPolicyPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Tạo chính sách mới</CardTitle>
+          <CardTitle className="text-base">
+            {t("pages.shops.tax.createTitle")}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="rounded-md border bg-muted/30 p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <LayoutTemplate className="h-4 w-4" />
-                Mẫu nhanh
+                {t("pages.shops.tax.quickTemplates")}
               </div>
               <p className="text-xs text-muted-foreground">
-                Chọn mẫu phù hợp để điền sẵn tên, kiểu giá và tỷ lệ — bạn vẫn có
-                thể chỉnh trước khi lưu.
+                {t("pages.shops.tax.quickTemplatesHint")}
               </p>
               <div className="flex flex-wrap gap-2">
-                {TAX_PRESETS.map((p) => (
+                {taxPresets.map((p) => (
                   <Button
                     key={p.id}
                     type="button"
@@ -418,26 +432,28 @@ export default function TaxPolicyPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Tên hiển thị *</Label>
+                <Label>{t("pages.shops.tax.displayName")}</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  placeholder="VD: VAT 10%"
+                  placeholder={t("pages.shops.tax.displayNamePlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Phạm vi</Label>
+                <Label>{t("pages.shops.tax.scopeLabel")}</Label>
                 <Select
                   value={branchId || "__shop__"}
                   onValueChange={(v) => setBranchId(v === "__shop__" ? "" : v)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Cả cửa hàng" />
+                    <SelectValue
+                      placeholder={t("pages.shops.tax.scopePlaceholder")}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__shop__">
-                      Cả cửa hàng (mặc định)
+                      {t("pages.shops.tax.scopeDefault")}
                     </SelectItem>
                     {branches.map((b) => (
                       <SelectItem key={b.id} value={b.id}>
@@ -451,11 +467,11 @@ export default function TaxPolicyPage() {
 
             <div className="flex items-center justify-between rounded-md border p-3">
               <div>
-                <p className="text-sm font-medium">Giá bán đã gồm thuế</p>
+                <p className="text-sm font-medium">
+                  {t("pages.shops.tax.priceIncludesTax")}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Bật nếu giá món đã bao gồm VAT (thông dụng tại VN). Khi bật, tổng
-                  thanh toán thường không tăng thêm so với tổng giá niêm yết — hệ
-                  thống chỉ tách phần VAT để hiển thị NET và thuế trên đơn.
+                  {t("pages.shops.tax.priceIncludesTaxHint")}
                 </p>
               </div>
               <Switch
@@ -466,35 +482,32 @@ export default function TaxPolicyPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Có hiệu lực từ (tùy chọn)</Label>
+                <Label>{t("pages.shops.tax.effectiveFrom")}</Label>
                 <Input
                   type="datetime-local"
                   value={effectiveFrom}
                   onChange={(e) => setEffectiveFrom(e.target.value)}
                 />
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                  So với thời điểm tạo đơn / xem trước thuế. Để trống = áp dụng
-                  ngay (mặc định duy nhất cho shop / chi nhánh).
+                  {t("pages.shops.tax.effectiveFromHint")}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Đến (tùy chọn, để trống = không hết hạn)</Label>
+                <Label>{t("pages.shops.tax.effectiveTo")}</Label>
                 <Input
                   type="datetime-local"
                   value={effectiveTo}
                   onChange={(e) => setEffectiveTo(e.target.value)}
                 />
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                  Sau mốc này bản ghi không còn được chọn làm chính sách hiệu
-                  lực. Để trống = không giới hạn (danh sách hiển thị “∞”). Chọn
-                  ngày giờ theo máy bạn; server nhận dạng ISO.
+                  {t("pages.shops.tax.effectiveToHint")}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Dòng thuế</Label>
+                <Label>{t("pages.shops.tax.taxLines")}</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -502,23 +515,25 @@ export default function TaxPolicyPage() {
                   onClick={addRule}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" />
-                  Thêm dòng
+                  {t("pages.shops.tax.addLine")}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Thuế % nhập dạng số thập phân:{" "}
-                <code className="text-foreground">0.1</code> = 10%. Thuế cố định
-                (FIXED) là số tiền.
+                {t("pages.shops.tax.taxLinesHint")}
               </p>
               <div className="space-y-3 rounded-md border p-3">
                 {rules.map((r, idx) => (
                   <div
                     key={idx}
-                    className="grid gap-2 sm:grid-cols-12 sm:items-end border-b pb-3 last:border-0 last:pb-0"
+                    className="space-y-3 border-b pb-3 last:border-0 last:pb-0 xl:grid xl:grid-cols-12 xl:items-end xl:gap-2 xl:space-y-0"
                   >
-                    <div className="sm:col-span-2 space-y-1 min-w-0">
-                      <Label className="text-xs">Mã</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:contents">
+                    <div className="space-y-1 min-w-0 xl:col-span-2">
+                      <Label className="text-xs">
+                        {t("pages.shops.tax.code")}
+                      </Label>
                       <Input
+                        className="w-full min-w-0"
                         value={r.code}
                         onChange={(e) =>
                           updateRule(idx, "code", e.target.value)
@@ -526,9 +541,12 @@ export default function TaxPolicyPage() {
                         placeholder="VAT"
                       />
                     </div>
-                    <div className="sm:col-span-3 space-y-1 min-w-0">
-                      <Label className="text-xs">Nhãn</Label>
+                    <div className="space-y-1 min-w-0 xl:col-span-3">
+                      <Label className="text-xs">
+                        {t("pages.shops.tax.label")}
+                      </Label>
                       <Input
+                        className="w-full min-w-0"
                         value={r.label}
                         onChange={(e) =>
                           updateRule(idx, "label", e.target.value)
@@ -536,24 +554,35 @@ export default function TaxPolicyPage() {
                         required
                       />
                     </div>
-                    <div className="sm:col-span-2 space-y-1 min-w-0">
-                      <Label className="text-xs">Loại</Label>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:contents">
+                      <div className="space-y-1 min-w-0 xl:col-span-2">
+                      <Label className="text-xs">
+                        {t("pages.shops.tax.type")}
+                      </Label>
                       <Select
                         value={r.type}
                         onValueChange={(v) => updateRule(idx, "type", v)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full min-w-0">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="PERCENT">Phần trăm</SelectItem>
-                          <SelectItem value="FIXED">Cố định (₫)</SelectItem>
+                          <SelectItem value="PERCENT">
+                            {t("pages.shops.tax.typePercent")}
+                          </SelectItem>
+                          <SelectItem value="FIXED">
+                            {t("pages.shops.tax.typeFixed")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="sm:col-span-2 space-y-1 min-w-0">
-                      <Label className="text-xs">Giá trị</Label>
+                      </div>
+                      <div className="space-y-1 min-w-0 xl:col-span-2">
+                      <Label className="text-xs">
+                        {t("pages.shops.tax.value")}
+                      </Label>
                       <Input
+                        className="w-full min-w-0"
                         type="number"
                         step="any"
                         value={r.value}
@@ -566,20 +595,21 @@ export default function TaxPolicyPage() {
                         }
                         required
                       />
+                      </div>
                     </div>
-                    <div className="sm:col-span-2 flex items-center gap-2 pb-2 min-w-0 shrink-0">
-                      <Switch
-                        className="shrink-0"
-                        checked={r.applyOnPreviousTaxes}
-                        onCheckedChange={(c) =>
-                          updateRule(idx, "applyOnPreviousTaxes", c)
-                        }
-                      />
-                      <span className="text-xs text-muted-foreground leading-snug">
-                        Chồng thuế
-                      </span>
-                    </div>
-                    <div className="sm:col-span-1 flex justify-end sm:justify-center pb-1 shrink-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2 xl:col-span-3 xl:pb-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Switch
+                          className="shrink-0"
+                          checked={r.applyOnPreviousTaxes}
+                          onCheckedChange={(c) =>
+                            updateRule(idx, "applyOnPreviousTaxes", c)
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground leading-snug">
+                          {t("pages.shops.tax.stackTax")}
+                        </span>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
@@ -587,7 +617,7 @@ export default function TaxPolicyPage() {
                         className="shrink-0"
                         onClick={() => removeRule(idx)}
                         disabled={rules.length <= 1}
-                        aria-label="Xóa dòng thuế"
+                        aria-label={t("pages.shops.tax.removeLineAria")}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -601,7 +631,7 @@ export default function TaxPolicyPage() {
               {submitting ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : null}
-              Lưu chính sách
+              {t("pages.shops.tax.savePolicy")}
             </Button>
           </form>
         </CardContent>

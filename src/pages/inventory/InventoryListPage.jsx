@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   flexRender,
   getCoreRowModel,
@@ -77,6 +78,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
+import {
+  dataTableContainer,
+  listFilterSelectWrap,
+  listProductSelectWrap,
+  listSearchWrap,
+  listToolbarFilters,
+} from "@/components/table/listPageLayout.js";
 
 import InventoryActionModal from "./InventoryActionModal.jsx";
 
@@ -122,27 +130,28 @@ const StatCard = ({ icon, label, value, sub, iconClassName, loading }) => {
 // ─── Stock Status Badge ──────────────────────────────────────────────────────
 
 const StockStatusBadge = ({ quantity, minQuantity, trackInventory }) => {
+  const { t } = useTranslation();
   if (trackInventory === false)
     return (
       <Badge className="gap-1 text-[11px] bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100">
-        <EyeOff className="h-3 w-3" /> Không theo dõi
+        <EyeOff className="h-3 w-3" /> {t("pages.inventory.list.statusNotTracked")}
       </Badge>
     );
   if (quantity <= 0)
     return (
       <Badge variant="destructive" className="gap-1 text-[11px]">
-        <PackageX className="h-3 w-3" /> Hết hàng
+        <PackageX className="h-3 w-3" /> {t("pages.inventory.list.statusOutOfStock")}
       </Badge>
     );
   if (minQuantity > 0 && quantity <= minQuantity)
     return (
       <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40 dark:hover:bg-amber-500/15">
-        <AlertTriangle className="h-3 w-3" /> Sắp hết
+        <AlertTriangle className="h-3 w-3" /> {t("pages.inventory.list.statusLowStock")}
       </Badge>
     );
   return (
     <Badge className="gap-1 text-[11px] bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15">
-      Còn hàng
+      {t("pages.inventory.list.statusInStock")}
     </Badge>
   );
 };
@@ -192,19 +201,20 @@ function buildStockTreeRows(products) {
 }
 
 const TxTypeBadge = ({ type }) => {
+  const { t } = useTranslation();
   const map = {
     IMPORT: {
-      label: "Nhập hàng",
+      label: t("pages.inventory.list.txImport"),
       icon: TrendingUp,
       cls: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40",
     },
     EXPORT: {
-      label: "Xuất hàng",
+      label: t("pages.inventory.list.txExport"),
       icon: TrendingDown,
       cls: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/15 dark:text-orange-200 dark:border-orange-500/40",
     },
     ADJUSTMENT: {
-      label: "Điều chỉnh",
+      label: t("pages.inventory.list.txAdjustment"),
       icon: SlidersHorizontal,
       cls: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-500/40",
     },
@@ -221,6 +231,8 @@ const TxTypeBadge = ({ type }) => {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 const InventoryListPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const {
     selectedShopId,
     selectedBranchId,
@@ -302,11 +314,11 @@ const InventoryListPage = () => {
         setTotalCount(list.length);
       }
     } catch {
-      toast.error("Không thể tải danh sách sản phẩm.");
+      toast.error(t("pages.inventory.list.fetchProductsError"));
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, selectedBranchId, pagination, sorting, debouncedKeyword]);
+  }, [selectedShopId, selectedBranchId, pagination, sorting, debouncedKeyword, t]);
 
   useEffect(() => {
     fetchProducts();
@@ -340,11 +352,11 @@ const InventoryListPage = () => {
         setTxTotalCount(list.length);
       }
     } catch {
-      toast.error("Không thể tải lịch sử giao dịch.");
+      toast.error(t("pages.inventory.list.fetchHistoryError"));
     } finally {
       setTxLoading(false);
     }
-  }, [selectedShopId, selectedBranchId, txPagination, txProductFilter]);
+  }, [selectedShopId, selectedBranchId, txPagination, txProductFilter, t]);
 
   useEffect(() => {
     if (activeTab === "history") fetchTransactions();
@@ -431,7 +443,11 @@ const InventoryListPage = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 shrink-0"
-                  aria-label={row.getIsExpanded() ? "Thu gọn biến thể" : "Mở biến thể"}
+                  aria-label={
+                    row.getIsExpanded()
+                      ? t("pages.inventory.list.collapseVariants")
+                      : t("pages.inventory.list.expandVariants")
+                  }
                   onClick={row.getToggleExpandedHandler()}
                 >
                   {row.getIsExpanded() ? (
@@ -465,7 +481,10 @@ const InventoryListPage = () => {
       {
         accessorKey: "productName",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Sản phẩm" />
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.inventory.list.colProduct")}
+          />
         ),
         cell: ({ row }) => {
           const name = row.original.productName || row.original.name;
@@ -475,7 +494,7 @@ const InventoryListPage = () => {
             return (
               <div className="pl-2 border-l-2 border-primary/25 ml-1 py-0.5">
                 <p className="text-sm font-medium leading-tight">
-                  {vlabel || "Biến thể"}
+                  {vlabel || t("pages.inventory.list.variant")}
                 </p>
               </div>
             );
@@ -510,7 +529,10 @@ const InventoryListPage = () => {
       {
         accessorKey: "price",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Giá bán" />
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.inventory.list.colPrice")}
+          />
         ),
         cell: ({ row }) => {
           const isSub = row.original._isVariantRow;
@@ -520,7 +542,7 @@ const InventoryListPage = () => {
           if (!isSub && hasVariants) {
             return (
               <span className="text-xs text-muted-foreground italic">
-                Theo biến thể
+                {t("pages.inventory.list.perVariant")}
               </span>
             );
           }
@@ -530,7 +552,7 @@ const InventoryListPage = () => {
             row.original.defaultPrice;
           return (
             <span className="text-sm font-medium">
-              {price ? Number(price).toLocaleString("vi-VN") + " ₫" : "—"}
+              {price ? Number(price).toLocaleString(numberLocale) + " ₫" : "—"}
             </span>
           );
         },
@@ -538,7 +560,10 @@ const InventoryListPage = () => {
       {
         accessorKey: "quantity",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Tồn kho" />
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.inventory.list.colStock")}
+          />
         ),
         cell: ({ row }) => {
           if (row.original.trackInventory === false)
@@ -551,7 +576,7 @@ const InventoryListPage = () => {
             <span
               className={`text-sm font-semibold tabular-nums ${qty <= 0 ? "text-red-600" : ""}`}
             >
-              {qty.toLocaleString("vi-VN")}
+              {qty.toLocaleString(numberLocale)}
             </span>
           );
         },
@@ -559,7 +584,10 @@ const InventoryListPage = () => {
       {
         accessorKey: "minQuantity",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Tồn tối thiểu" />
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.inventory.list.colMinStock")}
+          />
         ),
         cell: ({ row }) => {
           if (row.original.trackInventory === false)
@@ -569,14 +597,14 @@ const InventoryListPage = () => {
           const min = row.original.minQuantity ?? 0;
           return (
             <span className="text-sm text-muted-foreground tabular-nums">
-              {min > 0 ? min.toLocaleString("vi-VN") : "—"}
+              {min > 0 ? min.toLocaleString(numberLocale) : "—"}
             </span>
           );
         },
       },
       {
         id: "status",
-        header: "Trạng thái",
+        header: t("pages.inventory.list.colStatus"),
         enableSorting: false,
         cell: ({ row }) => {
           const isSub = row.original._isVariantRow;
@@ -607,12 +635,14 @@ const InventoryListPage = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Mở menu</span>
+                  <span className="sr-only">{t("pages.inventory.list.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background">
-                <DropdownMenuLabel>Thao tác kho</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  {t("pages.inventory.list.actionsInventory")}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={(e) => {
@@ -622,7 +652,7 @@ const InventoryListPage = () => {
                   disabled={!canManage}
                 >
                   <PackagePlus className="h-4 w-4 mr-2 text-emerald-600" />
-                  Nhập hàng
+                  {t("pages.inventory.list.import")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {
@@ -632,7 +662,7 @@ const InventoryListPage = () => {
                   disabled={!canManage || lineQty <= 0}
                 >
                   <PackageMinus className="h-4 w-4 mr-2 text-orange-600" />
-                  Xuất hàng
+                  {t("pages.inventory.list.export")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {
@@ -642,7 +672,7 @@ const InventoryListPage = () => {
                   disabled={!canManage}
                 >
                   <SlidersHorizontal className="h-4 w-4 mr-2 text-blue-600" />
-                  Điều chỉnh
+                  {t("pages.inventory.list.adjustment")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -650,7 +680,7 @@ const InventoryListPage = () => {
         },
       },
     ],
-    [canManage, openAction],
+    [canManage, openAction, t, numberLocale],
   );
 
   const stockTable = useReactTable({
@@ -688,7 +718,10 @@ const InventoryListPage = () => {
       {
         accessorKey: "createdAt",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Thời gian" />
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.inventory.list.colTime")}
+          />
         ),
         cell: ({ row }) => {
           const d = row.original.createdAt;
@@ -696,9 +729,9 @@ const InventoryListPage = () => {
           const date = new Date(d);
           return (
             <div>
-              <p className="text-sm">{date.toLocaleDateString("vi-VN")}</p>
+              <p className="text-sm">{date.toLocaleDateString(numberLocale)}</p>
               <p className="text-xs text-muted-foreground">
-                {date.toLocaleTimeString("vi-VN")}
+                {date.toLocaleTimeString(numberLocale)}
               </p>
             </div>
           );
@@ -706,7 +739,7 @@ const InventoryListPage = () => {
       },
       {
         accessorKey: "productName",
-        header: "Sản phẩm",
+        header: t("pages.inventory.list.colProduct"),
         cell: ({ row }) => (
           <div>
             <p className="text-sm font-medium">
@@ -717,7 +750,7 @@ const InventoryListPage = () => {
             </p>
             {row.original.variantId && (
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Biến thể:{" "}
+                {t("pages.inventory.list.variantLabel")}{" "}
                 <span
                   className={
                     row.original.variantName ? "" : "font-mono break-all"
@@ -732,13 +765,16 @@ const InventoryListPage = () => {
       },
       {
         accessorKey: "type",
-        header: "Loại",
+        header: t("pages.inventory.list.colType"),
         cell: ({ row }) => <TxTypeBadge type={row.original.type} />,
       },
       {
         accessorKey: "quantity",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Số lượng" />
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.inventory.list.colQuantity")}
+          />
         ),
         cell: ({ row }) => {
           const type = row.original.type;
@@ -749,23 +785,23 @@ const InventoryListPage = () => {
               className={`text-sm font-semibold tabular-nums ${isPositive ? "text-emerald-600" : type === "EXPORT" ? "text-orange-600" : "text-blue-600"}`}
             >
               {isPositive ? "+" : type === "EXPORT" ? "-" : ""}
-              {Math.abs(qty).toLocaleString("vi-VN")}
+              {Math.abs(qty).toLocaleString(numberLocale)}
             </span>
           );
         },
       },
       {
         accessorKey: "currentStock",
-        header: "Tồn sau GD",
+        header: t("pages.inventory.list.colStockAfter"),
         cell: ({ row }) => (
           <span className="text-sm tabular-nums">
-            {(row.original.currentStock ?? 0).toLocaleString("vi-VN")}
+            {(row.original.currentStock ?? 0).toLocaleString(numberLocale)}
           </span>
         ),
       },
       {
         accessorKey: "note",
-        header: "Ghi chú",
+        header: t("pages.inventory.list.colNote"),
         cell: ({ row }) => (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -783,7 +819,7 @@ const InventoryListPage = () => {
       },
       {
         accessorKey: "createdByName",
-        header: "Người thực hiện",
+        header: t("pages.inventory.list.colPerformedBy"),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {row.original.createdByName || "—"}
@@ -791,7 +827,7 @@ const InventoryListPage = () => {
         ),
       },
     ],
-    [],
+    [t, numberLocale],
   );
 
   const txTable = useReactTable({
@@ -816,12 +852,14 @@ const InventoryListPage = () => {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Quản lý kho hàng
+              {t("pages.inventory.list.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
               {selectedBranch
-                ? `Chi nhánh: ${selectedBranch.name}`
-                : "Chọn chi nhánh để xem tồn kho"}
+                ? t("pages.inventory.list.subtitleBranch", {
+                    name: selectedBranch.name,
+                  })
+                : t("pages.inventory.list.subtitleSelectBranch")}
             </p>
           </div>
           {branches.length > 1 && (
@@ -831,7 +869,9 @@ const InventoryListPage = () => {
             >
               <SelectTrigger className="w-[220px]">
                 <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Chọn chi nhánh" />
+                <SelectValue
+                  placeholder={t("pages.inventory.list.selectBranch")}
+                />
               </SelectTrigger>
               <SelectContent className="bg-background">
                 {branches.map((b) => (
@@ -848,9 +888,11 @@ const InventoryListPage = () => {
         {noBranch ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Warehouse className="h-16 w-16 text-muted-foreground/40 mb-4" />
-            <h3 className="text-lg font-semibold">Chưa chọn chi nhánh</h3>
+            <h3 className="text-lg font-semibold">
+              {t("pages.inventory.list.noBranchTitle")}
+            </h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-              Vui lòng chọn một chi nhánh để xem và quản lý tồn kho sản phẩm.
+              {t("pages.inventory.list.noBranchHint")}
             </p>
           </div>
         ) : (
@@ -861,28 +903,28 @@ const InventoryListPage = () => {
             >
               <StatCard
                 icon={Package}
-                label="Theo dõi tồn kho"
-                value={stats.totalProducts.toLocaleString("vi-VN")}
+                label={t("pages.inventory.list.statTracked")}
+                value={stats.totalProducts.toLocaleString(numberLocale)}
                 iconClassName="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300"
                 loading={loading && products.length === 0}
               />
               <StatCard
                 icon={Warehouse}
-                label="Tổng tồn kho"
-                value={stats.totalStock.toLocaleString("vi-VN")}
+                label={t("pages.inventory.list.statTotalStock")}
+                value={stats.totalStock.toLocaleString(numberLocale)}
                 iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300"
                 loading={loading && products.length === 0}
               />
               <StatCard
                 icon={AlertTriangle}
-                label="Sắp hết hàng"
+                label={t("pages.inventory.list.statLowStock")}
                 value={stats.lowStock}
                 iconClassName="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300"
                 loading={loading && products.length === 0}
               />
               <StatCard
                 icon={PackageX}
-                label="Hết hàng"
+                label={t("pages.inventory.list.statOutOfStock")}
                 value={stats.outOfStock}
                 iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"
                 loading={loading && products.length === 0}
@@ -890,7 +932,7 @@ const InventoryListPage = () => {
               {stats.notTracked > 0 && (
                 <StatCard
                   icon={EyeOff}
-                  label="Không theo dõi"
+                  label={t("pages.inventory.list.statNotTracked")}
                   value={stats.notTracked}
                   iconClassName="bg-gray-100 text-gray-500"
                   loading={loading && products.length === 0}
@@ -902,10 +944,10 @@ const InventoryListPage = () => {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
                 <TabsTrigger value="stock" className="gap-1.5">
-                  <Package className="h-4 w-4" /> Tồn kho
+                  <Package className="h-4 w-4" /> {t("pages.inventory.list.tabStock")}
                 </TabsTrigger>
                 <TabsTrigger value="history" className="gap-1.5">
-                  <History className="h-4 w-4" /> Lịch sử
+                  <History className="h-4 w-4" /> {t("pages.inventory.list.tabHistory")}
                 </TabsTrigger>
               </TabsList>
 
@@ -913,45 +955,49 @@ const InventoryListPage = () => {
               <TabsContent value="stock">
                 <div className="flex flex-col gap-4">
                   {/* Toolbar */}
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                      <div className="relative flex-1 min-w-0 sm:max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                          placeholder="Tìm sản phẩm..."
-                          value={keyword}
-                          onChange={(e) => handleKeywordChange(e.target.value)}
-                          className="pl-9 flex-1 min-w-0"
-                        />
-                      </div>
-                      <Select
-                        value={stockFilter}
-                        onValueChange={(v) => {
-                          setStockFilter(v);
-                          setPagination((p) => ({ ...p, pageIndex: 0 }));
-                        }}
-                      >
-                        <SelectTrigger className="w-[160px]">
+                  <div className={listToolbarFilters}>
+                    <div className={listSearchWrap}>
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        placeholder={t("pages.inventory.list.searchPlaceholder")}
+                        value={keyword}
+                        onChange={(e) => handleKeywordChange(e.target.value)}
+                        className="pl-9 w-full"
+                      />
+                    </div>
+                    <Select
+                      value={stockFilter}
+                      onValueChange={(v) => {
+                        setStockFilter(v);
+                        setPagination((p) => ({ ...p, pageIndex: 0 }));
+                      }}
+                    >
+                      <SelectTrigger className={listFilterSelectWrap}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-background">
-                          <SelectItem value="ALL">Tất cả</SelectItem>
-                          <SelectItem value="IN_STOCK">Còn hàng</SelectItem>
-                          <SelectItem value="LOW_STOCK">
-                            Sắp hết hàng
+                          <SelectItem value="ALL">
+                            {t("pages.inventory.list.filterAll")}
                           </SelectItem>
-                          <SelectItem value="OUT_OF_STOCK">Hết hàng</SelectItem>
+                          <SelectItem value="IN_STOCK">
+                            {t("pages.inventory.list.filterInStock")}
+                          </SelectItem>
+                          <SelectItem value="LOW_STOCK">
+                            {t("pages.inventory.list.filterLowStock")}
+                          </SelectItem>
+                          <SelectItem value="OUT_OF_STOCK">
+                            {t("pages.inventory.list.filterOutOfStock")}
+                          </SelectItem>
                           <SelectItem value="NOT_TRACKED">
-                            Không theo dõi
+                            {t("pages.inventory.list.filterNotTracked")}
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                      <DataTableViewOptions table={stockTable} />
-                    </div>
+                    <DataTableViewOptions table={stockTable} />
                   </div>
 
                   {/* Table */}
-                  <div className="relative overflow-hidden rounded-md border">
+                  <div className={dataTableContainer}>
                     {loading && products.length > 0 && (
                       <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -981,7 +1027,7 @@ const InventoryListPage = () => {
                               colSpan={stockColumns.length}
                               className="h-24 text-center text-muted-foreground"
                             >
-                              Đang tải...
+                              {t("pages.inventory.list.loading")}
                             </TableCell>
                           </TableRow>
                         ) : stockTable.getRowModel().rows?.length ? (
@@ -1012,8 +1058,8 @@ const InventoryListPage = () => {
                               className="h-24 text-center text-muted-foreground"
                             >
                               {stockFilter !== "ALL"
-                                ? "Không có sản phẩm phù hợp với bộ lọc."
-                                : "Chưa có sản phẩm nào trong chi nhánh."}
+                                ? t("pages.inventory.list.emptyFilter")
+                                : t("pages.inventory.list.emptyBranch")}
                             </TableCell>
                           </TableRow>
                         )}
@@ -1029,7 +1075,7 @@ const InventoryListPage = () => {
               <TabsContent value="history">
                 <div className="flex flex-col gap-4">
                   {/* Toolbar */}
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className={listToolbarFilters}>
                     {products.length > 0 && (
                       <Select
                         value={txProductFilter}
@@ -1040,12 +1086,16 @@ const InventoryListPage = () => {
                           setTxPagination((p) => ({ ...p, pageIndex: 0 }));
                         }}
                       >
-                        <SelectTrigger className="w-[280px]">
-                          <SelectValue placeholder="Chọn sản phẩm để xem lịch sử" />
+                        <SelectTrigger className={listProductSelectWrap}>
+                          <SelectValue
+                            placeholder={t(
+                              "pages.inventory.list.selectProductHistory",
+                            )}
+                          />
                         </SelectTrigger>
                         <SelectContent className="bg-background">
                           <SelectItem value="ALL" disabled>
-                            Chọn sản phẩm
+                            {t("pages.inventory.list.selectProduct")}
                           </SelectItem>
                           {products
                             .filter((p) => p.trackInventory !== false)
@@ -1064,20 +1114,28 @@ const InventoryListPage = () => {
                         setTxTypeFilter(v);
                       }}
                     >
-                      <SelectTrigger className="w-[160px]">
+                      <SelectTrigger className={listFilterSelectWrap}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-background">
-                        <SelectItem value="ALL">Tất cả loại</SelectItem>
-                        <SelectItem value="IMPORT">Nhập hàng</SelectItem>
-                        <SelectItem value="EXPORT">Xuất hàng</SelectItem>
-                        <SelectItem value="ADJUSTMENT">Điều chỉnh</SelectItem>
+                        <SelectItem value="ALL">
+                          {t("pages.inventory.list.filterAllTypes")}
+                        </SelectItem>
+                        <SelectItem value="IMPORT">
+                          {t("pages.inventory.list.txImport")}
+                        </SelectItem>
+                        <SelectItem value="EXPORT">
+                          {t("pages.inventory.list.txExport")}
+                        </SelectItem>
+                        <SelectItem value="ADJUSTMENT">
+                          {t("pages.inventory.list.txAdjustment")}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {/* Table */}
-                  <div className="relative overflow-hidden rounded-md border">
+                  <div className={dataTableContainer}>
                     {txLoading && transactions.length > 0 && (
                       <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -1107,7 +1165,7 @@ const InventoryListPage = () => {
                               colSpan={txColumns.length}
                               className="h-24 text-center text-muted-foreground"
                             >
-                              Đang tải...
+                              {t("pages.inventory.list.loading")}
                             </TableCell>
                           </TableRow>
                         ) : txTable.getRowModel().rows?.length ? (
@@ -1133,8 +1191,8 @@ const InventoryListPage = () => {
                                 <ArrowDownUp className="h-8 w-8 text-muted-foreground/40" />
                                 <p>
                                   {txProductFilter === "ALL"
-                                    ? "Chọn sản phẩm để xem lịch sử giao dịch."
-                                    : "Chưa có giao dịch nào."}
+                                    ? t("pages.inventory.list.historySelectProduct")
+                                    : t("pages.inventory.list.historyEmpty")}
                                 </p>
                               </div>
                             </TableCell>

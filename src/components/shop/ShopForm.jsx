@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,29 +29,33 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { COUNTRIES } from "@/constants/countries";
 import { getFlagUrl } from "@/utils/commonUtils";
+import {
+  getBusinessModelLabel,
+  getShopTypeLabel,
+} from "@/utils/shopLabels";
 
-const formSchema = z
-  .object({
-    name: z.string().min(1, "Tên cửa hàng không được để trống."),
-    type: z.string(),
-    address: z.string().min(10, "Địa chỉ phải có ít nhất 10 ký tự."),
-    phone: z.string().min(1, "Số điện thoại không được để trống."),
-    countryCode: z.string(),
-    businessModel: z.string(),
-    taxRegistrationNumber: z
-      .string()
-      .max(32, "MST tối đa 32 ký tự."),
-  })
-  .superRefine((data, ctx) => {
-    const countryInfo = COUNTRIES.find((c) => c.code === data.countryCode);
-    if (countryInfo && !countryInfo.phonePattern.test(data.phone)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Số điện thoại không hợp lệ cho ${countryInfo.name}`,
-        path: ["phone"],
-      });
-    }
-  });
+function buildShopFormSchema(t) {
+  return z
+    .object({
+      name: z.string().min(1, t("pages.shops.form.nameRequired")),
+      type: z.string(),
+      address: z.string().min(10, t("pages.shops.form.addressMin")),
+      phone: z.string().min(1, t("pages.shops.form.phoneRequired")),
+      countryCode: z.string(),
+      businessModel: z.string(),
+      taxRegistrationNumber: z.string().max(32, t("pages.shops.form.taxMax")),
+    })
+    .superRefine((data, ctx) => {
+      const countryInfo = COUNTRIES.find((c) => c.code === data.countryCode);
+      if (countryInfo && !countryInfo.phonePattern.test(data.phone)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("pages.shops.form.phoneInvalid", { country: countryInfo.name }),
+          path: ["phone"],
+        });
+      }
+    });
+}
 
 export default function ShopForm({
   mode = "create",
@@ -61,6 +66,8 @@ export default function ShopForm({
   onModeChange,
   handleDelete,
 }) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => buildShopFormSchema(t), [t]);
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: shop || {
@@ -115,22 +122,22 @@ export default function ShopForm({
     const MAX_FILE_SIZE_MB = 5;
 
     if (!ALLOWED_TYPES.includes(selectedFile.type)) {
-      toast.error("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP");
+      toast.error(t("pages.shops.form.imageTypeError"));
       return;
     }
 
     let processedFile = selectedFile;
     if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      const toastId = toast.loading("Ảnh vượt quá 5MB. Đang nén ảnh...");
+      const toastId = toast.loading(t("pages.shops.form.compressing"));
       try {
         processedFile = await imageCompression(selectedFile, {
           maxSizeMB: 1,
           maxWidthOrHeight: 1024,
           useWebWorker: true,
         });
-        toast.success("Nén ảnh thành công!", { id: toastId });
+        toast.success(t("pages.shops.form.compressSuccess"), { id: toastId });
       } catch {
-        toast.error("Nén ảnh thất bại.", { id: toastId });
+        toast.error(t("pages.shops.form.compressFail"), { id: toastId });
       }
     }
 
@@ -141,7 +148,7 @@ export default function ShopForm({
     // Cập nhật vào react-hook-form
     form.setValue("logo", processedFile, { shouldDirty: true });
 
-    toast.success("Ảnh đã sẵn sàng!");
+    toast.success(t("pages.shops.form.imageReady"));
   };
 
   // --- Submit handler ---
@@ -181,8 +188,8 @@ export default function ShopForm({
               e.stopPropagation();
               navigator.clipboard
                 .writeText(String(value))
-                .then(() => toast.success("Đã sao chép!"))
-                .catch(() => toast.error("Không thể sao chép"));
+                .then(() => toast.success(t("pages.shops.form.copySuccess")))
+                .catch(() => toast.error(t("pages.shops.form.copyFail")));
             }}
           />
         )}
@@ -206,10 +213,10 @@ export default function ShopForm({
                 render={() => (
                   <FormItem className="w-full">
                     <FormLabel>
-                      Logo cửa hàng{" "}
+                      {t("pages.shops.form.logoLabel")}{" "}
                       {!isReadOnly && (
                         <span className="text-xs text-gray-500">
-                          (JPG, PNG, WEBP tối đa 5MB)
+                          {t("pages.shops.form.logoHint")}
                         </span>
                       )}
                     </FormLabel>
@@ -244,7 +251,7 @@ export default function ShopForm({
                               }}
                               className="text-xs"
                             >
-                              Xóa ảnh
+                              {t("pages.shops.form.removeImage")}
                             </Button>
                           )}
                           {!isReadOnly && (
@@ -254,8 +261,8 @@ export default function ShopForm({
                               className="relative overflow-hidden text-xs"
                             >
                               {imagePreview
-                                ? "Tải ảnh khác"
-                                : "Tải logo cửa hàng"}
+                                ? t("pages.shops.form.uploadOther")
+                                : t("pages.shops.form.uploadLogo")}
                               <input
                                 key={fileInputKey}
                                 type="file"
@@ -281,7 +288,7 @@ export default function ShopForm({
                 if (isReadOnly) {
                   return (
                     <FormItem>
-                      <FormLabel>Tên cửa hàng</FormLabel>
+                      <FormLabel>{t("pages.shops.form.shopName")}</FormLabel>
                       <FormControl>
                         <ReadOnlyValue value={form.getValues("name")} />
                       </FormControl>
@@ -291,11 +298,11 @@ export default function ShopForm({
                 }
                 return (
                   <FormItem>
-                    <FormLabel>Tên cửa hàng *</FormLabel>
+                    <FormLabel>{t("pages.shops.form.shopNameRequired")}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
-                          placeholder="Nhập tên cửa hàng"
+                          placeholder={t("pages.shops.form.shopNamePlaceholder")}
                           aria-invalid={!!fieldState.error}
                           {...field}
                         />
@@ -315,13 +322,12 @@ export default function ShopForm({
                 render={({ field }) => {
                   if (isReadOnly) {
                     const value = form.getValues("type");
+                    const hit = shopTypes.find((s) => s.value === value);
                     const label =
-                      shopTypes.find((s) => s.value === value)?.label ||
-                      value ||
-                      "-";
+                      getShopTypeLabel(t, value, hit?.label) || "-";
                     return (
                       <FormItem>
-                        <FormLabel>Loại hình kinh doanh</FormLabel>
+                        <FormLabel>{t("pages.shops.form.businessType")}</FormLabel>
                         <FormControl>
                           <ReadOnlyValue value={label} />
                         </FormControl>
@@ -331,7 +337,7 @@ export default function ShopForm({
 
                   return (
                     <FormItem>
-                      <FormLabel>Loại hình kinh doanh</FormLabel>
+                      <FormLabel>{t("pages.shops.form.businessType")}</FormLabel>
                       <FormControl>
                         <Select
                           onValueChange={(value) => {
@@ -347,12 +353,12 @@ export default function ShopForm({
                           value={field.value}
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Chọn loại hình" />
+                            <SelectValue placeholder={t("pages.shops.form.selectType")} />
                           </SelectTrigger>
                           <SelectContent>
                             {shopTypes.map((opt) => (
                               <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
+                                {getShopTypeLabel(t, opt.value, opt.label)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -369,13 +375,12 @@ export default function ShopForm({
                 render={({ field }) => {
                   if (isReadOnly) {
                     const value = form.getValues("businessModel");
+                    const hit = businessModels.find((b) => b.value === value);
                     const label =
-                      businessModels.find((b) => b.value === value)?.label ||
-                      value ||
-                      "-";
+                      getBusinessModelLabel(t, value, hit?.label) || "-";
                     return (
                       <FormItem>
-                        <FormLabel>Mô hình kinh doanh</FormLabel>
+                        <FormLabel>{t("pages.shops.form.businessModel")}</FormLabel>
                         <FormControl>
                           <ReadOnlyValue value={label} />
                         </FormControl>
@@ -385,19 +390,19 @@ export default function ShopForm({
 
                   return (
                     <FormItem>
-                      <FormLabel>Mô hình kinh doanh</FormLabel>
+                      <FormLabel>{t("pages.shops.form.businessModel")}</FormLabel>
                       <FormControl>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Chọn mô hình" />
+                            <SelectValue placeholder={t("pages.shops.form.selectModel")} />
                           </SelectTrigger>
                           <SelectContent>
                             {businessModels.map((opt) => (
                               <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
+                                {getBusinessModelLabel(t, opt.value, opt.label)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -419,7 +424,7 @@ export default function ShopForm({
                       COUNTRIES.find((cc) => cc.code === value) || COUNTRIES[0];
                     return (
                       <FormItem>
-                        <FormLabel>Quốc gia</FormLabel>
+                        <FormLabel>{t("pages.shops.form.country")}</FormLabel>
                         <FormControl>
                           <div className="flex items-center gap-3">
                             <img
@@ -439,7 +444,7 @@ export default function ShopForm({
 
                   return (
                     <FormItem>
-                      <FormLabel>Quốc gia</FormLabel>
+                      <FormLabel>{t("pages.shops.form.country")}</FormLabel>
                       <FormControl>
                         <Select
                           onValueChange={field.onChange}
@@ -500,7 +505,7 @@ export default function ShopForm({
                     const display = `${country.dialCode} ${val || "-"}`;
                     return (
                       <FormItem>
-                        <FormLabel>Số điện thoại</FormLabel>
+                        <FormLabel>{t("pages.shops.form.phone")}</FormLabel>
                         <FormControl>
                           <ReadOnlyValue value={display} />
                         </FormControl>
@@ -511,7 +516,7 @@ export default function ShopForm({
 
                   return (
                     <FormItem>
-                      <FormLabel>Số điện thoại *</FormLabel>
+                      <FormLabel>{t("pages.shops.form.phoneRequired")}</FormLabel>
                       <FormControl>
                         <div className="flex">
                           <span className="px-3 py-2 bg-gray-200 border border-r-0 rounded-l-md text-gray-700 text-xs">
@@ -519,7 +524,7 @@ export default function ShopForm({
                           </span>
                           <Input
                             aria-invalid={!!fieldState.error}
-                            placeholder="Nhập số điện thoại"
+                            placeholder={t("pages.shops.form.phonePlaceholder")}
                             className="flex-1 rounded-l-none"
                             {...field}
                           />
@@ -540,7 +545,7 @@ export default function ShopForm({
                 if (isReadOnly) {
                   return (
                     <FormItem>
-                      <FormLabel>Địa chỉ</FormLabel>
+                      <FormLabel>{t("pages.shops.form.address")}</FormLabel>
                       <FormControl>
                         <ReadOnlyValue
                           value={form.getValues("address")}
@@ -554,10 +559,10 @@ export default function ShopForm({
 
                 return (
                   <FormItem>
-                    <FormLabel>Địa chỉ *</FormLabel>
+                    <FormLabel>{t("pages.shops.form.addressRequired")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Nhập địa chỉ chi tiết"
+                        placeholder={t("pages.shops.form.addressPlaceholder")}
                         rows={3}
                         aria-invalid={!!fieldState.error}
                         {...field}
@@ -576,7 +581,7 @@ export default function ShopForm({
                 if (isReadOnly) {
                   return (
                     <FormItem>
-                      <FormLabel>Mã số thuế (MST)</FormLabel>
+                      <FormLabel>{t("pages.shops.settings.taxId")}</FormLabel>
                       <FormControl>
                         <ReadOnlyValue
                           value={form.getValues("taxRegistrationNumber")}
@@ -588,10 +593,10 @@ export default function ShopForm({
                 }
                 return (
                   <FormItem>
-                    <FormLabel>Mã số thuế (MST) — tùy chọn</FormLabel>
+                    <FormLabel>{t("pages.shops.form.taxOptional")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Ví dụ: 0123456789"
+                        placeholder={t("pages.shops.form.taxPlaceholder")}
                         maxLength={32}
                         aria-invalid={!!fieldState.error}
                         {...field}
@@ -614,7 +619,7 @@ export default function ShopForm({
                 className="w-fit"
                 onClick={() => history.back()}
               >
-                Quay lại
+                {t("pages.shops.form.back")}
               </Button>
               <Button
                 variant="destructive"
@@ -622,7 +627,7 @@ export default function ShopForm({
                 onClick={() => handleDelete()}
                 disabled={isLoading}
               >
-                Delete
+                {t("pages.shops.form.delete")}
               </Button>
               <Button
                 variant="warning"
@@ -633,7 +638,7 @@ export default function ShopForm({
                   onModeChange("edit");
                 }}
               >
-                Chỉnh sửa
+                {t("pages.shops.form.edit")}
               </Button>
             </>
           ) : (
@@ -646,7 +651,7 @@ export default function ShopForm({
                   mode === "create" ? history.back() : onModeChange("view");
                 }}
               >
-                Hủy
+                {t("pages.shops.form.cancel")}
               </Button>
               <Button
                 variant={mode === "edit" ? "warning" : "success"}
@@ -655,10 +660,10 @@ export default function ShopForm({
                 className="w-fit"
               >
                 {isLoading
-                  ? "Đang xử lý..."
+                  ? t("pages.shops.form.processing")
                   : mode === "edit"
-                    ? "Cập nhật"
-                    : "Tạo cửa hàng"}
+                    ? t("pages.shops.form.update")
+                    : t("pages.shops.form.createShop")}
               </Button>
             </>
           )}

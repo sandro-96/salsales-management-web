@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -22,11 +23,15 @@ import {
 } from "@/components/ui/select";
 
 import { addStaff } from "../../api/staffApi.js";
-import { SHOP_ROLES_ASSIGNABLE } from "../../constants/shopRoles.js";
+import { SHOP_ROLE } from "../../constants/shopRoles.js";
+import { buildShopRolesAssignable } from "@/utils/shopLabels";
 
 export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
+  const { t } = useTranslation();
+  const assignableRoles = useMemo(() => buildShopRolesAssignable(t), [t]);
+  const defaultRole = SHOP_ROLE.STAFF;
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState(SHOP_ROLES_ASSIGNABLE[1]?.value ?? "STAFF");
+  const [role, setRole] = useState(defaultRole);
   const [submitting, setSubmitting] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const emailTrimmed = email.trim();
@@ -37,22 +42,22 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
   useEffect(() => {
     if (open) {
       setEmail("");
-      setRole(SHOP_ROLES_ASSIGNABLE[1]?.value ?? "STAFF");
+      setRole(defaultRole);
       setAttemptedSubmit(false);
     }
   }, [open]);
 
   const validate = () => {
     if (!emailTrimmed) {
-      toast.error("Email không được để trống.");
+      toast.error(t("pages.staffs.addModal.emailRequired"));
       return false;
     }
     if (!emailRegex.test(emailTrimmed)) {
-      toast.error("Email không hợp lệ.");
+      toast.error(t("pages.staffs.addModal.emailInvalid"));
       return false;
     }
     if (!role) {
-      toast.error("Vui lòng chọn vai trò.");
+      toast.error(t("pages.staffs.addModal.roleRequired"));
       return false;
     }
     return true;
@@ -69,18 +74,18 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
         role,
       });
       if (res.data?.success) {
-        toast.success("Thêm nhân viên thành công.");
+        toast.success(t("pages.staffs.addModal.addSuccess"));
         onSuccess?.();
         onClose?.();
       } else {
-        toast.error(res.data?.message || "Thêm nhân viên thất bại.");
+        toast.error(res.data?.message || t("pages.staffs.addModal.addFail"));
       }
     } catch (err) {
       const msg = err.response?.data?.message;
       if (msg) {
         toast.error(msg);
       } else {
-        toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
+        toast.error(t("pages.staffs.addModal.genericError"));
       }
     } finally {
       setSubmitting(false);
@@ -94,9 +99,9 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Thêm nhân viên</DialogTitle>
+          <DialogTitle>{t("pages.staffs.addModal.title")}</DialogTitle>
           <DialogDescription>
-            Nhập email của người dùng đã có tài khoản để thêm vào cửa hàng.
+            {t("pages.staffs.addModal.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -106,32 +111,32 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
               htmlFor="staff-email"
               className={emailInvalid ? "text-destructive" : undefined}
             >
-              Email *
+              {t("pages.staffs.addModal.emailLabel")}
             </Label>
             <Input
               id="staff-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@email.com"
+              placeholder={t("pages.staffs.addModal.emailPlaceholder")}
               autoFocus
               aria-invalid={emailInvalid}
             />
             <p className="text-xs text-muted-foreground">
-              Người dùng phải đã đăng ký tài khoản trên hệ thống.
+              {t("pages.staffs.addModal.emailHint")}
             </p>
           </div>
 
           <div className="space-y-2">
             <Label className={roleInvalid ? "text-destructive" : undefined}>
-              Vai trò *
+              {t("pages.staffs.addModal.roleLabel")}
             </Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger aria-invalid={roleInvalid}>
-                <SelectValue placeholder="Chọn vai trò" />
+                <SelectValue placeholder={t("pages.staffs.addModal.rolePlaceholder")} />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                {SHOP_ROLES_ASSIGNABLE.map((r) => (
+                {assignableRoles.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
                   </SelectItem>
@@ -143,11 +148,11 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Hủy
+            {t("pages.staffs.addModal.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting} variant="success">
             {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-            Thêm nhân viên
+            {t("pages.staffs.addModal.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

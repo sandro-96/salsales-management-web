@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Loader2, Store } from "lucide-react";
 import { useShop } from "@/hooks/useShop.js";
 import { searchProducts, updateBranchProduct } from "@/api/productApi.js";
@@ -22,6 +23,8 @@ export default function BranchPricesTab({
   focusBranchId,
   onSuccess,
 }) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const { branches, isOwner, shopRole } = useShop();
   const canEditBranchPricing = isOwner || shopRole === "MANAGER";
 
@@ -107,11 +110,11 @@ export default function BranchPricesTab({
       setDrafts(initDrafts);
     } catch (err) {
       console.error("BranchPricesTab fetch error:", err);
-      toast.error("Không thể tải dữ liệu theo chi nhánh.");
+      toast.error(t("pages.products.branchPrices.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, product, focusBranchId, branches]);
+  }, [shopId, product, focusBranchId, branches, t]);
 
   useEffect(() => {
     fetchBranchRows();
@@ -171,7 +174,7 @@ export default function BranchPricesTab({
       };
       const res = await updateBranchProduct(shopId, branchId, row.id, payload);
       if (res.data?.success) {
-        toast.success("Đã cập nhật chi nhánh.");
+        toast.success(t("pages.products.branchPrices.updateSuccess"));
         setRowsMap((prev) => ({
           ...prev,
           [branchId]: { ...prev[branchId], ...res.data.data },
@@ -183,11 +186,11 @@ export default function BranchPricesTab({
         }));
         onSuccess?.();
       } else {
-        toast.error(res.data?.message || "Cập nhật thất bại.");
+        toast.error(res.data?.message || t("pages.products.branchPrices.updateFail"));
       }
     } catch (err) {
       console.error("updateBranchProduct error:", err);
-      toast.error("Đã xảy ra lỗi khi cập nhật.");
+      toast.error(t("pages.products.branchPrices.updateError"));
     } finally {
       setSaving((prev) => ({ ...prev, [branchId]: false }));
     }
@@ -227,7 +230,7 @@ export default function BranchPricesTab({
     return (
       <div className="flex items-center justify-center h-32 text-muted-foreground gap-2">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-sm">Đang tải...</span>
+        <span className="text-sm">{t("pages.products.branchPrices.loading")}</span>
       </div>
     );
   }
@@ -236,7 +239,7 @@ export default function BranchPricesTab({
     return (
       <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
         <Store className="h-8 w-8 opacity-40" />
-        <p className="text-sm">Cửa hàng chưa có chi nhánh nào.</p>
+        <p className="text-sm">{t("pages.products.branchPrices.noBranches")}</p>
       </div>
     );
   }
@@ -245,22 +248,22 @@ export default function BranchPricesTab({
     <div className="flex flex-col gap-3">
       {!canEditBranchPricing && (
         <p className="text-xs text-muted-foreground rounded-md border bg-muted/40 px-3 py-2">
-          Chỉ chủ shop và quản lý được chỉnh giá sản phẩm tại chi nhánh.
+          {t("pages.products.branchPrices.permissionHint")}
         </p>
       )}
-      {/* Shop defaults summary — only show when viewing all branches */}
       {!focusBranchId && (
         <p className="text-sm text-muted-foreground">
-          Giá mặc định shop:{" "}
+          {t("pages.products.branchPrices.defaultPrice")}{" "}
           <span className="font-medium text-foreground">
             {product?.defaultPrice
-              ? Number(product.defaultPrice).toLocaleString("vi-VN") + " ₫"
+              ? Number(product.defaultPrice).toLocaleString(numberLocale) + " ₫"
               : "-"}
           </span>
-          {" · "}Giá vốn mặc định:{" "}
+          {" · "}
+          {t("pages.products.branchPrices.defaultCost")}
           <span className="font-medium text-foreground">
             {product?.costPrice
-              ? Number(product.costPrice).toLocaleString("vi-VN") + " ₫"
+              ? Number(product.costPrice).toLocaleString(numberLocale) + " ₫"
               : "-"}
           </span>
         </p>
@@ -285,14 +288,14 @@ export default function BranchPricesTab({
                   <span className="font-medium text-sm">{branch.name}</span>
                   {!row && (
                     <Badge variant="outline" className="text-xs">
-                      Chưa có sản phẩm
+                      {t("pages.products.branchPrices.noProductInBranch")}
                     </Badge>
                   )}
                 </div>
                 {row && draft && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                      Đang bán
+                      {t("pages.products.branchPrices.selling")}
                     </span>
                     <Switch
                       checked={draft.activeInBranch}
@@ -310,7 +313,7 @@ export default function BranchPricesTab({
                   {/* Pricing */}
                   <div className="grid grid-cols-2 gap-3">
                     <Field
-                      label="Giá bán tại chi nhánh"
+                      label={t("pages.products.branchPrices.branchPrice")}
                       placeholder={String(product?.defaultPrice ?? "")}
                       value={draft.price}
                       onChange={(v) => setDraftField(branch.id, "price", v)}
@@ -318,7 +321,7 @@ export default function BranchPricesTab({
                       disabled={!canEditBranchPricing}
                     />
                     <Field
-                      label="Giá vốn tại chi nhánh"
+                      label={t("pages.products.branchPrices.branchCost")}
                       placeholder={String(product?.costPrice ?? "")}
                       value={draft.branchCostPrice}
                       onChange={(v) =>
@@ -328,8 +331,8 @@ export default function BranchPricesTab({
                       disabled={!canEditBranchPricing}
                     />
                     <Field
-                      label="Giá khuyến mãi"
-                      placeholder="Không áp dụng"
+                      label={t("pages.products.branchPrices.promoPrice")}
+                      placeholder={t("pages.products.branchPrices.noPromo")}
                       value={draft.discountPrice}
                       onChange={(v) =>
                         setDraftField(branch.id, "discountPrice", v)
@@ -338,7 +341,7 @@ export default function BranchPricesTab({
                       disabled={!canEditBranchPricing}
                     />
                     <Field
-                      label="Giảm giá (%)"
+                      label={t("pages.products.branchPrices.discountPercent")}
                       placeholder="0"
                       max={100}
                       value={draft.discountPercentage}
@@ -356,7 +359,7 @@ export default function BranchPricesTab({
                     row.branchVariants.length > 0 && (
                       <div className="border-t pt-3 flex flex-col gap-2">
                         <span className="text-xs font-medium text-muted-foreground">
-                          Giá biến thể tại chi nhánh (0 = dùng giá chi nhánh)
+                          {t("pages.products.branchPrices.variantPrices")}
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {row.branchVariants.map((bv) => {
@@ -396,10 +399,12 @@ export default function BranchPricesTab({
                   {/* Lý do thay đổi giá */}
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-muted-foreground font-medium">
-                      Lý do thay đổi giá
+                      {t("pages.products.branchPrices.priceReason")}
                     </label>
                     <Input
-                      placeholder="Lý do thay đổi giá (không bắt buộc)"
+                      placeholder={t(
+                        "pages.products.branchPrices.priceReasonPlaceholder",
+                      )}
                       value={draft.reason}
                       disabled={!canEditBranchPricing}
                       onChange={(e) =>
@@ -420,12 +425,12 @@ export default function BranchPricesTab({
                       {isSaving ? (
                         <>
                           <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                          Đang lưu...
+                          {t("pages.products.branchPrices.saving")}
                         </>
                       ) : focusBranchId ? (
-                        "Lưu thay đổi"
+                        t("pages.products.branchPrices.saveChanges")
                       ) : (
-                        "Lưu chi nhánh này"
+                        t("pages.products.branchPrices.saveBranch")
                       )}
                     </Button>
                   </div>
@@ -434,30 +439,31 @@ export default function BranchPricesTab({
                   {rowsMap[branch.id]?.branchPriceHistory?.length > 0 && (
                     <div className="border-t pt-3 flex flex-col gap-2">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Lịch sử giá chi nhánh (
-                        {rowsMap[branch.id].branchPriceHistory.length} mục)
+                        {t("pages.products.branchPrices.priceHistory", {
+                          count: rowsMap[branch.id].branchPriceHistory.length,
+                        })}
                       </span>
                       <div className="overflow-x-auto rounded-md border">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="bg-muted text-muted-foreground border-b">
                               <th className="text-left px-2 py-1.5 font-medium">
-                                Thời điểm
+                                {t("pages.products.branchPrices.colTime")}
                               </th>
                               <th className="text-right px-2 py-1.5 font-medium">
-                                Giá bán cũ
+                                {t("pages.products.branchPrices.colOldPrice")}
                               </th>
                               <th className="text-right px-2 py-1.5 font-medium">
-                                Giá bán mới
+                                {t("pages.products.branchPrices.colNewPrice")}
                               </th>
                               <th className="text-right px-2 py-1.5 font-medium">
-                                Giá vốn cũ
+                                {t("pages.products.branchPrices.colOldCost")}
                               </th>
                               <th className="text-right px-2 py-1.5 font-medium">
-                                Giá vốn mới
+                                {t("pages.products.branchPrices.colNewCost")}
                               </th>
                               <th className="text-left px-2 py-1.5 font-medium">
-                                Lý do
+                                {t("pages.products.branchPrices.colReason")}
                               </th>
                             </tr>
                           </thead>
@@ -471,7 +477,7 @@ export default function BranchPricesTab({
                                   <td className="px-2 py-1.5 whitespace-nowrap text-muted-foreground">
                                     {h.changedAt
                                       ? new Date(h.changedAt).toLocaleString(
-                                          "vi-VN",
+                                          numberLocale,
                                           {
                                             dateStyle: "short",
                                             timeStyle: "short",
@@ -482,14 +488,14 @@ export default function BranchPricesTab({
                                   <td className="px-2 py-1.5 text-right">
                                     {h.oldPrice != null
                                       ? Number(h.oldPrice).toLocaleString(
-                                          "vi-VN",
+                                          numberLocale,
                                         ) + " ₫"
                                       : "-"}
                                   </td>
                                   <td className="px-2 py-1.5 text-right font-medium">
                                     {h.newPrice != null
                                       ? Number(h.newPrice).toLocaleString(
-                                          "vi-VN",
+                                          numberLocale,
                                         ) + " ₫"
                                       : "-"}
                                   </td>
@@ -497,7 +503,7 @@ export default function BranchPricesTab({
                                     {h.oldCostPrice != null &&
                                     h.oldCostPrice !== undefined
                                       ? Number(h.oldCostPrice).toLocaleString(
-                                          "vi-VN",
+                                          numberLocale,
                                         ) + " ₫"
                                       : "-"}
                                   </td>
@@ -505,7 +511,7 @@ export default function BranchPricesTab({
                                     {h.newCostPrice != null &&
                                     h.newCostPrice !== undefined
                                       ? Number(h.newCostPrice).toLocaleString(
-                                          "vi-VN",
+                                          numberLocale,
                                         ) + " ₫"
                                       : "-"}
                                   </td>
@@ -523,7 +529,7 @@ export default function BranchPricesTab({
                 </>
               ) : (
                 <p className="text-xs text-muted-foreground italic">
-                  Sản phẩm chưa được thêm vào chi nhánh này.
+                  {t("pages.products.branchPrices.notInBranch")}
                 </p>
               )}
             </div>

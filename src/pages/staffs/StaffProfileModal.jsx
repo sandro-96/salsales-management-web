@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { vi } from "date-fns/locale";
+import { enUS, vi } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
 
 import {
@@ -40,14 +41,9 @@ import {
   createExternalStaff,
 } from "../../api/staffProfileApi.js";
 import { useShop } from "../../hooks/useShop.js";
-import { SHOP_ROLE_LABELS } from "../../constants/shopRoles.js";
+import { getShopRoleLabel } from "@/utils/shopLabels";
 
-const CONTRACT_TYPES = [
-  { value: "FULL_TIME", label: "Toàn thời gian" },
-  { value: "PART_TIME", label: "Bán thời gian" },
-  { value: "PROBATION", label: "Thử việc" },
-  { value: "CONTRACT", label: "Hợp đồng" },
-];
+const CONTRACT_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "PROBATION", "CONTRACT"];
 
 export default function StaffProfileModal({
   open,
@@ -57,6 +53,8 @@ export default function StaffProfileModal({
   onSuccess,
   isNewExternal = false,
 }) {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language?.startsWith("en") ? enUS : vi;
   const { branches } = useShop();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -80,6 +78,9 @@ export default function StaffProfileModal({
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
   const [note, setNote] = useState("");
+
+  const contractLabel = (type) =>
+    t(`pages.staffs.contractType.${type}`, { defaultValue: type });
 
   const resetForm = () => {
     setFullName("");
@@ -143,18 +144,18 @@ export default function StaffProfileModal({
         }
       } catch (err) {
         console.error("Fetch staff profile error:", err);
-        toast.error("Không thể tải hồ sơ nhân sự.");
+        toast.error(t("pages.staffs.profileModal.fetchError"));
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [open, staff, shopId, isNewExternal]);
+  }, [open, staff, shopId, isNewExternal, t]);
 
   const handleSubmit = async () => {
     if (isExternal && !fullName.trim()) {
-      toast.error("Vui lòng nhập họ tên nhân viên.");
+      toast.error(t("pages.staffs.profileModal.fullNameRequired"));
       return;
     }
 
@@ -192,17 +193,17 @@ export default function StaffProfileModal({
       if (res?.data?.success) {
         toast.success(
           isNewExternal
-            ? "Thêm nhân viên ngoài hệ thống thành công."
-            : "Lưu hồ sơ nhân sự thành công.",
+            ? t("pages.staffs.profileModal.createExternalSuccess")
+            : t("pages.staffs.profileModal.saveSuccess"),
         );
         onSuccess?.();
         onClose?.();
       } else {
-        toast.error(res?.data?.message || "Lưu hồ sơ thất bại.");
+        toast.error(res?.data?.message || t("pages.staffs.profileModal.saveFail"));
       }
     } catch (err) {
       const msg = err.response?.data?.message;
-      toast.error(msg || "Đã xảy ra lỗi. Vui lòng thử lại.");
+      toast.error(msg || t("pages.staffs.profileModal.genericError"));
     } finally {
       setSubmitting(false);
     }
@@ -211,7 +212,7 @@ export default function StaffProfileModal({
   if (!isNewExternal && !staff) return null;
 
   const displayName = isNewExternal
-    ? "nhân viên mới"
+    ? t("pages.staffs.profileModal.newStaffDisplayName")
     : staff?.fullName || staff?.email || "-";
 
   return (
@@ -223,18 +224,13 @@ export default function StaffProfileModal({
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {isNewExternal
-              ? "Thêm nhân viên ngoài hệ thống"
-              : "Hồ sơ nhân sự"}
+              ? t("pages.staffs.profileModal.titleNewExternal")
+              : t("pages.staffs.profileModal.title")}
           </DialogTitle>
           <DialogDescription>
-            {isNewExternal ? (
-              "Tạo hồ sơ cho nhân viên không cần tài khoản hệ thống (tạp vụ, bưng bê...)."
-            ) : (
-              <>
-                Quản lý thông tin nhân sự cho{" "}
-                <span className="font-medium">{displayName}</span>.
-              </>
-            )}
+            {isNewExternal
+              ? t("pages.staffs.profileModal.descriptionNewExternal")
+              : t("pages.staffs.profileModal.description", { name: displayName })}
           </DialogDescription>
         </DialogHeader>
 
@@ -268,10 +264,12 @@ export default function StaffProfileModal({
                   </p>
                 </div>
                 {staff.external ? (
-                  <Badge variant="secondary">Ngoài hệ thống</Badge>
+                  <Badge variant="secondary">
+                    {t("pages.staffs.profileModal.externalBadge")}
+                  </Badge>
                 ) : (
                   <Badge variant="outline">
-                    {SHOP_ROLE_LABELS[staff.role] || staff.role}
+                    {getShopRoleLabel(t, staff.role) || staff.role}
                   </Badge>
                 )}
               </div>
@@ -280,37 +278,42 @@ export default function StaffProfileModal({
             {isExternal && (
               <div className="space-y-3">
                 <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Thông tin cá nhân
+                  {t("pages.staffs.profileModal.sectionPersonal")}
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5 col-span-2">
                     <Label htmlFor="sp-fullname">
-                      Họ tên <span className="text-red-500">*</span>
+                      {t("pages.staffs.profileModal.fullNameLabel")}{" "}
+                      <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="sp-fullname"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="VD: Nguyễn Văn A"
+                      placeholder={t("pages.staffs.profileModal.fullNamePlaceholder")}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="sp-phone-ext">Số điện thoại</Label>
+                    <Label htmlFor="sp-phone-ext">
+                      {t("pages.staffs.profileModal.phoneLabel")}
+                    </Label>
                     <Input
                       id="sp-phone-ext"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="VD: 0912345678"
+                      placeholder={t("pages.staffs.profileModal.phonePlaceholder")}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="sp-email-ext">Email</Label>
+                    <Label htmlFor="sp-email-ext">
+                      {t("pages.staffs.profileModal.emailLabel")}
+                    </Label>
                     <Input
                       id="sp-email-ext"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="VD: email@example.com"
+                      placeholder={t("pages.staffs.profileModal.emailPlaceholder")}
                     />
                   </div>
                 </div>
@@ -319,18 +322,20 @@ export default function StaffProfileModal({
 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Thông tin công việc
+                {t("pages.staffs.profileModal.sectionWork")}
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5 col-span-2">
-                  <Label>Chi nhánh</Label>
+                  <Label>{t("pages.staffs.profileModal.branchLabel")}</Label>
                   <Select value={branchId} onValueChange={setBranchId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Chưa gắn chi nhánh" />
+                      <SelectValue
+                        placeholder={t("pages.staffs.profileModal.branchPlaceholder")}
+                      />
                     </SelectTrigger>
                     <SelectContent className="bg-background">
                       <SelectItem value="__none__">
-                        Không gắn chi nhánh
+                        {t("pages.staffs.profileModal.branchNone")}
                       </SelectItem>
                       {(branches || []).map((b) => (
                         <SelectItem key={b.id} value={b.id}>
@@ -341,34 +346,40 @@ export default function StaffProfileModal({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sp-position">Vị trí</Label>
+                  <Label htmlFor="sp-position">
+                    {t("pages.staffs.profileModal.positionLabel")}
+                  </Label>
                   <Input
                     id="sp-position"
                     value={position}
                     onChange={(e) => setPosition(e.target.value)}
-                    placeholder="VD: Thu ngân, Tạp vụ..."
+                    placeholder={t("pages.staffs.profileModal.positionPlaceholder")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sp-department">Phòng ban</Label>
+                  <Label htmlFor="sp-department">
+                    {t("pages.staffs.profileModal.departmentLabel")}
+                  </Label>
                   <Input
                     id="sp-department"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    placeholder="VD: Bếp, Phục vụ..."
+                    placeholder={t("pages.staffs.profileModal.departmentPlaceholder")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sp-level">Cấp bậc</Label>
+                  <Label htmlFor="sp-level">
+                    {t("pages.staffs.profileModal.levelLabel")}
+                  </Label>
                   <Input
                     id="sp-level"
                     value={level}
                     onChange={(e) => setLevel(e.target.value)}
-                    placeholder="VD: Thử việc, Chính thức..."
+                    placeholder={t("pages.staffs.profileModal.levelPlaceholder")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Ngày vào làm</Label>
+                  <Label>{t("pages.staffs.profileModal.startDateLabel")}</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -380,8 +391,8 @@ export default function StaffProfileModal({
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {startDate
-                          ? format(startDate, "dd/MM/yyyy", { locale: vi })
-                          : "Chọn ngày"}
+                          ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
+                          : t("pages.staffs.profileModal.startDatePlaceholder")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -389,7 +400,7 @@ export default function StaffProfileModal({
                         mode="single"
                         selected={startDate}
                         onSelect={setStartDate}
-                        locale={vi}
+                        locale={dateLocale}
                         initialFocus
                       />
                     </PopoverContent>
@@ -400,32 +411,36 @@ export default function StaffProfileModal({
 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Hợp đồng & Lương
+                {t("pages.staffs.profileModal.sectionContractSalary")}
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Loại hợp đồng</Label>
+                  <Label>{t("pages.staffs.profileModal.contractTypeLabel")}</Label>
                   <Select value={contractType} onValueChange={setContractType}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Chọn loại" />
+                      <SelectValue
+                        placeholder={t("pages.staffs.profileModal.contractTypePlaceholder")}
+                      />
                     </SelectTrigger>
                     <SelectContent className="bg-background">
-                      {CONTRACT_TYPES.map((ct) => (
-                        <SelectItem key={ct.value} value={ct.value}>
-                          {ct.label}
+                      {CONTRACT_TYPE_VALUES.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {contractLabel(value)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sp-salary">Lương cơ bản (VNĐ)</Label>
+                  <Label htmlFor="sp-salary">
+                    {t("pages.staffs.profileModal.salaryLabel")}
+                  </Label>
                   <Input
                     id="sp-salary"
                     type="number"
                     value={salary}
                     onChange={(e) => setSalary(e.target.value)}
-                    placeholder="VD: 8000000"
+                    placeholder={t("pages.staffs.profileModal.salaryPlaceholder")}
                   />
                 </div>
               </div>
@@ -433,75 +448,95 @@ export default function StaffProfileModal({
 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Giấy tờ
+                {t("pages.staffs.profileModal.sectionDocuments")}
               </h4>
               <div className="space-y-1.5">
-                <Label htmlFor="sp-id">Số CCCD / CMND</Label>
+                <Label htmlFor="sp-id">
+                  {t("pages.staffs.profileModal.idNumberLabel")}
+                </Label>
                 <Input
                   id="sp-id"
                   value={idNumber}
                   onChange={(e) => setIdNumber(e.target.value)}
-                  placeholder="VD: 001234567890"
+                  placeholder={t("pages.staffs.profileModal.idNumberPlaceholder")}
                 />
               </div>
             </div>
 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Tài khoản ngân hàng
+                {t("pages.staffs.profileModal.sectionBank")}
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="sp-bank">Tên ngân hàng</Label>
+                  <Label htmlFor="sp-bank">
+                    {t("pages.staffs.profileModal.bankNameLabel")}
+                  </Label>
                   <Input
                     id="sp-bank"
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
-                    placeholder="VD: Vietcombank"
+                    placeholder={t("pages.staffs.profileModal.bankNamePlaceholder")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sp-bank-number">Số tài khoản</Label>
+                  <Label htmlFor="sp-bank-number">
+                    {t("pages.staffs.profileModal.bankAccountNumberLabel")}
+                  </Label>
                   <Input
                     id="sp-bank-number"
                     value={bankAccountNumber}
                     onChange={(e) => setBankAccountNumber(e.target.value)}
-                    placeholder="VD: 1234567890"
+                    placeholder={t(
+                      "pages.staffs.profileModal.bankAccountNumberPlaceholder",
+                    )}
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sp-bank-holder">Chủ tài khoản</Label>
+                <Label htmlFor="sp-bank-holder">
+                  {t("pages.staffs.profileModal.bankAccountHolderLabel")}
+                </Label>
                 <Input
                   id="sp-bank-holder"
                   value={bankAccountHolder}
                   onChange={(e) => setBankAccountHolder(e.target.value)}
-                  placeholder="VD: NGUYEN VAN A"
+                  placeholder={t(
+                    "pages.staffs.profileModal.bankAccountHolderPlaceholder",
+                  )}
                 />
               </div>
             </div>
 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Liên hệ khẩn cấp
+                {t("pages.staffs.profileModal.sectionEmergency")}
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="sp-ec-name">Họ tên</Label>
+                  <Label htmlFor="sp-ec-name">
+                    {t("pages.staffs.profileModal.emergencyNameLabel")}
+                  </Label>
                   <Input
                     id="sp-ec-name"
                     value={emergencyContactName}
                     onChange={(e) => setEmergencyContactName(e.target.value)}
-                    placeholder="Họ tên người liên hệ"
+                    placeholder={t(
+                      "pages.staffs.profileModal.emergencyNamePlaceholder",
+                    )}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sp-ec-phone">Số điện thoại</Label>
+                  <Label htmlFor="sp-ec-phone">
+                    {t("pages.staffs.profileModal.emergencyPhoneLabel")}
+                  </Label>
                   <Input
                     id="sp-ec-phone"
                     value={emergencyContactPhone}
                     onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                    placeholder="VD: 0912345678"
+                    placeholder={t(
+                      "pages.staffs.profileModal.emergencyPhonePlaceholder",
+                    )}
                   />
                 </div>
               </div>
@@ -509,12 +544,12 @@ export default function StaffProfileModal({
 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Ghi chú
+                {t("pages.staffs.profileModal.sectionNote")}
               </h4>
               <Textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Ghi chú thêm về nhân viên..."
+                placeholder={t("pages.staffs.profileModal.notePlaceholder")}
                 rows={3}
               />
             </div>
@@ -523,11 +558,13 @@ export default function StaffProfileModal({
 
         <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Hủy
+            {t("pages.staffs.profileModal.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting || loading} variant="success">
             {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-            {isNewExternal ? "Thêm nhân viên" : "Lưu hồ sơ"}
+            {isNewExternal
+              ? t("pages.staffs.profileModal.submitNew")
+              : t("pages.staffs.profileModal.submitSave")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,4 +1,5 @@
 import React from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Clock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { useSubscription } from "@/hooks/useSubscription";
  * - Các trường hợp còn lại ẩn banner.
  */
 export default function SubscriptionBanner() {
+  const { t } = useTranslation();
   const { data } = useSubscription();
   const navigate = useNavigate();
 
@@ -24,14 +26,13 @@ export default function SubscriptionBanner() {
     return (
       <Bar tone="danger" icon={<AlertTriangle className="h-4 w-4" />}>
         <span className="flex-1 min-w-0">
-          Gói dịch vụ đã hết hạn. Các thao tác ghi (thêm/sửa/xoá) tạm khoá cho tới khi
-          bạn thanh toán <b>99.000đ</b> để gia hạn.
+          <Trans i18nKey="pages.billing.banner.expired" components={{ b: <b /> }} />
         </span>
         <Button size="sm" variant="secondary"
           className="h-7 bg-white/95 text-red-700 hover:bg-white shrink-0 dark:bg-red-100 dark:text-red-900 dark:hover:bg-white"
           onClick={goBilling}
         >
-          Thanh toán ngay
+          {t("pages.billing.banner.payNow")}
         </Button>
       </Bar>
     );
@@ -41,14 +42,17 @@ export default function SubscriptionBanner() {
     return (
       <Bar tone="warn" icon={<Clock className="h-4 w-4" />}>
         <span className="flex-1 min-w-0">
-          Bạn còn <b>{trialDaysRemaining} ngày</b> dùng thử. Sau đó cần thanh toán
-          99.000đ/tháng để tiếp tục sử dụng.
+          <Trans
+            i18nKey="pages.billing.banner.trialEnding"
+            values={{ days: trialDaysRemaining }}
+            components={{ b: <b /> }}
+          />
         </span>
         <Button size="sm" variant="secondary"
           className="h-7 bg-white/95 text-amber-800 hover:bg-white shrink-0 dark:bg-amber-100 dark:text-amber-900 dark:hover:bg-white"
           onClick={goBilling}
         >
-          Xem chi tiết
+          {t("pages.billing.banner.viewDetails")}
         </Button>
       </Bar>
     );
@@ -58,14 +62,17 @@ export default function SubscriptionBanner() {
     return (
       <Bar tone="info" icon={<Info className="h-4 w-4" />}>
         <span className="flex-1 min-w-0">
-          Gói của bạn sẽ hết hạn trong <b>{periodDaysRemaining} ngày</b>. Gia hạn sớm
-          để không bị gián đoạn.
+          <Trans
+            i18nKey="pages.billing.banner.renewSoon"
+            values={{ days: periodDaysRemaining }}
+            components={{ b: <b /> }}
+          />
         </span>
         <Button size="sm" variant="secondary"
           className="h-7 bg-white/95 text-sky-800 hover:bg-white shrink-0 dark:bg-sky-100 dark:text-sky-900 dark:hover:bg-white"
           onClick={goBilling}
         >
-          Gia hạn
+          {t("pages.billing.banner.renew")}
         </Button>
       </Bar>
     );

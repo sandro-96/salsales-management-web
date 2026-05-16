@@ -1,4 +1,8 @@
-export function cartFromOrderItems(items) {
+export function cartFromOrderItems(items, t) {
+  const fallback =
+    typeof t === "function"
+      ? t("pages.pos.cartUtils.productFallback")
+      : "Product";
   const list = Array.isArray(items) ? items : [];
   return list.map((it, idx) => {
     const unit = it?.priceAfterDiscount ?? it?.price ?? 0;
@@ -20,7 +24,7 @@ export function cartFromOrderItems(items) {
         : "";
     const nameExtra =
       toppingLabel && tops.length > 0 ? ` + ${toppingLabel}` : "";
-    const name = `${it?.productName || "Sản phẩm"}${label}${nameExtra}`;
+    const name = `${it?.productName || fallback}${label}${nameExtra}`;
     const productId = it?.productId || "";
     const variantId = it?.variantId || null;
     const tKey = toppingIds.length ? toppingIds.join(",") : "not";

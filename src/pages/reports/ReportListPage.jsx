@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { toast } from "sonner";
 import { format, subDays } from "date-fns";
-import { vi } from "date-fns/locale";
+import { enUS, vi } from "date-fns/locale";
 import {
   Loader2,
   Download,
@@ -74,28 +75,6 @@ import {
   exportTopProducts,
 } from "../../api/reportApi.js";
 
-const formatCurrency = (value, { round = false } = {}) => {
-  const n = Number(value || 0);
-  const v = round ? Math.round(n) : n;
-  return v.toLocaleString("vi-VN") + "đ";
-};
-
-const formatNumber = (value) => Number(value || 0).toLocaleString("vi-VN");
-
-const formatDateShort = (dateStr) => {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "-";
-  return format(d, "dd/MM", { locale: vi });
-};
-
-const formatDateFull = (dateStr) => {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "-";
-  return format(d, "dd/MM/yyyy", { locale: vi });
-};
-
 const toISODate = (date) => {
   if (!date) return null;
   const d = date instanceof Date ? date : new Date(date);
@@ -103,7 +82,15 @@ const toISODate = (date) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const StatCard = ({ title, value, icon, description, hint, className }) => (
+const StatCard = ({
+  title,
+  value,
+  icon,
+  description,
+  hint,
+  hintAria,
+  className,
+}) => (
   <Card className={cn("flex h-full min-h-0 flex-col", className)}>
     <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
       <div className="flex min-w-0 flex-1 items-center gap-1">
@@ -116,7 +103,7 @@ const StatCard = ({ title, value, icon, description, hint, className }) => (
               <button
                 type="button"
                 className="shrink-0 rounded-md text-muted-foreground outline-none ring-offset-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Giải thích chỉ số"
+                aria-label={hintAria}
               >
                 <Info className="h-3.5 w-3.5" />
               </button>
@@ -138,23 +125,70 @@ const StatCard = ({ title, value, icon, description, hint, className }) => (
   </Card>
 );
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border bg-background p-3 shadow-md">
-      <p className="text-sm font-medium mb-1">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} className="text-sm" style={{ color: p.color }}>
-          {p.name}: {p.name.includes("Doanh thu") || p.name.includes("Tổng tiền")
-            ? formatCurrency(p.value)
-            : formatNumber(p.value)}
-        </p>
-      ))}
-    </div>
-  );
-};
-
 const ReportListPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const dateLocale = i18n.language?.startsWith("en") ? enUS : vi;
+
+  const formatCurrency = useCallback(
+    (value, { round = false } = {}) => {
+      const n = Number(value || 0);
+      const v = round ? Math.round(n) : n;
+      return v.toLocaleString(numberLocale) + "đ";
+    },
+    [numberLocale],
+  );
+
+  const formatNumber = useCallback(
+    (value) => Number(value || 0).toLocaleString(numberLocale),
+    [numberLocale],
+  );
+
+  const formatDateShort = useCallback(
+    (dateStr) => {
+      if (!dateStr) return "-";
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return "-";
+      return format(d, "dd/MM", { locale: dateLocale });
+    },
+    [dateLocale],
+  );
+
+  const formatDateFull = useCallback(
+    (dateStr) => {
+      if (!dateStr) return "-";
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return "-";
+      return format(d, "dd/MM/yyyy", { locale: dateLocale });
+    },
+    [dateLocale],
+  );
+
+  const chartRevenueLabel = t("pages.reports.list.chartRevenue");
+  const chartOrdersLabel = t("pages.reports.list.chartOrders");
+  const chartProductsLabel = t("pages.reports.list.chartProducts");
+
+  const CustomTooltip = useCallback(
+    ({ active, payload, label }) => {
+      if (!active || !payload?.length) return null;
+      const currencyNames = new Set([chartRevenueLabel]);
+      return (
+        <div className="rounded-lg border bg-background p-3 shadow-md">
+          <p className="text-sm font-medium mb-1">{label}</p>
+          {payload.map((p, i) => (
+            <p key={i} className="text-sm" style={{ color: p.color }}>
+              {p.name}:{" "}
+              {currencyNames.has(p.name)
+                ? formatCurrency(p.value)
+                : formatNumber(p.value)}
+            </p>
+          ))}
+        </div>
+      );
+    },
+    [chartRevenueLabel, formatCurrency, formatNumber],
+  );
+
   const [searchParams] = useSearchParams();
   const { selectedShopId, branches } = useShop();
   const shopId = selectedShopId;
@@ -195,17 +229,16 @@ const ReportListPage = () => {
       setTopProducts(topRes.data?.data ?? []);
     } catch (err) {
       console.error("Fetch reports error:", err);
-      toast.error("Không thể tải dữ liệu báo cáo.");
+      toast.error(t("pages.reports.list.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, buildRequest]);
+  }, [shopId, buildRequest, t]);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  // Branch deeplink: /reports?branchId=...
   useEffect(() => {
     const bid = searchParams.get("branchId");
     if (!bid) return;
@@ -234,9 +267,9 @@ const ReportListPage = () => {
       link.download = "daily-report.xlsx";
       link.click();
       URL.revokeObjectURL(link.href);
-      toast.success("Xuất báo cáo theo ngày thành công.");
+      toast.success(t("pages.reports.list.exportDailySuccess"));
     } catch {
-      toast.error("Không thể xuất file Excel.");
+      toast.error(t("pages.reports.list.exportFail"));
     } finally {
       setExporting(false);
     }
@@ -254,9 +287,9 @@ const ReportListPage = () => {
       link.download = "top-products.xlsx";
       link.click();
       URL.revokeObjectURL(link.href);
-      toast.success("Xuất sản phẩm bán chạy thành công.");
+      toast.success(t("pages.reports.list.exportTopSuccess"));
     } catch {
-      toast.error("Không thể xuất file Excel.");
+      toast.error(t("pages.reports.list.exportFail"));
     } finally {
       setExporting(false);
     }
@@ -274,37 +307,37 @@ const ReportListPage = () => {
     () =>
       sortedDailyData.map((d) => ({
         date: formatDateShort(d.date),
-        "Doanh thu": d.totalRevenue,
-        "Đơn hàng": d.totalOrders,
-        "Sản phẩm": d.totalProductsSold,
+        revenue: d.totalRevenue,
+        orders: d.totalOrders,
+        products: d.totalProductsSold,
       })),
-    [sortedDailyData],
+    [sortedDailyData, formatDateShort],
   );
 
   const chartRangeLabel = useMemo(
     () =>
-      `${format(startDate, "dd/MM/yyyy", { locale: vi })} — ${format(endDate, "dd/MM/yyyy", { locale: vi })}`,
-    [startDate, endDate],
+      `${format(startDate, "dd/MM/yyyy", { locale: dateLocale })} — ${format(endDate, "dd/MM/yyyy", { locale: dateLocale })}`,
+    [startDate, endDate, dateLocale],
   );
+
+  const orderStatusLabel = (status) =>
+    t(`pages.orders.status.${status}`, { defaultValue: status });
 
   return (
     <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Báo cáo doanh thu
+              {t("pages.reports.list.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Phân tích doanh thu, đơn hàng và sản phẩm bán chạy.
+              {t("pages.reports.list.subtitle")}
             </p>
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Start date */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -316,8 +349,8 @@ const ReportListPage = () => {
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {startDate
-                  ? format(startDate, "dd/MM/yyyy", { locale: vi })
-                  : "Từ ngày"}
+                  ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
+                  : t("pages.reports.list.fromDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -325,7 +358,7 @@ const ReportListPage = () => {
                 mode="single"
                 selected={startDate}
                 onSelect={(d) => d && setStartDate(d)}
-                locale={vi}
+                locale={dateLocale}
                 initialFocus
               />
             </PopoverContent>
@@ -333,7 +366,6 @@ const ReportListPage = () => {
 
           <span className="text-muted-foreground">—</span>
 
-          {/* End date */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -345,8 +377,8 @@ const ReportListPage = () => {
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {endDate
-                  ? format(endDate, "dd/MM/yyyy", { locale: vi })
-                  : "Đến ngày"}
+                  ? format(endDate, "dd/MM/yyyy", { locale: dateLocale })
+                  : t("pages.reports.list.toDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -355,13 +387,12 @@ const ReportListPage = () => {
                 selected={endDate}
                 onSelect={(d) => d && setEndDate(d)}
                 disabled={(d) => startDate && d < startDate}
-                locale={vi}
+                locale={dateLocale}
                 initialFocus
               />
             </PopoverContent>
           </Popover>
 
-          {/* Branch filter */}
           {branches?.length > 0 && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
               <SelectTrigger className="w-[180px]">
@@ -369,7 +400,9 @@ const ReportListPage = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="__all__">Tất cả chi nhánh</SelectItem>
+                <SelectItem value="__all__">
+                  {t("pages.reports.list.allBranches")}
+                </SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {b.name}
@@ -379,17 +412,26 @@ const ReportListPage = () => {
             </Select>
           )}
 
-          {/* Status filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[170px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-background">
-              <SelectItem value="__all__">Tất cả trạng thái</SelectItem>
-              <SelectItem value="COMPLETED">Hoàn tất</SelectItem>
-              <SelectItem value="PENDING">Chờ xử lý</SelectItem>
-              <SelectItem value="CONFIRMED">Đã xác nhận</SelectItem>
-              <SelectItem value="CANCELLED">Đã huỷ</SelectItem>
+              <SelectItem value="__all__">
+                {t("pages.reports.list.allStatuses")}
+              </SelectItem>
+              <SelectItem value="COMPLETED">
+                {orderStatusLabel("COMPLETED")}
+              </SelectItem>
+              <SelectItem value="PENDING">
+                {orderStatusLabel("PENDING")}
+              </SelectItem>
+              <SelectItem value="CONFIRMED">
+                {orderStatusLabel("CONFIRMED")}
+              </SelectItem>
+              <SelectItem value="CANCELLED">
+                {orderStatusLabel("CANCELLED")}
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -398,55 +440,54 @@ const ReportListPage = () => {
           )}
         </div>
 
-        {/* Summary cards */}
         <div className="grid grid-cols-2 items-stretch gap-4 lg:grid-cols-5">
           <StatCard
-            title="Tổng đơn hàng"
+            title={t("pages.reports.list.statOrders")}
             value={formatNumber(summary?.totalOrders)}
             icon={ShoppingCart}
           />
           <StatCard
-            title="Sản phẩm đã bán"
+            title={t("pages.reports.list.statProductsSold")}
             value={formatNumber(summary?.totalProductsSold)}
             icon={Package}
           />
           <StatCard
-            title="Doanh thu"
+            title={t("pages.reports.list.statRevenue")}
             value={formatCurrency(summary?.totalRevenue)}
             icon={DollarSign}
-            description="Tổng tiền hàng trên đơn"
-            hint="Theo totalPrice trên đơn. Khi giá đã gồm VAT, con số này thường gần với tổng tiền thu tùy cách cấu hình thuế."
+            description={t("pages.reports.list.statRevenueDesc")}
+            hint={t("pages.reports.list.statRevenueHint")}
+            hintAria={t("pages.reports.list.metricHintAria")}
           />
           <StatCard
-            title="Tổng tiền thu"
+            title={t("pages.reports.list.statAmount")}
             value={formatCurrency(summary?.totalAmount)}
             icon={Receipt}
-            description="Đã bao gồm thuế"
+            description={t("pages.reports.list.statAmountDesc")}
           />
           <StatCard
-            title="TB / đơn hàng"
+            title={t("pages.reports.list.statAvgOrder")}
             value={formatCurrency(summary?.averageOrderValue, { round: true })}
             icon={TrendingUp}
-            hint="Doanh thu chia cho số đơn; làm tròn đến đồng."
+            hint={t("pages.reports.list.statAvgOrderHint")}
+            hintAria={t("pages.reports.list.metricHintAria")}
           />
         </div>
 
-        {/* Tabs: Daily chart + Top products */}
         <Tabs defaultValue="daily" className="w-full">
           <div className="flex items-center justify-between">
             <TabsList>
               <TabsTrigger value="daily">
                 <BarChart3 className="h-4 w-4 mr-1.5" />
-                Theo ngày
+                {t("pages.reports.list.tabDaily")}
               </TabsTrigger>
               <TabsTrigger value="top-products">
                 <TrendingUp className="h-4 w-4 mr-1.5" />
-                Bán chạy
+                {t("pages.reports.list.tabTopProducts")}
               </TabsTrigger>
             </TabsList>
           </div>
 
-          {/* Daily report tab */}
           <TabsContent value="daily" className="space-y-4 mt-4">
             <div className="flex justify-end">
               <Button
@@ -460,7 +501,7 @@ const ReportListPage = () => {
                 ) : (
                   <Download className="h-4 w-4 mr-1" />
                 )}
-                Xuất Excel
+                {t("pages.reports.list.exportExcel")}
               </Button>
             </div>
 
@@ -469,14 +510,16 @@ const ReportListPage = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
-                      Biểu đồ doanh thu theo ngày
+                      {t("pages.reports.list.chartTitle")}
                     </CardTitle>
                     <CardDescription>
-                      Khoảng đã chọn: {chartRangeLabel}
+                      {t("pages.reports.list.chartRange", { range: chartRangeLabel })}
                       {sortedDailyData.length > 0 ? (
                         <span className="text-muted-foreground">
                           {" "}
-                          · Có dữ liệu {sortedDailyData.length} ngày
+                          {t("pages.reports.list.chartDaysWithData", {
+                            count: sortedDailyData.length,
+                          })}
                         </span>
                       ) : null}
                     </CardDescription>
@@ -507,7 +550,8 @@ const ReportListPage = () => {
                         <RechartsTooltip content={<CustomTooltip />} />
                         <Legend />
                         <Bar
-                          dataKey="Doanh thu"
+                          dataKey="revenue"
+                          name={chartRevenueLabel}
                           fill="hsl(var(--chart-1, 220 70% 50%))"
                           radius={[4, 4, 0, 0]}
                         />
@@ -519,23 +563,25 @@ const ReportListPage = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
-                      Chi tiết theo ngày
+                      {t("pages.reports.list.dailyDetailTitle")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Ngày</TableHead>
-                          <TableHead className="text-right">Đơn hàng</TableHead>
+                          <TableHead>{t("pages.reports.list.colDate")}</TableHead>
                           <TableHead className="text-right">
-                            Sản phẩm
+                            {t("pages.reports.list.colOrders")}
                           </TableHead>
                           <TableHead className="text-right">
-                            Doanh thu
+                            {t("pages.reports.list.colProducts")}
                           </TableHead>
                           <TableHead className="text-right">
-                            Tổng tiền
+                            {t("pages.reports.list.colRevenue")}
+                          </TableHead>
+                          <TableHead className="text-right">
+                            {t("pages.reports.list.colAmount")}
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -570,15 +616,14 @@ const ReportListPage = () => {
                   <BarChart3 className="h-12 w-12 text-muted-foreground/30 mb-3" />
                   <p className="text-muted-foreground">
                     {loading
-                      ? "Đang tải dữ liệu..."
-                      : "Không có dữ liệu trong khoảng thời gian này."}
+                      ? t("pages.reports.list.loading")
+                      : t("pages.reports.list.emptyDaily")}
                   </p>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
 
-          {/* Top products tab */}
           <TabsContent value="top-products" className="space-y-4 mt-4">
             <div className="flex justify-end">
               <Button
@@ -592,7 +637,7 @@ const ReportListPage = () => {
                 ) : (
                   <Download className="h-4 w-4 mr-1" />
                 )}
-                Xuất Excel
+                {t("pages.reports.list.exportExcel")}
               </Button>
             </div>
 
@@ -600,10 +645,10 @@ const ReportListPage = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    Top 10 sản phẩm bán chạy
+                    {t("pages.reports.list.topProductsTitle")}
                   </CardTitle>
                   <CardDescription>
-                    Sắp xếp theo số lượng bán giảm dần
+                    {t("pages.reports.list.topProductsDesc")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -613,11 +658,13 @@ const ReportListPage = () => {
                         <TableHead className="w-[50px] text-center">
                           #
                         </TableHead>
-                        <TableHead>Sản phẩm</TableHead>
+                        <TableHead>{t("pages.reports.list.colProduct")}</TableHead>
                         <TableHead className="text-right">
-                          Số lượng bán
+                          {t("pages.reports.list.colQtySold")}
                         </TableHead>
-                        <TableHead className="text-right">Doanh thu</TableHead>
+                        <TableHead className="text-right">
+                          {t("pages.reports.list.colRevenue")}
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -664,8 +711,8 @@ const ReportListPage = () => {
                   <TrendingUp className="h-12 w-12 text-muted-foreground/30 mb-3" />
                   <p className="text-muted-foreground">
                     {loading
-                      ? "Đang tải dữ liệu..."
-                      : "Không có dữ liệu sản phẩm bán chạy."}
+                      ? t("pages.reports.list.loading")
+                      : t("pages.reports.list.emptyTopProducts")}
                   </p>
                 </CardContent>
               </Card>

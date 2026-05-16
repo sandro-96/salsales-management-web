@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
 import Flag from "@/i18n/Flag.jsx";
+import { updateProfile } from "@/api/userApi";
 
 export default function LanguageSwitcher({
   className,
@@ -30,6 +31,11 @@ export default function LanguageSwitcher({
   const handleChange = (code) => {
     if (code !== i18n.language) {
       i18n.changeLanguage(code);
+      if (localStorage.getItem("accessToken")) {
+        updateProfile({ language: code }).catch(() => {
+          /* best-effort sync for email/API locale */
+        });
+      }
     }
   };
 

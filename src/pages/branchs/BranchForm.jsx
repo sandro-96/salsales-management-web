@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +27,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { COUNTRIES } from "@/constants/countries";
+import { INVOICE_LOCALES } from "@/utils/invoiceLocale.js";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getFlagUrl } from "@/utils/commonUtils";
 import { cn } from "@/lib/utils"; // giả sử bạn có utils cn cho className
 import { useShopPermissions } from "@/hooks/useShopPermissions.js";
@@ -43,11 +52,12 @@ function toTimeInputValue(value) {
   return "";
 }
 
-const formSchema = z
+function buildBranchFormSchema(t) {
+  return z
   .object({
-    name: z.string().min(1, "Tên chi nhánh không được để trống."),
-    address: z.string().min(10, "Địa chỉ phải có ít nhất 10 ký tự."),
-    phone: z.string().min(1, "Số điện thoại không được để trống."),
+    name: z.string().min(1, t("pages.branches.form.validation.nameRequired")),
+    address: z.string().min(10, t("pages.branches.form.validation.addressMin")),
+    phone: z.string().min(1, t("pages.branches.form.validation.phoneRequired")),
     countryCode: z.string().optional().default("VN"),
 
     openingDate: z.date().optional().nullable(),
@@ -70,20 +80,22 @@ const formSchema = z
 
     taxRegistrationNumber: z
       .string()
-      .max(32, "MST tối đa 32 ký tự.")
+      .max(32, t("pages.branches.form.validation.taxMax"))
       .optional()
       .nullable(),
 
     wifiSsid: z
       .string()
-      .max(64, "Tên Wi‑Fi tối đa 64 ký tự.")
+      .max(64, t("pages.branches.form.validation.wifiSsidMax"))
       .optional()
       .nullable(),
     wifiPassword: z
       .string()
-      .max(128, "Mật khẩu Wi‑Fi tối đa 128 ký tự.")
+      .max(128, t("pages.branches.form.validation.wifiPasswordMax"))
       .optional()
       .nullable(),
+
+    invoiceLocale: z.enum(["vi", "en"]).default("vi"),
 
     isDefault: z.boolean().default(false),
     active: z.boolean().default(true),
@@ -97,11 +109,14 @@ const formSchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Số điện thoại không hợp lệ cho ${countryInfo.name}`,
+        message: t("pages.branches.form.validation.phoneInvalidForCountry", {
+          country: countryInfo.name,
+        }),
         path: ["phone"],
       });
     }
   });
+}
 
 export default function BranchForm({
   mode = "create",
@@ -112,6 +127,8 @@ export default function BranchForm({
   handleDelete,
   shop,
 }) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => buildBranchFormSchema(t), [t]);
   const { hasShopPermission } = useShopPermissions();
   const canManage = hasShopPermission(PERM.BRANCH_MANAGE);
   const form = useForm({
@@ -124,6 +141,7 @@ export default function BranchForm({
       taxRegistrationNumber: "",
       wifiSsid: "",
       wifiPassword: "",
+      invoiceLocale: "vi",
       isDefault: false,
       active: true,
     },
@@ -153,6 +171,10 @@ export default function BranchForm({
       taxRegistrationNumber: branch.taxRegistrationNumber ?? "",
       wifiSsid: branch.wifiSsid ?? "",
       wifiPassword: branch.wifiPassword ?? "",
+      invoiceLocale:
+        branch.invoiceLocale === "en" || branch.invoiceLocale?.startsWith?.("en")
+          ? "en"
+          : "vi",
       isDefault: branch.default ?? false,
       active: branch.active !== false,
     });
@@ -190,13 +212,13 @@ export default function BranchForm({
           <button
             type="button"
             className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Sao chép"
+            aria-label={t("pages.branches.form.copy")}
             onClick={(e) => {
               e.stopPropagation();
               navigator.clipboard
                 .writeText(String(value))
-                .then(() => toast.success("Đã sao chép!"))
-                .catch(() => toast.error("Không thể sao chép"));
+                .then(() => toast.success(t("pages.branches.form.copied")))
+                .catch(() => toast.error(t("pages.branches.form.copyFail")));
             }}
           >
             <Copy className="h-4 w-4" />
@@ -245,7 +267,9 @@ export default function BranchForm({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tên chi nhánh *</FormLabel>
+                  <FormLabel>
+                    {t("pages.branches.form.name")} *
+                  </FormLabel>
                   {isReadOnly ? (
                     <FormControl>
                       <ReadOnlyValue value={field.value} />
@@ -253,7 +277,7 @@ export default function BranchForm({
                   ) : (
                     <FormControl>
                       <Input
-                        placeholder="Nhập tên chi nhánh"
+                        placeholder={t("pages.branches.form.namePlaceholder")}
                         className="h-10 px-3.5 py-2"
                         {...field}
                       />
@@ -271,7 +295,7 @@ export default function BranchForm({
                 name="countryCode"
                 render={() => (
                   <FormItem className="min-w-0">
-                    <FormLabel>Quốc gia</FormLabel>
+                    <FormLabel>{t("pages.branches.form.country")}</FormLabel>
                     <FormControl>
                       <div className="flex min-h-9 items-center gap-3">
                         <img
@@ -295,7 +319,9 @@ export default function BranchForm({
                 name="phone"
                 render={({ field, fieldState }) => (
                   <FormItem className="min-w-0">
-                    <FormLabel>Số điện thoại *</FormLabel>
+                    <FormLabel>
+                      {t("pages.branches.form.phone")} *
+                    </FormLabel>
                     {isReadOnly ? (
                       <FormControl>
                         <ReadOnlyValue
@@ -319,7 +345,7 @@ export default function BranchForm({
                         </span>
                         <FormControl>
                           <Input
-                            placeholder="Nhập số điện thoại"
+                            placeholder={t("pages.branches.form.phonePlaceholder")}
                             className="h-10 min-h-10 flex-1 min-w-0 rounded-none border-0 bg-transparent px-3.5 py-2 shadow-none focus-visible:ring-0 focus-visible:border-0 focus-visible:outline-none md:text-sm"
                             inputMode="tel"
                             autoComplete="tel"
@@ -340,7 +366,9 @@ export default function BranchForm({
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Địa chỉ *</FormLabel>
+                  <FormLabel>
+                    {t("pages.branches.form.address")} *
+                  </FormLabel>
                   {isReadOnly ? (
                     <FormControl>
                       <ReadOnlyValue value={field.value} variant="multi" />
@@ -349,7 +377,7 @@ export default function BranchForm({
                     <FormControl>
                       <Textarea
                         rows={3}
-                        placeholder="Nhập địa chỉ chi tiết"
+                        placeholder={t("pages.branches.form.addressPlaceholder")}
                         className="min-h-[88px] px-3.5 py-2.5 text-sm md:text-sm"
                         {...field}
                       />
@@ -365,7 +393,7 @@ export default function BranchForm({
               name="taxRegistrationNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mã số thuế (MST) — tùy chọn</FormLabel>
+                  <FormLabel>{t("pages.branches.form.taxOptional")}</FormLabel>
                   {isReadOnly ? (
                     <FormControl>
                       <ReadOnlyValue value={field.value || "-"} />
@@ -373,7 +401,7 @@ export default function BranchForm({
                   ) : (
                     <FormControl>
                       <Input
-                        placeholder="Để trống = dùng MST của cửa hàng"
+                        placeholder={t("pages.branches.form.taxPlaceholder")}
                         maxLength={32}
                         {...field}
                         value={field.value ?? ""}
@@ -382,8 +410,7 @@ export default function BranchForm({
                   )}
                   {!isReadOnly && (
                     <FormDescription>
-                      Chỉ nhập khi chi nhánh đăng ký MST riêng tại địa điểm kinh
-                      doanh.
+                      {t("pages.branches.form.taxHint")}
                     </FormDescription>
                   )}
                   <FormMessage />
@@ -398,7 +425,7 @@ export default function BranchForm({
                 name="openingDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Ngày khai trương</FormLabel>
+                    <FormLabel>{t("pages.branches.form.openingDate")}</FormLabel>
                     {isReadOnly ? (
                       <FormControl>
                         <ReadOnlyValue
@@ -423,7 +450,7 @@ export default function BranchForm({
                               {field.value ? (
                                 format(field.value, "dd/MM/yyyy")
                               ) : (
-                                <span>Chọn ngày</span>
+                                <span>{t("pages.branches.form.pickDate")}</span>
                               )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
@@ -455,13 +482,13 @@ export default function BranchForm({
                 name="capacity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sức chứa (số ghế/bàn)</FormLabel>
+                    <FormLabel>{t("pages.branches.form.capacity")}</FormLabel>
                     {isReadOnly ? (
                       <ReadOnlyValue value={field.value} />
                     ) : (
                       <Input
                         type="number"
-                        placeholder="Ví dụ: 100"
+                        placeholder={t("pages.branches.form.capacityPlaceholder")}
                         {...field}
                       />
                     )}
@@ -478,7 +505,7 @@ export default function BranchForm({
                 name="openingTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Giờ mở cửa</FormLabel>
+                    <FormLabel>{t("pages.branches.form.openingTime")}</FormLabel>
                     {isReadOnly ? (
                       <ReadOnlyValue value={field.value || "-"} />
                     ) : (
@@ -500,7 +527,7 @@ export default function BranchForm({
                 name="closingTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Giờ đóng cửa</FormLabel>
+                    <FormLabel>{t("pages.branches.form.closingTime")}</FormLabel>
                     {isReadOnly ? (
                       <ReadOnlyValue value={field.value || "-"} />
                     ) : (
@@ -526,11 +553,16 @@ export default function BranchForm({
                 name="managerName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tên quản lý</FormLabel>
+                    <FormLabel>{t("pages.branches.form.managerName")}</FormLabel>
                     {isReadOnly ? (
                       <ReadOnlyValue value={field.value} />
                     ) : (
-                      <Input placeholder="Nhập tên quản lý" {...field} />
+                      <Input
+                        placeholder={t(
+                          "pages.branches.form.managerNamePlaceholder",
+                        )}
+                        {...field}
+                      />
                     )}
                     <FormMessage />
                   </FormItem>
@@ -541,11 +573,16 @@ export default function BranchForm({
                 name="managerPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>SĐT quản lý</FormLabel>
+                    <FormLabel>{t("pages.branches.form.managerPhone")}</FormLabel>
                     {isReadOnly ? (
                       <ReadOnlyValue value={field.value} />
                     ) : (
-                      <Input placeholder="Nhập số điện thoại" {...field} />
+                      <Input
+                        placeholder={t(
+                          "pages.branches.form.managerPhonePlaceholder",
+                        )}
+                        {...field}
+                      />
                     )}
                     <FormMessage />
                   </FormItem>
@@ -559,14 +596,16 @@ export default function BranchForm({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mô tả chi nhánh (tùy chọn)</FormLabel>
+                  <FormLabel>
+                    {t("pages.branches.form.descriptionOptional")}
+                  </FormLabel>
                   {isReadOnly ? (
                     <ReadOnlyValue value={field.value} variant="multi" />
                   ) : (
                     <FormControl>
                       <Textarea
                         rows={4}
-                        placeholder="Ghi chú đặc điểm chi nhánh..."
+                        placeholder={t("pages.branches.form.descriptionPlaceholder")}
                         className="min-h-[100px] px-3.5 py-2.5 text-sm md:text-sm"
                         {...field}
                         value={field.value ?? ""}
@@ -582,11 +621,10 @@ export default function BranchForm({
               <div className="space-y-1">
                 <p className="text-sm font-medium flex items-center gap-2">
                   <Wifi className="h-4 w-4 shrink-0" />
-                  Wi‑Fi khách (in trên hóa đơn)
+                  {t("pages.branches.form.wifiSectionTitle")}
                 </p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Nếu nhập, tên mạng và mật khẩu sẽ xuất hiện trên bill in từ POS
-                  hoặc mục in lại đơn.
+                  {t("pages.branches.form.wifiSectionHint")}
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
@@ -596,7 +634,7 @@ export default function BranchForm({
                   render={({ field }) => (
                     <FormItem className="space-y-2">
                       <FormLabel className="text-foreground">
-                        Tên Wi‑Fi (SSID)
+                        {t("pages.branches.form.wifiSsid")}
                       </FormLabel>
                       {isReadOnly ? (
                         <FormControl>
@@ -605,7 +643,7 @@ export default function BranchForm({
                       ) : (
                         <FormControl>
                           <Input
-                            placeholder="Ví dụ: MilkTea_Guest"
+                            placeholder={t("pages.branches.form.wifiSsidPlaceholder")}
                             maxLength={64}
                             className="h-10 px-3.5"
                             {...field}
@@ -623,7 +661,7 @@ export default function BranchForm({
                   render={({ field }) => (
                     <FormItem className="space-y-2">
                       <FormLabel className="text-foreground">
-                        Mật khẩu Wi‑Fi
+                        {t("pages.branches.form.wifiPassword")}
                       </FormLabel>
                       {isReadOnly ? (
                         <FormControl>
@@ -633,7 +671,9 @@ export default function BranchForm({
                         <FormControl>
                           <Input
                             type="password"
-                            placeholder="Để trống nếu không có"
+                            placeholder={t(
+                              "pages.branches.form.wifiPasswordPlaceholder",
+                            )}
                             maxLength={128}
                             autoComplete="new-password"
                             className="h-10 px-3.5"
@@ -647,6 +687,50 @@ export default function BranchForm({
                   )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="invoiceLocale"
+                render={({ field }) => (
+                  <FormItem className="space-y-2 max-w-md">
+                    <FormLabel className="text-foreground">
+                      {t("pages.branches.form.invoiceLocale")}
+                    </FormLabel>
+                    <FormDescription>
+                      {t("pages.branches.form.invoiceLocaleHint")}
+                    </FormDescription>
+                    {isReadOnly ? (
+                      <FormControl>
+                        <ReadOnlyValue
+                          value={t(
+                            `pages.branches.form.invoiceLocaleOption.${field.value || "vi"}`,
+                          )}
+                        />
+                      </FormControl>
+                    ) : (
+                      <Select
+                        value={field.value || "vi"}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {INVOICE_LOCALES.map((code) => (
+                            <SelectItem key={code} value={code}>
+                              {t(
+                                `pages.branches.form.invoiceLocaleOption.${code}`,
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           </div>
         </div>
@@ -660,7 +744,7 @@ export default function BranchForm({
                 type="button"
                 onClick={() => history.back()}
               >
-                Quay lại
+                {t("pages.branches.form.back")}
               </Button>
               {handleDelete && (
                 <Button
@@ -669,7 +753,7 @@ export default function BranchForm({
                   onClick={handleDelete}
                   disabled={isLoading}
                 >
-                  Xóa
+                  {t("pages.branches.form.delete")}
                 </Button>
               )}
               {canManage && (
@@ -678,7 +762,7 @@ export default function BranchForm({
                   type="button"
                   onClick={() => onModeChange?.("edit")}
                 >
-                  Chỉnh sửa
+                  {t("pages.branches.form.edit")}
                 </Button>
               )}
             </>
@@ -691,7 +775,7 @@ export default function BranchForm({
                   mode === "create" ? history.back() : onModeChange?.("view")
                 }
               >
-                Hủy
+                {t("pages.branches.form.cancel")}
               </Button>
               {canManage && (
               <Button
@@ -700,10 +784,10 @@ export default function BranchForm({
                 disabled={isLoading || !isDirty}
               >
                 {isLoading
-                  ? "Đang xử lý..."
+                  ? t("pages.branches.form.processing")
                   : mode === "edit"
-                  ? "Cập nhật"
-                  : "Tạo chi nhánh"}
+                  ? t("pages.branches.form.update")
+                  : t("pages.branches.form.create")}
               </Button>
               )}
             </>

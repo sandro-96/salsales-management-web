@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useShop } from "../../hooks/useShop.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
@@ -53,6 +54,14 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
+import {
+  dataTableContainer,
+  listBranchSelectWrap,
+  listInputGrow,
+  listToolbarActions,
+  listToolbarFilters,
+  listToolbarRoot,
+} from "@/components/table/listPageLayout.js";
 
 import { removeStaff } from "../../api/staffApi.js";
 import {
@@ -63,16 +72,14 @@ import {
 import AddStaffModal from "./AddStaffModal.jsx";
 import EditStaffModal from "./EditStaffModal.jsx";
 import StaffProfileModal from "./StaffProfileModal.jsx";
-import {
-  SHOP_ROLE_BADGE_VARIANT,
-  SHOP_ROLE_LABELS,
-} from "../../constants/shopRoles.js";
+import { SHOP_ROLE_BADGE_VARIANT } from "../../constants/shopRoles.js";
+import { getShopRoleLabel } from "@/utils/shopLabels";
 
-const formatDate = (dateStr) => {
+const formatDate = (dateStr, locale) => {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("vi-VN", {
+  return d.toLocaleDateString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -80,6 +87,8 @@ const formatDate = (dateStr) => {
 };
 
 const StaffListPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { selectedShopId, branches, isOwner, shopRole } = useShop();
@@ -165,11 +174,11 @@ const StaffListPage = () => {
       }
     } catch (err) {
       console.error("Fetch staff error:", err);
-      toast.error("Không thể tải danh sách nhân viên.");
+      toast.error(t("pages.staffs.list.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, pagination, debouncedKeyword, branchFilter]);
+  }, [shopId, pagination, debouncedKeyword, branchFilter, t]);
 
   useEffect(() => {
     fetchStaff();
@@ -177,17 +186,21 @@ const StaffListPage = () => {
 
   const handleDelete = async (staff) => {
     if (staff.role === "OWNER") {
-      toast.error("Không thể xóa chủ cửa hàng.");
+      toast.error(t("pages.staffs.list.deleteOwnerError"));
       return;
     }
 
-    const label = staff.fullName || staff.email || "nhân viên";
-    const ok = await confirm(`Bạn có chắc muốn xóa "${label}" không?`, {
-      title: "Xóa nhân viên",
-      confirmText: "Xóa",
-      cancelText: "Hủy",
-      variant: "destructive",
-    });
+    const label =
+      staff.fullName || staff.email || t("pages.staffs.list.defaultStaffLabel");
+    const ok = await confirm(
+      t("pages.staffs.list.deleteConfirm", { label }),
+      {
+        title: t("pages.staffs.list.deleteTitle"),
+        confirmText: t("pages.staffs.list.deleteConfirmBtn"),
+        cancelText: t("pages.staffs.list.cancel"),
+        variant: "destructive",
+      },
+    );
     if (!ok) return;
 
     try {
@@ -195,24 +208,24 @@ const StaffListPage = () => {
       if (staff.external && staff.id) {
         const res = await deleteExternalProfile(shopId, staff.id);
         if (res.data?.success) {
-          toast.success("Xóa nhân viên thành công.");
+          toast.success(t("pages.staffs.list.deleteSuccess"));
           fetchStaff();
         } else {
-          toast.error(res.data?.message || "Xóa nhân viên thất bại.");
+          toast.error(res.data?.message || t("pages.staffs.list.deleteFail"));
         }
       } else {
         const res = await removeStaff(shopId, staff.userId);
         if (res.data?.success) {
-          toast.success("Xóa nhân viên thành công.");
+          toast.success(t("pages.staffs.list.deleteSuccess"));
           fetchStaff();
         } else {
-          toast.error(res.data?.message || "Xóa nhân viên thất bại.");
+          toast.error(res.data?.message || t("pages.staffs.list.deleteFail"));
         }
       }
     } catch (err) {
       console.error("Remove staff error:", err);
       toast.error(
-        err.response?.data?.message || "Đã xảy ra lỗi khi xóa nhân viên.",
+        err.response?.data?.message || t("pages.staffs.list.deleteError"),
       );
     } finally {
       setIsSubmitting(false);
@@ -253,14 +266,15 @@ const StaffListPage = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success("Xuất file Excel thành công.");
+      toast.success(t("pages.staffs.list.exportSuccess"));
     } catch (err) {
       console.error("Export error:", err);
-      toast.error("Không thể xuất file Excel.");
+      toast.error(t("pages.staffs.list.exportFail"));
     }
   };
 
-  const columns = [
+  const columns = useMemo(
+    () => [
     {
       id: "avatar",
       header: "",
@@ -289,7 +303,7 @@ const StaffListPage = () => {
     {
       accessorKey: "fullName",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Họ tên" />
+        <DataTableColumnHeader column={column} title={t("pages.staffs.list.colFullName")} />
       ),
       cell: ({ row }) => (
         <div className="font-medium min-w-[140px]">
@@ -300,7 +314,7 @@ const StaffListPage = () => {
     {
       accessorKey: "email",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Email" />
+        <DataTableColumnHeader column={column} title={t("pages.staffs.list.colEmail")} />
       ),
       cell: ({ row }) => (
         <div className="text-sm text-muted-foreground min-w-[180px]">
@@ -310,28 +324,28 @@ const StaffListPage = () => {
     },
     {
       accessorKey: "phone",
-      header: "Số điện thoại",
+      header: t("pages.staffs.list.colPhone"),
       cell: ({ row }) => (
         <div className="text-sm">{row.getValue("phone") || "-"}</div>
       ),
     },
     {
       accessorKey: "position",
-      header: "Vị trí",
+      header: t("pages.staffs.list.colPosition"),
       cell: ({ row }) => (
         <div className="text-sm">{row.getValue("position") || "-"}</div>
       ),
     },
     {
       accessorKey: "department",
-      header: "Phòng ban",
+      header: t("pages.staffs.list.colDepartment"),
       cell: ({ row }) => (
         <div className="text-sm">{row.getValue("department") || "-"}</div>
       ),
     },
     {
       accessorKey: "branchId",
-      header: "Chi nhánh",
+      header: t("pages.staffs.list.colBranch"),
       cell: ({ row }) => {
         const bid = row.getValue("branchId");
         return (
@@ -343,13 +357,13 @@ const StaffListPage = () => {
     },
     {
       accessorKey: "role",
-      header: "Loại",
+      header: t("pages.staffs.list.colType"),
       cell: ({ row }) => {
         const staff = row.original;
         if (staff.external) {
           return (
             <Badge variant="secondary" className="gap-1 whitespace-nowrap">
-              Ngoài HT
+              {t("pages.staffs.list.externalBadge")}
             </Badge>
           );
         }
@@ -360,7 +374,7 @@ const StaffListPage = () => {
             className="gap-1"
           >
             <Shield className="h-3 w-3" />
-            {SHOP_ROLE_LABELS[role] || role}
+            {getShopRoleLabel(t, role) || role}
           </Badge>
         );
       },
@@ -368,10 +382,10 @@ const StaffListPage = () => {
     {
       accessorKey: "createdAt",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Ngày tạo" />
+        <DataTableColumnHeader column={column} title={t("pages.staffs.list.colCreatedAt")} />
       ),
       cell: ({ row }) => (
-        <div className="text-sm">{formatDate(row.getValue("createdAt"))}</div>
+        <div className="text-sm">{formatDate(row.getValue("createdAt"), numberLocale)}</div>
       ),
     },
     {
@@ -384,12 +398,12 @@ const StaffListPage = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Mở menu</span>
+                <span className="sr-only">{t("pages.staffs.list.openMenu")}</span>
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-background">
-              <DropdownMenuLabel>Hành động</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("pages.staffs.list.actions")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
@@ -398,7 +412,7 @@ const StaffListPage = () => {
                 }}
               >
                 <Eye className="h-4 w-4 mr-2" />
-                Xem chi tiết
+                {t("pages.staffs.list.viewDetail")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(e) => {
@@ -407,7 +421,7 @@ const StaffListPage = () => {
                 }}
               >
                 <FileUser className="h-4 w-4 mr-2" />
-                Sửa hồ sơ nhanh
+                {t("pages.staffs.list.quickEditProfile")}
               </DropdownMenuItem>
               {!staff.external && canManageStaff && (
                 <DropdownMenuItem
@@ -416,7 +430,7 @@ const StaffListPage = () => {
                     handleOpenEdit(staff);
                   }}
                 >
-                  Chỉnh sửa vai trò & quyền
+                  {t("pages.staffs.list.editRolePermissions")}
                 </DropdownMenuItem>
               )}
               {canManageStaff && (
@@ -428,7 +442,7 @@ const StaffListPage = () => {
                     handleDelete(staff);
                   }}
                 >
-                  Xóa
+                  {t("pages.staffs.list.delete")}
                   <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
                     ⌘⌫
                   </DropdownMenuShortcut>
@@ -439,7 +453,9 @@ const StaffListPage = () => {
         );
       },
     },
-  ];
+  ],
+    [t, numberLocale, branchMap, canManageStaff, isSubmitting],
+  );
 
   const table = useReactTable({
     data: staffList,
@@ -466,27 +482,26 @@ const StaffListPage = () => {
   });
 
   return (
-    <div className="h-full flex-1 flex-col gap-8 p-4 md:p-8 md:flex">
+    <div className="h-full min-w-0 flex-1 flex-col gap-8 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Quản lý nhân viên
+              {t("pages.staffs.list.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Quản lý nhân viên hệ thống và nhân viên ngoài hệ thống (tạp vụ,
-              bưng bê...).
+              {t("pages.staffs.list.subtitle")}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className={listToolbarRoot}>
+          <div className={listToolbarFilters}>
             <Input
-              placeholder="Tìm theo tên, email, SĐT, vị trí..."
+              placeholder={t("pages.staffs.list.searchPlaceholder")}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="flex-1 min-w-0 sm:max-w-xs"
+              className={listInputGrow}
             />
             {branches?.length > 1 && (
               <Select
@@ -496,11 +511,11 @@ const StaffListPage = () => {
                   setPagination((p) => ({ ...p, pageIndex: 0 }));
                 }}
               >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Tất cả chi nhánh" />
+                <SelectTrigger className={listBranchSelectWrap}>
+                  <SelectValue placeholder={t("pages.staffs.list.allBranches")} />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
-                  <SelectItem value="__all__">Tất cả chi nhánh</SelectItem>
+                  <SelectItem value="__all__">{t("pages.staffs.list.allBranches")}</SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
@@ -511,7 +526,7 @@ const StaffListPage = () => {
             )}
             <DataTableViewOptions table={table} />
           </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className={listToolbarActions}>
             {canManageStaff && (
               <Button
                 variant="outline"
@@ -520,7 +535,7 @@ const StaffListPage = () => {
                 onClick={() => navigate("/staffs/dashboard")}
               >
                 <BarChart3 className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Tổng quan</span>
+                <span className="hidden sm:inline">{t("pages.staffs.list.overview")}</span>
               </Button>
             )}
             {canManageStaff && (
@@ -531,7 +546,7 @@ const StaffListPage = () => {
                 onClick={handleExportProfiles}
               >
                 <FileDown className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Xuất Excel</span>
+                <span className="hidden sm:inline">{t("pages.staffs.list.exportExcel")}</span>
               </Button>
             )}
             {canManageStaff && (
@@ -542,7 +557,7 @@ const StaffListPage = () => {
                 onClick={() => setAddExternalModalOpen(true)}
               >
                 <UserPlus className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Ngoài HT</span>
+                <span className="hidden sm:inline">{t("pages.staffs.list.addExternal")}</span>
               </Button>
             )}
             {canManageStaff && (
@@ -553,13 +568,13 @@ const StaffListPage = () => {
                 onClick={() => setAddModalOpen(true)}
               >
                 <Plus className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Thêm nhân viên</span>
+                <span className="hidden sm:inline">{t("pages.staffs.list.addStaff")}</span>
               </Button>
             )}
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-md border">
+        <div className={dataTableContainer}>
           {loading && staffList.length > 0 && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -589,7 +604,7 @@ const StaffListPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    Đang tải...
+                    {t("pages.staffs.list.loading")}
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
@@ -618,7 +633,7 @@ const StaffListPage = () => {
                   >
                     <div className="flex flex-col items-center gap-2">
                       <Users className="h-8 w-8 text-muted-foreground/40" />
-                      <span>Chưa có nhân viên nào.</span>
+                      <span>{t("pages.staffs.list.empty")}</span>
                     </div>
                   </TableCell>
                 </TableRow>

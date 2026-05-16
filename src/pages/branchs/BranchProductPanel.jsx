@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useShop } from "@/hooks/useShop.js";
 import {
@@ -58,6 +59,8 @@ export default function BranchProductPanel({
   branchId,
   onCountChange,
 }) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const { isOwner, shopRole } = useShop();
   const canEditBranchPricing = isOwner || shopRole === "MANAGER";
 
@@ -115,11 +118,11 @@ export default function BranchProductPanel({
       if (!debouncedKeyword) onCountChange?.(total);
     } catch (err) {
       console.error("BranchProductPanel fetch error:", err);
-      toast.error("Không thể tải danh sách sản phẩm chi nhánh.");
+      toast.error(t("pages.branches.productPanel.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, branchId, pagination, sorting, debouncedKeyword, onCountChange]);
+  }, [shopId, branchId, pagination, sorting, debouncedKeyword, onCountChange, t]);
 
   useEffect(() => {
     fetchProducts();
@@ -144,12 +147,12 @@ export default function BranchProductPanel({
         );
         toast.success(
           updated?.activeInBranch
-            ? "Đã bật sản phẩm tại chi nhánh."
-            : "Đã tắt sản phẩm tại chi nhánh.",
+            ? t("pages.branches.productPanel.activated")
+            : t("pages.branches.productPanel.deactivated"),
         );
       }
     } catch {
-      toast.error("Không thể cập nhật trạng thái.");
+      toast.error(t("pages.branches.productPanel.statusUpdateFail"));
     }
   };
 
@@ -158,7 +161,7 @@ export default function BranchProductPanel({
     setEditDialogOpen(true);
   };
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       accessorKey: "images",
       header: "",
@@ -186,7 +189,10 @@ export default function BranchProductPanel({
     {
       accessorKey: "name",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Tên sản phẩm" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.branches.productPanel.colName")}
+        />
       ),
       cell: ({ row }) => (
         <div className="font-medium">{row.getValue("name")}</div>
@@ -204,7 +210,10 @@ export default function BranchProductPanel({
     {
       accessorKey: "price",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Giá bán" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.branches.productPanel.colPrice")}
+        />
       ),
       cell: ({ row }) => {
         const product = row.original;
@@ -217,13 +226,21 @@ export default function BranchProductPanel({
         return (
           <div className="flex flex-col gap-0.5">
             <span className="font-medium">
-              {price ? Number(price).toLocaleString("vi-VN") + " ₫" : "-"}
+              {price
+                ? Number(price).toLocaleString(numberLocale) + " ₫"
+                : "-"}
             </span>
             {hasDiscount && (
               <span className="text-xs text-green-600">
                 {discountFlat != null && discountFlat > 0
-                  ? `KM: ${Number(discountFlat).toLocaleString("vi-VN")} ₫`
-                  : `KM: -${discountPct}%`}
+                  ? t("pages.branches.productPanel.discountFlat", {
+                      amount:
+                        Number(discountFlat).toLocaleString(numberLocale) +
+                        " ₫",
+                    })
+                  : t("pages.branches.productPanel.discountPercent", {
+                      percent: discountPct,
+                    })}
               </span>
             )}
           </div>
@@ -233,7 +250,10 @@ export default function BranchProductPanel({
     {
       accessorKey: "activeInBranch",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Đang bán" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.branches.productPanel.colActive")}
+        />
       ),
       cell: ({ row }) => {
         const product = row.original;
@@ -262,12 +282,16 @@ export default function BranchProductPanel({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Mở menu</span>
+                <span className="sr-only">
+                  {t("pages.branches.productPanel.openMenu")}
+                </span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-background">
-              <DropdownMenuLabel>Hành động</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {t("pages.branches.productPanel.actions")}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
@@ -275,14 +299,14 @@ export default function BranchProductPanel({
                   handleOpenEdit(product);
                 }}
               >
-                Cập nhật giá
+                {t("pages.branches.productPanel.updatePrice")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         );
       },
     },
-  ];
+  ], [t, numberLocale, canEditBranchPricing]);
 
   const table = useReactTable({
     data: products,
@@ -309,7 +333,7 @@ export default function BranchProductPanel({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Tìm kiếm sản phẩm..."
+            placeholder={t("pages.branches.productPanel.searchPlaceholder")}
             value={keyword}
             onChange={(e) => handleKeywordChange(e.target.value)}
             className="max-w-xs min-w-[200px] h-10 px-3.5"
@@ -349,7 +373,7 @@ export default function BranchProductPanel({
                   colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  Đang tải...
+                  {t("pages.branches.productPanel.loading")}
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
@@ -381,7 +405,7 @@ export default function BranchProductPanel({
                   colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  Chưa có sản phẩm nào tại chi nhánh này.
+                  {t("pages.branches.productPanel.empty")}
                 </TableCell>
               </TableRow>
             )}
@@ -395,10 +419,13 @@ export default function BranchProductPanel({
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[540px]">
           <DialogHeader>
-            <DialogTitle>Cập nhật sản phẩm tại chi nhánh</DialogTitle>
+            <DialogTitle>
+              {t("pages.branches.productPanel.dialogTitle")}
+            </DialogTitle>
             <DialogDescription>
-              {editingProduct?.name} — Điều chỉnh giá và trạng thái bán tại chi
-              nhánh này.
+              {t("pages.branches.productPanel.dialogDesc", {
+                name: editingProduct?.name ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
           {editingProduct && (

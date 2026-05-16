@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -34,6 +35,7 @@ export default function CustomerFormModal({
   branches,
   onSuccess,
 }) {
+  const { t } = useTranslation();
   const isEdit = !!customer;
   const { hasShopPermission } = useShopPermissions();
   const canEdit = hasShopPermission(PERM.CUSTOMER_UPDATE);
@@ -70,11 +72,11 @@ export default function CustomerFormModal({
 
   const validate = () => {
     if (!name.trim()) {
-      toast.error("Tên khách hàng không được để trống.");
+      toast.error(t("pages.customers.formModal.nameRequired"));
       return false;
     }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast.error("Email không hợp lệ.");
+      toast.error(t("pages.customers.formModal.emailInvalid"));
       return false;
     }
     return true;
@@ -98,25 +100,30 @@ export default function CustomerFormModal({
       if (isEdit) {
         const res = await updateCustomer(customer.id, shopId, payload);
         if (res.data?.success) {
-          toast.success("Cập nhật khách hàng thành công.");
+          toast.success(t("pages.customers.formModal.updateSuccess"));
           onSuccess?.();
           onClose?.();
         } else {
-          toast.error(res.data?.message || "Cập nhật thất bại.");
+          toast.error(
+            res.data?.message || t("pages.customers.formModal.updateFail"),
+          );
         }
       } else {
         const res = await createCustomer(shopId, payload);
         if (res.data?.success) {
-          toast.success("Tạo khách hàng thành công.");
+          toast.success(t("pages.customers.formModal.createSuccess"));
           onSuccess?.();
           onClose?.();
         } else {
-          toast.error(res.data?.message || "Tạo khách hàng thất bại.");
+          toast.error(
+            res.data?.message || t("pages.customers.formModal.createFail"),
+          );
         }
       }
     } catch (err) {
       const msg =
-        err.response?.data?.message || "Đã xảy ra lỗi. Vui lòng thử lại.";
+        err.response?.data?.message ||
+        t("pages.customers.formModal.genericError");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -132,15 +139,15 @@ export default function CustomerFormModal({
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {readOnly
-              ? "Chi tiết khách hàng"
+              ? t("pages.customers.formModal.viewTitle")
               : isEdit
-                ? "Chỉnh sửa khách hàng"
-                : "Thêm khách hàng mới"}
+                ? t("pages.customers.formModal.editTitle")
+                : t("pages.customers.formModal.createTitle")}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {isEdit
-              ? "Chỉnh sửa thông tin khách hàng."
-              : "Điền thông tin để tạo khách hàng mới."}
+              ? t("pages.customers.formModal.editDesc")
+              : t("pages.customers.formModal.createDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -148,15 +155,17 @@ export default function CustomerFormModal({
           <div className="space-y-2">
             <Label
               htmlFor="cust-name"
-              className={attemptedSubmit && !name.trim() ? "text-destructive" : undefined}
+              className={
+                attemptedSubmit && !name.trim() ? "text-destructive" : undefined
+              }
             >
-              Tên khách hàng *
+              {t("pages.customers.formModal.nameLabel")} *
             </Label>
             <Input
               id="cust-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="VD: Nguyễn Văn A"
+              placeholder={t("pages.customers.formModal.namePlaceholder")}
               autoFocus
               disabled={readOnly}
               aria-invalid={attemptedSubmit && !name.trim()}
@@ -165,52 +174,60 @@ export default function CustomerFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="cust-phone">Số điện thoại</Label>
+              <Label htmlFor="cust-phone">
+                {t("pages.customers.formModal.phoneLabel")}
+              </Label>
               <Input
                 id="cust-phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="VD: 0901234567"
+                placeholder={t("pages.customers.formModal.phonePlaceholder")}
                 disabled={readOnly}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cust-email">Email</Label>
+              <Label htmlFor="cust-email">
+                {t("pages.customers.formModal.emailLabel")}
+              </Label>
               <Input
                 id="cust-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="VD: email@example.com"
+                placeholder={t("pages.customers.formModal.emailPlaceholder")}
                 disabled={readOnly}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cust-address">Địa chỉ</Label>
+            <Label htmlFor="cust-address">
+              {t("pages.customers.formModal.addressLabel")}
+            </Label>
             <Input
               id="cust-address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="VD: 123 Nguyễn Huệ, Q.1, TP.HCM"
+              placeholder={t("pages.customers.formModal.addressPlaceholder")}
               disabled={readOnly}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Chi nhánh</Label>
+            <Label>{t("pages.customers.formModal.branchLabel")}</Label>
             <Select
               value={branchId || "__none__"}
               onValueChange={(v) => setBranchId(v === "__none__" ? "" : v)}
               disabled={isEdit || readOnly}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Không phân biệt chi nhánh" />
+                <SelectValue
+                  placeholder={t("pages.customers.formModal.branchPlaceholder")}
+                />
               </SelectTrigger>
               <SelectContent className="bg-background">
                 <SelectItem value="__none__">
-                  Không phân biệt chi nhánh
+                  {t("pages.customers.formModal.branchNone")}
                 </SelectItem>
                 {branches?.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
@@ -221,18 +238,20 @@ export default function CustomerFormModal({
             </Select>
             {isEdit && (
               <p className="text-xs text-muted-foreground">
-                Không thể thay đổi chi nhánh khi chỉnh sửa.
+                {t("pages.customers.formModal.branchLockedHint")}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cust-note">Ghi chú</Label>
+            <Label htmlFor="cust-note">
+              {t("pages.customers.formModal.noteLabel")}
+            </Label>
             <Textarea
               id="cust-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="VD: Khách VIP, hay mua sản phẩm X..."
+              placeholder={t("pages.customers.formModal.notePlaceholder")}
               rows={3}
               disabled={readOnly}
             />
@@ -241,12 +260,22 @@ export default function CustomerFormModal({
 
         <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            {readOnly ? "Đóng" : "Hủy"}
+            {readOnly
+              ? t("pages.customers.formModal.close")
+              : t("pages.customers.formModal.cancel")}
           </Button>
           {!readOnly && (
-            <Button onClick={handleSubmit} disabled={submitting} variant="success">
-              {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-              {isEdit ? "Lưu thay đổi" : "Thêm khách hàng"}
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting}
+              variant="success"
+            >
+              {submitting && (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              )}
+              {isEdit
+                ? t("pages.customers.formModal.save")
+                : t("pages.customers.formModal.addCustomer")}
             </Button>
           )}
         </DialogFooter>

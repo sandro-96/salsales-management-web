@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Loader2, RotateCcw } from "lucide-react";
 
@@ -26,90 +27,102 @@ import {
   updateStaffRole,
   updateStaffPermissions,
 } from "../../api/staffApi.js";
-import { SHOP_ROLE_LABELS, SHOP_ROLES_ASSIGNABLE } from "../../constants/shopRoles.js";
+import {
+  buildShopRolesAssignable,
+  getShopRoleLabel,
+} from "@/utils/shopLabels";
 
-const PERMISSION_GROUPS = [
+const buildPermissionGroups = (t) => [
   {
-    label: "Sản phẩm",
+    key: "products",
+    label: t("pages.staffs.editModal.permGroup.products"),
     permissions: [
-      { value: "PRODUCT_VIEW", label: "Xem" },
-      { value: "PRODUCT_CREATE", label: "Tạo" },
-      { value: "PRODUCT_UPDATE", label: "Sửa" },
-      { value: "PRODUCT_DELETE", label: "Xóa" },
-      { value: "PRODUCT_IMPORT", label: "Nhập Excel" },
-      { value: "PRODUCT_EXPORT", label: "Xuất Excel" },
-      { value: "PRODUCT_UPDATE_STATUS", label: "Đổi trạng thái" },
-      { value: "PRODUCT_VIEW_LOW_STOCK", label: "Xem tồn kho thấp" },
+      { value: "PRODUCT_VIEW", permKey: "view" },
+      { value: "PRODUCT_CREATE", permKey: "create" },
+      { value: "PRODUCT_UPDATE", permKey: "update" },
+      { value: "PRODUCT_DELETE", permKey: "delete" },
+      { value: "PRODUCT_IMPORT", permKey: "import" },
+      { value: "PRODUCT_EXPORT", permKey: "export" },
+      { value: "PRODUCT_UPDATE_STATUS", permKey: "updateStatus" },
+      { value: "PRODUCT_VIEW_LOW_STOCK", permKey: "viewLowStock" },
     ],
   },
   {
-    label: "Đơn hàng",
+    key: "orders",
+    label: t("pages.staffs.editModal.permGroup.orders"),
     permissions: [
-      { value: "ORDER_VIEW", label: "Xem" },
-      { value: "ORDER_CREATE", label: "Tạo" },
-      { value: "ORDER_UPDATE", label: "Sửa" },
-      { value: "ORDER_CANCEL", label: "Hủy" },
-      { value: "ORDER_PAYMENT_CONFIRM", label: "Xác nhận thanh toán" },
+      { value: "ORDER_VIEW", permKey: "view" },
+      { value: "ORDER_CREATE", permKey: "create" },
+      { value: "ORDER_UPDATE", permKey: "update" },
+      { value: "ORDER_CANCEL", permKey: "cancel" },
+      { value: "ORDER_PAYMENT_CONFIRM", permKey: "paymentConfirm" },
     ],
   },
   {
-    label: "Khách hàng",
+    key: "customers",
+    label: t("pages.staffs.editModal.permGroup.customers"),
     permissions: [
-      { value: "CUSTOMER_VIEW", label: "Xem" },
-      { value: "CUSTOMER_UPDATE", label: "Sửa" },
-      { value: "CUSTOMER_DELETE", label: "Xóa" },
+      { value: "CUSTOMER_VIEW", permKey: "view" },
+      { value: "CUSTOMER_UPDATE", permKey: "update" },
+      { value: "CUSTOMER_DELETE", permKey: "delete" },
     ],
   },
   {
-    label: "Khuyến mãi",
+    key: "promotions",
+    label: t("pages.staffs.editModal.permGroup.promotions"),
     permissions: [
-      { value: "PROMOTION_VIEW", label: "Xem" },
-      { value: "PROMOTION_CREATE", label: "Tạo" },
-      { value: "PROMOTION_UPDATE", label: "Sửa" },
-      { value: "PROMOTION_DELETE", label: "Xóa" },
+      { value: "PROMOTION_VIEW", permKey: "view" },
+      { value: "PROMOTION_CREATE", permKey: "create" },
+      { value: "PROMOTION_UPDATE", permKey: "update" },
+      { value: "PROMOTION_DELETE", permKey: "delete" },
     ],
   },
   {
-    label: "Bàn",
+    key: "tables",
+    label: t("pages.staffs.editModal.permGroup.tables"),
     permissions: [
-      { value: "TABLE_VIEW", label: "Xem" },
-      { value: "TABLE_CREATE", label: "Tạo" },
-      { value: "TABLE_UPDATE", label: "Sửa" },
-      { value: "TABLE_DELETE", label: "Xóa" },
+      { value: "TABLE_VIEW", permKey: "view" },
+      { value: "TABLE_CREATE", permKey: "create" },
+      { value: "TABLE_UPDATE", permKey: "update" },
+      { value: "TABLE_DELETE", permKey: "delete" },
     ],
   },
   {
-    label: "Cửa hàng",
+    key: "shop",
+    label: t("pages.staffs.editModal.permGroup.shop"),
     permissions: [
-      { value: "SHOP_VIEW", label: "Xem" },
-      { value: "SHOP_UPDATE", label: "Sửa" },
-      { value: "SHOP_DELETE", label: "Xóa" },
-      { value: "SHOP_MANAGE", label: "Quản lý" },
+      { value: "SHOP_VIEW", permKey: "view" },
+      { value: "SHOP_UPDATE", permKey: "update" },
+      { value: "SHOP_DELETE", permKey: "delete" },
+      { value: "SHOP_MANAGE", permKey: "manage" },
     ],
   },
   {
-    label: "Nhân viên",
+    key: "staffUser",
+    label: t("pages.staffs.editModal.permGroup.staffUser"),
     permissions: [
-      { value: "SHOP_USER_VIEW", label: "Xem" },
-      { value: "SHOP_USER_CREATE", label: "Thêm" },
-      { value: "SHOP_USER_UPDATE", label: "Sửa" },
-      { value: "SHOP_USER_DELETE", label: "Xóa" },
+      { value: "SHOP_USER_VIEW", permKey: "view" },
+      { value: "SHOP_USER_CREATE", permKey: "staffCreate" },
+      { value: "SHOP_USER_UPDATE", permKey: "update" },
+      { value: "SHOP_USER_DELETE", permKey: "delete" },
     ],
   },
   {
-    label: "Chi nhánh",
+    key: "branch",
+    label: t("pages.staffs.editModal.permGroup.branch"),
     permissions: [
-      { value: "BRANCH_VIEW", label: "Xem" },
-      { value: "BRANCH_UPDATE", label: "Sửa" },
-      { value: "BRANCH_MANAGE", label: "Quản lý" },
+      { value: "BRANCH_VIEW", permKey: "view" },
+      { value: "BRANCH_UPDATE", permKey: "update" },
+      { value: "BRANCH_MANAGE", permKey: "manage" },
     ],
   },
   {
-    label: "Kho & Báo cáo",
+    key: "inventoryReport",
+    label: t("pages.staffs.editModal.permGroup.inventoryReport"),
     permissions: [
-      { value: "INVENTORY_VIEW", label: "Xem kho" },
-      { value: "INVENTORY_MANAGE", label: "Quản lý kho" },
-      { value: "REPORT_VIEW", label: "Xem báo cáo" },
+      { value: "INVENTORY_VIEW", permKey: "viewInventory" },
+      { value: "INVENTORY_MANAGE", permKey: "manageInventory" },
+      { value: "REPORT_VIEW", permKey: "viewReport" },
     ],
   },
 ];
@@ -146,6 +159,9 @@ export default function EditStaffModal({
   shopId,
   onSuccess,
 }) {
+  const { t } = useTranslation();
+  const permissionGroups = useMemo(() => buildPermissionGroups(t), [t]);
+  const assignableRoles = useMemo(() => buildShopRolesAssignable(t), [t]);
   const [role, setRole] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -214,7 +230,7 @@ export default function EditStaffModal({
           role,
         });
         if (!roleRes.data?.success) {
-          toast.error(roleRes.data?.message || "Cập nhật vai trò thất bại.");
+          toast.error(roleRes.data?.message || t("pages.staffs.editModal.roleUpdateFail"));
           return;
         }
       }
@@ -227,21 +243,23 @@ export default function EditStaffModal({
         permissions: [...permsToSave],
       });
       if (permRes.data?.success) {
-        toast.success("Cập nhật thành công.");
+        toast.success(t("pages.staffs.editModal.updateSuccess"));
         onSuccess?.();
         onClose?.();
       } else {
-        toast.error(permRes.data?.message || "Cập nhật quyền thất bại.");
+        toast.error(permRes.data?.message || t("pages.staffs.editModal.permUpdateFail"));
       }
     } catch (err) {
       const msg = err.response?.data?.message;
-      toast.error(msg || "Đã xảy ra lỗi. Vui lòng thử lại.");
+      toast.error(msg || t("pages.staffs.editModal.genericError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   if (!staff) return null;
+
+  const staffName = staff.fullName || staff.email;
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
@@ -250,18 +268,13 @@ export default function EditStaffModal({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="shrink-0">
-          <DialogTitle>Chỉnh sửa nhân viên</DialogTitle>
+          <DialogTitle>{t("pages.staffs.editModal.title")}</DialogTitle>
           <DialogDescription>
-            Thay đổi vai trò và phân quyền cho{" "}
-            <span className="font-medium">
-              {staff.fullName || staff.email}
-            </span>
-            .
+            {t("pages.staffs.editModal.description", { name: staffName })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-5 pr-1 py-2">
-          {/* Staff info */}
           <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
             {staff.avatarUrl ? (
               <img
@@ -285,19 +298,18 @@ export default function EditStaffModal({
               </p>
             </div>
             <Badge variant="outline">
-              {SHOP_ROLE_LABELS[staff.role] || staff.role}
+              {getShopRoleLabel(t, staff.role) || staff.role}
             </Badge>
           </div>
 
-          {/* Role */}
           <div className="space-y-2">
-            <Label>Vai trò</Label>
+            <Label>{t("pages.staffs.editModal.roleLabel")}</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                {SHOP_ROLES_ASSIGNABLE.map((r) => (
+                {assignableRoles.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
                   </SelectItem>
@@ -306,15 +318,14 @@ export default function EditStaffModal({
             </Select>
             {roleChanged && (
               <p className="text-xs text-amber-600">
-                Thay đổi vai trò sẽ đặt lại quyền về mặc định của vai trò mới.
+                {t("pages.staffs.editModal.roleChangeWarning")}
               </p>
             )}
           </div>
 
-          {/* Permissions */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Phân quyền chi tiết</Label>
+              <Label>{t("pages.staffs.editModal.permissionsLabel")}</Label>
               <Button
                 variant="ghost"
                 size="sm"
@@ -322,20 +333,20 @@ export default function EditStaffModal({
                 onClick={resetToDefault}
               >
                 <RotateCcw className="h-3 w-3" />
-                Đặt lại mặc định
+                {t("pages.staffs.editModal.resetDefault")}
               </Button>
             </div>
 
             {roleChanged && (
               <p className="text-xs text-muted-foreground italic">
-                Quyền sẽ được đặt lại theo vai trò mới sau khi lưu.
+                {t("pages.staffs.editModal.permissionsResetHint")}
               </p>
             )}
 
             <div
               className={`space-y-3 ${roleChanged ? "opacity-50 pointer-events-none" : ""}`}
             >
-              {PERMISSION_GROUPS.map((group) => {
+              {permissionGroups.map((group) => {
                 const allPerms = group.permissions.map((p) => p.value);
                 const checkedCount = allPerms.filter((p) =>
                   selectedPermissions.has(p),
@@ -345,7 +356,7 @@ export default function EditStaffModal({
 
                 return (
                   <div
-                    key={group.label}
+                    key={group.key}
                     className="rounded-lg border p-3 space-y-2"
                   >
                     <div className="flex items-center gap-2">
@@ -373,7 +384,7 @@ export default function EditStaffModal({
                               togglePermission(perm.value)
                             }
                           />
-                          {perm.label}
+                          {t(`pages.staffs.editModal.perm.${perm.permKey}`)}
                         </label>
                       ))}
                     </div>
@@ -386,7 +397,7 @@ export default function EditStaffModal({
 
         <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Hủy
+            {t("pages.staffs.editModal.cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -394,7 +405,7 @@ export default function EditStaffModal({
             variant="success"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-            Lưu thay đổi
+            {t("pages.staffs.editModal.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

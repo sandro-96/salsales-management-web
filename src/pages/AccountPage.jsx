@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { getCurrentUser, updateProfile, changePassword } from "../api/userApi";
 import { useAuth } from "../hooks/useAuth";
 import { Navigate } from "react-router-dom";
@@ -23,7 +24,7 @@ import {
   CalendarIcon,
 } from "lucide-react";
 import { format } from "date-fns";
-import { vi } from "date-fns/locale";
+import { enUS, vi } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,14 +49,10 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-const GENDER_MAP = {
-  MALE: "Nam",
-  FEMALE: "Nữ",
-  OTHER: "Khác",
-};
-
 const AccountPage = () => {
   const { user: authUser, enums, isUserContextReady } = useAuth();
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language?.startsWith("en") ? enUS : vi;
 
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,6 +105,7 @@ const AccountPage = () => {
   });
 
   const countryCode = watch("countryCode");
+  const emptyLabel = t("pages.accounts.notUpdated");
 
   const refreshUserSnapshot = useCallback(async () => {
     try {
@@ -140,11 +138,11 @@ const AccountPage = () => {
       });
       setIsEditMode(false);
     } catch {
-      toast.error("Không thể tải thông tin tài khoản.");
+      toast.error(t("pages.accounts.toast.loadFail"));
     } finally {
       setLoading(false);
     }
-  }, [reset]);
+  }, [reset, t]);
 
   useEffect(() => {
     if (authUser && isUserContextReady) {
@@ -168,15 +166,15 @@ const AccountPage = () => {
       if (avatarFile) formData.append("file", avatarFile);
 
       await updateProfile(formData);
-      toast.success("Cập nhật thông tin thành công!");
+      toast.success(t("pages.accounts.toast.updateSuccess"));
       setAvatarFile(null);
       setPreviewAvatar(null);
       loadUser();
     } catch (err) {
       const msg =
         err.response?.data?.code === "INVALID_PHONE_NUMBER"
-          ? "Số điện thoại không đúng định dạng."
-          : err.response?.data?.message || "Có lỗi khi cập nhật thông tin.";
+          ? t("pages.accounts.toast.phoneInvalid")
+          : err.response?.data?.message || t("pages.accounts.toast.updateFail");
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -197,13 +195,15 @@ const AccountPage = () => {
       await changePassword(payload);
       toast.success(
         googleOnlyNoPassword
-          ? "Đã đặt mật khẩu đăng nhập. Bạn có thể đăng nhập bằng email và mật khẩu."
-          : "Đổi mật khẩu thành công!",
+          ? t("pages.accounts.toast.passwordSetSuccess")
+          : t("pages.accounts.toast.passwordChangeSuccess"),
       );
       resetPassword();
       await refreshUserSnapshot();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Có lỗi khi đổi mật khẩu.");
+      toast.error(
+        err.response?.data?.message || t("pages.accounts.toast.passwordChangeFail"),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -244,19 +244,19 @@ const AccountPage = () => {
     <div className="flex-1 flex-col gap-6 p-4 md:p-8 md:flex max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight">Tài khoản</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">{t("pages.accounts.title")}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Quản lý thông tin cá nhân và bảo mật
+          {t("pages.accounts.subtitle")}
         </p>
       </div>
 
       <Tabs defaultValue="profile" className="gap-6">
         <TabsList>
           <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-1" /> Hồ sơ
+            <User className="h-4 w-4 mr-1" /> {t("pages.accounts.tabs.profile")}
           </TabsTrigger>
           <TabsTrigger value="security">
-            <Lock className="h-4 w-4 mr-1" /> Bảo mật
+            <Lock className="h-4 w-4 mr-1" /> {t("pages.accounts.tabs.security")}
           </TabsTrigger>
         </TabsList>
 
@@ -297,7 +297,7 @@ const AccountPage = () => {
                 {/* Name + email + meta */}
                 <div className="flex-1 text-center sm:text-left">
                   <h3 className="text-lg font-semibold">
-                    {fullName || "Chưa cập nhật tên"}
+                    {fullName || t("pages.accounts.nameNotSet")}
                   </h3>
                   <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start mt-1">
                     <span className="text-sm text-muted-foreground flex items-center gap-1">
@@ -307,7 +307,7 @@ const AccountPage = () => {
                       className={`text-[10px] ${user?.verified ? "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15" : "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40 dark:hover:bg-amber-500/15"}`}
                     >
                       <Shield className="h-2.5 w-2.5 mr-0.5" />
-                      {user?.verified ? "Đã xác thực" : "Chưa xác thực"}
+                      {user?.verified ? t("pages.accounts.verified") : t("pages.accounts.unverified")}
                     </Badge>
                   </div>
                   {fileError && isEditMode && (
@@ -319,11 +319,11 @@ const AccountPage = () => {
                 <div className="shrink-0">
                   {!isEditMode ? (
                     <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
-                      <Pencil className="h-4 w-4 mr-1" /> Chỉnh sửa
+                      <Pencil className="h-4 w-4 mr-1" /> {t("pages.accounts.edit")}
                     </Button>
                   ) : (
                     <Button variant="ghost" size="sm" onClick={cancelEdit}>
-                      <X className="h-4 w-4 mr-1" /> Hủy
+                      <X className="h-4 w-4 mr-1" /> {t("pages.accounts.cancel")}
                     </Button>
                   )}
                 </div>
@@ -335,47 +335,49 @@ const AccountPage = () => {
           <form onSubmit={handleSubmit(onProfileSubmit)}>
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">Thông tin cá nhân</CardTitle>
+                <CardTitle className="text-base font-medium">
+                  {t("pages.accounts.profile.personalInfo")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* Name row */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <FieldWrapper label="Họ *" error={errors.lastName}>
+                  <FieldWrapper label={t("pages.accounts.profile.lastNameRequired")} error={errors.lastName}>
                     {isEditMode ? (
                       <Input
                         {...register("lastName", {
-                          required: "Họ không được để trống.",
-                          maxLength: { value: 50, message: "Tối đa 50 ký tự." },
+                          required: t("pages.accounts.validation.lastNameRequired"),
+                          maxLength: { value: 50, message: t("pages.accounts.validation.max50") },
                         })}
-                        placeholder="Nguyễn"
+                        placeholder={t("pages.accounts.profile.placeholders.lastName")}
                       />
                     ) : (
-                      <FieldValue>{user?.lastName}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>{user?.lastName}</FieldValue>
                     )}
                   </FieldWrapper>
-                  <FieldWrapper label="Tên đệm" error={errors.middleName}>
+                  <FieldWrapper label={t("pages.accounts.profile.middleName")} error={errors.middleName}>
                     {isEditMode ? (
                       <Input
                         {...register("middleName", {
-                          maxLength: { value: 50, message: "Tối đa 50 ký tự." },
+                          maxLength: { value: 50, message: t("pages.accounts.validation.max50") },
                         })}
-                        placeholder="Văn"
+                        placeholder={t("pages.accounts.profile.placeholders.middleName")}
                       />
                     ) : (
-                      <FieldValue>{user?.middleName}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>{user?.middleName}</FieldValue>
                     )}
                   </FieldWrapper>
-                  <FieldWrapper label="Tên *" error={errors.firstName}>
+                  <FieldWrapper label={t("pages.accounts.profile.firstNameRequired")} error={errors.firstName}>
                     {isEditMode ? (
                       <Input
                         {...register("firstName", {
-                          required: "Tên không được để trống.",
-                          maxLength: { value: 50, message: "Tối đa 50 ký tự." },
+                          required: t("pages.accounts.validation.firstNameRequired"),
+                          maxLength: { value: 50, message: t("pages.accounts.validation.max50") },
                         })}
-                        placeholder="An"
+                        placeholder={t("pages.accounts.profile.placeholders.firstName")}
                       />
                     ) : (
-                      <FieldValue>{user?.firstName}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>{user?.firstName}</FieldValue>
                     )}
                   </FieldWrapper>
                 </div>
@@ -384,7 +386,7 @@ const AccountPage = () => {
 
                 {/* Contact */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FieldWrapper label="Quốc gia" icon={Globe}>
+                  <FieldWrapper label={t("pages.accounts.profile.country")} icon={Globe}>
                     {isEditMode ? (
                       <Controller
                         name="countryCode"
@@ -392,7 +394,7 @@ const AccountPage = () => {
                         render={({ field }) => (
                           <Select value={field.value} onValueChange={field.onChange}>
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Chọn quốc gia" />
+                              <SelectValue placeholder={t("pages.accounts.profile.selectCountry")} />
                             </SelectTrigger>
                             <SelectContent>
                               {countryOptions.map((c) => (
@@ -405,10 +407,10 @@ const AccountPage = () => {
                         )}
                       />
                     ) : (
-                      <FieldValue>{country?.name || null}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>{country?.name || null}</FieldValue>
                     )}
                   </FieldWrapper>
-                  <FieldWrapper label="Số điện thoại" icon={Phone} error={errors.phone}>
+                  <FieldWrapper label={t("pages.accounts.profile.phone")} icon={Phone} error={errors.phone}>
                     {isEditMode ? (
                       <Input
                         {...register("phone", {
@@ -416,15 +418,15 @@ const AccountPage = () => {
                             if (value && countryCode) {
                               const c = countryOptions.find((o) => o.code === countryCode);
                               if (c && !new RegExp(c.phonePattern).test(value))
-                                return "Số điện thoại không đúng định dạng.";
+                                return t("pages.accounts.validation.phoneInvalid");
                             }
                             return true;
                           },
                         })}
-                        placeholder="0912345678"
+                        placeholder={t("pages.accounts.profile.placeholders.phone")}
                       />
                     ) : (
-                      <FieldValue>{user?.phone}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>{user?.phone}</FieldValue>
                     )}
                   </FieldWrapper>
                 </div>
@@ -432,39 +434,39 @@ const AccountPage = () => {
                 <Separator />
 
                 {/* Address */}
-                <FieldWrapper label="Địa chỉ" icon={MapPin} error={errors.address}>
+                <FieldWrapper label={t("pages.accounts.profile.address")} icon={MapPin} error={errors.address}>
                   {isEditMode ? (
-                    <Input {...register("address")} placeholder="123 Đường ABC" />
+                    <Input {...register("address")} placeholder={t("pages.accounts.profile.placeholders.address")} />
                   ) : (
-                    <FieldValue>{user?.address}</FieldValue>
+                    <FieldValue emptyLabel={emptyLabel}>{user?.address}</FieldValue>
                   )}
                 </FieldWrapper>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <FieldWrapper label="Thành phố" error={errors.city}>
+                  <FieldWrapper label={t("pages.accounts.profile.city")} error={errors.city}>
                     {isEditMode ? (
-                      <Input {...register("city")} placeholder="TP. Hồ Chí Minh" />
+                      <Input {...register("city")} placeholder={t("pages.accounts.profile.placeholders.city")} />
                     ) : (
-                      <FieldValue>{user?.city}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>{user?.city}</FieldValue>
                     )}
                   </FieldWrapper>
-                  <FieldWrapper label="Tỉnh / Bang" error={errors.state}>
+                  <FieldWrapper label={t("pages.accounts.profile.state")} error={errors.state}>
                     {isEditMode ? (
                       <Input {...register("state")} placeholder="" />
                     ) : (
-                      <FieldValue>{user?.state}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>{user?.state}</FieldValue>
                     )}
                   </FieldWrapper>
-                  <FieldWrapper label="Mã bưu điện" error={errors.zipCode}>
+                  <FieldWrapper label={t("pages.accounts.profile.zipCode")} error={errors.zipCode}>
                     {isEditMode ? (
                       <Input
                         {...register("zipCode", {
-                          maxLength: { value: 10, message: "Tối đa 10 ký tự." },
+                          maxLength: { value: 10, message: t("pages.accounts.validation.max10") },
                         })}
-                        placeholder="70000"
+                        placeholder={t("pages.accounts.profile.placeholders.zipCode")}
                       />
                     ) : (
-                      <FieldValue>{user?.zipCode}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>{user?.zipCode}</FieldValue>
                     )}
                   </FieldWrapper>
                 </div>
@@ -473,7 +475,7 @@ const AccountPage = () => {
 
                 {/* Gender & Birth date */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FieldWrapper label="Giới tính">
+                  <FieldWrapper label={t("pages.accounts.profile.gender")}>
                     {isEditMode ? (
                       <Controller
                         name="gender"
@@ -481,21 +483,23 @@ const AccountPage = () => {
                         render={({ field }) => (
                           <Select value={field.value} onValueChange={field.onChange}>
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Chọn giới tính" />
+                              <SelectValue placeholder={t("pages.accounts.profile.selectGender")} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="MALE">Nam</SelectItem>
-                              <SelectItem value="FEMALE">Nữ</SelectItem>
-                              <SelectItem value="OTHER">Khác</SelectItem>
+                              <SelectItem value="MALE">{t("pages.accounts.gender.MALE")}</SelectItem>
+                              <SelectItem value="FEMALE">{t("pages.accounts.gender.FEMALE")}</SelectItem>
+                              <SelectItem value="OTHER">{t("pages.accounts.gender.OTHER")}</SelectItem>
                             </SelectContent>
                           </Select>
                         )}
                       />
                     ) : (
-                      <FieldValue>{GENDER_MAP[user?.gender] || null}</FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>
+                        {user?.gender ? t(`pages.accounts.gender.${user.gender}`) : null}
+                      </FieldValue>
                     )}
                   </FieldWrapper>
-                  <FieldWrapper label="Ngày sinh">
+                  <FieldWrapper label={t("pages.accounts.profile.birthDate")}>
                     {isEditMode ? (
                       <Controller
                         name="birthDate"
@@ -512,8 +516,8 @@ const AccountPage = () => {
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {field.value
-                                  ? format(field.value, "dd/MM/yyyy", { locale: vi })
-                                  : "Chọn ngày sinh"}
+                                  ? format(field.value, "dd/MM/yyyy", { locale: dateLocale })
+                                  : t("pages.accounts.profile.selectBirthDate")}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -521,7 +525,7 @@ const AccountPage = () => {
                                 mode="single"
                                 selected={field.value}
                                 onSelect={field.onChange}
-                                locale={vi}
+                                locale={dateLocale}
                                 captionLayout="dropdown-buttons"
                                 fromYear={1940}
                                 toYear={new Date().getFullYear()}
@@ -532,9 +536,9 @@ const AccountPage = () => {
                         )}
                       />
                     ) : (
-                      <FieldValue>
+                      <FieldValue emptyLabel={emptyLabel}>
                         {user?.birthDate
-                          ? format(new Date(user.birthDate), "dd/MM/yyyy", { locale: vi })
+                          ? format(new Date(user.birthDate), "dd/MM/yyyy", { locale: dateLocale })
                           : null}
                       </FieldValue>
                     )}
@@ -545,7 +549,7 @@ const AccountPage = () => {
                 {isEditMode && (
                   <div className="flex justify-end gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={cancelEdit}>
-                      Hủy
+                      {t("pages.accounts.cancel")}
                     </Button>
                     <Button type="submit" disabled={isSubmitting || !hasDirtyFields}>
                       {isSubmitting ? (
@@ -553,7 +557,7 @@ const AccountPage = () => {
                       ) : (
                         <Save className="h-4 w-4 mr-1" />
                       )}
-                      {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+                      {isSubmitting ? t("pages.accounts.saving") : t("pages.accounts.save")}
                     </Button>
                   </div>
                 )}
@@ -567,13 +571,13 @@ const AccountPage = () => {
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium">
-                {googleOnlyNoPassword ? "Đặt mật khẩu đăng nhập" : "Đổi mật khẩu"}
+                {googleOnlyNoPassword
+                  ? t("pages.accounts.security.setPassword")
+                  : t("pages.accounts.security.changePassword")}
               </CardTitle>
               {googleOnlyNoPassword ? (
                 <p className="text-sm text-muted-foreground font-normal pt-1">
-                  Tài khoản của bạn đăng nhập qua Google và chưa có mật khẩu cục bộ.
-                  Đặt mật khẩu bên dưới nếu bạn muốn đăng nhập thêm bằng email và mật
-                  khẩu (vẫn có thể dùng Google như hiện tại).
+                  {t("pages.accounts.security.googleOnlyHint")}
                 </p>
               ) : null}
             </CardHeader>
@@ -584,14 +588,14 @@ const AccountPage = () => {
               >
                 {requiresCurrentPassword ? (
                   <FieldWrapper
-                    label="Mật khẩu hiện tại"
+                    label={t("pages.accounts.security.currentPassword")}
                     error={passwordErrors.currentPassword}
                   >
                     <div className="relative">
                       <Input
                         type={showCurrentPw ? "text" : "password"}
                         {...registerPassword("currentPassword", {
-                          required: "Không được để trống.",
+                          required: t("pages.accounts.validation.required"),
                         })}
                         placeholder="••••••••"
                       />
@@ -608,15 +612,15 @@ const AccountPage = () => {
                 ) : null}
 
                 <FieldWrapper
-                  label="Mật khẩu mới"
+                  label={t("pages.accounts.security.newPassword")}
                   error={passwordErrors.newPassword}
                 >
                   <div className="relative">
                     <Input
                       type={showNewPw ? "text" : "password"}
                       {...registerPassword("newPassword", {
-                        required: "Không được để trống.",
-                        minLength: { value: 6, message: "Ít nhất 6 ký tự." },
+                        required: t("pages.accounts.validation.required"),
+                        minLength: { value: 6, message: t("pages.accounts.validation.passwordMin") },
                       })}
                       placeholder="••••••••"
                     />
@@ -632,7 +636,7 @@ const AccountPage = () => {
                 </FieldWrapper>
 
                 <FieldWrapper
-                  label="Xác nhận mật khẩu mới"
+                  label={t("pages.accounts.security.confirmPassword")}
                   error={passwordErrors.confirmNewPassword}
                 >
                   <div className="relative">
@@ -641,7 +645,7 @@ const AccountPage = () => {
                       {...registerPassword("confirmNewPassword", {
                         validate: (value) => {
                           const newPw = watchPassword("newPassword");
-                          return value === newPw || "Mật khẩu không khớp.";
+                          return value === newPw || t("pages.accounts.validation.passwordMismatch");
                         },
                       })}
                       placeholder="••••••••"
@@ -673,10 +677,10 @@ const AccountPage = () => {
                       <Lock className="h-4 w-4 mr-1" />
                     )}
                     {isSubmitting
-                      ? "Đang xử lý..."
+                      ? t("pages.accounts.processing")
                       : googleOnlyNoPassword
-                        ? "Đặt mật khẩu"
-                        : "Đổi mật khẩu"}
+                        ? t("pages.accounts.security.setPasswordBtn")
+                        : t("pages.accounts.security.changePasswordBtn")}
                   </Button>
                 </div>
               </form>
@@ -701,10 +705,10 @@ function FieldWrapper({ label, icon: IconComp, error, children }) {
   );
 }
 
-function FieldValue({ children }) {
+function FieldValue({ children, emptyLabel }) {
   return (
     <p className="text-sm font-medium py-2 px-3 rounded-md bg-muted/50 min-h-9 flex items-center">
-      {children || <span className="text-muted-foreground">Chưa cập nhật</span>}
+      {children || <span className="text-muted-foreground">{emptyLabel}</span>}
     </p>
   );
 }

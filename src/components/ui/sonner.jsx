@@ -1,14 +1,35 @@
 import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 
-const Toaster = ({ ...props }) => {
+const Toaster = ({
+  position = "bottom-right",
+  closeButton = true,
+  duration = 4000,
+  visibleToasts = 4,
+  offset = {
+    bottom: "max(1rem, env(safe-area-inset-bottom, 0px))",
+    right: "max(1rem, env(safe-area-inset-right, 0px))",
+  },
+  ...props
+}) => {
   const { theme = "system" } = useTheme();
 
   return (
     <Sonner
       theme={theme}
       richColors
+      closeButton={closeButton}
+      position={position}
+      duration={duration}
+      visibleToasts={visibleToasts}
+      offset={offset}
       className="toaster group"
+      toastOptions={{
+        classNames: {
+          closeButton:
+            "absolute right-2 top-2 rounded-md border border-border bg-background/80 text-foreground opacity-100 hover:bg-muted",
+        },
+      }}
       style={
         {
           "--normal-bg": "var(--popover)",

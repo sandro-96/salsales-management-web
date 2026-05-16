@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -23,23 +24,12 @@ import {
   Loader2,
   FileSpreadsheet,
   X,
-  FileDown,
 } from "lucide-react";
 import { exportProductsExcel, importProductsExcel } from "@/api/productApi.js";
 import { generateProductTemplate } from "@/utils/generateProductTemplate.js";
 
 const NONE_VALUE = "__none__";
 
-/**
- * Dialog Import / Export sản phẩm qua Excel
- *
- * Props:
- *  open       – boolean
- *  onClose    – () => void
- *  shopId     – string
- *  branches   – Branch[]   ({ id, name })
- *  onImportSuccess – () => void  (gọi lại để refresh bảng)
- */
 const ProductImportExportDialog = ({
   open,
   onClose,
@@ -47,17 +37,14 @@ const ProductImportExportDialog = ({
   branches = [],
   onImportSuccess,
 }) => {
-  /* ── Export state ─────────────────────────────────────────────────────── */
+  const { t } = useTranslation();
   const [exportBranchId, setExportBranchId] = useState(NONE_VALUE);
   const [isExporting, setIsExporting] = useState(false);
-
-  /* ── Import state ─────────────────────────────────────────────────────── */
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef(null);
   const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
 
-  /* ── Handlers ─────────────────────────────────────────────────────────── */
   const handleExport = async () => {
     if (!shopId) return;
     setIsExporting(true);
@@ -75,10 +62,10 @@ const ProductImportExportDialog = ({
         : `products_shop_${shopId}.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
-      toast.success("Xuất file Excel thành công.");
+      toast.success(t("pages.products.importExport.exportSuccess"));
     } catch (err) {
       console.error("Export error:", err);
-      toast.error("Xuất file thất bại. Vui lòng thử lại.");
+      toast.error(t("pages.products.importExport.exportFail"));
     } finally {
       setIsExporting(false);
     }
@@ -95,7 +82,7 @@ const ProductImportExportDialog = ({
     try {
       const res = await importProductsExcel(shopId, importFile);
       const count = res.data?.data ?? 0;
-      toast.success(`Đã nhập ${count} sản phẩm thành công.`);
+      toast.success(t("pages.products.importExport.importSuccess", { count }));
       setImportFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       onImportSuccess?.();
@@ -103,13 +90,11 @@ const ProductImportExportDialog = ({
     } catch (err) {
       const status = err?.response?.status;
       if (status === 400) {
-        toast.error(
-          "File không hợp lệ hoặc dữ liệu sai định dạng. Kiểm tra lại file Excel.",
-        );
+        toast.error(t("pages.products.importExport.importInvalidFile"));
       } else if (status === 403) {
-        toast.error("Bạn không có quyền nhập sản phẩm.");
+        toast.error(t("pages.products.importExport.importForbidden"));
       } else {
-        toast.error("Nhập sản phẩm thất bại. Vui lòng thử lại.");
+        toast.error(t("pages.products.importExport.importFail"));
       }
       console.error("Import error:", err);
     } finally {
@@ -130,10 +115,10 @@ const ProductImportExportDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            Import / Export Excel
+            {t("pages.products.importExport.title")}
           </DialogTitle>
           <DialogDescription>
-            Nhập hoặc xuất danh sách sản phẩm qua file Excel.
+            {t("pages.products.importExport.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -141,28 +126,28 @@ const ProductImportExportDialog = ({
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="import">
               <Upload className="h-4 w-4 mr-1.5" />
-              Nhập
+              {t("pages.products.importExport.tabImport")}
             </TabsTrigger>
             <TabsTrigger value="export">
               <Download className="h-4 w-4 mr-1.5" />
-              Xuất
+              {t("pages.products.importExport.tabExport")}
             </TabsTrigger>
           </TabsList>
 
-          {/* ── IMPORT TAB ──────────────────────────────────────────────── */}
           <TabsContent value="import" className="mt-4 flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="import-branch">
-                Chi nhánh <span className="text-red-500">*</span>
+                {t("pages.products.importExport.branchLabel")}{" "}
+                <span className="text-red-500">*</span>
               </Label>
-              <span className="text-muted-foreground">
-                Không cần chọn chi nhánh
+              <span className="text-muted-foreground text-sm">
+                {t("pages.products.importExport.branchHint")}
               </span>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="import-file">
-                File Excel (.xlsx / .xls){" "}
+                {t("pages.products.importExport.fileLabel")}{" "}
                 <span className="text-red-500">*</span>
               </Label>
               <div
@@ -171,7 +156,9 @@ const ProductImportExportDialog = ({
               >
                 <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm text-muted-foreground truncate">
-                  {importFile ? importFile.name : "Nhấn để chọn file..."}
+                  {importFile
+                    ? importFile.name
+                    : t("pages.products.importExport.chooseFile")}
                 </span>
                 {importFile && (
                   <button
@@ -198,7 +185,7 @@ const ProductImportExportDialog = ({
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Chưa có file mẫu?{" "}
+              {t("pages.products.importExport.templateHint")}{" "}
               <button
                 type="button"
                 className="underline hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
@@ -208,19 +195,20 @@ const ProductImportExportDialog = ({
                   try {
                     await generateProductTemplate();
                   } catch {
-                    toast.error("Không thể tạo file mẫu.");
+                    toast.error(t("pages.products.importExport.templateFail"));
                   } finally {
                     setIsGeneratingTemplate(false);
                   }
                 }}
               >
-                {isGeneratingTemplate ? "Đang tạo..." : "Tải file mẫu (.xlsx)"}
+                {isGeneratingTemplate
+                  ? t("pages.products.importExport.generatingTemplate")
+                  : t("pages.products.importExport.downloadTemplate")}
               </button>
             </p>
 
             <p className="text-xs text-muted-foreground">
-              Các dòng lỗi sẽ bị bỏ qua, số sản phẩm nhập thành công sẽ hiển thị
-              sau khi hoàn thành.
+              {t("pages.products.importExport.importNote")}
             </p>
 
             <Button
@@ -233,21 +221,24 @@ const ProductImportExportDialog = ({
               ) : (
                 <Upload className="h-4 w-4 mr-2" />
               )}
-              {isImporting ? "Đang nhập..." : "Nhập sản phẩm"}
+              {isImporting
+                ? t("pages.products.importExport.importing")
+                : t("pages.products.importExport.importBtn")}
             </Button>
           </TabsContent>
 
-          {/* ── EXPORT TAB ──────────────────────────────────────────────── */}
           <TabsContent value="export" className="mt-4 flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="export-branch">Chi nhánh</Label>
+              <Label htmlFor="export-branch">
+                {t("pages.products.importExport.exportBranch")}
+              </Label>
               <Select value={exportBranchId} onValueChange={setExportBranchId}>
                 <SelectTrigger id="export-branch">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE_VALUE}>
-                    Toàn cửa hàng (không chọn chi nhánh)
+                    {t("pages.products.importExport.exportAllShop")}
                   </SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
@@ -258,8 +249,8 @@ const ProductImportExportDialog = ({
               </Select>
               <p className="text-xs text-muted-foreground">
                 {exportBranchId === NONE_VALUE
-                  ? "Xuất toàn bộ sản phẩm cấp shop. Các cột tồn kho / giá chi nhánh sẽ để trống."
-                  : "Xuất kèm giá bán, tồn kho và thông tin tại chi nhánh đã chọn."}
+                  ? t("pages.products.importExport.exportAllHint")
+                  : t("pages.products.importExport.exportBranchHint")}
               </p>
             </div>
 
@@ -273,7 +264,9 @@ const ProductImportExportDialog = ({
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              {isExporting ? "Đang xuất..." : "Tải file Excel"}
+              {isExporting
+                ? t("pages.products.importExport.exporting")
+                : t("pages.products.importExport.exportBtn")}
             </Button>
           </TabsContent>
         </Tabs>

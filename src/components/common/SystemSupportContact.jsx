@@ -1,5 +1,6 @@
 import React from "react";
-import { Mail, Phone, Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Mail, Phone, Info, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function envStr(key) {
@@ -9,7 +10,6 @@ function envStr(key) {
 
 function normalizeSingleLine(text) {
   if (!text) return "";
-  // Support both actual newlines and literal "\n" from .env
   return String(text)
     .replace(/\\n/g, " • ")
     .replace(/\r?\n/g, " • ")
@@ -19,31 +19,45 @@ function normalizeSingleLine(text) {
 
 function normalizeMultiline(text) {
   if (!text) return "";
-  // Turn literal "\n" into real newlines for display
   return String(text).replace(/\\n/g, "\n").trim();
+}
+
+function zaloHref(raw) {
+  const digits = String(raw).replace(/\D/g, "");
+  if (!digits) return null;
+  return `https://zalo.me/${digits}`;
 }
 
 /**
  * Thông tin liên hệ hệ thống (toàn app).
- * Cấu hình qua Vite env:
- * - VITE_SUPPORT_NAME (optional)
- * - VITE_SUPPORT_PHONE (optional)
- * - VITE_SUPPORT_EMAIL (optional)
- * - VITE_SUPPORT_NOTE (optional)
+ * Env: VITE_SUPPORT_NAME, VITE_SUPPORT_PHONE, VITE_SUPPORT_EMAIL,
+ * VITE_SUPPORT_ZALO (optional), VITE_SUPPORT_NOTE (optional extra lines).
  */
 export default function SystemSupportContact({
   className,
   compact = false,
   variant = "card", // 'card' | 'inline'
 }) {
+  const { t } = useTranslation();
   const name = envStr("VITE_SUPPORT_NAME");
   const phone = envStr("VITE_SUPPORT_PHONE");
   const email = envStr("VITE_SUPPORT_EMAIL");
+  const zalo = envStr("VITE_SUPPORT_ZALO");
   const note = envStr("VITE_SUPPORT_NOTE");
   const noteInline = normalizeSingleLine(note);
   const noteMultiline = normalizeMultiline(note);
+  const zaloUrl = zaloHref(zalo);
 
-  if (!name && !phone && !email && !note) return null;
+  const title = name
+    ? t("systemSupport.titleWithName", { name })
+    : t("systemSupport.title");
+  const titleShort = name
+    ? t("systemSupport.contactShortWithName", { name })
+    : t("systemSupport.contactShort");
+
+  if (!name && !phone && !email && !zalo && !note) return null;
+
+  const hoursLine = t("systemSupport.hours");
 
   if (variant === "inline") {
     return (
@@ -55,9 +69,7 @@ export default function SystemSupportContact({
       >
         <span className="inline-flex items-center gap-1.5 text-foreground/90">
           <Info className="h-3.5 w-3.5 shrink-0" />
-          <span className="font-medium truncate">
-            {name ? `Liên hệ — ${name}` : "Liên hệ"}
-          </span>
+          <span className="font-medium truncate">{titleShort}</span>
         </span>
         {phone ? (
           <a
@@ -77,6 +89,20 @@ export default function SystemSupportContact({
             <span className="truncate">{email}</span>
           </a>
         ) : null}
+        <span className="min-w-0 truncate whitespace-nowrap">{hoursLine}</span>
+        {zalo && zaloUrl ? (
+          <a
+            href={zaloUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-1 hover:text-foreground"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span>
+              {t("systemSupport.zalo")}: {zalo}
+            </span>
+          </a>
+        ) : null}
         {noteInline ? (
           <span className="min-w-0 flex-1 truncate whitespace-nowrap">
             {noteInline}
@@ -94,10 +120,8 @@ export default function SystemSupportContact({
       )}
     >
       <div className="flex items-center gap-1.5 text-foreground/90">
-        <Info className="h-3.5 w-3.5" />
-        <span className="font-medium">
-          {name ? `Liên hệ hệ thống — ${name}` : "Liên hệ hệ thống"}
-        </span>
+        <Info className="h-3.5 w-3.5 shrink-0" />
+        <span className="font-medium">{title}</span>
       </div>
 
       <div
@@ -111,27 +135,42 @@ export default function SystemSupportContact({
             href={`tel:${phone}`}
             className="inline-flex items-center gap-1 hover:text-foreground"
           >
-            <Phone className="h-3.5 w-3.5" />
-            <span>{phone}</span>
+            <Phone className="h-3.5 w-3.5 shrink-0" />
+            <span className="tabular-nums">{phone}</span>
           </a>
         ) : null}
         {email ? (
           <a
             href={`mailto:${email}`}
-            className="inline-flex items-center gap-1 hover:text-foreground"
+            className="inline-flex items-center gap-1 hover:text-foreground min-w-0"
           >
-            <Mail className="h-3.5 w-3.5" />
+            <Mail className="h-3.5 w-3.5 shrink-0" />
             <span className="break-all">{email}</span>
           </a>
         ) : null}
       </div>
 
-      {note ? (
-        <div className={cn("mt-2 whitespace-break-spaces", compact && "mt-1")}>
-          {noteMultiline}
-        </div>
-      ) : null}
+      <div className={cn("mt-2 space-y-1", compact && "mt-1")}>
+        <p>{hoursLine}</p>
+        {zalo && zaloUrl ? (
+          <p>
+            <a
+              href={zaloUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:text-foreground"
+            >
+              <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                {t("systemSupport.zalo")}: {zalo}
+              </span>
+            </a>
+          </p>
+        ) : null}
+        {noteMultiline ? (
+          <p className="whitespace-break-spaces">{noteMultiline}</p>
+        ) : null}
+      </div>
     </div>
   );
 }
-

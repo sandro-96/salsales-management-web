@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -58,46 +59,37 @@ import {
   rejectLeaveRequest,
 } from "../../api/leaveApi.js";
 import { payrollGetStaffMonth } from "../../api/payrollApi.js";
-import {
-  SHOP_ROLE_BADGE_VARIANT,
-  SHOP_ROLE_LABELS,
-} from "../../constants/shopRoles.js";
+import { SHOP_ROLE_BADGE_VARIANT } from "../../constants/shopRoles.js";
+import { getShopRoleLabel } from "@/utils/shopLabels";
 import StaffProfileModal from "./StaffProfileModal.jsx";
 
-const CONTRACT_LABELS = {
-  FULL_TIME: "Toàn thời gian",
-  PART_TIME: "Bán thời gian",
-  PROBATION: "Thử việc",
-  CONTRACT: "Hợp đồng",
-};
-
-const formatVnd = (value) => {
-  if (value === null || value === undefined || value === "") return "—";
+const formatVnd = (value, locale, emptyValue = "—") => {
+  if (value === null || value === undefined || value === "") return emptyValue;
   const n = Number(value || 0);
-  return `${Math.round(n).toLocaleString("vi-VN")} ₫`;
+  return `${Math.round(n).toLocaleString(locale)} ₫`;
 };
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return "—";
+const formatDate = (dateStr, locale, emptyValue = "—") => {
+  if (!dateStr) return emptyValue;
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("vi-VN", {
+  if (isNaN(d.getTime())) return emptyValue;
+  return d.toLocaleDateString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
 };
 
-const formatTime = (dateStr) => {
-  if (!dateStr) return "—";
+const formatTime = (dateStr, locale, emptyValue = "—") => {
+  if (!dateStr) return emptyValue;
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  if (isNaN(d.getTime())) return emptyValue;
+  return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 };
 
-const formatMinutes = (m) => {
+const formatMinutes = (m, emptyValue = "—") => {
   const n = Number(m || 0);
-  if (!Number.isFinite(n) || n <= 0) return "—";
+  if (!Number.isFinite(n) || n <= 0) return emptyValue;
   const h = Math.floor(n / 60);
   const min = n % 60;
   return h > 0 ? `${h}h ${min}m` : `${min}m`;
@@ -116,7 +108,7 @@ const normalizeDatetimeLocal = (v) => {
   return t.length === 16 ? `${t}:00` : t;
 };
 
-const InfoRow = ({ icon: Icon, label, value }) => (
+const InfoRow = ({ icon: Icon, label, value, emptyValue = "—" }) => (
   <div className="flex items-start gap-3">
     <div className="mt-0.5 text-muted-foreground">
       {Icon ? <Icon className="h-4 w-4" /> : null}
@@ -124,13 +116,13 @@ const InfoRow = ({ icon: Icon, label, value }) => (
     <div className="flex flex-col">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-sm font-medium break-all">
-        {value && String(value).trim() ? value : "—"}
+        {value && String(value).trim() ? value : emptyValue}
       </span>
     </div>
   </div>
 );
 
-const PlaceholderCard = ({ title, phase, description }) => (
+const PlaceholderCard = ({ title, phase, description, hint }) => (
   <Card className="border-dashed">
     <CardHeader>
       <CardTitle className="text-sm flex items-center gap-2">
@@ -142,14 +134,15 @@ const PlaceholderCard = ({ title, phase, description }) => (
       <CardDescription>{description}</CardDescription>
     </CardHeader>
     <CardContent>
-      <p className="text-xs text-muted-foreground">
-        Dữ liệu sẽ hiển thị tại đây sau khi module được bật.
-      </p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </CardContent>
   </Card>
 );
 
 const StaffOverviewPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const emptyValue = t("pages.staffs.overview.emptyValue");
   const navigate = useNavigate();
   const { id: routeId } = useParams();
   const { selectedShopId, branches, shopRole } = useShop();
@@ -195,11 +188,11 @@ const StaffOverviewPage = () => {
       setData(res.data?.data ?? null);
     } catch (err) {
       console.error("Fetch staff member overview error:", err);
-      toast.error("Không thể tải hồ sơ nhân sự.");
+      toast.error(t("pages.staffs.overview.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, routeId]);
+  }, [shopId, routeId, t]);
 
   useEffect(() => {
     fetchOverview();
@@ -270,14 +263,14 @@ const StaffOverviewPage = () => {
       if (status && status !== 404) {
         console.error("Fetch payroll item error:", err);
         toast.error(
-          err.response?.data?.message || "Không thể tải bảng lương nhân viên.",
+          err.response?.data?.message || t("pages.staffs.overview.payrollFetchError"),
         );
       }
       setPayrollItem(null);
     } finally {
       setPayrollLoading(false);
     }
-  }, [shopId, data]);
+  }, [shopId, data, t]);
 
   useEffect(() => {
     fetchPayroll();
@@ -290,7 +283,9 @@ const StaffOverviewPage = () => {
     ? branchMap[profile.branchId] || profile.branchId
     : null;
   const contractLabel = profile?.contractType
-    ? CONTRACT_LABELS[profile.contractType] || profile.contractType
+    ? t(`pages.staffs.contractType.${profile.contractType}`, {
+        defaultValue: profile.contractType,
+      })
     : null;
 
   const staffRef = profile ? (profile.external ? profile.id : profile.userId) : null;
@@ -336,11 +331,11 @@ const StaffOverviewPage = () => {
     setAttendanceSubmitting(true);
     try {
       await attendanceCheckIn(shopId, { staffRef, staffType });
-      toast.success("Đã check-in.");
+      toast.success(t("pages.staffs.overview.checkInSuccess"));
       fetchAttendance();
     } catch (err) {
       console.error("Check-in error:", err);
-      toast.error(err.response?.data?.message || "Không thể check-in.");
+      toast.error(err.response?.data?.message || t("pages.staffs.overview.checkInFail"));
     } finally {
       setAttendanceSubmitting(false);
     }
@@ -351,11 +346,11 @@ const StaffOverviewPage = () => {
     setAttendanceSubmitting(true);
     try {
       await attendanceCheckOut(shopId, { staffRef, staffType });
-      toast.success("Đã check-out.");
+      toast.success(t("pages.staffs.overview.checkOutSuccess"));
       fetchAttendance();
     } catch (err) {
       console.error("Check-out error:", err);
-      toast.error(err.response?.data?.message || "Không thể check-out.");
+      toast.error(err.response?.data?.message || t("pages.staffs.overview.checkOutFail"));
     } finally {
       setAttendanceSubmitting(false);
     }
@@ -364,7 +359,7 @@ const StaffOverviewPage = () => {
   const handleManualAttendanceSave = async () => {
     if (!shopId || !staffRef || !staffType) return;
     if (!manualWorkDate || !manualCheckIn) {
-      toast.error("Vui lòng chọn ngày làm việc và giờ vào.");
+      toast.error(t("pages.staffs.overview.manualDateRequired"));
       return;
     }
     setManualSubmitting(true);
@@ -381,12 +376,12 @@ const StaffOverviewPage = () => {
       if (manualNote.trim()) payload.note = manualNote.trim();
 
       await attendanceManualSession(shopId, payload);
-      toast.success("Đã lưu giờ chấm công.");
+      toast.success(t("pages.staffs.overview.manualSaveSuccess"));
       fetchAttendance();
     } catch (err) {
       console.error("Manual attendance error:", err);
       toast.error(
-        err.response?.data?.message || "Không thể lưu giờ chấm công.",
+        err.response?.data?.message || t("pages.staffs.overview.manualSaveFail"),
       );
     } finally {
       setManualSubmitting(false);
@@ -396,7 +391,7 @@ const StaffOverviewPage = () => {
   const handleCreateLeave = async () => {
     if (!shopId || !staffRef) return;
     if (!leaveForm.fromDate || !leaveForm.toDate) {
-      toast.error("Vui lòng chọn từ ngày / đến ngày.");
+      toast.error(t("pages.staffs.overview.leaveDateRequired"));
       return;
     }
     setLeaveSubmitting(true);
@@ -410,13 +405,13 @@ const StaffOverviewPage = () => {
         toDate: leaveForm.toDate,
         reason: leaveForm.reason,
       });
-      toast.success("Đã tạo đơn nghỉ phép.");
+      toast.success(t("pages.staffs.overview.leaveCreateSuccess"));
       setLeaveCreateOpen(false);
       setLeaveForm((s) => ({ ...s, reason: "" }));
       fetchLeaves();
     } catch (err) {
       console.error("Create leave error:", err);
-      toast.error(err.response?.data?.message || "Không thể tạo đơn nghỉ phép.");
+      toast.error(err.response?.data?.message || t("pages.staffs.overview.leaveCreateFail"));
     } finally {
       setLeaveSubmitting(false);
     }
@@ -427,11 +422,11 @@ const StaffOverviewPage = () => {
     setLeaveSubmitting(true);
     try {
       await approveLeaveRequest(shopId, leaveId);
-      toast.success("Đã duyệt đơn.");
+      toast.success(t("pages.staffs.overview.leaveApproveSuccess"));
       fetchLeaves();
     } catch (err) {
       console.error("Approve leave error:", err);
-      toast.error(err.response?.data?.message || "Không thể duyệt đơn.");
+      toast.error(err.response?.data?.message || t("pages.staffs.overview.leaveApproveFail"));
     } finally {
       setLeaveSubmitting(false);
     }
@@ -442,11 +437,11 @@ const StaffOverviewPage = () => {
     setLeaveSubmitting(true);
     try {
       await rejectLeaveRequest(shopId, leaveId, {});
-      toast.success("Đã từ chối đơn.");
+      toast.success(t("pages.staffs.overview.leaveRejectSuccess"));
       fetchLeaves();
     } catch (err) {
       console.error("Reject leave error:", err);
-      toast.error(err.response?.data?.message || "Không thể từ chối đơn.");
+      toast.error(err.response?.data?.message || t("pages.staffs.overview.leaveRejectFail"));
     } finally {
       setLeaveSubmitting(false);
     }
@@ -457,11 +452,11 @@ const StaffOverviewPage = () => {
     setLeaveSubmitting(true);
     try {
       await cancelLeaveRequest(shopId, leaveId, {});
-      toast.success("Đã huỷ đơn.");
+      toast.success(t("pages.staffs.overview.leaveCancelSuccess"));
       fetchLeaves();
     } catch (err) {
       console.error("Cancel leave error:", err);
-      toast.error(err.response?.data?.message || "Không thể huỷ đơn.");
+      toast.error(err.response?.data?.message || t("pages.staffs.overview.leaveCancelFail"));
     } finally {
       setLeaveSubmitting(false);
     }
@@ -474,17 +469,16 @@ const StaffOverviewPage = () => {
           variant="ghost"
           size="icon"
           onClick={() => navigate("/staffs")}
-          aria-label="Về danh sách nhân sự"
+          aria-label={t("pages.staffs.overview.backAriaLabel")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
           <h2 className="text-2xl font-semibold tracking-tight">
-            Hồ sơ nhân sự
+            {t("pages.staffs.overview.title")}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Thông tin chi tiết, vai trò, lương và placeholder cho chấm công /
-            nghỉ phép / bảng lương.
+            {t("pages.staffs.overview.subtitle")}
           </p>
         </div>
         {profile && (
@@ -494,19 +488,19 @@ const StaffOverviewPage = () => {
             className="gap-2"
           >
             <Edit3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Chỉnh sửa hồ sơ</span>
+            <span className="hidden sm:inline">{t("pages.staffs.overview.editProfile")}</span>
           </Button>
         )}
       </div>
 
       {loading && !profile ? (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin mr-2" /> Đang tải...
+          <Loader2 className="h-5 w-5 animate-spin mr-2" /> {t("pages.staffs.overview.loading")}
         </div>
       ) : !profile ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Không tìm thấy nhân sự.
+            {t("pages.staffs.overview.notFound")}
           </CardContent>
         </Card>
       ) : (
@@ -531,11 +525,11 @@ const StaffOverviewPage = () => {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-xl font-semibold truncate">
-                        {profile.fullName || "—"}
+                        {profile.fullName || emptyValue}
                       </h3>
                       {isExternal ? (
                         <Badge variant="secondary" className="gap-1">
-                          <Users className="h-3 w-3" /> Ngoài hệ thống
+                          <Users className="h-3 w-3" /> {t("pages.staffs.overview.externalBadge")}
                         </Badge>
                       ) : (
                         <Badge
@@ -543,7 +537,7 @@ const StaffOverviewPage = () => {
                           className="gap-1"
                         >
                           <Shield className="h-3 w-3" />
-                          {SHOP_ROLE_LABELS[role] || role || "—"}
+                          {getShopRoleLabel(t, role) || role || emptyValue}
                         </Badge>
                       )}
                       {profile.position ? (
@@ -554,31 +548,31 @@ const StaffOverviewPage = () => {
                       ) : null}
                     </div>
                     <p className="text-sm text-muted-foreground mt-1 break-all">
-                      {profile.email || "—"}
+                      {profile.email || emptyValue}
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-6">
                   <div>
                     <div className="text-xs text-muted-foreground">
-                      Chi nhánh
+                      {t("pages.staffs.overview.summaryBranch")}
                     </div>
                     <div className="text-sm font-medium">
-                      {branchName || "—"}
+                      {branchName || emptyValue}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground">Lương</div>
+                    <div className="text-xs text-muted-foreground">{t("pages.staffs.overview.summarySalary")}</div>
                     <div className="text-sm font-medium">
-                      {profile.salary ? formatVnd(profile.salary) : "—"}
+                      {profile.salary ? formatVnd(profile.salary, numberLocale, emptyValue) : emptyValue}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">
-                      Loại HĐ
+                      {t("pages.staffs.overview.summaryContract")}
                     </div>
                     <div className="text-sm font-medium">
-                      {contractLabel || "—"}
+                      {contractLabel || emptyValue}
                     </div>
                   </div>
                 </div>
@@ -589,75 +583,84 @@ const StaffOverviewPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Liên hệ</CardTitle>
+                <CardTitle className="text-base">{t("pages.staffs.overview.contactTitle")}</CardTitle>
                 <CardDescription>
-                  Thông tin liên lạc của nhân sự.
+                  {t("pages.staffs.overview.contactDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoRow icon={Mail} label="Email" value={profile.email} />
-                <InfoRow icon={Phone} label="Số điện thoại" value={profile.phone} />
+                <InfoRow icon={Mail} label={t("pages.staffs.overview.labelEmail")} value={profile.email} emptyValue={emptyValue} />
+                <InfoRow icon={Phone} label={t("pages.staffs.overview.labelPhone")} value={profile.phone} emptyValue={emptyValue} />
                 <InfoRow
                   icon={MapPin}
-                  label="Chi nhánh"
+                  label={t("pages.staffs.overview.labelBranch")}
                   value={branchName}
+                  emptyValue={emptyValue}
                 />
                 <InfoRow
                   icon={Briefcase}
-                  label="Phòng ban"
+                  label={t("pages.staffs.overview.labelDepartment")}
                   value={profile.department}
+                  emptyValue={emptyValue}
                 />
                 <InfoRow
                   icon={Briefcase}
-                  label="Cấp bậc"
+                  label={t("pages.staffs.overview.labelLevel")}
                   value={profile.level}
+                  emptyValue={emptyValue}
                 />
                 <InfoRow
                   icon={CalendarDays}
-                  label="Ngày vào làm"
-                  value={profile.startDate ? formatDate(profile.startDate) : null}
+                  label={t("pages.staffs.overview.labelStartDate")}
+                  value={profile.startDate ? formatDate(profile.startDate, numberLocale, emptyValue) : null}
+                  emptyValue={emptyValue}
                 />
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Hợp đồng & lương</CardTitle>
+                <CardTitle className="text-base">{t("pages.staffs.overview.contractSalaryTitle")}</CardTitle>
                 <CardDescription>
-                  Lương cố định khai báo. Lương thực trả hiển thị khi bật phase
-                  Payroll.
+                  {t("pages.staffs.overview.contractSalaryDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InfoRow
                   icon={Wallet}
-                  label="Lương cố định / tháng"
-                  value={formatVnd(profile.salary)}
+                  label={t("pages.staffs.overview.labelFixedSalary")}
+                  value={formatVnd(profile.salary, numberLocale, emptyValue)}
+                  emptyValue={emptyValue}
                 />
                 <InfoRow
                   icon={Briefcase}
-                  label="Loại hợp đồng"
+                  label={t("pages.staffs.overview.labelContractType")}
                   value={contractLabel}
+                  emptyValue={emptyValue}
                 />
                 <InfoRow
                   icon={IdCard}
-                  label="Số CCCD"
+                  label={t("pages.staffs.overview.labelIdNumber")}
                   value={profile.idNumber}
+                  emptyValue={emptyValue}
                 />
                 <InfoRow
                   icon={CreditCard}
-                  label="Ngân hàng"
+                  label={t("pages.staffs.overview.labelBank")}
                   value={profile.bankName}
+                  emptyValue={emptyValue}
                 />
                 <InfoRow
                   icon={CreditCard}
-                  label="Số tài khoản"
+                  label={t("pages.staffs.overview.labelBankAccount")}
                   value={profile.bankAccountNumber}
+                  emptyValue={emptyValue}
                 />
                 <InfoRow
                   icon={CreditCard}
-                  label="Chủ tài khoản"
+                  label={t("pages.staffs.overview.labelBankHolder")}
                   value={profile.bankAccountHolder}
+                  emptyValue={emptyValue}
                 />
               </CardContent>
             </Card>
@@ -665,23 +668,25 @@ const StaffOverviewPage = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Liên hệ khẩn cấp</CardTitle>
+              <CardTitle className="text-base">{t("pages.staffs.overview.emergencyTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InfoRow
                 icon={Users}
-                label="Người liên hệ"
+                label={t("pages.staffs.overview.labelEmergencyContact")}
                 value={profile.emergencyContactName}
+                emptyValue={emptyValue}
               />
               <InfoRow
                 icon={Phone}
-                label="Số điện thoại"
+                label={t("pages.staffs.overview.labelPhone")}
                 value={profile.emergencyContactPhone}
+                emptyValue={emptyValue}
               />
               {profile.note ? (
                 <div className="sm:col-span-2">
                   <div className="text-xs text-muted-foreground mb-1">
-                    Ghi chú
+                    {t("pages.staffs.overview.labelNote")}
                   </div>
                   <div className="text-sm whitespace-pre-wrap">
                     {profile.note}
@@ -691,20 +696,16 @@ const StaffOverviewPage = () => {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+          <div className="grid grid-cols-1 min-[1100px]:grid-cols-3 gap-4">
+            <Card className="min-w-0">
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4" /> Chấm công (Phase 2)
+                  <CalendarDays className="h-4 w-4 shrink-0" /> {t("pages.staffs.overview.attendanceTitle")}
                 </CardTitle>
                 <CardDescription>
-                  Check-in / check-out theo ca (nhiều lượt trong ngày) và tự cộng tổng giờ.
+                  {t("pages.staffs.overview.attendanceDesc")}
                   {canManageAttendanceManual ? (
-                    <>
-                      {" "}
-                      Owner/Manager có thể nhập giờ vào — giờ ra theo ngày (khi nhân viên không
-                      tiện mở app).
-                    </>
+                    <> {" "}{t("pages.staffs.overview.attendanceDescManual")}</>
                   ) : null}
                 </CardDescription>
               </CardHeader>
@@ -712,27 +713,27 @@ const StaffOverviewPage = () => {
                 {attendanceLoading ? (
                   <div className="text-sm text-muted-foreground flex items-center">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Đang tải chấm công...
+                    {t("pages.staffs.overview.attendanceLoading")}
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="text-sm min-w-0">
                         <div className="text-muted-foreground text-xs">
-                          Hôm nay
+                          {t("pages.staffs.overview.today")}
                         </div>
                         <div className="font-medium">
-                          {todayEntry?.checkInAt ? "Đã check-in" : "Chưa check-in"}
-                          {todayEntry?.checkOutAt ? " · Đã check-out" : ""}
+                          {todayEntry?.checkInAt ? t("pages.staffs.overview.checkedIn") : t("pages.staffs.overview.notCheckedIn")}
+                          {todayEntry?.checkOutAt ? t("pages.staffs.overview.checkedOutSuffix") : ""}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          Tổng giờ hôm nay:{" "}
+                          {t("pages.staffs.overview.todayTotalHours")}{" "}
                           <span className="font-medium text-foreground">
-                            {formatMinutes(todayEntry?.totalMinutes)}
+                            {formatMinutes(todayEntry?.totalMinutes, emptyValue)}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <Button
                           variant="outline"
                           size="sm"
@@ -740,7 +741,7 @@ const StaffOverviewPage = () => {
                           disabled={attendanceSubmitting || hasOpenSession}
                           onClick={handleCheckIn}
                         >
-                          <LogIn className="h-4 w-4" /> Check-in
+                          <LogIn className="h-4 w-4 shrink-0" /> {t("pages.staffs.overview.checkIn")}
                         </Button>
                         <Button
                           variant="success"
@@ -752,7 +753,7 @@ const StaffOverviewPage = () => {
                           }
                           onClick={handleCheckOut}
                         >
-                          <LogOut className="h-4 w-4" /> Check-out
+                          <LogOut className="h-4 w-4 shrink-0" /> {t("pages.staffs.overview.checkOut")}
                         </Button>
                       </div>
                     </div>
@@ -760,16 +761,15 @@ const StaffOverviewPage = () => {
                     {canManageAttendanceManual ? (
                       <div className="rounded-md border bg-muted/30 p-3 space-y-3">
                         <div className="text-sm font-medium">
-                          Nhập giờ chấm công (quản lý)
+                          {t("pages.staffs.overview.manualTitle")}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Dùng khi nhân viên không thể bấm check-in/check-out trên app. Có thể chọn
-                          ngày trong quá khứ và chỉnh sửa theo thực tế ca làm.
+                          {t("pages.staffs.overview.manualHint")}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1.5">
                             <Label htmlFor="manual-work-date" className="text-xs">
-                              Ngày làm việc
+                              {t("pages.staffs.overview.manualWorkDate")}
                             </Label>
                             <Input
                               id="manual-work-date"
@@ -781,7 +781,7 @@ const StaffOverviewPage = () => {
                           <div className="space-y-1.5 sm:col-span-2 grid sm:grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                               <Label htmlFor="manual-in" className="text-xs">
-                                Giờ vào
+                                {t("pages.staffs.overview.manualCheckIn")}
                               </Label>
                               <Input
                                 id="manual-in"
@@ -792,7 +792,7 @@ const StaffOverviewPage = () => {
                             </div>
                             <div className="space-y-1.5">
                               <Label htmlFor="manual-out" className="text-xs">
-                                Giờ ra (tuỳ chọn)
+                                {t("pages.staffs.overview.manualCheckOut")}
                               </Label>
                               <Input
                                 id="manual-out"
@@ -805,7 +805,7 @@ const StaffOverviewPage = () => {
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="manual-note" className="text-xs">
-                            Ghi chú (tuỳ chọn)
+                            {t("pages.staffs.overview.manualNote")}
                           </Label>
                           <Textarea
                             id="manual-note"
@@ -813,7 +813,7 @@ const StaffOverviewPage = () => {
                             className="text-sm resize-none"
                             value={manualNote}
                             onChange={(e) => setManualNote(e.target.value)}
-                            placeholder="VD: ca sáng cửa hàng, bù giờ..."
+                            placeholder={t("pages.staffs.overview.manualNotePlaceholder")}
                           />
                         </div>
                         <div className="flex items-start gap-2">
@@ -827,8 +827,7 @@ const StaffOverviewPage = () => {
                             htmlFor="manual-replace"
                             className="text-xs font-normal leading-snug cursor-pointer"
                           >
-                            Ghi đè toàn bộ ca trong ngày đã chọn (xóa các session chấm công trước
-                            đó trong ngày đó).
+                            {t("pages.staffs.overview.manualReplaceDay")}
                           </Label>
                         </div>
                         <Button
@@ -840,19 +839,19 @@ const StaffOverviewPage = () => {
                           {manualSubmitting ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Đang lưu...
+                              {t("pages.staffs.overview.manualSaving")}
                             </>
                           ) : (
-                            "Lưu giờ chấm công"
+                            t("pages.staffs.overview.manualSave")
                           )}
                         </Button>
                       </div>
                     ) : null}
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-2">
                       <div className="rounded-md border p-2">
                         <div className="text-[11px] text-muted-foreground">
-                          Ngày có check-in
+                          {t("pages.staffs.overview.statCheckedInDays")}
                         </div>
                         <div className="text-sm font-semibold">
                           {attendanceMonth?.checkedInDays ?? 0}
@@ -860,7 +859,7 @@ const StaffOverviewPage = () => {
                       </div>
                       <div className="rounded-md border p-2">
                         <div className="text-[11px] text-muted-foreground">
-                          Ngày có check-out
+                          {t("pages.staffs.overview.statCheckedOutDays")}
                         </div>
                         <div className="text-sm font-semibold">
                           {attendanceMonth?.checkedOutDays ?? 0}
@@ -868,7 +867,7 @@ const StaffOverviewPage = () => {
                       </div>
                       <div className="rounded-md border p-2">
                         <div className="text-[11px] text-muted-foreground">
-                          Bản ghi
+                          {t("pages.staffs.overview.statRecords")}
                         </div>
                         <div className="text-sm font-semibold">
                           {attendanceMonth?.totalDays ?? 0}
@@ -878,7 +877,7 @@ const StaffOverviewPage = () => {
 
                     <div className="pt-2 border-t">
                       <div className="text-xs text-muted-foreground mb-2">
-                        Timeline hôm nay
+                        {t("pages.staffs.overview.timelineToday")}
                       </div>
                       {todayEntry?.sessions?.length ? (
                         <div className="space-y-2">
@@ -889,27 +888,27 @@ const StaffOverviewPage = () => {
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <Badge variant="outline" className="shrink-0">
-                                  Ca {idx + 1}
+                                  {t("pages.staffs.overview.shiftBadge", { index: idx + 1 })}
                                 </Badge>
                                 <div className="truncate">
-                                  {formatTime(s.checkInAt)} →{" "}
-                                  {formatTime(s.checkOutAt)}
+                                  {formatTime(s.checkInAt, numberLocale, emptyValue)} →{" "}
+                                  {formatTime(s.checkOutAt, numberLocale, emptyValue)}
                                 </div>
                               </div>
                               <div className="text-muted-foreground shrink-0">
-                                {formatMinutes(s.minutes)}
+                                {formatMinutes(s.minutes, emptyValue)}
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
                         <div className="text-sm text-muted-foreground">
-                          Chưa có session nào hôm nay.
+                          {t("pages.staffs.overview.noSessionsToday")}
                         </div>
                       )}
 
                       <div className="text-xs text-muted-foreground mt-3 mb-2">
-                        Gần đây
+                        {t("pages.staffs.overview.recent")}
                       </div>
                       <div className="space-y-2">
                         {(attendanceMonth?.entries || [])
@@ -927,14 +926,14 @@ const StaffOverviewPage = () => {
                             >
                               <div className="font-medium">{e.workDate}</div>
                               <div className="text-muted-foreground">
-                                {formatMinutes(e.totalMinutes)}
+                                {formatMinutes(e.totalMinutes, emptyValue)}
                               </div>
                             </div>
                           ))}
                         {(!attendanceMonth?.entries ||
                           attendanceMonth.entries.length === 0) && (
                           <div className="text-sm text-muted-foreground">
-                            Chưa có bản ghi chấm công.
+                            {t("pages.staffs.overview.noAttendanceRecords")}
                           </div>
                         )}
                       </div>
@@ -943,31 +942,32 @@ const StaffOverviewPage = () => {
                 )}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between gap-3">
-                <div>
-                  <CardTitle className="text-sm">Nghỉ phép</CardTitle>
+            <Card className="min-w-0">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <CardTitle className="text-sm">{t("pages.staffs.overview.leaveTitle")}</CardTitle>
                   <CardDescription>
-                    Tạo đơn nghỉ phép, theo dõi trạng thái và duyệt/từ chối theo quyền.
+                    {t("pages.staffs.overview.leaveDesc")}
                   </CardDescription>
                 </div>
                 <Button
                   variant="success"
                   size="sm"
+                  className="w-full sm:w-auto shrink-0"
                   onClick={() => setLeaveCreateOpen(true)}
                 >
-                  Tạo đơn
+                  {t("pages.staffs.overview.createLeave")}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
                 {leaveLoading ? (
                   <div className="text-sm text-muted-foreground flex items-center">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Đang tải đơn nghỉ phép...
+                    {t("pages.staffs.overview.leaveLoading")}
                   </div>
                 ) : leaveList.length === 0 ? (
                   <div className="text-sm text-muted-foreground">
-                    Chưa có đơn nghỉ phép trong tháng này.
+                    {t("pages.staffs.overview.leaveEmpty")}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -982,9 +982,9 @@ const StaffOverviewPage = () => {
                       .map((lr) => (
                         <div
                           key={lr.id}
-                          className="rounded-md border p-2 flex items-start justify-between gap-3"
+                          className="rounded-md border p-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
                         >
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline">{lr.type || "ANNUAL"}</Badge>
                               <Badge
@@ -1010,7 +1010,7 @@ const StaffOverviewPage = () => {
                               </div>
                             ) : null}
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex flex-wrap items-center gap-2 shrink-0">
                             {(lr.status === "PENDING" ||
                               lr.status === "APPROVED") && (
                               <Button
@@ -1019,7 +1019,7 @@ const StaffOverviewPage = () => {
                                 disabled={leaveSubmitting}
                                 onClick={() => handleCancelLeave(lr.id)}
                               >
-                                Huỷ
+                                {t("pages.staffs.overview.leaveCancel")}
                               </Button>
                             )}
                             {lr.status === "PENDING" && (
@@ -1030,7 +1030,7 @@ const StaffOverviewPage = () => {
                                   disabled={leaveSubmitting}
                                   onClick={() => handleApproveLeave(lr.id)}
                                 >
-                                  Duyệt
+                                  {t("pages.staffs.overview.leaveApprove")}
                                 </Button>
                                 <Button
                                   variant="destructive"
@@ -1038,7 +1038,7 @@ const StaffOverviewPage = () => {
                                   disabled={leaveSubmitting}
                                   onClick={() => handleRejectLeave(lr.id)}
                                 >
-                                  Từ chối
+                                  {t("pages.staffs.overview.leaveReject")}
                                 </Button>
                               </>
                             )}
@@ -1049,66 +1049,69 @@ const StaffOverviewPage = () => {
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="min-w-0">
               <CardHeader>
-                <CardTitle className="text-sm">Bảng lương</CardTitle>
+                <CardTitle className="text-sm">{t("pages.staffs.overview.payrollTitle")}</CardTitle>
                 <CardDescription>
-                  Theo tháng {data?.month || "—"}
+                  {t("pages.staffs.overview.payrollMonthDesc", { month: data?.month || emptyValue })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 {payrollLoading ? (
                   <div className="text-sm text-muted-foreground flex items-center">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Đang tải bảng lương...
+                    {t("pages.staffs.overview.payrollLoading")}
                   </div>
                 ) : !payrollItem ? (
                   <div className="text-sm text-muted-foreground">
-                    Chưa có bảng lương cho tháng này. Vào “Tổng quan nhân sự” →
-                    “Bảng lương” để tạo.
+                    {t("pages.staffs.overview.payrollEmpty")}
                   </div>
                 ) : (
                   <>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Base</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.overview.payrollBase")}</span>
                       <span className="font-semibold">
-                        {formatVnd(payrollItem.baseSalary)}
+                        {formatVnd(payrollItem.baseSalary, numberLocale, emptyValue)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Gross</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.overview.payrollGross")}</span>
                       <span className="font-semibold">
-                        {formatVnd(payrollItem.grossSalary)}
+                        {formatVnd(payrollItem.grossSalary, numberLocale, emptyValue)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Deductions</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.overview.payrollDeductions")}</span>
                       <span className="font-semibold">
-                        {formatVnd(payrollItem.deduction)}
+                        {formatVnd(payrollItem.deduction, numberLocale, emptyValue)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Net</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.overview.payrollNet")}</span>
                       <span className="font-semibold">
-                        {formatVnd(payrollItem.netSalary)}
+                        {formatVnd(payrollItem.netSalary, numberLocale, emptyValue)}
                       </span>
                     </div>
                     <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
                       <div>
-                        Chấm công:{" "}
+                        {t("pages.staffs.overview.payrollAttendance")}{" "}
                         <span className="font-medium text-foreground">
-                          {formatMinutes(payrollItem.workMinutes)}
+                          {formatMinutes(payrollItem.workMinutes, emptyValue)}
                         </span>
                       </div>
                       <div>
-                        Nghỉ đã duyệt:{" "}
+                        {t("pages.staffs.overview.payrollApprovedLeave")}{" "}
                         <span className="font-medium text-foreground">
-                          {Number(payrollItem.approvedLeaveDays || 0)} ngày
+                          {t("pages.staffs.overview.payrollApprovedLeaveDays", {
+                            count: Number(payrollItem.approvedLeaveDays || 0),
+                          })}
                         </span>
                         {" · "}
-                        UNPAID:{" "}
+                        {t("pages.staffs.overview.payrollUnpaid")}{" "}
                         <span className="font-medium text-foreground">
-                          {Number(payrollItem.unpaidLeaveDays || 0)} ngày
+                          {t("pages.staffs.overview.payrollUnpaidDays", {
+                            count: Number(payrollItem.unpaidLeaveDays || 0),
+                          })}
                         </span>
                       </div>
                     </div>
@@ -1121,27 +1124,26 @@ const StaffOverviewPage = () => {
           <Dialog open={leaveCreateOpen} onOpenChange={setLeaveCreateOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Tạo đơn nghỉ phép</DialogTitle>
+                <DialogTitle>{t("pages.staffs.overview.leaveCreateTitle")}</DialogTitle>
                 <DialogDescription>
-                  Nhập khoảng thời gian nghỉ và lý do. Đơn sẽ ở trạng thái chờ
-                  duyệt.
+                  {t("pages.staffs.overview.leaveCreateDesc")}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-3">
                 <div className="grid gap-2">
-                  <Label>Loại nghỉ</Label>
+                  <Label>{t("pages.staffs.overview.leaveTypeLabel")}</Label>
                   <Input
                     value={leaveForm.type}
                     onChange={(e) =>
                       setLeaveForm((s) => ({ ...s, type: e.target.value }))
                     }
-                    placeholder="ANNUAL / SICK / UNPAID..."
+                    placeholder={t("pages.staffs.overview.leaveTypePlaceholder")}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="grid gap-2">
-                    <Label>Từ ngày</Label>
+                    <Label>{t("pages.staffs.overview.leaveFromDate")}</Label>
                     <Input
                       type="date"
                       value={leaveForm.fromDate}
@@ -1151,7 +1153,7 @@ const StaffOverviewPage = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Đến ngày</Label>
+                    <Label>{t("pages.staffs.overview.leaveToDate")}</Label>
                     <Input
                       type="date"
                       value={leaveForm.toDate}
@@ -1162,13 +1164,13 @@ const StaffOverviewPage = () => {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label>Lý do</Label>
+                  <Label>{t("pages.staffs.overview.leaveReason")}</Label>
                   <Textarea
                     value={leaveForm.reason}
                     onChange={(e) =>
                       setLeaveForm((s) => ({ ...s, reason: e.target.value }))
                     }
-                    placeholder="VD: nghỉ ốm, việc gia đình..."
+                    placeholder={t("pages.staffs.overview.leaveReasonPlaceholder")}
                   />
                 </div>
               </div>
@@ -1178,14 +1180,14 @@ const StaffOverviewPage = () => {
                   variant="outline"
                   onClick={() => setLeaveCreateOpen(false)}
                 >
-                  Đóng
+                  {t("pages.staffs.overview.leaveClose")}
                 </Button>
                 <Button
                   variant="success"
                   disabled={leaveSubmitting}
                   onClick={handleCreateLeave}
                 >
-                  Tạo đơn
+                  {t("pages.staffs.overview.leaveCreateSubmit")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1194,30 +1196,30 @@ const StaffOverviewPage = () => {
           <Card className="bg-muted/40">
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
-                <Building2 className="h-4 w-4" /> Metadata
+                <Building2 className="h-4 w-4" /> {t("pages.staffs.overview.metadataTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
-                <div className="text-xs text-muted-foreground">Ngày tạo</div>
-                <div>{formatDate(profile.createdAt)}</div>
+                <div className="text-xs text-muted-foreground">{t("pages.staffs.overview.metadataCreatedAt")}</div>
+                <div>{formatDate(profile.createdAt, numberLocale, emptyValue)}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">
-                  Cập nhật cuối
+                  {t("pages.staffs.overview.metadataUpdatedAt")}
                 </div>
-                <div>{formatDate(profile.updatedAt)}</div>
+                <div>{formatDate(profile.updatedAt, numberLocale, emptyValue)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">User ID</div>
+                <div className="text-xs text-muted-foreground">{t("pages.staffs.overview.metadataUserId")}</div>
                 <div className="font-mono text-xs break-all">
-                  {profile.userId || "—"}
+                  {profile.userId || emptyValue}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Profile ID</div>
+                <div className="text-xs text-muted-foreground">{t("pages.staffs.overview.metadataProfileId")}</div>
                 <div className="font-mono text-xs break-all">
-                  {profile.id || "—"}
+                  {profile.id || emptyValue}
                 </div>
               </div>
             </CardContent>

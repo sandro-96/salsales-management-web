@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
@@ -52,44 +53,62 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
-
 import {
-  getPromotions,
-  deletePromotion,
-} from "../../api/promotionApi.js";
+  dataTableContainer,
+  listBranchSelectWrap,
+  listInputGrow,
+  listToolbarActions,
+  listToolbarFilters,
+  listToolbarRoot,
+} from "@/components/table/listPageLayout.js";
+
+import { getPromotions, deletePromotion } from "../../api/promotionApi.js";
 import PromotionFormModal from "./PromotionFormModal.jsx";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const getPromotionStatus = (promo) => {
-  if (!promo.active) return { label: "Tạm dừng", variant: "secondary" };
+const getPromotionStatus = (promo, t) => {
+  if (!promo.active)
+    return {
+      label: t("pages.promotions.list.statusPaused"),
+      variant: "secondary",
+    };
   const now = new Date();
   const start = new Date(promo.startDate);
   const end = new Date(promo.endDate);
-  if (now < start) return { label: "Sắp diễn ra", variant: "outline" };
-  if (now > end) return { label: "Đã hết hạn", variant: "destructive" };
-  return { label: "Đang hoạt động", variant: "default" };
+  if (now < start)
+    return {
+      label: t("pages.promotions.list.statusUpcoming"),
+      variant: "outline",
+    };
+  if (now > end)
+    return {
+      label: t("pages.promotions.list.statusExpired"),
+      variant: "destructive",
+    };
+  return {
+    label: t("pages.promotions.list.statusActive"),
+    variant: "default",
+  };
 };
 
-const formatDate = (dateStr) => {
+const formatDate = (dateStr, locale) => {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("vi-VN", {
+  return d.toLocaleDateString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
 };
 
-const formatDiscount = (type, value) => {
+const formatDiscount = (type, value, locale) => {
   if (type === "PERCENT") return `${value}%`;
-  return Number(value).toLocaleString("vi-VN") + "đ";
+  return Number(value).toLocaleString(locale) + "đ";
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
 const PromotionListPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const { selectedShopId, branches } = useShop();
   const { hasShopPermission } = useShopPermissions();
   const shopId = selectedShopId;
@@ -100,7 +119,9 @@ const PromotionListPage = () => {
 
   const branchMap = useMemo(() => {
     const map = {};
-    branches?.forEach((b) => { map[b.id] = b.name; });
+    branches?.forEach((b) => {
+      map[b.id] = b.name;
+    });
     return map;
   }, [branches]);
 
@@ -118,8 +139,6 @@ const PromotionListPage = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [branchFilter, setBranchFilter] = useState("__all__");
   const [keyword, setKeyword] = useState("");
-
-  // ── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchPromotions = useCallback(async () => {
     if (!shopId) return;
@@ -149,25 +168,23 @@ const PromotionListPage = () => {
       }
     } catch (err) {
       console.error("Fetch promotions error:", err);
-      toast.error("Không thể tải danh sách khuyến mãi.");
+      toast.error(t("pages.promotions.list.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, pagination, sorting, branchFilter]);
+  }, [shopId, pagination, sorting, branchFilter, t]);
 
   useEffect(() => {
     fetchPromotions();
   }, [fetchPromotions]);
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
-
   const handleDelete = async (promo) => {
     const ok = await confirm(
-      `Bạn có chắc muốn xóa khuyến mãi "${promo.name}" không? Hành động này không thể hoàn tác.`,
+      t("pages.promotions.list.deleteConfirm", { name: promo.name }),
       {
-        title: "Xóa khuyến mãi",
-        confirmText: "Xóa",
-        cancelText: "Hủy",
+        title: t("pages.promotions.list.deleteTitle"),
+        confirmText: t("pages.promotions.list.deleteConfirmBtn"),
+        cancelText: t("pages.promotions.list.cancel"),
         variant: "destructive",
       },
     );
@@ -180,15 +197,15 @@ const PromotionListPage = () => {
       setIsSubmitting(true);
       const res = await deletePromotion(promo.id, shopId);
       if (res.data?.success) {
-        toast.success("Xóa khuyến mãi thành công.");
+        toast.success(t("pages.promotions.list.deleteSuccess"));
         fetchPromotions();
       } else {
-        toast.error(res.data?.message || "Xóa khuyến mãi thất bại.");
+        toast.error(res.data?.message || t("pages.promotions.list.deleteFail"));
         fetchPromotions();
       }
     } catch (err) {
       console.error("Delete promotion error:", err);
-      toast.error("Đã xảy ra lỗi khi xóa khuyến mãi.");
+      toast.error(t("pages.promotions.list.deleteError"));
       fetchPromotions();
     } finally {
       setIsSubmitting(false);
@@ -200,168 +217,189 @@ const PromotionListPage = () => {
     setModalOpen(true);
   };
 
-  // ── Columns ──────────────────────────────────────────────────────────────
-
-  const columns = [
-    {
-      accessorKey: "name",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Tên khuyến mãi" />
-      ),
-      cell: ({ row }) => (
-        <div className="font-medium min-w-[140px]">{row.getValue("name")}</div>
-      ),
-    },
-    {
-      accessorKey: "priority",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Ưu tiên" />
-      ),
-      cell: ({ row }) => (
-        <span className="tabular-nums text-sm font-medium">
-          {row.original.priority ?? 0}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "discountType",
-      header: "Loại giảm giá",
-      cell: ({ row }) => {
-        const type = row.getValue("discountType");
-        const value = row.original.discountValue;
-        return (
-          <div className="flex items-center gap-1.5">
-            {type === "PERCENT" ? (
-              <Percent className="h-3.5 w-3.5 text-blue-500" />
-            ) : (
-              <DollarSign className="h-3.5 w-3.5 text-green-500" />
-            )}
-            <span className="font-semibold">
-              {formatDiscount(type, value)}
-            </span>
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.promotions.list.colName")}
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="font-medium min-w-[140px]">{row.getValue("name")}</div>
+        ),
+      },
+      {
+        accessorKey: "priority",
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.promotions.list.colPriority")}
+          />
+        ),
+        cell: ({ row }) => (
+          <span className="tabular-nums text-sm font-medium">
+            {row.original.priority ?? 0}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "discountType",
+        header: t("pages.promotions.list.colDiscountType"),
+        cell: ({ row }) => {
+          const type = row.getValue("discountType");
+          const value = row.original.discountValue;
+          return (
+            <div className="flex items-center gap-1.5">
+              {type === "PERCENT" ? (
+                <Percent className="h-3.5 w-3.5 text-blue-500" />
+              ) : (
+                <DollarSign className="h-3.5 w-3.5 text-green-500" />
+              )}
+              <span className="font-semibold">
+                {formatDiscount(type, value, numberLocale)}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "startDate",
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.promotions.list.colStartDate")}
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="text-sm">
+            {formatDate(row.getValue("startDate"), numberLocale)}
           </div>
-        );
+        ),
       },
-    },
-    {
-      accessorKey: "startDate",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Ngày bắt đầu" />
-      ),
-      cell: ({ row }) => (
-        <div className="text-sm">{formatDate(row.getValue("startDate"))}</div>
-      ),
-    },
-    {
-      accessorKey: "endDate",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Ngày kết thúc" />
-      ),
-      cell: ({ row }) => (
-        <div className="text-sm">{formatDate(row.getValue("endDate"))}</div>
-      ),
-    },
-    {
-      id: "branch",
-      header: "Phạm vi",
-      cell: ({ row }) => {
-        const bid = row.original.branchId;
-        if (!bid) {
+      {
+        accessorKey: "endDate",
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.promotions.list.colEndDate")}
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="text-sm">
+            {formatDate(row.getValue("endDate"), numberLocale)}
+          </div>
+        ),
+      },
+      {
+        id: "branch",
+        header: t("pages.promotions.list.colScope"),
+        cell: ({ row }) => {
+          const bid = row.original.branchId;
+          if (!bid) {
+            return (
+              <Badge variant="outline" className="text-xs gap-1">
+                <Globe className="h-3 w-3" />
+                {t("pages.promotions.list.scopeAllShop")}
+              </Badge>
+            );
+          }
           return (
-            <Badge variant="outline" className="text-xs gap-1">
-              <Globe className="h-3 w-3" />
-              Toàn shop
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Warehouse className="h-3 w-3" />
+              {branchMap[bid] || bid}
             </Badge>
           );
-        }
-        return (
-          <Badge variant="secondary" className="text-xs gap-1">
-            <Warehouse className="h-3 w-3" />
-            {branchMap[bid] || bid}
-          </Badge>
-        );
+        },
       },
-    },
-    {
-      id: "scope",
-      header: "Sản phẩm",
-      cell: ({ row }) => {
-        const ids = row.original.applicableProductIds;
-        if (!ids || ids.length === 0) {
+      {
+        id: "scope",
+        header: t("pages.promotions.list.colProducts"),
+        cell: ({ row }) => {
+          const ids = row.original.applicableProductIds;
+          if (!ids || ids.length === 0) {
+            return (
+              <Badge variant="outline" className="text-xs">
+                {t("pages.promotions.list.scopeAllProducts")}
+              </Badge>
+            );
+          }
           return (
-            <Badge variant="outline" className="text-xs">
-              Tất cả SP
+            <Badge variant="secondary" className="text-xs">
+              {t("pages.promotions.list.productCount", { count: ids.length })}
             </Badge>
           );
-        }
-        return (
-          <Badge variant="secondary" className="text-xs">
-            {ids.length} sản phẩm
-          </Badge>
-        );
+        },
       },
-    },
-    {
-      id: "status",
-      header: "Trạng thái",
-      cell: ({ row }) => {
-        const { label, variant } = getPromotionStatus(row.original);
-        return <Badge variant={variant}>{label}</Badge>;
+      {
+        id: "status",
+        header: t("pages.promotions.list.colStatus"),
+        cell: ({ row }) => {
+          const { label, variant } = getPromotionStatus(row.original, t);
+          return <Badge variant={variant}>{label}</Badge>;
+        },
       },
-    },
-    {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const promo = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Mở menu</span>
-                <MoreHorizontal />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-background">
-              <DropdownMenuLabel>Hành động</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenEdit(promo);
-                }}
-              >
-                {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
-              </DropdownMenuItem>
-              {canDelete && (
+      {
+        id: "actions",
+        enableHiding: false,
+        cell: ({ row }) => {
+          const promo = row.original;
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">
+                    {t("pages.promotions.list.openMenu")}
+                  </span>
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background">
+                <DropdownMenuLabel>
+                  {t("pages.promotions.list.actions")}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
-                  disabled={isSubmitting}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDelete(promo);
+                    handleOpenEdit(promo);
                   }}
                 >
-                  Xóa
-                  <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
-                    ⌘⌫
-                  </DropdownMenuShortcut>
+                  {canUpdate
+                    ? t("pages.promotions.list.edit")
+                    : t("pages.promotions.list.viewDetail")}
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
+                {canDelete && (
+                  <DropdownMenuItem
+                    className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
+                    disabled={isSubmitting}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(promo);
+                    }}
+                  >
+                    {t("pages.promotions.list.delete")}
+                    <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
+                      ⌘⌫
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
-    },
-  ];
+    ],
+    [t, numberLocale, branchMap, canUpdate, canDelete, isSubmitting],
+  );
 
   const filteredPromotions = useMemo(() => {
     if (!keyword.trim()) return promotions;
     const kw = keyword.toLowerCase();
     return promotions.filter((p) => p.name?.toLowerCase().includes(kw));
   }, [promotions, keyword]);
-
-  // ── Table ────────────────────────────────────────────────────────────────
 
   const table = useReactTable({
     data: filteredPromotions,
@@ -387,31 +425,27 @@ const PromotionListPage = () => {
     },
   });
 
-  // ── Render ───────────────────────────────────────────────────────────────
-
   return (
     <div className="h-full flex-1 flex-col gap-8 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-4">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Quản lý khuyến mãi
+              {t("pages.promotions.list.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Tạo và quản lý các chương trình khuyến mãi cho cửa hàng.
+              {t("pages.promotions.list.subtitle")}
             </p>
           </div>
         </div>
 
-        {/* Toolbar */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className={listToolbarRoot}>
+          <div className={listToolbarFilters}>
             <Input
-              placeholder="Tìm khuyến mãi..."
+              placeholder={t("pages.promotions.list.searchPlaceholder")}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="flex-1 min-w-0 sm:max-w-xs"
+              className={listInputGrow}
             />
             {branches?.length > 0 && (
               <Select
@@ -421,12 +455,14 @@ const PromotionListPage = () => {
                   setPagination((p) => ({ ...p, pageIndex: 0 }));
                 }}
               >
-                <SelectTrigger className="w-[180px]">
-                  <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectTrigger className={listBranchSelectWrap}>
+                  <Warehouse className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
-                  <SelectItem value="__all__">Tất cả phạm vi</SelectItem>
+                  <SelectItem value="__all__">
+                    {t("pages.promotions.list.allScopes")}
+                  </SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
@@ -437,7 +473,7 @@ const PromotionListPage = () => {
             )}
             <DataTableViewOptions table={table} />
           </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className={listToolbarActions}>
             {canCreate && (
               <Button
                 variant="success"
@@ -449,14 +485,15 @@ const PromotionListPage = () => {
                 }}
               >
                 <Plus className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Thêm khuyến mãi</span>
+                <span className="hidden sm:inline">
+                  {t("pages.promotions.list.addPromotion")}
+                </span>
               </Button>
             )}
           </div>
         </div>
 
-        {/* Table */}
-        <div className="relative overflow-hidden rounded-md border">
+        <div className={dataTableContainer}>
           {loading && promotions.length > 0 && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -486,7 +523,7 @@ const PromotionListPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    Đang tải...
+                    {t("pages.promotions.list.loading")}
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
@@ -515,7 +552,7 @@ const PromotionListPage = () => {
                   >
                     <div className="flex flex-col items-center gap-2">
                       <Tag className="h-8 w-8 text-muted-foreground/40" />
-                      <span>Chưa có khuyến mãi nào.</span>
+                      <span>{t("pages.promotions.list.empty")}</span>
                     </div>
                   </TableCell>
                 </TableRow>

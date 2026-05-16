@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop.js";
 import { toast } from "sonner";
 import {
@@ -51,6 +52,14 @@ import { Switch } from "@/components/ui/switch";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
+import {
+  dataTableContainer,
+  listBranchSelectWrap,
+  listInputGrow,
+  listToolbarActions,
+  listToolbarFilters,
+  listToolbarRoot,
+} from "@/components/table/listPageLayout.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import {
   getProducts,
@@ -63,14 +72,15 @@ import ProductImportExportDialog from "./ProductImportExportDialog.jsx";
 import ShopToppingsModal from "./ShopToppingsModal.jsx";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
+import { translateProductCategory } from "@/constants/productConstants.js";
 
 /** Dữ liệu clone cho form tạo mới — ProductForm xử lý qua prefill.__isClone */
-function buildProductClonePrefill(product) {
+function buildProductClonePrefill(product, nameSuffix = "") {
   if (!product) return null;
   const baseName = String(product.name ?? "").trim();
   return {
     __isClone: true,
-    name: baseName ? `${baseName} (bản sao)` : "",
+    name: baseName ? `${baseName}${nameSuffix}` : "",
     sku: "",
     barcode: "",
     unit: product.unit ?? "",
@@ -89,6 +99,8 @@ function buildProductClonePrefill(product) {
 }
 
 const ProductPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const { selectedShopId, branches, selectedShop, fetchShops } = useShop();
   const { hasShopPermission, hasAnyShopPermission } = useShopPermissions();
   const shopId = selectedShopId;
@@ -157,11 +169,11 @@ const ProductPage = () => {
       }
     } catch (err) {
       console.error("Fetch products error:", err);
-      toast.error("Không thể tải danh sách sản phẩm.");
+      toast.error(t("pages.products.list.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, pagination, sorting, debouncedKeyword]);
+  }, [shopId, pagination, sorting, debouncedKeyword, t]);
 
   useEffect(() => {
     fetchProducts();
@@ -178,11 +190,13 @@ const ProductPage = () => {
           ),
         );
         toast.success(
-          updated?.active ? "Đã kích hoạt sản phẩm." : "Đã tắt sản phẩm.",
+          updated?.active
+            ? t("pages.products.list.activated")
+            : t("pages.products.list.deactivated"),
         );
       }
     } catch {
-      toast.error("Không thể cập nhật trạng thái.");
+      toast.error(t("pages.products.list.statusUpdateFail"));
     }
   };
 
@@ -202,24 +216,24 @@ const ProductPage = () => {
         );
         toast.success(
           trackInventory
-            ? "Đã bật theo dõi tồn kho."
-            : "Đã tắt theo dõi tồn kho.",
+            ? t("pages.products.list.trackInventoryOn")
+            : t("pages.products.list.trackInventoryOff"),
         );
       } else {
-        toast.error(res.data?.message || "Không thể cập nhật.");
+        toast.error(res.data?.message || t("pages.products.list.updateFail"));
       }
     } catch {
-      toast.error("Không thể cập nhật theo dõi tồn kho.");
+      toast.error(t("pages.products.list.trackInventoryUpdateFail"));
     }
   };
 
   const handleDelete = async (product) => {
     const ok = await confirm(
-      `Bạn có chắc muốn xóa sản phẩm "${product.name}" không? Hành động này không thể hoàn tác.`,
+      t("pages.products.list.deleteConfirm", { name: product.name }),
       {
-        title: "Xóa sản phẩm",
-        confirmText: "Xóa",
-        cancelText: "Hủy",
+        title: t("pages.products.list.deleteTitle"),
+        confirmText: t("pages.products.list.deleteConfirmBtn"),
+        cancelText: t("pages.products.list.cancel"),
         variant: "destructive",
       },
     );
@@ -235,15 +249,15 @@ const ProductPage = () => {
       setIsSubmitting(true);
       const res = await deleteProduct(shopId, product.productId);
       if (res.data?.success) {
-        toast.success("Xóa sản phẩm thành công.");
+        toast.success(t("pages.products.list.deleteSuccess"));
         fetchProducts(); // background sync, no await
       } else {
-        toast.error(res.data?.message || "Xóa sản phẩm thất bại.");
+        toast.error(res.data?.message || t("pages.products.list.deleteFail"));
         fetchProducts(); // revert
       }
     } catch (err) {
       console.error("Delete product error:", err);
-      toast.error("Đã xảy ra lỗi khi xóa sản phẩm.");
+      toast.error(t("pages.products.list.deleteError"));
       fetchProducts(); // revert
     } finally {
       setIsSubmitting(false);
@@ -264,7 +278,10 @@ const ProductPage = () => {
 
   const handleCloneFromProduct = (product) => {
     if (!canCreate) return;
-    const payload = buildProductClonePrefill(product);
+    const payload = buildProductClonePrefill(
+      product,
+      t("pages.products.list.cloneNameSuffix"),
+    );
     if (!payload) return;
     setEditingProduct(null);
     setCreateStep("form");
@@ -272,7 +289,7 @@ const ProductPage = () => {
     setModalOpen(true);
   };
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       accessorKey: "images",
       header: "",
@@ -300,7 +317,10 @@ const ProductPage = () => {
     {
       accessorKey: "name",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Tên sản phẩm" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.products.list.colName")}
+        />
       ),
       cell: ({ row }) => (
         <div className="font-medium">{row.getValue("name")}</div>
@@ -317,19 +337,27 @@ const ProductPage = () => {
     },
     {
       accessorKey: "category",
-      header: "Danh mục",
-      cell: ({ row }) => <div>{row.getValue("category") || "-"}</div>,
+      header: t("pages.products.list.colCategory"),
+      cell: ({ row }) => {
+        const raw = row.getValue("category");
+        return (
+          <div>{raw ? translateProductCategory(t, raw) : "-"}</div>
+        );
+      },
     },
     {
       accessorKey: "defaultPrice",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Giá bán mặc định" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.products.list.colDefaultPrice")}
+        />
       ),
       cell: ({ row }) => {
         const price = row.getValue("defaultPrice");
         return (
           <div className="font-medium">
-            {price ? Number(price).toLocaleString("vi-VN") + " ₫" : "-"}
+            {price ? Number(price).toLocaleString(numberLocale) + " ₫" : "-"}
           </div>
         );
       },
@@ -337,7 +365,10 @@ const ProductPage = () => {
     {
       accessorKey: "active",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Hoạt động" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.products.list.colActive")}
+        />
       ),
       cell: ({ row }) => {
         const product = row.original;
@@ -359,7 +390,10 @@ const ProductPage = () => {
     {
       accessorKey: "trackInventory",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Theo dõi tồn kho" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.products.list.colTrackInventory")}
+        />
       ),
       cell: ({ row }) => {
         const product = row.original;
@@ -394,26 +428,28 @@ const ProductPage = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Mở menu</span>
+                  <span className="sr-only">{t("pages.products.list.openMenu")}</span>
                   <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background">
-                <DropdownMenuLabel>Hành động</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("pages.products.list.actions")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => {
                     handleOpenEdit(product);
                   }}
                 >
-                  {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
+                  {canUpdate
+                    ? t("pages.products.list.edit")
+                    : t("pages.products.list.viewDetail")}
                 </DropdownMenuItem>
                 {canCreate && (
                   <DropdownMenuItem
                     onSelect={() => handleCloneFromProduct(product)}
                   >
                     <CopyPlus className="h-4 w-4" />
-                    Tạo mới từ sản phẩm này
+                    {t("pages.products.list.cloneFrom")}
                   </DropdownMenuItem>
                 )}
                 {canDelete && (
@@ -422,7 +458,7 @@ const ProductPage = () => {
                     disabled={isSubmitting}
                     onSelect={() => handleDelete(product)}
                   >
-                    Xóa
+                    {t("pages.products.list.delete")}
                     <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
                       ⌘⌫
                     </DropdownMenuShortcut>
@@ -434,7 +470,7 @@ const ProductPage = () => {
         );
       },
     },
-  ];
+  ], [t, numberLocale, canUpdate, canCreate, canDelete, canUpdateStatus, isSubmitting]);
 
   const table = useReactTable({
     data: products,
@@ -466,22 +502,22 @@ const ProductPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold tracking-tight">
-            Quản lý sản phẩm
+            {t("pages.products.list.title")}
           </h2>
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className={listToolbarRoot}>
+          <div className={listToolbarFilters}>
             <Input
-              placeholder="Tìm kiếm sản phẩm..."
+              placeholder={t("pages.products.list.searchPlaceholder")}
               value={keyword}
               onChange={(e) => handleKeywordChange(e.target.value)}
-              className="flex-1 min-w-0 sm:max-w-sm"
+              className={listInputGrow}
             />
             <DataTableViewOptions table={table} />
           </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className={listToolbarActions}>
             {selectedShop?.toppingsEnabled && canManageShopToppings && (
               <Button
                 variant="outline"
@@ -490,7 +526,9 @@ const ProductPage = () => {
                 onClick={() => setToppingsSettingsOpen(true)}
               >
                 <Layers className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Cài đặt topping</span>
+                <span className="hidden sm:inline">
+                  {t("pages.products.list.toppingsSettings")}
+                </span>
               </Button>
             )}
             {canImportExport && (
@@ -501,7 +539,9 @@ const ProductPage = () => {
                 onClick={() => setImportExportOpen(true)}
               >
                 <FileSpreadsheet className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Excel</span>
+                <span className="hidden sm:inline">
+                  {t("pages.products.list.excel")}
+                </span>
               </Button>
             )}
             {canCreate && (
@@ -518,7 +558,9 @@ const ProductPage = () => {
                   }}
                 >
                   <ScanLine className="h-4 w-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Quét mã vạch</span>
+                  <span className="hidden sm:inline">
+                    {t("pages.products.list.scanBarcode")}
+                  </span>
                 </Button>
                 <Button
                   variant="success"
@@ -532,7 +574,9 @@ const ProductPage = () => {
                   }}
                 >
                   <PackagePlus className="h-4 w-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Thêm sản phẩm</span>
+                  <span className="hidden sm:inline">
+                    {t("pages.products.list.addProduct")}
+                  </span>
                 </Button>
               </>
             )}
@@ -540,7 +584,7 @@ const ProductPage = () => {
         </div>
 
         {/* Table */}
-        <div className="relative overflow-hidden rounded-md border">
+        <div className={dataTableContainer}>
           {loading && products.length > 0 && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -570,7 +614,7 @@ const ProductPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    Đang tải...
+                    {t("pages.products.list.loading")}
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
@@ -595,19 +639,23 @@ const ProductPage = () => {
                         </TableRow>
                       </ContextMenuTrigger>
                       <ContextMenuContent className="min-w-[11rem] bg-background">
-                        <ContextMenuLabel>Hành động</ContextMenuLabel>
+                        <ContextMenuLabel>
+                          {t("pages.products.list.actions")}
+                        </ContextMenuLabel>
                         <ContextMenuSeparator />
                         <ContextMenuItem
                           onSelect={() => handleOpenEdit(product)}
                         >
-                          {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
+                          {canUpdate
+                            ? t("pages.products.list.edit")
+                            : t("pages.products.list.viewDetail")}
                         </ContextMenuItem>
                         {canCreate && (
                           <ContextMenuItem
                             onSelect={() => handleCloneFromProduct(product)}
                           >
                             <CopyPlus className="h-4 w-4" />
-                            Tạo mới từ sản phẩm này
+                            {t("pages.products.list.cloneFrom")}
                           </ContextMenuItem>
                         )}
                         {canDelete && (
@@ -616,7 +664,7 @@ const ProductPage = () => {
                             disabled={isSubmitting}
                             onSelect={() => handleDelete(product)}
                           >
-                            Xóa
+                            {t("pages.products.list.delete")}
                             <ContextMenuShortcut>
                               ⌘⌫
                             </ContextMenuShortcut>
@@ -632,7 +680,7 @@ const ProductPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    Chưa có sản phẩm nào trong cửa hàng.
+                    {t("pages.products.list.empty")}
                   </TableCell>
                 </TableRow>
               )}

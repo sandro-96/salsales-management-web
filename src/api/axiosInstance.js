@@ -1,5 +1,6 @@
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import i18n, { LANGUAGE_STORAGE_KEY } from "@/i18n";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -12,6 +13,18 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     config.headers = config.headers ?? {};
+    const lang =
+      i18n.language ||
+      (typeof localStorage !== "undefined"
+        ? localStorage.getItem(LANGUAGE_STORAGE_KEY)
+        : null) ||
+      "vi";
+    const acceptLanguage = lang.startsWith("en") ? "en" : "vi";
+    if (typeof config.headers.set === "function") {
+      config.headers.set("Accept-Language", acceptLanguage);
+    } else {
+      config.headers["Accept-Language"] = acceptLanguage;
+    }
     // FormData cần boundary do trình duyệt/axios gắn — bỏ default application/json
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
       if (typeof config.headers.delete === "function") {

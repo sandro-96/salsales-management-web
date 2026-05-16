@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
@@ -55,6 +56,14 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/table/DataTableColumnHeader.jsx";
 import { DataTableViewOptions } from "@/components/table/DataTableViewOptions.jsx";
 import { DataTablePagination } from "@/components/table/DataTablePagination.jsx";
+import {
+  dataTableContainer,
+  listBranchSelectWrap,
+  listSearchWrap,
+  listToolbarActions,
+  listToolbarFilters,
+  listToolbarRoot,
+} from "@/components/table/listPageLayout.js";
 
 import {
   getCustomers,
@@ -63,11 +72,11 @@ import {
 } from "../../api/customerApi.js";
 import CustomerFormModal from "./CustomerFormModal.jsx";
 
-const formatDate = (dateStr) => {
+const formatDate = (dateStr, locale) => {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("vi-VN", {
+  return d.toLocaleDateString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -75,6 +84,8 @@ const formatDate = (dateStr) => {
 };
 
 const CustomerListPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const { selectedShopId, branches } = useShop();
   const { hasShopPermission } = useShopPermissions();
   const shopId = selectedShopId;
@@ -145,11 +156,11 @@ const CustomerListPage = () => {
       }
     } catch (err) {
       console.error("Fetch customers error:", err);
-      toast.error("Không thể tải danh sách khách hàng.");
+      toast.error(t("pages.customers.list.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, pagination, sorting, branchFilter, debouncedKeyword]);
+  }, [shopId, pagination, sorting, branchFilter, debouncedKeyword, t]);
 
   useEffect(() => {
     fetchCustomers();
@@ -157,11 +168,11 @@ const CustomerListPage = () => {
 
   const handleDelete = async (cust) => {
     const ok = await confirm(
-      `Bạn có chắc muốn xóa khách hàng "${cust.name}" không? Hành động này không thể hoàn tác.`,
+      t("pages.customers.list.deleteConfirm", { name: cust.name }),
       {
-        title: "Xóa khách hàng",
-        confirmText: "Xóa",
-        cancelText: "Hủy",
+        title: t("pages.customers.list.deleteTitle"),
+        confirmText: t("pages.customers.list.deleteConfirmBtn"),
+        cancelText: t("pages.customers.list.cancel"),
         variant: "destructive",
       },
     );
@@ -174,15 +185,15 @@ const CustomerListPage = () => {
       setIsSubmitting(true);
       const res = await deleteCustomer(cust.id, shopId, cust.branchId);
       if (res.data?.success) {
-        toast.success("Xóa khách hàng thành công.");
+        toast.success(t("pages.customers.list.deleteSuccess"));
         fetchCustomers();
       } else {
-        toast.error(res.data?.message || "Xóa khách hàng thất bại.");
+        toast.error(res.data?.message || t("pages.customers.list.deleteFail"));
         fetchCustomers();
       }
     } catch (err) {
       console.error("Delete customer error:", err);
-      toast.error("Đã xảy ra lỗi khi xóa khách hàng.");
+      toast.error(t("pages.customers.list.deleteError"));
       fetchCustomers();
     } finally {
       setIsSubmitting(false);
@@ -204,10 +215,10 @@ const CustomerListPage = () => {
       link.download = "customers.xlsx";
       link.click();
       URL.revokeObjectURL(link.href);
-      toast.success("Xuất file Excel thành công.");
+      toast.success(t("pages.customers.list.exportSuccess"));
     } catch (err) {
       console.error("Export error:", err);
-      toast.error("Không thể xuất file Excel.");
+      toast.error(t("pages.customers.list.exportFail"));
     } finally {
       setExporting(false);
     }
@@ -218,11 +229,15 @@ const CustomerListPage = () => {
     setModalOpen(true);
   };
 
-  const columns = [
+  const columns = useMemo(
+    () => [
     {
       accessorKey: "name",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Tên khách hàng" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.customers.list.colName")}
+        />
       ),
       cell: ({ row }) => (
         <div className="font-medium min-w-[140px]">{row.getValue("name")}</div>
@@ -230,7 +245,7 @@ const CustomerListPage = () => {
     },
     {
       accessorKey: "phone",
-      header: "Số điện thoại",
+      header: t("pages.customers.list.colPhone"),
       cell: ({ row }) => {
         const val = row.getValue("phone");
         return val ? (
@@ -245,7 +260,7 @@ const CustomerListPage = () => {
     },
     {
       accessorKey: "email",
-      header: "Email",
+      header: t("pages.customers.list.colEmail"),
       cell: ({ row }) => {
         const val = row.getValue("email");
         return val ? (
@@ -260,7 +275,7 @@ const CustomerListPage = () => {
     },
     {
       accessorKey: "address",
-      header: "Địa chỉ",
+      header: t("pages.customers.list.colAddress"),
       cell: ({ row }) => {
         const val = row.getValue("address");
         return val ? (
@@ -275,7 +290,7 @@ const CustomerListPage = () => {
     },
     {
       id: "branch",
-      header: "Chi nhánh",
+      header: t("pages.customers.list.colBranch"),
       cell: ({ row }) => {
         const bid = row.original.branchId;
         if (!bid)
@@ -291,7 +306,10 @@ const CustomerListPage = () => {
     {
       accessorKey: "loyaltyPoints",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Điểm tích lũy" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.customers.list.colLoyaltyPoints")}
+        />
       ),
       cell: ({ row }) => {
         const points = row.getValue("loyaltyPoints") ?? 0;
@@ -299,7 +317,7 @@ const CustomerListPage = () => {
           <div className="flex items-center gap-1.5 text-sm">
             <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
             <span className="font-medium">
-              {points.toLocaleString("vi-VN")}
+              {points.toLocaleString(numberLocale)}
             </span>
           </div>
         );
@@ -308,11 +326,14 @@ const CustomerListPage = () => {
     {
       accessorKey: "createdAt",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Ngày tạo" />
+        <DataTableColumnHeader
+          column={column}
+          title={t("pages.customers.list.colCreatedAt")}
+        />
       ),
       cell: ({ row }) => (
         <div className="text-sm text-muted-foreground">
-          {formatDate(row.getValue("createdAt"))}
+          {formatDate(row.getValue("createdAt"), numberLocale)}
         </div>
       ),
     },
@@ -325,12 +346,16 @@ const CustomerListPage = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Mở menu</span>
+                <span className="sr-only">
+                  {t("pages.customers.list.openMenu")}
+                </span>
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-background">
-              <DropdownMenuLabel>Hành động</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {t("pages.customers.list.actions")}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
@@ -338,7 +363,9 @@ const CustomerListPage = () => {
                   handleOpenEdit(cust);
                 }}
               >
-                {canManage ? "Chỉnh sửa" : "Xem chi tiết"}
+                {canManage
+                  ? t("pages.customers.list.edit")
+                  : t("pages.customers.list.viewDetail")}
               </DropdownMenuItem>
               {canDelete && (
                 <DropdownMenuItem
@@ -349,7 +376,7 @@ const CustomerListPage = () => {
                     handleDelete(cust);
                   }}
                 >
-                  Xóa
+                  {t("pages.customers.list.delete")}
                   <DropdownMenuShortcut className="ml-auto text-xs tracking-widest text-muted-foreground">
                     ⌘⌫
                   </DropdownMenuShortcut>
@@ -360,7 +387,16 @@ const CustomerListPage = () => {
         );
       },
     },
-  ];
+  ],
+    [
+      t,
+      numberLocale,
+      branchMap,
+      canManage,
+      canDelete,
+      isSubmitting,
+    ],
+  );
 
   const table = useReactTable({
     data: customers,
@@ -387,28 +423,28 @@ const CustomerListPage = () => {
   });
 
   return (
-    <div className="h-full flex-1 flex-col gap-8 p-4 md:p-8 md:flex">
+    <div className="h-full min-w-0 flex-1 flex-col gap-8 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Quản lý khách hàng
+              {t("pages.customers.list.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Tìm kiếm, thêm mới và quản lý thông tin khách hàng.
+              {t("pages.customers.list.subtitle")}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="relative flex-1 min-w-0 sm:max-w-xs">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className={listToolbarRoot}>
+          <div className={listToolbarFilters}>
+            <div className={listSearchWrap}>
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Tìm theo tên, SĐT, email..."
+                placeholder={t("pages.customers.list.searchPlaceholder")}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                className="pl-8"
+                className="pl-8 w-full"
               />
             </div>
             {branches?.length > 0 && (
@@ -419,12 +455,14 @@ const CustomerListPage = () => {
                   setPagination((p) => ({ ...p, pageIndex: 0 }));
                 }}
               >
-                <SelectTrigger className="w-[180px]">
-                  <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectTrigger className={listBranchSelectWrap}>
+                  <Warehouse className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
-                  <SelectItem value="__all__">Tất cả chi nhánh</SelectItem>
+                  <SelectItem value="__all__">
+                    {t("pages.customers.list.allBranches")}
+                  </SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
@@ -435,7 +473,7 @@ const CustomerListPage = () => {
             )}
             <DataTableViewOptions table={table} />
           </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className={listToolbarActions}>
             <Button
               variant="outline"
               size="sm"
@@ -448,7 +486,9 @@ const CustomerListPage = () => {
               ) : (
                 <Download className="h-4 w-4 sm:mr-1" />
               )}
-              <span className="hidden sm:inline">Xuất Excel</span>
+              <span className="hidden sm:inline">
+                {t("pages.customers.list.exportExcel")}
+              </span>
             </Button>
             {canManage && (
               <Button
@@ -461,13 +501,15 @@ const CustomerListPage = () => {
                 }}
               >
                 <Plus className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Thêm khách hàng</span>
+                <span className="hidden sm:inline">
+                  {t("pages.customers.list.addCustomer")}
+                </span>
               </Button>
             )}
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-md border">
+        <div className={dataTableContainer}>
           {loading && customers.length > 0 && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -497,7 +539,7 @@ const CustomerListPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    Đang tải...
+                    {t("pages.customers.list.loading")}
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
@@ -526,7 +568,7 @@ const CustomerListPage = () => {
                   >
                     <div className="flex flex-col items-center gap-2">
                       <Users className="h-8 w-8 text-muted-foreground/40" />
-                      <span>Chưa có khách hàng nào.</span>
+                      <span>{t("pages.customers.list.empty")}</span>
                     </div>
                   </TableCell>
                 </TableRow>

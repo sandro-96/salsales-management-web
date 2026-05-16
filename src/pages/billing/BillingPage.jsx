@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import {
   CreditCard,
   Clock,
@@ -42,14 +43,7 @@ import {
   cancelSubscriptionManualTransferPending,
 } from "@/api/subscriptionApi";
 import { toast } from "sonner";
-import { SHOP_ROLE_LABELS } from "@/constants/shopRoles.js";
-
-const GATEWAY_OPTIONS = [
-  {
-    value: "MANUAL",
-    label: "Chuyển khoản — admin xác nhận",
-  },
-];
+import { getShopRoleLabel } from "@/utils/shopLabels";
 
 /** Push WS từ server khi có thông báo billing (NotificationType). */
 const BILLING_REFRESH_WS_TYPES = new Set([
@@ -57,53 +51,6 @@ const BILLING_REFRESH_WS_TYPES = new Set([
   "BILLING_PAYMENT_FAILED",
   "BILLING_MANUAL_TRANSFER_PENDING",
 ]);
-
-function fmtVnd(v) {
-  if (v == null) return "—";
-  return Number(v).toLocaleString("vi-VN") + " ₫";
-}
-
-function fmtDate(iso) {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return String(iso);
-  }
-}
-
-function statusBadge(status) {
-  switch (status) {
-    case "TRIAL":
-      return (
-        <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-500/20 dark:text-sky-200 dark:hover:bg-sky-500/20">
-          Đang dùng thử
-        </Badge>
-      );
-    case "ACTIVE":
-      return (
-        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-200 dark:hover:bg-emerald-500/20">
-          Đang hoạt động
-        </Badge>
-      );
-    case "EXPIRED":
-      return <Badge variant="destructive">Đã hết hạn</Badge>;
-    case "CANCELLED":
-      return (
-        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700/50">
-          Đã huỷ
-        </Badge>
-      );
-    default:
-      return <Badge variant="secondary">{status ?? "—"}</Badge>;
-  }
-}
 
 /**
  * Khi gateway redirect về /billing (VNPay/MoMo — giữ lại cho tương lai).
@@ -135,12 +82,62 @@ function parsePaymentCallback(search) {
   return null;
 }
 
+function statusBadge(status, t) {
+  const text = status
+    ? t(`pages.billing.status.${status}`, { defaultValue: status })
+    : "—";
+  switch (status) {
+    case "TRIAL":
+      return (
+        <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-500/20 dark:text-sky-200 dark:hover:bg-sky-500/20">
+          {text}
+        </Badge>
+      );
+    case "ACTIVE":
+      return (
+        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-200 dark:hover:bg-emerald-500/20">
+          {text}
+        </Badge>
+      );
+    case "EXPIRED":
+      return <Badge variant="destructive">{text}</Badge>;
+    case "CANCELLED":
+      return (
+        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700/50">
+          {text}
+        </Badge>
+      );
+    default:
+      return <Badge variant="secondary">{text}</Badge>;
+  }
+}
+
 function TransferBlock({ title, info, showCopyContent }) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+
+  const fmtVndLocal = (v) => {
+    if (v == null) return "—";
+    return Number(v).toLocaleString(numberLocale) + " ₫";
+  };
+
   if (!info?.accountNumber) return null;
+
+  const amountFormatted = fmtVndLocal(info.amountVnd);
+  const instructionText = info.transferContent
+    ? t("pages.billing.transfer.instructionsPayment", {
+        amount: amountFormatted,
+        content: info.transferContent,
+      })
+    : t("pages.billing.transfer.instructionsStatic", {
+        amount: amountFormatted,
+        perMonth: t("pages.billing.transfer.perMonthShort"),
+      });
+
   const copyContent = () => {
     if (!info.transferContent) return;
     navigator.clipboard.writeText(info.transferContent);
-    toast.success("Đã copy nội dung chuyển khoản");
+    toast.success(t("pages.billing.transfer.copySuccess"));
   };
   return (
     <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
@@ -150,31 +147,31 @@ function TransferBlock({ title, info, showCopyContent }) {
       </div>
       <div className="grid gap-2 text-sm md:grid-cols-2">
         <div>
-          <span className="text-muted-foreground">Ngân hàng: </span>
+          <span className="text-muted-foreground">{t("pages.billing.transfer.bank")} </span>
           {info.bankName || "—"}
         </div>
         <div>
-          <span className="text-muted-foreground">Chủ TK: </span>
+          <span className="text-muted-foreground">{t("pages.billing.transfer.accountHolder")} </span>
           {info.accountHolder}
         </div>
         <div className="md:col-span-2">
-          <span className="text-muted-foreground">Số TK: </span>
+          <span className="text-muted-foreground">{t("pages.billing.transfer.accountNumber")} </span>
           <span className="font-mono font-semibold">{info.accountNumber}</span>
         </div>
         <div>
-          <span className="text-muted-foreground">Số tiền: </span>
-          <span className="font-semibold tabular-nums">{fmtVnd(info.amountVnd)}</span>
+          <span className="text-muted-foreground">{t("pages.billing.transfer.amount")} </span>
+          <span className="font-semibold tabular-nums">{fmtVndLocal(info.amountVnd)}</span>
         </div>
         {info.transferContent ? (
           <div className="md:col-span-2 flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground">Nội dung CK: </span>
+            <span className="text-muted-foreground">{t("pages.billing.transfer.transferContent")} </span>
             <code className="rounded bg-background px-2 py-0.5 text-xs font-mono border">
               {info.transferContent}
             </code>
             {showCopyContent && (
               <Button type="button" variant="outline" size="sm" onClick={copyContent}>
                 <Copy className="h-3.5 w-3.5 mr-1" />
-                Copy
+                {t("pages.billing.transfer.copy")}
               </Button>
             )}
           </div>
@@ -184,29 +181,60 @@ function TransferBlock({ title, info, showCopyContent }) {
         <div className="flex flex-col gap-3 border-t pt-3 mt-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <QrCode className="h-4 w-4 shrink-0" />
-            <span>
-              Quét mã QR để chuyển (điền sẵn số tiền / nội dung nếu hỗ trợ)
-            </span>
+            <span>{t("pages.billing.transfer.qrHint")}</span>
           </div>
           <div className="flex justify-center w-full">
             <img
               src={info.qrImageUrl}
-              alt="QR chuyển khoản"
+              alt={t("pages.billing.transfer.qrAlt")}
               className="w-full max-w-[360px] aspect-square rounded-lg border bg-white object-contain p-2 shadow-sm"
             />
           </div>
         </div>
       ) : null}
-      {info.instructions ? (
-        <p className="text-xs text-muted-foreground whitespace-pre-line border-t pt-2">
-          {info.instructions}
-        </p>
-      ) : null}
+      <p className="text-xs text-muted-foreground whitespace-pre-line border-t pt-2">
+        {instructionText}
+      </p>
     </div>
   );
 }
 
 export default function BillingPage() {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const dateLocale = numberLocale;
+
+  const fmtVnd = useCallback(
+    (v) => {
+      if (v == null) return "—";
+      return Number(v).toLocaleString(numberLocale) + " ₫";
+    },
+    [numberLocale],
+  );
+
+  const fmtDate = useCallback(
+    (iso) => {
+      if (!iso) return "—";
+      try {
+        return new Date(iso).toLocaleString(dateLocale, {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch {
+        return String(iso);
+      }
+    },
+    [dateLocale],
+  );
+
+  const gatewayOptions = useMemo(
+    () => [{ value: "MANUAL", label: t("pages.billing.gateway.manual") }],
+    [t],
+  );
+
   const { confirm } = useAlertDialog();
   const { user } = useAuth();
   const { subscribe, connected } = useWebSocket();
@@ -275,8 +303,8 @@ export default function BillingPage() {
     if (!user?.id || !connected || !isShopContextReady || needsShopPick) return;
     return subscribe(`/topic/notifications/${user.id}`, (message) => {
       if (message.type !== WebSocketMessageTypes.NOTIFICATION || !message.data) return;
-      const t = message.data.type;
-      if (!BILLING_REFRESH_WS_TYPES.has(t)) return;
+      const msgType = message.data.type;
+      if (!BILLING_REFRESH_WS_TYPES.has(msgType)) return;
       const sid = message.data.shopId;
       if (selectedShopId && sid && sid !== selectedShopId) return;
       refresh(true);
@@ -323,11 +351,14 @@ export default function BillingPage() {
     if (!callback) return;
     if (callback.success) {
       toast.success(
-        `Thanh toán ${callback.gateway} thành công. Gói dịch vụ sẽ được cập nhật trong ít phút.`,
+        t("pages.billing.toast.paymentSuccess", { gateway: callback.gateway }),
       );
     } else {
       toast.error(
-        `Thanh toán ${callback.gateway} thất bại (mã ${callback.code}). Vui lòng thử lại hoặc chọn phương thức khác.`,
+        t("pages.billing.toast.paymentFail", {
+          gateway: callback.gateway,
+          code: callback.code,
+        }),
       );
     }
     refresh(true);
@@ -345,7 +376,7 @@ export default function BillingPage() {
     ];
     keysToStrip.forEach((k) => url.searchParams.delete(k));
     window.history.replaceState({}, document.title, url.pathname + url.search);
-  }, [refresh, loadHistory]);
+  }, [refresh, loadHistory, t]);
 
   const keyDate = useMemo(() => {
     if (!data) return null;
@@ -366,11 +397,11 @@ export default function BillingPage() {
   const onCancelPendingManual = async () => {
     if (!manualRefToReport) return;
     const ok = await confirm(
-      "Huỷ yêu cầu chuyển khoản đang chờ xác nhận? Sau đó bạn có thể tạo mã thanh toán mới.",
+      t("pages.billing.toast.cancelConfirm"),
       {
-        title: "Huỷ yêu cầu chờ xác nhận",
-        confirmText: "Huỷ yêu cầu",
-        cancelText: "Đóng",
+        title: t("pages.billing.toast.cancelTitle"),
+        confirmText: t("pages.billing.toast.cancelConfirmBtn"),
+        cancelText: t("pages.billing.toast.cancelClose"),
         variant: "destructive",
       },
     );
@@ -384,11 +415,11 @@ export default function BillingPage() {
       setLastCreatedTxnRef(null);
       await refresh();
       await loadHistory();
-      toast.success("Đã huỷ yêu cầu chờ xác nhận.");
+      toast.success(t("pages.billing.toast.cancelSuccess"));
     } catch (err) {
       toast.error(
         err?.response?.data?.message ||
-          "Không huỷ được. Thử lại hoặc liên hệ hỗ trợ.",
+          t("pages.billing.toast.cancelFail"),
       );
     } finally {
       setCancellingTransfer(false);
@@ -403,19 +434,17 @@ export default function BillingPage() {
         providerTxnRef: manualRefToReport,
       });
       if (res?.data?.success === false) {
-        toast.error(res?.data?.message || "Không ghi nhận được");
+        toast.error(res?.data?.message || t("pages.billing.toast.reportFail"));
         return;
       }
       setLastCreatedTxnRef(null);
       await refresh();
       await loadHistory();
-      toast.success(
-        "Đã ghi nhận: bạn đã chuyển khoản. Admin sẽ đối soát và xác nhận sớm nhất.",
-      );
+      toast.success(t("pages.billing.toast.reportSuccess"));
     } catch (err) {
       toast.error(
         err?.response?.data?.message ||
-          "Không ghi nhận được. Thử lại hoặc liên hệ hỗ trợ.",
+          t("pages.billing.toast.reportFailGeneric"),
       );
     } finally {
       setReportingTransfer(false);
@@ -435,7 +464,7 @@ export default function BillingPage() {
         payload?.paymentUrl &&
         !payload.paymentUrl.startsWith("/mock-pay")
       ) {
-        toast.info("Đang chuyển tới cổng thanh toán…");
+        toast.info(t("pages.billing.toast.redirecting"));
         window.location.href = payload.paymentUrl;
         return;
       }
@@ -444,21 +473,19 @@ export default function BillingPage() {
         setLastPaymentTransfer(instr);
         setLastCreatedTxnRef(payload?.transactionId || null);
         toast.success(
-          `Đã tạo mã giao dịch ${payload.transactionId}. Admin đã nhận thông báo — sau khi chuyển khoản, vui lòng chờ xác nhận (thường trong giờ hành chính).`,
+          t("pages.billing.toast.txnCreated", { id: payload.transactionId }),
         );
       } else {
         setLastPaymentTransfer(null);
         setLastCreatedTxnRef(payload?.transactionId || null);
-        toast.success(
-          "Đã ghi nhận yêu cầu. Vui lòng chuyển khoản theo thông tin tài khoản — admin đã được thông báo nếu hệ thống cấu hình đủ.",
-        );
+        toast.success(t("pages.billing.toast.requestRecorded"));
       }
       await refresh();
       await loadHistory();
     } catch (err) {
       toast.error(
         err?.response?.data?.message ||
-          "Không khởi tạo được thanh toán. Vui lòng thử lại sau.",
+          t("pages.billing.toast.payInitFail"),
       );
     } finally {
       setPaying(false);
@@ -467,31 +494,41 @@ export default function BillingPage() {
 
   const displayTransfer = lastPaymentTransfer || transferPreview;
 
+  const transferTitle = lastPaymentTransfer?.transferContent
+    ? t("pages.billing.transfer.thisPayment")
+    : t("pages.billing.transfer.systemInfo");
+
+  const daysLabelKey =
+    data?.status === "TRIAL"
+      ? "pages.billing.currentStatus.trialRemaining"
+      : data?.status === "ACTIVE"
+        ? "pages.billing.currentStatus.activeRemaining"
+        : "pages.billing.currentStatus.daysRemainingLabel";
+
   return (
     <div className="w-full p-4 space-y-4 md:max-w-5xl md:mx-auto">
       <div className="flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-primary" />
-        <h1 className="text-xl font-semibold">Gói dịch vụ &amp; Thanh toán</h1>
+        <h1 className="text-xl font-semibold">{t("pages.billing.title")}</h1>
       </div>
 
       {needsShopPick && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
             <AlertTriangle className="inline h-4 w-4 mr-1 align-text-bottom" />
-            Bạn có nhiều shop — hãy <b>chọn shop</b> trên menu (góc trên) để xem và thanh toán
-            đúng gói cho từng shop.
+            <Trans i18nKey="pages.billing.pickShopWarning" components={{ b: <b /> }} />
           </div>
         )}
 
       {selectedShop && !needsShopPick && isShopContextReady && (
         <div className="rounded-lg border bg-card px-4 py-3 text-sm shadow-sm">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Thanh toán cho cửa hàng
+            {t("pages.billing.payingForShop")}
           </div>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="text-lg font-semibold">{selectedShop.name}</span>
             {selectedShop.role && (
               <Badge variant="outline" className="text-xs font-normal">
-                {SHOP_ROLE_LABELS[selectedShop.role] || selectedShop.role}
+                {getShopRoleLabel(t, selectedShop.role) || selectedShop.role}
               </Badge>
             )}
           </div>
@@ -501,25 +538,27 @@ export default function BillingPage() {
             </p>
           ) : null}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground shrink-0">Trạng thái gói:</span>
+            <span className="text-muted-foreground shrink-0">{t("pages.billing.packageStatus")}</span>
             {loading && !data ? (
-              <span className="text-muted-foreground text-xs">Đang tải…</span>
+              <span className="text-muted-foreground text-xs">{t("pages.billing.loading")}</span>
             ) : data ? (
               <>
-                {statusBadge(data.status)}
+                {statusBadge(data.status, t)}
                 {(data.status === "TRIAL" || data.status === "ACTIVE") && (
                   <span className="text-muted-foreground text-xs tabular-nums">
-                    Còn {remainingDays} ngày
+                    {t("pages.billing.daysRemaining", { count: remainingDays })}
                   </span>
                 )}
               </>
             ) : selectedShop.subscriptionStatus != null ? (
               <>
-                {statusBadge(selectedShop.subscriptionStatus)}
+                {statusBadge(selectedShop.subscriptionStatus, t)}
                 {(selectedShop.subscriptionStatus === "TRIAL" ||
                   selectedShop.subscriptionStatus === "ACTIVE") && (
                   <span className="text-muted-foreground text-xs tabular-nums">
-                    Còn {selectedShop.subscriptionDaysRemaining ?? 0} ngày
+                    {t("pages.billing.daysRemaining", {
+                      count: selectedShop.subscriptionDaysRemaining ?? 0,
+                    })}
                   </span>
                 )}
               </>
@@ -529,7 +568,7 @@ export default function BillingPage() {
           </div>
           {data?.shopId && selectedShop.id && data.shopId !== selectedShop.id ? (
             <p className="text-xs text-amber-800 dark:text-amber-300 mt-2">
-              Dữ liệu gói chưa khớp shop đang chọn. Hãy tải lại trang hoặc đổi shop.
+              {t("pages.billing.dataMismatch")}
             </p>
           ) : null}
         </div>
@@ -538,24 +577,19 @@ export default function BillingPage() {
       {transferPreviewLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Đang tải thông tin chuyển khoản…
+          {t("pages.billing.loadingTransfer")}
         </div>
       ) : displayTransfer?.accountNumber ? (
         <div className="space-y-3">
           <TransferBlock
-            title={
-              lastPaymentTransfer?.transferContent
-                ? "Thanh toán lần này (mã vừa tạo)"
-                : "Thông tin chuyển khoản hệ thống"
-            }
+            title={transferTitle}
             info={displayTransfer}
             showCopyContent={!!lastPaymentTransfer?.transferContent}
           />
           {manualRefToReport && !pendingManualReportedAt && (
               <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-sky-950 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-100">
                 <p className="text-sm">
-                  Sau khi <b>đã chuyển khoản</b> đúng số tiền và nội dung, hãy bấm nút
-                  bên phải để báo admin đối soát — không thay thế xác nhận của admin.
+                  <Trans i18nKey="pages.billing.reportTransfer.hint" components={{ b: <b /> }} />
                 </p>
                 <div className="flex flex-wrap gap-2 shrink-0 justify-end">
                   <Button
@@ -569,10 +603,10 @@ export default function BillingPage() {
                     {cancellingTransfer ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Đang huỷ…
+                        {t("pages.billing.reportTransfer.cancelling")}
                       </>
                     ) : (
-                      "Huỷ yêu cầu chờ"
+                      t("pages.billing.reportTransfer.cancelPending")
                     )}
                   </Button>
                   <Button
@@ -586,12 +620,12 @@ export default function BillingPage() {
                     {reportingTransfer ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Đang gửi…
+                        {t("pages.billing.reportTransfer.sending")}
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Tôi đã chuyển khoản
+                        {t("pages.billing.reportTransfer.iTransferred")}
                       </>
                     )}
                   </Button>
@@ -602,8 +636,9 @@ export default function BillingPage() {
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
               <div>
                 <CheckCircle2 className="inline h-4 w-4 mr-1 align-text-bottom" />
-                Đã báo admin lúc {fmtDate(pendingManualReportedAt)}. Vui lòng chờ xác
-                nhận (thường trong giờ hành chính).
+                {t("pages.billing.reportTransfer.reportedAt", {
+                  date: fmtDate(pendingManualReportedAt),
+                })}
               </div>
               {manualRefToReport ? (
                 <Button
@@ -617,10 +652,10 @@ export default function BillingPage() {
                   {cancellingTransfer ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Đang huỷ…
+                      {t("pages.billing.reportTransfer.cancelling")}
                     </>
                   ) : (
-                    "Huỷ chờ xác nhận"
+                    t("pages.billing.reportTransfer.cancelWaiting")
                   )}
                 </Button>
               ) : null}
@@ -632,47 +667,38 @@ export default function BillingPage() {
       <Card>
         <CardHeader className="gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <CardTitle className="text-lg">Trạng thái hiện tại</CardTitle>
+            <CardTitle className="text-lg">{t("pages.billing.currentStatus.title")}</CardTitle>
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             ) : (
-              statusBadge(data?.status)
+              statusBadge(data?.status, t)
             )}
           </div>
-          <CardDescription>
-            Mỗi shop được dùng thử miễn phí <b>30 ngày</b>. Sau thời gian dùng
-            thử, phí dịch vụ là <b>99.000đ/tháng</b>. Thanh toán qua{" "}
-            <b>chuyển khoản</b> — gói được gia hạn sau khi admin xác nhận đã nhận
-            tiền.
+          <CardDescription className="space-y-1">
+            <Trans i18nKey="pages.billing.currentStatus.description" components={{ b: <b /> }} />
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <InfoStat
               icon={<Clock className="h-4 w-4" />}
-              label={
-                data?.status === "TRIAL"
-                  ? "Còn lại (dùng thử)"
-                  : data?.status === "ACTIVE"
-                    ? "Còn lại (chu kỳ hiện tại)"
-                    : "Số ngày còn lại"
-              }
+              label={t(daysLabelKey)}
               value={
                 data?.status === "EXPIRED" || data?.status === "CANCELLED"
-                  ? "0 ngày"
-                  : `${remainingDays ?? 0} ngày`
+                  ? t("pages.billing.daysUnit", { count: 0 })
+                  : t("pages.billing.daysUnit", { count: remainingDays ?? 0 })
               }
-              sub={keyDate ? `Hết hạn ${fmtDate(keyDate)}` : null}
+              sub={keyDate ? t("pages.billing.expiresAt", { date: fmtDate(keyDate) }) : null}
             />
             <InfoStat
               icon={<Receipt className="h-4 w-4" />}
-              label="Phí định kỳ"
+              label={t("pages.billing.currentStatus.recurringFee")}
               value={fmtVnd(data?.amountVnd ?? 99000)}
-              sub="VND / tháng"
+              sub={t("pages.billing.vndPerMonth")}
             />
             <InfoStat
               icon={<CheckCircle2 className="h-4 w-4" />}
-              label="Thanh toán gần nhất"
+              label={t("pages.billing.currentStatus.lastPayment")}
               value={data?.lastPaymentAt ? fmtDate(data.lastPaymentAt) : "—"}
               sub={data?.lastPaymentTransactionId || null}
             />
@@ -682,17 +708,16 @@ export default function BillingPage() {
             <div className="flex items-start gap-2 p-3 rounded-md bg-red-50 text-red-800 text-sm dark:bg-red-500/10 dark:text-red-200">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <p>
-                Các thao tác ghi (thêm/sửa/xoá đơn, sản phẩm, khách hàng…) đang
-                bị khoá. Hãy thanh toán để khôi phục quyền thao tác.
+                {t("pages.billing.currentStatus.lockedWarning")}
               </p>
             </div>
           )}
         </CardContent>
         <CardFooter className="flex-wrap gap-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            Phương thức:{" "}
+            {t("pages.billing.currentStatus.paymentMethod")}{" "}
             <span className="font-medium text-foreground">
-              {GATEWAY_OPTIONS[0].label}
+              {gatewayOptions[0].label}
             </span>
           </div>
           <Button
@@ -706,41 +731,39 @@ export default function BillingPage() {
               <CreditCard className="h-4 w-4 mr-2" />
             )}
             {data?.status === "ACTIVE"
-              ? "Tạo mã & gia hạn (chuyển khoản 99.000đ)"
-              : "Tạo mã thanh toán (chuyển khoản 99.000đ)"}
+              ? t("pages.billing.currentStatus.payActive")
+              : t("pages.billing.currentStatus.payDefault")}
           </Button>
         </CardFooter>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Lịch sử gói &amp; thanh toán</CardTitle>
+          <CardTitle className="text-base">{t("pages.billing.history.title")}</CardTitle>
           <CardDescription>
-            Các thay đổi status, giao dịch thanh toán và thao tác admin (nếu có).
-            Khi admin xác nhận, dòng <b>PAYMENT</b> sẽ ghi nhận thời gian và mã
-            giao dịch.
+            <Trans i18nKey="pages.billing.history.description" components={{ b: <b /> }} />
           </CardDescription>
         </CardHeader>
         <CardContent>
           {historyLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Đang tải lịch sử…
+              {t("pages.billing.loadingHistory")}
             </div>
           ) : !history || history.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Chưa có giao dịch nào.
+              {t("pages.billing.history.empty")}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Thời gian</TableHead>
-                    <TableHead>Hành động</TableHead>
-                    <TableHead>Chu kỳ</TableHead>
-                    <TableHead>Phương thức</TableHead>
-                    <TableHead>Mã giao dịch</TableHead>
+                    <TableHead>{t("pages.billing.history.colTime")}</TableHead>
+                    <TableHead>{t("pages.billing.history.colAction")}</TableHead>
+                    <TableHead>{t("pages.billing.history.colPeriod")}</TableHead>
+                    <TableHead>{t("pages.billing.history.colMethod")}</TableHead>
+                    <TableHead>{t("pages.billing.history.colTxnId")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -751,7 +774,9 @@ export default function BillingPage() {
                       </TableCell>
                       <TableCell className="text-sm">{h.actionType}</TableCell>
                       <TableCell className="text-sm">
-                        {h.durationMonths ? `${h.durationMonths} tháng` : "—"}
+                        {h.durationMonths
+                          ? t("pages.billing.monthsUnit", { count: h.durationMonths })
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-sm">
                         {h.paymentMethod || "—"}

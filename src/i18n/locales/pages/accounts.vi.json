@@ -1,0 +1,79 @@
+{
+  "title": "Tài khoản",
+  "subtitle": "Quản lý thông tin cá nhân và bảo mật",
+  "tabs": {
+    "profile": "Hồ sơ",
+    "security": "Bảo mật"
+  },
+  "gender": {
+    "MALE": "Nam",
+    "FEMALE": "Nữ",
+    "OTHER": "Khác"
+  },
+  "verified": "Đã xác thực",
+  "unverified": "Chưa xác thực",
+  "nameNotSet": "Chưa cập nhật tên",
+  "notUpdated": "Chưa cập nhật",
+  "edit": "Chỉnh sửa",
+  "cancel": "Hủy",
+  "saving": "Đang lưu...",
+  "save": "Lưu thay đổi",
+  "processing": "Đang xử lý...",
+  "profile": {
+    "personalInfo": "Thông tin cá nhân",
+    "lastName": "Họ",
+    "lastNameRequired": "Họ *",
+    "middleName": "Tên đệm",
+    "firstName": "Tên",
+    "firstNameRequired": "Tên *",
+    "country": "Quốc gia",
+    "selectCountry": "Chọn quốc gia",
+    "phone": "Số điện thoại",
+    "address": "Địa chỉ",
+    "city": "Thành phố",
+    "state": "Tỉnh / Bang",
+    "zipCode": "Mã bưu điện",
+    "gender": "Giới tính",
+    "selectGender": "Chọn giới tính",
+    "birthDate": "Ngày sinh",
+    "selectBirthDate": "Chọn ngày sinh",
+    "placeholders": {
+      "lastName": "Nguyễn",
+      "middleName": "Văn",
+      "firstName": "An",
+      "phone": "0912345678",
+      "address": "123 Đường ABC",
+      "city": "TP. Hồ Chí Minh",
+      "zipCode": "70000"
+    }
+  },
+  "validation": {
+    "lastNameRequired": "Họ không được để trống.",
+    "firstNameRequired": "Tên không được để trống.",
+    "max50": "Tối đa 50 ký tự.",
+    "max10": "Tối đa 10 ký tự.",
+    "phoneInvalid": "Số điện thoại không đúng định dạng.",
+    "required": "Không được để trống.",
+    "passwordMin": "Ít nhất 6 ký tự.",
+    "passwordMismatch": "Mật khẩu không khớp."
+  },
+  "toast": {
+    "loadFail": "Không thể tải thông tin tài khoản.",
+    "updateSuccess": "Cập nhật thông tin thành công!",
+    "updateFail": "Có lỗi khi cập nhật thông tin.",
+    "phoneInvalid": "Số điện thoại không đúng định dạng.",
+    "passwordChangeSuccess": "Đổi mật khẩu thành công!",
+    "passwordSetSuccess": "Đã đặt mật khẩu đăng nhập. Bạn có thể đăng nhập bằng email và mật khẩu.",
+    "passwordChangeFail": "Có lỗi khi đổi mật khẩu."
+  },
+  "security": {
+    "changePassword": "Đổi mật khẩu",
+    "setPassword": "Đặt mật khẩu đăng nhập",
+    "googleOnlyHint": "Tài khoản của bạn đăng nhập qua Google và chưa có mật khẩu cục bộ. Đặt mật khẩu bên dưới nếu bạn muốn đăng nhập thêm bằng email và mật khẩu (vẫn có thể dùng Google như hiện tại).",
+    "currentPassword": "Mật khẩu hiện tại",
+    "newPassword": "Mật khẩu mới",
+    "confirmPassword": "Xác nhận mật khẩu mới",
+    "setPasswordBtn": "Đặt mật khẩu",
+    "changePasswordBtn": "Đổi mật khẩu"
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -34,7 +35,7 @@ export default function BranchFormModal() {
     <Dialog open onOpenChange={() => navigate(-1)}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Thêm Chi nhánh</DialogTitle>
+          <DialogTitle>{t("pages.branches.create.title")}</DialogTitle>
         </DialogHeader>
         <BranchForm onSubmit={handleSubmit} isLoading={loading} shop={selectedShop} />
       </DialogContent>

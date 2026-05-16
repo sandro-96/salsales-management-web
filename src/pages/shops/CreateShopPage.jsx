@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import axiosInstance from "../../api/axiosInstance";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import ShopForm from "../../components/shop/ShopForm";
 
 export default function CreateShopPage() {
+  const { t } = useTranslation();
   const { enums } = useAuth();
   const { fetchShops } = useShop();
   const navigate = useNavigate();
@@ -30,16 +32,16 @@ export default function CreateShopPage() {
       });
 
       if (res.data.success) {
-        toast.success("Tạo cửa hàng thành công.");
+        toast.success(t("pages.shops.create.success"));
         const createdId = res.data.data?.id;
         await fetchShops(createdId);
         navigate(-1);
       } else {
-        toast.error(res.data.message || "Đã xảy ra lỗi khi tạo cửa hàng.");
+        toast.error(res.data.message || t("pages.shops.create.fail"));
       }
     } catch (err) {
-      console.error("Lỗi khi tạo cửa hàng:", err);
-      toast.error("Đã xảy ra lỗi khi tạo cửa hàng.");
+      console.error("Create shop error:", err);
+      toast.error(t("pages.shops.create.fail"));
     } finally {
       setIsLoading(false);
     }
@@ -48,7 +50,7 @@ export default function CreateShopPage() {
   return (
     <div className="p-6 h-full w-full">
       <div className="w-full h-full flex flex-col gap-6">
-        <div className="font-medium text-2xl">Tạo cửa hàng</div>
+        <div className="font-medium text-2xl">{t("pages.shops.create.title")}</div>
         <ShopForm
           mode="create"
           enums={enums}

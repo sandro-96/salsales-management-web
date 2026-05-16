@@ -60,3 +60,26 @@ export const PRODUCT_CATEGORIES = [
   { value: "pet", label: "Thú cưng" },
   { value: "other", label: "Khác" },
 ];
+
+const KNOWN_UNIT_VALUES = new Set(PRODUCT_UNITS.map((u) => u.value));
+const KNOWN_CATEGORY_VALUES = new Set(PRODUCT_CATEGORIES.map((c) => c.value));
+
+/** Hiển thị đơn vị: dịch nếu là mã chuẩn, giữ nguyên nếu tự nhập */
+export function translateProductUnit(t, value) {
+  if (value == null || value === "") return "";
+  const key = String(value);
+  if (KNOWN_UNIT_VALUES.has(key)) {
+    return t(`pages.products.units.${key}`);
+  }
+  return key;
+}
+
+/** Hiển thị danh mục: dịch nếu là mã chuẩn, giữ nguyên nếu tự nhập */
+export function translateProductCategory(t, value) {
+  if (value == null || value === "") return "";
+  const key = String(value);
+  if (KNOWN_CATEGORY_VALUES.has(key)) {
+    return t(`pages.products.categories.${key}`);
+  }
+  return key;
+}

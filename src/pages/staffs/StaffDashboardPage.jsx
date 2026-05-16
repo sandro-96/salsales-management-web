@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -34,31 +35,8 @@ import { useShop } from "../../hooks/useShop.js";
 import { getStaffShopOverview } from "../../api/staffProfileApi.js";
 import { leaveShopMonthSummary } from "../../api/leaveApi.js";
 import { payrollGenerate } from "../../api/payrollApi.js";
-import {
-  SHOP_ROLE,
-  SHOP_ROLE_BADGE_VARIANT,
-  SHOP_ROLE_LABELS,
-} from "../../constants/shopRoles.js";
-
-const CONTRACT_LABELS = {
-  FULL_TIME: "Toàn thời gian",
-  PART_TIME: "Bán thời gian",
-  PROBATION: "Thử việc",
-  CONTRACT: "Hợp đồng",
-};
-
-const formatVnd = (value) => {
-  const n = Number(value || 0);
-  return `${Math.round(n).toLocaleString("vi-VN")} ₫`;
-};
-
-const formatMinutes = (m) => {
-  const n = Number(m || 0);
-  if (!Number.isFinite(n) || n <= 0) return "0h";
-  const h = Math.floor(n / 60);
-  const min = n % 60;
-  return min === 0 ? `${h}h` : `${h}h ${min}m`;
-};
+import { SHOP_ROLE, SHOP_ROLE_BADGE_VARIANT } from "../../constants/shopRoles.js";
+import { getShopRoleLabel } from "@/utils/shopLabels";
 
 const currentMonth = () => {
   const d = new Date();
@@ -91,9 +69,33 @@ const StatCard = ({ icon: Icon, label, value, hint, accent }) => (
 );
 
 const StaffDashboardPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const emptyValue = t("pages.staffs.overview.emptyValue");
   const navigate = useNavigate();
   const { selectedShopId } = useShop();
   const shopId = selectedShopId;
+
+  const formatVnd = useCallback(
+    (value) => {
+      const n = Number(value || 0);
+      return `${Math.round(n).toLocaleString(numberLocale)} ₫`;
+    },
+    [numberLocale],
+  );
+
+  const formatMinutes = useCallback(
+    (m) => {
+      const n = Number(m || 0);
+      if (!Number.isFinite(n) || n <= 0) {
+        return t("pages.staffs.dashboard.formatMinutesZero");
+      }
+      const h = Math.floor(n / 60);
+      const min = n % 60;
+      return min === 0 ? `${h}h` : `${h}h ${min}m`;
+    },
+    [t],
+  );
 
   const [month, setMonth] = useState(currentMonth);
   const [data, setData] = useState(null);
@@ -108,11 +110,11 @@ const StaffDashboardPage = () => {
       setData(res.data?.data ?? null);
     } catch (err) {
       console.error("Fetch staff overview error:", err);
-      toast.error("Không thể tải tổng quan nhân sự.");
+      toast.error(t("pages.staffs.dashboard.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [shopId, month]);
+  }, [shopId, month, t]);
 
   const fetchLeaveSummary = useCallback(async () => {
     if (!shopId) return;
@@ -135,22 +137,22 @@ const StaffDashboardPage = () => {
     return Object.values(SHOP_ROLE)
       .map((value) => ({
         role: value,
-        label: SHOP_ROLE_LABELS[value] || value,
+        label: getShopRoleLabel(t, value) || value,
         count: Number(data.staffByRole[value] || 0),
       }))
       .sort((a, b) => b.count - a.count);
-  }, [data]);
+  }, [data, t]);
 
   const branchRows = data?.staffByBranch ?? [];
   const contractEntries = useMemo(() => {
     if (!data?.payrollByContract) return [];
     return Object.entries(data.payrollByContract).map(([key, val]) => ({
       key,
-      label: CONTRACT_LABELS[key] || key,
+      label: t(`pages.staffs.contractType.${key}`, { defaultValue: key }),
       staffCount: Number(val?.staffCount || 0),
       totalSalary: Number(val?.totalSalary || 0),
     }));
-  }, [data]);
+  }, [data, t]);
 
   const payrollEnabled = !!data?.payroll?.enabled;
   const payrollStatus = data?.payroll?.status;
@@ -159,11 +161,13 @@ const StaffDashboardPage = () => {
     if (!shopId) return;
     try {
       await payrollGenerate(shopId, { month });
-      toast.success("Đã tạo / tính lại bảng lương.");
+      toast.success(t("pages.staffs.dashboard.payrollGenerateSuccess"));
       fetchOverview();
     } catch (err) {
       console.error("Generate payroll error:", err);
-      toast.error(err.response?.data?.message || "Không thể tạo bảng lương.");
+      toast.error(
+        err.response?.data?.message || t("pages.staffs.dashboard.payrollGenerateFail"),
+      );
     }
   };
 
@@ -175,17 +179,16 @@ const StaffDashboardPage = () => {
             variant="ghost"
             size="icon"
             onClick={() => navigate("/staffs")}
-            aria-label="Về danh sách nhân sự"
+            aria-label={t("pages.staffs.dashboard.backAriaLabel")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Tổng quan nhân sự
+              {t("pages.staffs.dashboard.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Theo dõi tổng số nhân sự, chi phí lương ước tính và phân bố theo
-              chi nhánh / vai trò.
+              {t("pages.staffs.dashboard.subtitle")}
             </p>
           </div>
         </div>
@@ -201,43 +204,48 @@ const StaffDashboardPage = () => {
 
       {loading && !data ? (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin mr-2" /> Đang tải...
+          <Loader2 className="h-5 w-5 animate-spin mr-2" /> {t("pages.staffs.dashboard.loading")}
         </div>
       ) : !data ? (
         <div className="text-center py-12 text-muted-foreground">
-          Chưa có dữ liệu để hiển thị.
+          {t("pages.staffs.dashboard.empty")}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               icon={Users}
-              label="Tổng nhân sự"
-              value={data.totalStaff?.toLocaleString("vi-VN") || 0}
-              hint={`${data.systemStaff || 0} hệ thống · ${
-                data.externalStaff || 0
-              } ngoài HT`}
+              label={t("pages.staffs.dashboard.statTotalStaff")}
+              value={data.totalStaff?.toLocaleString(numberLocale) || 0}
+              hint={t("pages.staffs.dashboard.statTotalStaffHint", {
+                system: data.systemStaff || 0,
+                external: data.externalStaff || 0,
+              })}
               accent="bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
             />
             <StatCard
               icon={Wallet}
-              label="Tổng lương / tháng"
+              label={t("pages.staffs.dashboard.statTotalSalary")}
               value={formatVnd(data.totalMonthlySalary)}
-              hint={`${data.staffWithSalary || 0} người đã khai báo lương`}
+              hint={t("pages.staffs.dashboard.statTotalSalaryHint", {
+                count: data.staffWithSalary || 0,
+              })}
               accent="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
             />
             <StatCard
               icon={Briefcase}
-              label="Lương trung bình"
+              label={t("pages.staffs.dashboard.statAverageSalary")}
               value={formatVnd(data.averageSalary)}
-              hint="Tính trên người có khai báo lương"
+              hint={t("pages.staffs.dashboard.statAverageSalaryHint")}
               accent="bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200"
             />
             <StatCard
               icon={Shield}
-              label="Nhân sự mới trong tháng"
-              value={data.newStaffThisMonth?.toLocaleString("vi-VN") || 0}
-              hint={`Theo tháng ${data.month || month}`}
+              label={t("pages.staffs.dashboard.statNewStaff")}
+              value={data.newStaffThisMonth?.toLocaleString(numberLocale) || 0}
+              hint={t("pages.staffs.dashboard.statNewStaffHint", {
+                month: data.month || month,
+              })}
               accent="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200"
             />
           </div>
@@ -246,18 +254,18 @@ const StaffDashboardPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Shield className="h-4 w-4" /> Theo vai trò
+                  <Shield className="h-4 w-4" /> {t("pages.staffs.dashboard.byRoleTitle")}
                 </CardTitle>
                 <CardDescription>
-                  Số lượng nhân sự hệ thống tương ứng từng vai trò.
+                  {t("pages.staffs.dashboard.byRoleDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Vai trò</TableHead>
-                      <TableHead className="text-right">Số người</TableHead>
+                      <TableHead>{t("pages.staffs.dashboard.colRole")}</TableHead>
+                      <TableHead className="text-right">{t("pages.staffs.dashboard.colCount")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -267,7 +275,7 @@ const StaffDashboardPage = () => {
                           colSpan={2}
                           className="text-center text-muted-foreground py-6"
                         >
-                          Chưa có dữ liệu vai trò.
+                          {t("pages.staffs.dashboard.byRoleEmpty")}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -283,7 +291,7 @@ const StaffDashboardPage = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            {row.count.toLocaleString("vi-VN")}
+                            {row.count.toLocaleString(numberLocale)}
                           </TableCell>
                         </TableRow>
                       ))
@@ -296,18 +304,18 @@ const StaffDashboardPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Building2 className="h-4 w-4" /> Theo chi nhánh
+                  <Building2 className="h-4 w-4" /> {t("pages.staffs.dashboard.byBranchTitle")}
                 </CardTitle>
                 <CardDescription>
-                  Phân bố nhân sự theo chi nhánh đã gán.
+                  {t("pages.staffs.dashboard.byBranchDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Chi nhánh</TableHead>
-                      <TableHead className="text-right">Số người</TableHead>
+                      <TableHead>{t("pages.staffs.dashboard.colBranch")}</TableHead>
+                      <TableHead className="text-right">{t("pages.staffs.dashboard.colCount")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -317,22 +325,22 @@ const StaffDashboardPage = () => {
                           colSpan={2}
                           className="text-center text-muted-foreground py-6"
                         >
-                          Chưa có chi nhánh nào.
+                          {t("pages.staffs.dashboard.byBranchEmpty")}
                         </TableCell>
                       </TableRow>
                     ) : (
                       branchRows.map((row, idx) => (
                         <TableRow key={row.branchId || `__unassigned__-${idx}`}>
                           <TableCell className="font-medium">
-                            {row.branchName || "—"}
+                            {row.branchName || emptyValue}
                             {!row.branchId && (
                               <Badge variant="outline" className="ml-2">
-                                Chưa gán
+                                {t("pages.staffs.dashboard.unassignedBadge")}
                               </Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            {Number(row.count || 0).toLocaleString("vi-VN")}
+                            {Number(row.count || 0).toLocaleString(numberLocale)}
                           </TableCell>
                         </TableRow>
                       ))
@@ -346,21 +354,19 @@ const StaffDashboardPage = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Wallet className="h-4 w-4" /> Chi phí lương theo loại hợp đồng
+                <Wallet className="h-4 w-4" /> {t("pages.staffs.dashboard.contractCostTitle")}
               </CardTitle>
               <CardDescription>
-                Tổng lương cố định khai báo trong hồ sơ nhân sự, nhóm theo loại
-                hợp đồng. Sẽ kết hợp với chấm công & thưởng/phạt thực tế khi
-                bật phase Payroll.
+                {t("pages.staffs.dashboard.contractCostDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Loại hợp đồng</TableHead>
-                    <TableHead className="text-right">Số nhân sự</TableHead>
-                    <TableHead className="text-right">Tổng lương</TableHead>
+                    <TableHead>{t("pages.staffs.dashboard.colContractType")}</TableHead>
+                    <TableHead className="text-right">{t("pages.staffs.dashboard.colStaffCount")}</TableHead>
+                    <TableHead className="text-right">{t("pages.staffs.dashboard.colTotalSalary")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -370,7 +376,7 @@ const StaffDashboardPage = () => {
                         colSpan={3}
                         className="text-center text-muted-foreground py-6"
                       >
-                        Chưa có dữ liệu hợp đồng / lương.
+                        {t("pages.staffs.dashboard.contractCostEmpty")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -378,7 +384,7 @@ const StaffDashboardPage = () => {
                       <TableRow key={row.key}>
                         <TableCell>{row.label}</TableCell>
                         <TableCell className="text-right">
-                          {row.staffCount.toLocaleString("vi-VN")}
+                          {row.staffCount.toLocaleString(numberLocale)}
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatVnd(row.totalSalary)}
@@ -394,113 +400,118 @@ const StaffDashboardPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Chấm công</CardTitle>
+                <CardTitle className="text-sm">{t("pages.staffs.dashboard.attendanceTitle")}</CardTitle>
                 <CardDescription>
                   {data?.attendance?.enabled
-                    ? `Theo tháng ${data.month || month}`
-                    : "Đang chuẩn bị (phase 2)."}
+                    ? t("pages.staffs.dashboard.attendanceMonthDesc", {
+                        month: data.month || month,
+                      })
+                    : t("pages.staffs.dashboard.attendancePreparing")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 {data?.attendance?.enabled ? (
                   <>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Tổng ca/session</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.dashboard.attendanceTotalSessions")}</span>
                       <span className="font-semibold">
                         {Number(data.attendance.totalShiftsScheduled || 0).toLocaleString(
-                          "vi-VN",
+                          numberLocale,
                         )}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Ca đã hoàn tất</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.dashboard.attendanceCompletedShifts")}</span>
                       <span className="font-semibold">
                         {Number(data.attendance.totalShiftsCompleted || 0).toLocaleString(
-                          "vi-VN",
+                          numberLocale,
                         )}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Tổng giờ làm</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.dashboard.attendanceTotalWorkHours")}</span>
                       <span className="font-semibold">
                         {formatMinutes(data.attendance.totalWorkMinutes)}
                       </span>
                     </div>
                     <div className="pt-2 border-t">
                       <p className="text-xs text-muted-foreground">
-                        Đi muộn / về sớm sẽ được tính khi bạn cấu hình ca chuẩn
-                        ở bước tiếp theo.
+                        {t("pages.staffs.dashboard.attendanceLateEarlyHint")}
                       </p>
                     </div>
                   </>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Số ca làm, đi muộn, về sớm sẽ hiển thị tại đây sau khi bật
-                    module Chấm công.
+                    {t("pages.staffs.dashboard.attendanceDisabledHint")}
                   </p>
                 )}
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Nghỉ phép</CardTitle>
+                <CardTitle className="text-sm">{t("pages.staffs.dashboard.leaveTitle")}</CardTitle>
                 <CardDescription>
-                  Theo tháng {data?.month || month} (tổng quan)
+                  {t("pages.staffs.dashboard.leaveMonthDesc", {
+                    month: data?.month || month,
+                  })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Tổng đơn</span>
+                  <span className="text-muted-foreground">{t("pages.staffs.dashboard.leaveTotal")}</span>
                   <span className="font-semibold">
-                    {Number(leaveSummary?.totalRequests || 0).toLocaleString("vi-VN")}
+                    {Number(leaveSummary?.totalRequests || 0).toLocaleString(numberLocale)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Chờ duyệt</span>
+                  <span className="text-muted-foreground">{t("pages.staffs.dashboard.leavePending")}</span>
                   <span className="font-semibold">
-                    {Number(leaveSummary?.pendingRequests || 0).toLocaleString("vi-VN")}
+                    {Number(leaveSummary?.pendingRequests || 0).toLocaleString(numberLocale)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Đã duyệt</span>
+                  <span className="text-muted-foreground">{t("pages.staffs.dashboard.leaveApproved")}</span>
                   <span className="font-semibold">
-                    {Number(leaveSummary?.approvedRequests || 0).toLocaleString("vi-VN")}
+                    {Number(leaveSummary?.approvedRequests || 0).toLocaleString(numberLocale)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Từ chối</span>
+                  <span className="text-muted-foreground">{t("pages.staffs.dashboard.leaveRejected")}</span>
                   <span className="font-semibold">
-                    {Number(leaveSummary?.rejectedRequests || 0).toLocaleString("vi-VN")}
+                    {Number(leaveSummary?.rejectedRequests || 0).toLocaleString(numberLocale)}
                   </span>
                 </div>
               </CardContent>
             </Card>
             <Card className="border-dashed">
               <CardHeader>
-                <CardTitle className="text-sm">Bảng lương</CardTitle>
+                <CardTitle className="text-sm">{t("pages.staffs.dashboard.payrollTitle")}</CardTitle>
                 <CardDescription>
                   {payrollEnabled
-                    ? `Theo tháng ${data?.month || month} (${payrollStatus || "—"})`
-                    : "Chưa tạo bảng lương cho tháng này."}
+                    ? t("pages.staffs.dashboard.payrollMonthActive", {
+                        month: data?.month || month,
+                        status: payrollStatus || t("pages.staffs.overview.emptyValue"),
+                      })
+                    : t("pages.staffs.dashboard.payrollNotCreated")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {payrollEnabled ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Gross</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.dashboard.payrollGross")}</span>
                       <span className="font-semibold">
                         {formatVnd(data.payroll.grossPayroll)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Deductions</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.dashboard.payrollDeductions")}</span>
                       <span className="font-semibold">
                         {formatVnd(data.payroll.deductionTotal)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Net</span>
+                      <span className="text-muted-foreground">{t("pages.staffs.dashboard.payrollNet")}</span>
                       <span className="font-semibold">
                         {formatVnd(data.payroll.netPayroll)}
                       </span>
@@ -511,23 +522,21 @@ const StaffDashboardPage = () => {
                         size="sm"
                         onClick={handleGeneratePayroll}
                       >
-                        Tính lại
+                        {t("pages.staffs.dashboard.payrollRecalculate")}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">
-                      Nhấn “Tạo bảng lương” để hệ thống tổng hợp lương theo
-                      tháng từ lương cơ bản, chấm công và nghỉ không lương
-                      (UNPAID).
+                      {t("pages.staffs.dashboard.payrollCreateHint")}
                     </p>
                     <Button
                       variant="success"
                       size="sm"
                       onClick={handleGeneratePayroll}
                     >
-                      Tạo bảng lương
+                      {t("pages.staffs.dashboard.payrollCreate")}
                     </Button>
                   </div>
                 )}

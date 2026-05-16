@@ -1,25 +1,12 @@
-import React from "react";
+﻿import React, { useMemo } from "react";
 import {
   orderLineAttributesLabel,
   orderLineToppings,
   orderLineVariantLabel,
 } from "../../utils/orderItemDisplay.js";
-
-const fmtMoney = (n) =>
-  Number(n ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 0 });
-
-const fmtDateTime = (v) => {
-  if (!v) return new Date().toLocaleString("vi-VN");
-  if (typeof v === "string") {
-    const s = v.replace("T", " ").slice(0, 19);
-    return s;
-  }
-  try {
-    return new Date(v).toLocaleString("vi-VN");
-  } catch {
-    return String(v);
-  }
-};
+import { posNumberLocale } from "../../utils/posHelpers.js";
+import { getInvoiceT } from "../../utils/invoiceI18n.js";
+import { normalizeInvoiceLocale } from "../../utils/invoiceLocale.js";
 
 const rowStyle = {
   display: "flex",
@@ -33,9 +20,10 @@ const rowStyle = {
 const labelMuted = { color: "#555" };
 
 /**
- * Hóa đơn POS — style inline để in qua iframe / renderToStaticMarkup.
+ * H├│a ─æ╞ín POS ΓÇö style inline ─æß╗â in qua iframe / renderToStaticMarkup.
  */
 export function PosInvoiceReceipt({
+  invoiceLocale = "vi",
   shopName,
   shopAddress,
   shopPhone,
@@ -49,6 +37,25 @@ export function PosInvoiceReceipt({
   printedAt,
   isDraft = false,
 }) {
+  const lng = normalizeInvoiceLocale(invoiceLocale);
+  const t = useMemo(() => getInvoiceT(lng), [lng]);
+  const locale = posNumberLocale(lng);
+
+  const fmtMoney = (n) =>
+    Number(n ?? 0).toLocaleString(locale, { maximumFractionDigits: 0 });
+
+  const fmtDateTime = (v) => {
+    if (!v) return new Date().toLocaleString(locale);
+    if (typeof v === "string") {
+      return v.replace("T", " ").slice(0, 19);
+    }
+    try {
+      return new Date(v).toLocaleString(locale);
+    } catch {
+      return String(v);
+    }
+  };
+
   const items = order?.items || [];
   const tax = order?.taxSnapshot;
   const taxes = tax?.taxes || [];
@@ -70,7 +77,7 @@ export function PosInvoiceReceipt({
         <div
           style={{ fontSize: "15px", fontWeight: 700, letterSpacing: "0.02em" }}
         >
-          {shopName || "Cửa hàng"}
+          {shopName || t("pages.pos.receipt.shopFallback")}
         </div>
         {branchName ? (
           <div style={{ fontSize: "11px", marginTop: "2px", ...labelMuted }}>
@@ -84,7 +91,7 @@ export function PosInvoiceReceipt({
         ) : null}
         {shopPhone ? (
           <div style={{ fontSize: "10px", marginTop: "2px", ...labelMuted }}>
-            ĐT: {shopPhone}
+            {t("pages.pos.receipt.phonePrefix")} {shopPhone}
           </div>
         ) : null}
       </div>
@@ -101,7 +108,7 @@ export function PosInvoiceReceipt({
           marginBottom: "10px",
         }}
       >
-        HÓA ĐƠN BÁN HÀNG
+        {t("pages.pos.receipt.salesInvoiceTitle")}
       </div>
 
       {isDraft ? (
@@ -119,12 +126,12 @@ export function PosInvoiceReceipt({
             letterSpacing: "0.04em",
           }}
         >
-          XEM TRƯỚC — CHƯA LẬP ĐƠN
+          {t("pages.pos.receipt.previewBanner")}
         </div>
       ) : null}
 
       <div style={{ ...rowStyle, fontSize: "10px" }}>
-        <span style={labelMuted}>Mã đơn hàng</span>
+        <span style={labelMuted}>{t("pages.pos.receipt.orderCodeLabel")}</span>
         <span
           style={{
             fontWeight: 600,
@@ -133,17 +140,17 @@ export function PosInvoiceReceipt({
           }}
         >
           {isDraft
-            ? "Sẽ tạo khi xác nhận"
+            ? t("pages.pos.receipt.willCreateOnConfirm")
             : order?.orderCode?.trim() || order?.id || "—"}
         </span>
       </div>
       <div style={{ ...rowStyle, fontSize: "10px" }}>
         <span style={labelMuted}>
           {isDraft
-            ? "Xem trước lúc"
+            ? t("pages.pos.receipt.timePreviewAt")
             : order?.paid && order?.paymentTime
-              ? "Thanh toán lúc"
-              : "Thời gian in"}
+              ? t("pages.pos.receipt.timePaidAt")
+              : t("pages.pos.receipt.timePrintedAt")}
         </span>
         <span>
           {!isDraft && order?.paid && order?.paymentTime
@@ -153,13 +160,13 @@ export function PosInvoiceReceipt({
       </div>
       {tableName ? (
         <div style={{ ...rowStyle, fontSize: "10px" }}>
-          <span style={labelMuted}>Bàn</span>
+          <span style={labelMuted}>{t("pages.pos.receipt.tableLabel")}</span>
           <span>{tableName}</span>
         </div>
       ) : null}
       {customerName ? (
         <div style={{ ...rowStyle, fontSize: "10px" }}>
-          <span style={labelMuted}>Khách hàng (CRM)</span>
+          <span style={labelMuted}>{t("pages.pos.receipt.crmCustomerLabel")}</span>
           <span style={{ textAlign: "right" }}>{customerName}</span>
         </div>
       ) : null}
@@ -168,7 +175,7 @@ export function PosInvoiceReceipt({
         <>
           {order?.guestName && String(order.guestName).trim() ? (
             <div style={{ ...rowStyle, fontSize: "10px" }}>
-              <span style={labelMuted}>Tên khách</span>
+              <span style={labelMuted}>{t("pages.pos.receipt.guestNameLabel")}</span>
               <span style={{ textAlign: "right", wordBreak: "break-word" }}>
                 {String(order.guestName).trim()}
               </span>
@@ -176,7 +183,7 @@ export function PosInvoiceReceipt({
           ) : null}
           {order?.guestPhone && String(order.guestPhone).trim() ? (
             <div style={{ ...rowStyle, fontSize: "10px" }}>
-              <span style={labelMuted}>SĐT khách</span>
+              <span style={labelMuted}>{t("pages.pos.receipt.guestPhoneLabel")}</span>
               <span style={{ textAlign: "right", wordBreak: "break-all" }}>
                 {String(order.guestPhone).trim()}
               </span>
@@ -201,7 +208,7 @@ export function PosInvoiceReceipt({
           : (item.quantity ?? 0);
         const weightUnit = item.weightUnit || "";
         const qtyLabel = isWeight
-          ? `${Number(item.weight ?? 0).toLocaleString("vi-VN", {
+          ? `${Number(item.weight ?? 0).toLocaleString(locale, {
               maximumFractionDigits: 3,
             })} ${weightUnit}`.trim()
           : String(item.quantity ?? 0);
@@ -228,16 +235,16 @@ export function PosInvoiceReceipt({
             ) : null}
             {showAttr ? (
               <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
-                Thuộc tính: {attrLine}
+                {t("pages.pos.receipt.attributesPrefix")} {attrLine}
               </div>
             ) : null}
             {tops.length > 0 ? (
               <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
-                {tops.map((t, ti) => (
-                  <div key={`${t.toppingId || ti}`}>
-                    + {t.name || t.toppingId}
+                {tops.map((top, ti) => (
+                  <div key={`${top.toppingId || ti}`}>
+                    + {top.name || top.toppingId}
                     {Number(t.extraPrice) > 0
-                      ? ` (${fmtMoney(t.extraPrice)} ₫)`
+                      ? ` (${fmtMoney(top.extraPrice)} ₫)`
                       : ""}
                   </div>
                 ))}
@@ -246,13 +253,15 @@ export function PosInvoiceReceipt({
             <div style={{ ...rowStyle, marginBottom: 0 }}>
               <span style={labelMuted}>
                 {fmtMoney(unit)}
-                {isWeight && weightUnit ? `/${weightUnit}` : ""} × {qtyLabel}
+                {isWeight && weightUnit ? `/${weightUnit}` : ""} ├ù {qtyLabel}
               </span>
               <span style={{ fontWeight: 600 }}>{fmtMoney(line)} ₫</span>
             </div>
             {hasDisc ? (
               <div style={{ fontSize: "10px", color: "#16a34a" }}>
-                (Giá gốc {fmtMoney(gross)} ₫)
+                {t("pages.pos.receipt.originalPriceLine", {
+                  amount: fmtMoney(gross),
+                })}
               </div>
             ) : null}
           </div>
@@ -262,14 +271,16 @@ export function PosInvoiceReceipt({
       <div style={{ borderTop: "1px dashed #ccc", margin: "10px 0" }} />
 
       <div style={rowStyle}>
-        <span style={labelMuted}>Tiền hàng</span>
+        <span style={labelMuted}>{t("pages.pos.receipt.merchandiseTotal")}</span>
         <span style={{ fontWeight: 600 }}>{fmtMoney(order?.totalPrice)} ₫</span>
       </div>
 
       {(order?.pointsRedeemed ?? 0) > 0 && (order?.pointsDiscount ?? 0) > 0 ? (
         <div style={rowStyle}>
           <span style={labelMuted}>
-            Giảm điểm ({order.pointsRedeemed} điểm)
+            {t("pages.pos.receipt.pointsDiscountLine", {
+              points: order.pointsRedeemed,
+            })}
           </span>
           <span style={{ fontWeight: 600, color: "#16a34a" }}>
             -{fmtMoney(order.pointsDiscount)} ₫
@@ -279,16 +290,16 @@ export function PosInvoiceReceipt({
 
       {tax?.priceIncludesTax ? (
         <div style={{ fontSize: "10px", color: "#666", marginBottom: "6px" }}>
-          Giá đã bao gồm thuế (theo chính sách).
+          {t("pages.pos.receipt.priceIncludesTaxReceipt")}
         </div>
       ) : null}
 
       {taxes.map((line, idx) => (
         <div key={`${line.code}-${idx}`} style={rowStyle}>
           <span style={labelMuted}>
-            {line.label || line.code || "Thuế"}
+            {line.label || line.code || t("pages.pos.receipt.taxFallback")}
             {line.rate > 0 && line.rate <= 1
-              ? ` (${(line.rate * 100).toLocaleString("vi-VN")}%)`
+              ? ` (${(line.rate * 100).toLocaleString(locale)}%)`
               : ""}
           </span>
           <span>{fmtMoney(line.amount)} ₫</span>
@@ -297,7 +308,7 @@ export function PosInvoiceReceipt({
 
       {taxes.length === 0 && (!tax || tax.taxTotal === 0) ? (
         <div style={rowStyle}>
-          <span style={labelMuted}>Thuế</span>
+          <span style={labelMuted}>{t("pages.pos.receipt.taxFallback")}</span>
           <span>0 ₫</span>
         </div>
       ) : null}
@@ -312,13 +323,13 @@ export function PosInvoiceReceipt({
           fontWeight: 700,
         }}
       >
-        <span>TỔNG THANH TOÁN</span>
+        <span>{t("pages.pos.receipt.totalPayment")}</span>
         <span>{fmtMoney(order?.totalAmount)} ₫</span>
       </div>
 
       {paymentMethodLabel ? (
         <div style={{ ...rowStyle, marginTop: "8px" }}>
-          <span style={labelMuted}>Thanh toán</span>
+          <span style={labelMuted}>{t("pages.pos.receipt.paymentRow")}</span>
           <span>{paymentMethodLabel}</span>
         </div>
       ) : null}
@@ -339,7 +350,7 @@ export function PosInvoiceReceipt({
               marginBottom: "6px",
             }}
           >
-            Chứng từ thanh toán
+            {t("pages.pos.receipt.paymentProofCaption")}
           </div>
           <img
             src={order.paymentProofImageUrl}
@@ -359,19 +370,19 @@ export function PosInvoiceReceipt({
       ) : null}
 
       <div style={{ ...rowStyle, marginTop: "4px" }}>
-        <span style={labelMuted}>Trạng thái</span>
+        <span style={labelMuted}>{t("pages.pos.receipt.statusLabel")}</span>
         <span style={{ fontWeight: order?.paid ? 600 : 500 }}>
           {isDraft
-            ? "Dự thảo"
+            ? t("pages.pos.receipt.draftStatus")
             : order?.paid
-              ? "Đã thanh toán"
-              : "Chưa thanh toán"}
+              ? t("pages.pos.receipt.paidStatus")
+              : t("pages.pos.receipt.unpaidStatus")}
         </span>
       </div>
 
       {order?.note ? (
         <div style={{ marginTop: "10px", fontSize: "10px", ...labelMuted }}>
-          <div style={{ fontWeight: 600, color: "#333" }}>Ghi chú</div>
+          <div style={{ fontWeight: 600, color: "#333" }}>{t("pages.pos.receipt.noteLabel")}</div>
           <div style={{ whiteSpace: "pre-wrap" }}>{order.note}</div>
         </div>
       ) : null}
@@ -386,12 +397,10 @@ export function PosInvoiceReceipt({
             ...labelMuted,
           }}
         >
-          <div style={{ fontWeight: 700, color: "#333", marginBottom: "4px" }}>
-            Wi‑Fi
-          </div>
+          <div style={{ fontWeight: 700, color: "#333", marginBottom: "4px" }}>{t("pages.pos.receipt.wifiTitle")}</div>
           {branchWifiSsid?.trim() ? (
             <div style={rowStyle}>
-              <span>Tên mạng</span>
+              <span>{t("pages.pos.receipt.wifiSsid")}</span>
               <span style={{ fontWeight: 600, textAlign: "right" }}>
                 {String(branchWifiSsid).trim()}
               </span>
@@ -399,7 +408,7 @@ export function PosInvoiceReceipt({
           ) : null}
           {branchWifiPassword?.trim() ? (
             <div style={rowStyle}>
-              <span>Mật khẩu</span>
+              <span>{t("pages.pos.receipt.wifiPassword")}</span>
               <span style={{ fontWeight: 600, textAlign: "right" }}>
                 {String(branchWifiPassword).trim()}
               </span>
@@ -417,8 +426,8 @@ export function PosInvoiceReceipt({
         }}
       >
         {isDraft
-          ? "Bản xem trước — số liệu sẽ khớp khi bạn xác nhận thanh toán."
-          : "Cảm ơn quý khách. Hẹn gặp lại!"}
+          ? t("pages.pos.receipt.draftFooter")
+          : t("pages.pos.receipt.thankYouFooter")}
       </div>
     </div>
   );

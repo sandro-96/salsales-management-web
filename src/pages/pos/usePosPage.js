@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -50,31 +51,32 @@ import {
   formatToppingSelectionLabel,
 } from "./posProductUtils";
 import { buildDraftOrderForInvoice } from "./posInvoiceDraft";
-import { getPaymentMethodLabel } from "./posPayment";
+import { getPaymentMethodLabel, posNumberLocale } from "../../utils/posHelpers";
+import { resolveInvoiceLocale } from "../../utils/invoiceLocale.js";
+import { getInvoiceT } from "../../utils/invoiceI18n.js";
 
 function isShopInactiveApiError(err) {
   const c = err?.response?.data?.code;
   return c === "4133" || c === 4133;
 }
 
-const SHOP_LOCKED_POS_MSG =
-  "Cửa hàng đang bị khóa. Không thể tạo đơn, thanh toán hay thay đổi đơn.";
-
-function toastShopLockedPos() {
-  toast.error(SHOP_LOCKED_POS_MSG);
-}
-
-function toastPosOrderError(err, fallback) {
-  if (isShopInactiveApiError(err)) {
-    toast.error(SHOP_LOCKED_POS_MSG);
-    return;
-  }
-  toast.error(err?.response?.data?.message || fallback);
-}
-
 export function usePosPage() {
+  const { t, i18n } = useTranslation();
+  const numberLocale = posNumberLocale(i18n.language);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const toastShopLockedPos = useCallback(() => {
+    toast.error(t("pages.pos.toast.shopLocked"));
+  }, [t]);
+
+  const toastPosOrderError = useCallback((err, fallback) => {
+    if (isShopInactiveApiError(err)) {
+      toast.error(t("pages.pos.toast.shopLocked"));
+      return;
+    }
+    toast.error(err?.response?.data?.message || fallback);
+  }, [t]);
   const {
     selectedShopId,
     selectedBranchId,
@@ -114,7 +116,7 @@ export function usePosPage() {
       return;
     }
     setCheckoutOpen(true);
-  }, [shopPosWriteBlocked]);
+  }, [shopPosWriteBlocked, toastShopLockedPos]);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [transferPaymentProofFile, setTransferPaymentProofFile] =
     useState(null);
@@ -362,7 +364,7 @@ export function usePosPage() {
         updateActiveTab({
           orderId: order.id,
           displayOrderCode: order.orderCode || null,
-          cart: cartFromOrderItems(order.items),
+          cart: cartFromOrderItems(order.items, t),
           note: order.note || "",
           customer: order.customerId
             ? {
@@ -375,7 +377,7 @@ export function usePosPage() {
           guestName: order.guestName || "",
           guestPhone: order.guestPhone || "",
         });
-        toast.info("Đã tải đơn đang mở của bàn.");
+        toast.info(t("pages.pos.toast.tableOrderLoaded"));
       } catch {
         // ignore
       }
@@ -390,6 +392,7 @@ export function usePosPage() {
     effectiveBranchId,
     activeOrderId,
     updateActiveTab,
+    t,
   ]);
 
   const fetchData = useCallback(async () => {
@@ -417,11 +420,11 @@ export function usePosPage() {
       setPromotions(promoList);
     } catch (err) {
       console.error("Failed to load POS data", err);
-      toast.error("Không thể tải dữ liệu sản phẩm");
+      toast.error(t("pages.pos.toast.loadProductsFailed"));
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, effectiveBranchId]);
+  }, [selectedShopId, effectiveBranchId, t]);
 
   useEffect(() => {
     fetchData();
@@ -486,7 +489,9 @@ export function usePosPage() {
           const removed = prev[idx];
           if (removed?.id === activeTabIdRef.current) {
             toast.warning(
-              `Đơn ${removed.displayOrderCode || orderId} đã bị xoá bởi người khác.`,
+              t("pages.pos.toast.orderDeletedByOther", {
+                code: removed.displayOrderCode || orderId,
+              }),
             );
           }
           return prev.filter((t) => t.orderId !== orderId);
@@ -503,8 +508,12 @@ export function usePosPage() {
           if (target?.id === activeTabIdRef.current) {
             toast.warning(
               isPaidByOther
-                ? `Đơn ${target.displayOrderCode || orderId} đã được thanh toán bởi người khác.`
-                : `Đơn ${target.displayOrderCode || orderId} đã bị huỷ bởi người khác.`,
+                ? t("pages.pos.toast.orderPaidByOther", {
+                    code: target.displayOrderCode || orderId,
+                  })
+                : t("pages.pos.toast.orderCancelledByOther", {
+                    code: target.displayOrderCode || orderId,
+                  }),
             );
           }
           // Loại bỏ đơn đã đóng khỏi tab POS đang chỉnh sửa.
@@ -514,17 +523,17 @@ export function usePosPage() {
 
         // ORDER_UPDATED/ORDER_STATUS_CHANGED trên đơn đang mở:
         // cập nhật note/table/customer; KHÔNG overwrite cart vì user có thể đang gõ.
-        return prev.map((t) => {
-          if (t.orderId !== orderId) return t;
+        return prev.map((tab) => {
+          if (tab.orderId !== orderId) return tab;
           return {
-            ...t,
-            displayOrderCode: payload.orderCode ?? t.displayOrderCode,
-            tableId: payload.tableId ?? t.tableId,
+            ...tab,
+            displayOrderCode: payload.orderCode ?? tab.displayOrderCode,
+            tableId: payload.tableId ?? tab.tableId,
           };
         });
       });
     },
-    [],
+    [t],
   );
   useBranchChannel("orders", onRealtimeOrder, { branchId: effectiveBranchId });
 
@@ -535,7 +544,7 @@ export function usePosPage() {
       return;
     }
     if (!Array.isArray(groupSelectedIds) || groupSelectedIds.length < 2) {
-      toast.error("Chọn ít nhất 2 bàn để ghép.");
+      toast.error(t("pages.pos.toast.selectAtLeastTwoTables"));
       return;
     }
     try {
@@ -544,12 +553,12 @@ export function usePosPage() {
         branchId: effectiveBranchId,
         tableIds: groupSelectedIds,
       });
-      toast.success("Đã ghép bàn.");
+      toast.success(t("pages.pos.toast.groupTablesSuccess"));
       setGroupDialogOpen(false);
       setGroupSelectedIds([]);
       fetchGroups();
     } catch (err) {
-      toastPosOrderError(err, "Không thể ghép bàn.");
+      toastPosOrderError(err, t("pages.pos.toast.groupTablesFailed"));
     }
   }, [
     selectedShopId,
@@ -557,6 +566,9 @@ export function usePosPage() {
     groupSelectedIds,
     fetchGroups,
     shopPosWriteBlocked,
+    toastShopLockedPos,
+    toastPosOrderError,
+    t,
   ]);
 
   const handleUngroup = useCallback(
@@ -568,13 +580,21 @@ export function usePosPage() {
       }
       try {
         await deleteTableGroup(groupId, selectedShopId, effectiveBranchId);
-        toast.success("Đã giải nhóm bàn.");
+        toast.success(t("pages.pos.toast.ungroupSuccess"));
         fetchGroups();
       } catch (err) {
-        toastPosOrderError(err, "Không thể giải nhóm.");
+        toastPosOrderError(err, t("pages.pos.toast.ungroupFailed"));
       }
     },
-    [selectedShopId, effectiveBranchId, fetchGroups, shopPosWriteBlocked],
+    [
+      selectedShopId,
+      effectiveBranchId,
+      fetchGroups,
+      shopPosWriteBlocked,
+      toastShopLockedPos,
+      toastPosOrderError,
+      t,
+    ],
   );
 
   const handleMergeGroupBills = useCallback(async () => {
@@ -592,9 +612,7 @@ export function usePosPage() {
     if (!targetOrderId || sourceOrderIds.length < 2) return;
     if (!sourceOrderIds.includes(targetOrderId)) return;
 
-    const ok = window.confirm(
-      "Gộp bill nhóm: các đơn khác trong nhóm sẽ bị hủy và toàn bộ món được gộp về đơn hiện tại. Bạn chắc chắn?",
-    );
+    const ok = window.confirm(t("pages.pos.confirm.mergeGroupBills"));
     if (!ok) return;
 
     setMergeGroupSubmitting(true);
@@ -630,7 +648,7 @@ export function usePosPage() {
             ...t,
             orderId: merged.id,
             displayOrderCode: merged.orderCode || t.displayOrderCode || null,
-            cart: cartFromOrderItems(merged.items),
+            cart: cartFromOrderItems(merged.items, t),
             note: merged.note || "",
             tableId: merged.tableId || t.tableId,
             customer: merged.customerId
@@ -651,11 +669,15 @@ export function usePosPage() {
       setActiveTabId(nextActiveId);
       setCustomerResults([]);
 
-      toast.success("Đã gộp bill nhóm.");
+      toast.success(t("pages.pos.toast.mergeGroupSuccess"));
       fetchData();
       fetchGroups();
     } catch (err) {
-      toastPosOrderError(err, "Không thể gộp bill nhóm.");
+      if (err?.message === "MISSING_MERGED_ORDER") {
+        toast.error(t("pages.pos.toast.mergeUnexpected"));
+      } else {
+        toastPosOrderError(err, t("pages.pos.toast.mergeGroupFailed"));
+      }
     } finally {
       setMergeGroupSubmitting(false);
     }
@@ -669,6 +691,9 @@ export function usePosPage() {
     activeTabId,
     fetchData,
     fetchGroups,
+    t,
+    toastShopLockedPos,
+    toastPosOrderError,
   ]);
 
   const handleSplit = useCallback(async () => {
@@ -691,7 +716,7 @@ export function usePosPage() {
       })
       .filter(Boolean);
     if (itemsToMove.length === 0) {
-      toast.error("Chọn số lượng món cần tách.");
+      toast.error(t("pages.pos.toast.selectSplitQty"));
       return;
     }
     try {
@@ -705,17 +730,17 @@ export function usePosPage() {
       const src = data?.source;
       updateActiveTab({
         orderId: src?.id || activeOrderId,
-        cart: cartFromOrderItems(src?.items),
+        cart: cartFromOrderItems(src?.items, t),
         note: src?.note || "",
         tableId: src?.tableId || selectedTableId,
       });
-      toast.success("Đã tách món sang đơn mới.");
+      toast.success(t("pages.pos.toast.splitSuccess"));
       setSplitDialogOpen(false);
       setSplitToTableId("none");
       setSplitQtyByLineKey({});
       fetchData();
     } catch (err) {
-      toastPosOrderError(err, "Không thể tách món.");
+      toastPosOrderError(err, t("pages.pos.toast.splitFailed"));
     }
   }, [
     selectedShopId,
@@ -727,6 +752,9 @@ export function usePosPage() {
     updateActiveTab,
     selectedTableId,
     fetchData,
+    toastShopLockedPos,
+    toastPosOrderError,
+    t,
   ]);
 
   const syncTimerRef = React.useRef(null);
@@ -763,7 +791,7 @@ export function usePosPage() {
         };
         await updateOrder(activeOrderId, selectedShopId, payload);
       } catch (err) {
-        toastPosOrderError(err, "Không thể cập nhật đơn.");
+        toastPosOrderError(err, t("pages.pos.toast.updateOrderFailed"));
       }
     }, 650);
 
@@ -780,6 +808,8 @@ export function usePosPage() {
     guestPhone,
     cart,
     shopPosWriteBlocked,
+    toastPosOrderError,
+    t,
   ]);
 
   const handleHoldOrder = useCallback(async () => {
@@ -833,8 +863,10 @@ export function usePosPage() {
           });
           setHoldSuccessMessage(
             created?.orderCode
-              ? `Đã tạo đơn ${created.orderCode} thành công.`
-              : "Đã tạo đơn thành công.",
+              ? t("pages.pos.toast.holdCreatedWithCode", {
+                  code: created.orderCode,
+                })
+              : t("pages.pos.toast.holdCreated"),
           );
           setHoldSuccessOpen(true);
         }
@@ -864,9 +896,9 @@ export function usePosPage() {
         }),
       };
       await updateOrder(activeOrderId, selectedShopId, payload);
-      toast.success("Đã lưu thay đổi đơn.");
+      toast.success(t("pages.pos.toast.holdSaved"));
     } catch (err) {
-      toastPosOrderError(err, "Không thể lưu đơn.");
+      toastPosOrderError(err, t("pages.pos.toast.holdSaveFailed"));
     }
   }, [
     selectedShopId,
@@ -882,6 +914,9 @@ export function usePosPage() {
     updateActiveTab,
     fetchData,
     shopPosWriteBlocked,
+    toastShopLockedPos,
+    toastPosOrderError,
+    t,
   ]);
 
   const customerSearchTimer = React.useRef(null);
@@ -1003,7 +1038,7 @@ export function usePosPage() {
           const res = await getCurrentOrderByTable(selectedShopId, tid);
           const order = res.data?.data;
           if (!order?.id) continue;
-          const exists = orderTabs.some((t) => t.orderId === order.id);
+          const exists = orderTabs.some((tab) => tab.orderId === order.id);
           if (exists) continue;
 
           const newTabId = nextTabIdRef.current++;
@@ -1014,7 +1049,7 @@ export function usePosPage() {
               orderId: order.id,
               displayOrderCode: order.orderCode || null,
               tableId: tid,
-              cart: cartFromOrderItems(order.items),
+              cart: cartFromOrderItems(order.items, t),
               note: order.note || "",
               customer: order.customerId
                 ? {
@@ -1044,6 +1079,7 @@ export function usePosPage() {
     selectedTableId,
     orderTabs,
     activeTabId,
+    t,
   ]);
 
   const addToCart = useCallback(
@@ -1055,12 +1091,12 @@ export function usePosPage() {
           ? product.branchVariants.find((v) => v.variantId === variantId)
           : null;
       if (hasVars && (!variantId || !branchVariant)) {
-        toast.error("Chọn biến thể hợp lệ.");
+        toast.error(t("pages.pos.toast.invalidVariant"));
         return;
       }
 
       if (toppingIds.length > 0 && activeToppings(product).length === 0) {
-        toast.error("Sản phẩm không có topping.");
+        toast.error(t("pages.pos.toast.noToppingsOnProduct"));
         return;
       }
 
@@ -1095,7 +1131,7 @@ export function usePosPage() {
         const existing = prev.find(lineMatch);
         if (existing) {
           if (maxStock != null && existing.quantity >= maxStock) {
-            toast.error("Không đủ tồn kho.");
+            toast.error(t("pages.pos.toast.insufficientStock"));
             return;
           }
           setCart(
@@ -1107,7 +1143,7 @@ export function usePosPage() {
         }
 
         if (maxStock != null && maxStock < 1) {
-          toast.error("Hết hàng.");
+          toast.error(t("pages.pos.toast.outOfStock"));
           return;
         }
       }
@@ -1140,7 +1176,7 @@ export function usePosPage() {
           originalPrice: combinedBase,
           price: hasDiscount ? discountedPrice : combinedBase,
           hasDiscount: !!hasDiscount,
-          promoLabel: hasDiscount ? formatDiscount(promo) : null,
+          promoLabel: hasDiscount ? formatDiscount(promo, numberLocale) : null,
           promoName: promo?.name || null,
           image: product.images?.[0] || null,
           quantity: 1,
@@ -1152,7 +1188,7 @@ export function usePosPage() {
         },
       ]);
     },
-    [promoMap, setCart],
+    [promoMap, setCart, t],
   );
 
   const queueAddProductWithToppings = useCallback(
@@ -1191,7 +1227,7 @@ export function usePosPage() {
         item.maxStock != null &&
         nextQty > item.maxStock
       ) {
-        toast.error("Không đủ tồn kho.");
+        toast.error(t("pages.pos.toast.insufficientStock"));
         return;
       }
       setCart(
@@ -1203,7 +1239,7 @@ export function usePosPage() {
           .filter((it) => it.quantity > 0),
       );
     },
-    [setCart],
+    [setCart, t],
   );
 
   const updateWeight = useCallback(
@@ -1257,12 +1293,12 @@ export function usePosPage() {
     try {
       await moveOrderTable(activeOrderId, selectedShopId, moveToTableId);
       updateActiveTab({ tableId: moveToTableId });
-      toast.success("Đã đổi bàn.");
+      toast.success(t("pages.pos.toast.moveTableSuccess"));
       fetchData();
       setMoveTableOpen(false);
       setMoveToTableId("none");
     } catch (err) {
-      toastPosOrderError(err, "Không thể đổi bàn.");
+      toastPosOrderError(err, t("pages.pos.toast.moveTableFailed"));
     }
   }, [
     selectedShopId,
@@ -1271,6 +1307,9 @@ export function usePosPage() {
     moveToTableId,
     updateActiveTab,
     fetchData,
+    toastShopLockedPos,
+    toastPosOrderError,
+    t,
   ]);
 
   // Số lượng quy đổi cho dòng (dùng weight nếu bán theo cân).
@@ -1371,9 +1410,12 @@ export function usePosPage() {
     const branchName = br?.name || null;
     const tableName =
       selectedTableId && selectedTableId !== "none"
-        ? tables.find((t) => t.id === selectedTableId)?.name || null
+        ? tables.find((tbl) => tbl.id === selectedTableId)?.name || null
         : null;
+    const invoiceLocale = resolveInvoiceLocale(br);
+    const invoiceT = getInvoiceT(invoiceLocale);
     return {
+      invoiceLocale,
       shopName: selectedShop?.name,
       shopAddress: selectedShop?.address,
       shopPhone: selectedShop?.phone,
@@ -1385,7 +1427,7 @@ export function usePosPage() {
         (guestName?.trim() ? guestName.trim() : null) ||
         null,
       tableName,
-      paymentMethodLabel: getPaymentMethodLabel(paymentMethod),
+      paymentMethodLabel: getPaymentMethodLabel(invoiceT, paymentMethod),
     };
   }, [
     branches,
@@ -1396,6 +1438,7 @@ export function usePosPage() {
     selectedCustomer,
     guestName,
     paymentMethod,
+    t,
   ]);
 
   const handlePostSaleCustomerSave = useCallback(async () => {
@@ -1406,7 +1449,7 @@ export function usePosPage() {
     }
     const name = postSaleName.trim();
     if (!name) {
-      toast.error("Vui lòng nhập tên khách hàng.");
+      toast.error(t("pages.pos.toast.customerNameRequired"));
       return;
     }
     setPostSaleSaving(true);
@@ -1421,17 +1464,19 @@ export function usePosPage() {
       });
       const newId = res.data?.data?.id;
       if (!res.data?.success || !newId) {
-        toast.error(res.data?.message || "Không tạo được khách hàng.");
+        toast.error(
+          res.data?.message || t("pages.pos.toast.createCustomerFailed"),
+        );
         return;
       }
       await patchOrderFulfillment(postSaleOrderId, selectedShopId, {
         customerId: newId,
       });
-      toast.success("Đã tạo khách và gắn vào đơn hàng.");
+      toast.success(t("pages.pos.toast.attachCustomerSuccess"));
       setPostSaleOpen(false);
       setPostSaleOrderId(null);
     } catch (e) {
-      toastPosOrderError(e, "Không hoàn tất thao tác.");
+      toastPosOrderError(e, t("pages.pos.toast.postSaleFailed"));
     } finally {
       setPostSaleSaving(false);
     }
@@ -1442,6 +1487,9 @@ export function usePosPage() {
     effectiveBranchId,
     postSaleName,
     postSalePhone,
+    toastShopLockedPos,
+    toastPosOrderError,
+    t,
   ]);
 
   const lastTableParamRef = React.useRef("");
@@ -1454,16 +1502,16 @@ export function usePosPage() {
       const code = (codeIn || "").trim();
       const oid = (idIn || "").trim();
       if (!selectedShopId) {
-        toast.error("Chưa chọn cửa hàng.");
+        toast.error(t("pages.pos.toast.shopNotSelected"));
         return;
       }
       if (!code && !oid) {
-        toast.error("Nhập mã đơn.");
+        toast.error(t("pages.pos.toast.enterOrderCode"));
         return;
       }
       const apiBranch = relaxBranchCheck ? undefined : effectiveBranchId;
       if (!relaxBranchCheck && code && !apiBranch) {
-        toast.error("Chọn chi nhánh để mở đơn theo mã.");
+        toast.error(t("pages.pos.toast.selectBranchForOrderCode"));
         return;
       }
       setOrderLookupSubmitting(true);
@@ -1474,7 +1522,7 @@ export function usePosPage() {
         });
         const order = res.data?.data;
         if (!order?.id) {
-          toast.error("Không tìm thấy đơn.");
+          toast.error(t("pages.pos.toast.orderNotFound"));
           return;
         }
 
@@ -1482,10 +1530,10 @@ export function usePosPage() {
           setSelectedBranchId(order.branchId);
         }
 
-        const existing = orderTabs.find((t) => t.orderId === order.id);
+        const existing = orderTabs.find((tab) => tab.orderId === order.id);
         if (existing) {
           switchTab(existing.id);
-          toast.info("Đơn đã mở trên một tab khác.");
+          toast.info(t("pages.pos.toast.orderAlreadyOpenTab"));
           return;
         }
 
@@ -1495,7 +1543,7 @@ export function usePosPage() {
           orderId: order.id,
           displayOrderCode: order.orderCode || null,
           tableId: order.tableId || "",
-          cart: cartFromOrderItems(order.items),
+          cart: cartFromOrderItems(order.items, t),
           note: order.note || "",
           customer: order.customerId
             ? {
@@ -1512,11 +1560,14 @@ export function usePosPage() {
         activeTabIdRef.current = id;
         setActiveTabId(id);
         setCustomerResults([]);
-        toast.success(`Đã mở đơn ${order.orderCode || order.id}`);
+        toast.success(
+          t("pages.pos.toast.orderOpened", {
+            code: order.orderCode || order.id,
+          }),
+        );
       } catch (err) {
         toast.error(
-          err.response?.data?.message ||
-            "Không thể mở đơn (đã thanh toán hoặc không thuộc chi nhánh).",
+          err.response?.data?.message || t("pages.pos.toast.openOrderFailed"),
         );
       } finally {
         setOrderLookupSubmitting(false);
@@ -1528,6 +1579,7 @@ export function usePosPage() {
       setSelectedBranchId,
       switchTab,
       orderTabs,
+      t,
     ],
   );
 
@@ -1670,24 +1722,22 @@ export function usePosPage() {
             } catch (upErr) {
               console.error(upErr);
               if (isShopInactiveApiError(upErr)) {
-                toast.error(SHOP_LOCKED_POS_MSG);
+                toast.error(t("pages.pos.toast.shopLocked"));
                 setTransferPaymentProofFile(null);
                 setSubmitting(false);
                 return;
               }
-              toast.warning(
-                "Đơn đã thanh toán nhưng chưa tải lên được ảnh chứng từ. Bạn có thể bổ sung tại Quản lý đơn hàng.",
-              );
+              toast.warning(t("pages.pos.toast.transferProofUploadWarning"));
             }
           }
         } catch (payErr) {
           if (isShopInactiveApiError(payErr)) {
-            toast.error(SHOP_LOCKED_POS_MSG);
+            toast.error(t("pages.pos.toast.shopLocked"));
             setTransferPaymentProofFile(null);
             setSubmitting(false);
             return;
           }
-          toast.info("Đơn hàng đã tạo nhưng chưa thanh toán");
+          toast.info(t("pages.pos.toast.orderCreatedUnpaid"));
         }
       }
 
@@ -1695,10 +1745,13 @@ export function usePosPage() {
       const branchName = br?.name || null;
       const tableName =
         selectedTableId && selectedTableId !== "none"
-          ? tables.find((t) => t.id === selectedTableId)?.name || null
-        : null;
+          ? tables.find((tbl) => tbl.id === selectedTableId)?.name || null
+          : null;
 
+      const invoiceLocale = resolveInvoiceLocale(br);
+      const invoiceT = getInvoiceT(invoiceLocale);
       setInvoicePayload({
+        invoiceLocale,
         order: finalOrder,
         printedAt: new Date().toISOString(),
         shopName: selectedShop?.name,
@@ -1713,6 +1766,7 @@ export function usePosPage() {
           null,
         tableName,
         paymentMethodLabel: getPaymentMethodLabel(
+          invoiceT,
           finalOrder?.paymentMethod || paymentMethod,
         ),
       });
@@ -1720,8 +1774,8 @@ export function usePosPage() {
 
       toast.success(
         deferPayment
-          ? "Đã tạo đơn — chờ thu COD. Xác nhận đã thu tiền trong mục Đơn hàng."
-          : "Đơn hàng đã được tạo thành công!",
+          ? t("pages.pos.toast.checkoutCodSuccess")
+          : t("pages.pos.toast.checkoutSuccess"),
       );
       setCheckoutOpen(false);
       if (orderTabs.length > 1) {
@@ -1755,7 +1809,7 @@ export function usePosPage() {
       }
     } catch (err) {
       console.error("Order creation failed", err);
-      toastPosOrderError(err, "Không thể tạo đơn hàng");
+      toastPosOrderError(err, t("pages.pos.toast.createOrderFailed"));
     } finally {
       setTransferPaymentProofFile(null);
       setSubmitting(false);

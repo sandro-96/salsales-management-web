@@ -1,0 +1,97 @@
+{
+  "title": "Gói dịch vụ & Thanh toán",
+  "gateway": {
+    "manual": "Chuyển khoản — admin xác nhận"
+  },
+  "status": {
+    "TRIAL": "Đang dùng thử",
+    "ACTIVE": "Đang hoạt động",
+    "EXPIRED": "Đã hết hạn",
+    "CANCELLED": "Đã huỷ"
+  },
+  "daysRemaining": "Còn {{count}} ngày",
+  "daysUnit": "{{count}} ngày",
+  "expiresAt": "Hết hạn {{date}}",
+  "vndPerMonth": "VND / tháng",
+  "monthsUnit": "{{count}} tháng",
+  "loading": "Đang tải…",
+  "loadingTransfer": "Đang tải thông tin chuyển khoản…",
+  "loadingHistory": "Đang tải lịch sử…",
+  "pickShopWarning": "Bạn có nhiều shop — hãy <b>chọn shop</b> trên menu (góc trên) để xem và thanh toán đúng gói cho từng shop.",
+  "payingForShop": "Thanh toán cho cửa hàng",
+  "packageStatus": "Trạng thái gói:",
+  "dataMismatch": "Dữ liệu gói chưa khớp shop đang chọn. Hãy tải lại trang hoặc đổi shop.",
+  "transfer": {
+    "thisPayment": "Thanh toán lần này (mã vừa tạo)",
+    "systemInfo": "Thông tin chuyển khoản hệ thống",
+    "bank": "Ngân hàng:",
+    "accountHolder": "Chủ TK:",
+    "accountNumber": "Số TK:",
+    "amount": "Số tiền:",
+    "transferContent": "Nội dung CK:",
+    "copy": "Copy",
+    "copySuccess": "Đã copy nội dung chuyển khoản",
+    "qrHint": "Quét mã QR để chuyển (điền sẵn số tiền / nội dung nếu hỗ trợ)",
+    "qrAlt": "QR chuyển khoản",
+    "perMonthShort": "/tháng",
+    "instructionsStatic": "Số tiền: {{amount}}{{perMonth}}.\nSau khi bấm \"Thanh toán\", hệ thống sẽ cấp mã giao dịch — vui lòng ghi đúng nội dung chuyển khoản.\nAdmin sẽ xác nhận trong thời gian làm việc; bạn nhận thông báo khi gia hạn thành công.",
+    "instructionsPayment": "1) Chuyển đúng {{amount}} tới tài khoản trên.\n2) Nội dung CK: {{content}} (bắt buộc khớp).\n3) Sau khi chuyển, chờ admin xác nhận — bạn sẽ nhận thông báo khi thanh toán được ghi nhận."
+  },
+  "reportTransfer": {
+    "hint": "Sau khi <b>đã chuyển khoản</b> đúng số tiền và nội dung, hãy bấm nút bên phải để báo admin đối soát — không thay thế xác nhận của admin.",
+    "cancelPending": "Huỷ yêu cầu chờ",
+    "cancelling": "Đang huỷ…",
+    "iTransferred": "Tôi đã chuyển khoản",
+    "sending": "Đang gửi…",
+    "reportedAt": "Đã báo admin lúc {{date}}. Vui lòng chờ xác nhận (thường trong giờ hành chính).",
+    "cancelWaiting": "Huỷ chờ xác nhận"
+  },
+  "currentStatus": {
+    "title": "Trạng thái hiện tại",
+    "description": "Mỗi shop được dùng thử miễn phí <b>30 ngày</b>. Sau thời gian dùng thử, phí dịch vụ là <b>99.000đ/tháng</b>. Thanh toán qua <b>chuyển khoản</b> — gói được gia hạn sau khi admin xác nhận đã nhận tiền.",
+    "trialRemaining": "Còn lại (dùng thử)",
+    "activeRemaining": "Còn lại (chu kỳ hiện tại)",
+    "daysRemainingLabel": "Số ngày còn lại",
+    "recurringFee": "Phí định kỳ",
+    "lastPayment": "Thanh toán gần nhất",
+    "lockedWarning": "Các thao tác ghi (thêm/sửa/xoá đơn, sản phẩm, khách hàng…) đang bị khoá. Hãy thanh toán để khôi phục quyền thao tác.",
+    "paymentMethod": "Phương thức:",
+    "payActive": "Tạo mã & gia hạn (chuyển khoản 99.000đ)",
+    "payDefault": "Tạo mã thanh toán (chuyển khoản 99.000đ)"
+  },
+  "history": {
+    "title": "Lịch sử gói & thanh toán",
+    "description": "Các thay đổi status, giao dịch thanh toán và thao tác admin (nếu có). Khi admin xác nhận, dòng <b>PAYMENT</b> sẽ ghi nhận thời gian và mã giao dịch.",
+    "empty": "Chưa có giao dịch nào.",
+    "colTime": "Thời gian",
+    "colAction": "Hành động",
+    "colPeriod": "Chu kỳ",
+    "colMethod": "Phương thức",
+    "colTxnId": "Mã giao dịch"
+  },
+  "toast": {
+    "paymentSuccess": "Thanh toán {{gateway}} thành công. Gói dịch vụ sẽ được cập nhật trong ít phút.",
+    "paymentFail": "Thanh toán {{gateway}} thất bại (mã {{code}}). Vui lòng thử lại hoặc chọn phương thức khác.",
+    "cancelConfirm": "Huỷ yêu cầu chuyển khoản đang chờ xác nhận? Sau đó bạn có thể tạo mã thanh toán mới.",
+    "cancelTitle": "Huỷ yêu cầu chờ xác nhận",
+    "cancelConfirmBtn": "Huỷ yêu cầu",
+    "cancelClose": "Đóng",
+    "cancelSuccess": "Đã huỷ yêu cầu chờ xác nhận.",
+    "cancelFail": "Không huỷ được. Thử lại hoặc liên hệ hỗ trợ.",
+    "reportFail": "Không ghi nhận được",
+    "reportSuccess": "Đã ghi nhận: bạn đã chuyển khoản. Admin sẽ đối soát và xác nhận sớm nhất.",
+    "reportFailGeneric": "Không ghi nhận được. Thử lại hoặc liên hệ hỗ trợ.",
+    "redirecting": "Đang chuyển tới cổng thanh toán…",
+    "txnCreated": "Đã tạo mã giao dịch {{id}}. Admin đã nhận thông báo — sau khi chuyển khoản, vui lòng chờ xác nhận (thường trong giờ hành chính).",
+    "requestRecorded": "Đã ghi nhận yêu cầu. Vui lòng chuyển khoản theo thông tin tài khoản — admin đã được thông báo nếu hệ thống cấu hình đủ.",
+    "payInitFail": "Không khởi tạo được thanh toán. Vui lòng thử lại sau."
+  },
+  "banner": {
+    "expired": "Gói dịch vụ đã hết hạn. Các thao tác ghi (thêm/sửa/xoá) tạm khoá cho tới khi bạn thanh toán <b>99.000đ</b> để gia hạn.",
+    "payNow": "Thanh toán ngay",
+    "trialEnding": "Bạn còn <b>{{days}} ngày</b> dùng thử. Sau đó cần thanh toán 99.000đ/tháng để tiếp tục sử dụng.",
+    "viewDetails": "Xem chi tiết",
+    "renewSoon": "Gói của bạn sẽ hết hạn trong <b>{{days}} ngày</b>. Gia hạn sớm để không bị gián đoạn.",
+    "renew": "Gia hạn"
+  }
+}

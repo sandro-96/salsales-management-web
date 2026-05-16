@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import {
   Search,
   Plus,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/select";
 
 import { PosTaxBreakdown } from "./PosTaxBreakdown";
+import { posNumberLocale } from "../../utils/posHelpers";
 
 export function CartPanel({
   cart,
@@ -76,6 +78,8 @@ export function CartPanel({
   onQuickSwitchTable,
   canPay = true,
 }) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = posNumberLocale(i18n.language);
   const [tableOpsOpen, setTableOpsOpen] = useState(false);
   const hasGuestInfo = Boolean((guestName ?? "").trim() || (guestPhone ?? "").trim());
   const [customerOpen, setCustomerOpen] = useState(
@@ -88,7 +92,7 @@ export function CartPanel({
       <div className="p-3 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-4 w-4" />
-          <span className="font-semibold text-sm">Đơn hàng</span>
+          <span className="font-semibold text-sm">{t("pages.pos.cart.title")}</span>
           {totalItems > 0 && (
             <Badge variant="secondary" className="text-xs">
               {totalItems}
@@ -102,7 +106,7 @@ export function CartPanel({
             className="text-xs h-7 text-destructive"
             onClick={clearCart}
           >
-            Xóa tất cả
+            {t("pages.pos.cart.clearAll")}
           </Button>
         )}
       </div>
@@ -124,7 +128,7 @@ export function CartPanel({
             )}
             <span className="flex items-center gap-0.5 text-[10px] text-yellow-600 font-medium shrink-0">
               <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
-              {(selectedCustomer.loyaltyPoints ?? 0).toLocaleString("vi-VN")}
+              {(selectedCustomer.loyaltyPoints ?? 0).toLocaleString(numberLocale)}
             </span>
           </div>
           <Button
@@ -144,7 +148,7 @@ export function CartPanel({
         >
           <UserRound className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="flex-1 min-w-0 text-xs font-medium truncate">
-            {(guestName ?? "").trim() || "Khách ghi nhận"}
+            {(guestName ?? "").trim() || t("pages.pos.cart.guestRecorded")}
             {(guestPhone ?? "").trim() ? (
               <span className="text-muted-foreground font-normal">
                 {" "}· {guestPhone}
@@ -160,28 +164,28 @@ export function CartPanel({
           className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors rounded-md px-2.5 py-1.5 border border-dashed border-muted-foreground/30"
         >
           <UserRound className="h-3.5 w-3.5" />
-          <span>Thêm thông tin khách</span>
+          <span>{t("pages.pos.cart.addGuestInfo")}</span>
           <ChevronDown className="h-3.5 w-3.5" />
         </button>
       ) : (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium text-muted-foreground">
-              Thông tin khách
+              {t("pages.pos.cart.guestInfo")}
             </span>
             <button
               type="button"
               onClick={() => setCustomerOpen(false)}
               className="flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground"
             >
-              Thu gọn
+              {t("pages.pos.cart.collapse")}
               <ChevronUp className="h-3.5 w-3.5" />
             </button>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Tìm khách hàng (tên, SĐT)..."
+              placeholder={t("pages.pos.cart.searchCustomerPlaceholder")}
               className="h-8 text-xs pl-7"
               onChange={(e) => onCustomerSearch(e.target.value)}
             />
@@ -206,7 +210,7 @@ export function CartPanel({
                     </div>
                     <span className="flex items-center gap-0.5 text-[10px] text-yellow-600 shrink-0">
                       <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
-                      {(c.loyaltyPoints ?? 0).toLocaleString("vi-VN")}
+                      {(c.loyaltyPoints ?? 0).toLocaleString(numberLocale)}
                     </span>
                   </button>
                 ))}
@@ -216,16 +220,16 @@ export function CartPanel({
 
           <div className="space-y-1.5 rounded-md border border-dashed border-muted-foreground/25 px-2.5 py-2 bg-muted/20">
             <p className="text-[10px] text-muted-foreground leading-tight">
-              Ghi nhận khách trên đơn (không gắn tích điểm)
+              {t("pages.pos.cart.guestNoteHint")}
             </p>
             <Input
-              placeholder="Tên khách (ghi nhận)"
+              placeholder={t("pages.pos.cart.guestNamePlaceholder")}
               className="h-8 text-xs"
               value={guestName ?? ""}
               onChange={(e) => setGuestName(e.target.value)}
             />
             <Input
-              placeholder="Số điện thoại (ghi nhận)"
+              placeholder={t("pages.pos.cart.guestPhonePlaceholder")}
               className="h-8 text-xs"
               value={guestPhone ?? ""}
               onChange={(e) => setGuestPhone(e.target.value)}
@@ -241,29 +245,29 @@ export function CartPanel({
             onValueChange={setSelectedTableId}
           >
             <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Chọn bàn (tuỳ chọn)" />
+              <SelectValue placeholder={t("pages.pos.cart.selectTablePlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none" className="text-xs">
-                Không chọn bàn
+                {t("pages.pos.cart.noTable")}
               </SelectItem>
-              {availableTables.map((t) => (
+              {availableTables.map((tbl) => (
                 <SelectItem
-                  key={t.id}
-                  value={t.id}
-                  disabled={t.status === "CLOSED"}
+                  key={tbl.id}
+                  value={tbl.id}
+                  disabled={tbl.status === "CLOSED"}
                   className={[
                     "text-xs rounded-sm my-0.5",
-                    t.alwaysAvailable &&
-                      t.status !== "CLOSED" &&
+                    tbl.alwaysAvailable &&
+                      tbl.status !== "CLOSED" &&
                       "bg-sky-50 text-sky-900 focus:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-100 dark:focus:bg-sky-500/25",
-                    !t.alwaysAvailable &&
-                      t.status === "AVAILABLE" &&
+                    !tbl.alwaysAvailable &&
+                      tbl.status === "AVAILABLE" &&
                       "bg-emerald-50 text-emerald-900 focus:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-100 dark:focus:bg-emerald-500/25",
-                    !t.alwaysAvailable &&
-                      t.status === "OCCUPIED" &&
+                    !tbl.alwaysAvailable &&
+                      tbl.status === "OCCUPIED" &&
                       "bg-amber-50 text-amber-950 focus:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-100 dark:focus:bg-amber-500/25",
-                    t.status === "CLOSED" &&
+                    tbl.status === "CLOSED" &&
                       "bg-slate-100 text-slate-500 line-through opacity-80 dark:bg-muted dark:text-muted-foreground",
                   ]
                     .filter(Boolean)
@@ -271,38 +275,45 @@ export function CartPanel({
                 >
                   <span className="flex items-center justify-between gap-2 w-full">
                     <span className="truncate">
-                      {t.name} {t.capacity ? `(${t.capacity} chỗ)` : ""}
+                      {tbl.name}{" "}
+                      {tbl.capacity
+                        ? t("pages.pos.cart.capacitySeats", {
+                            count: tbl.capacity,
+                          })
+                        : ""}
                     </span>
                     <span className="flex items-center gap-1 shrink-0">
                       <span
                         className={[
                           "text-[10px] font-medium px-1.5 py-0.5 rounded",
-                          t.alwaysAvailable &&
-                            t.status !== "CLOSED" &&
+                          tbl.alwaysAvailable &&
+                            tbl.status !== "CLOSED" &&
                             "bg-sky-100 text-sky-900 dark:bg-sky-500/25 dark:text-sky-100",
-                          !t.alwaysAvailable &&
-                            t.status === "AVAILABLE" &&
+                          !tbl.alwaysAvailable &&
+                            tbl.status === "AVAILABLE" &&
                             "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/25 dark:text-emerald-100",
-                          !t.alwaysAvailable &&
-                            t.status === "OCCUPIED" &&
+                          !tbl.alwaysAvailable &&
+                            tbl.status === "OCCUPIED" &&
                             "bg-amber-100 text-amber-900 dark:bg-amber-500/25 dark:text-amber-100",
-                          t.status === "CLOSED" &&
+                          tbl.status === "CLOSED" &&
                             "bg-slate-200 text-slate-700 dark:bg-muted dark:text-muted-foreground",
                         ]
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        {t.status === "CLOSED"
-                          ? "Đóng"
-                          : t.alwaysAvailable
-                            ? "Luôn trống"
-                            : t.status === "AVAILABLE"
-                              ? "Trống"
-                              : "Đang phục vụ"}
+                        {tbl.status === "CLOSED"
+                          ? t("pages.pos.cart.tableStatusClosed")
+                          : tbl.alwaysAvailable
+                            ? t("pages.pos.cart.tableStatusAlwaysAvailable")
+                            : tbl.status === "AVAILABLE"
+                              ? t("pages.pos.cart.tableStatusAvailable")
+                              : t("pages.pos.cart.tableStatusOccupied")}
                       </span>
-                      {activeGroup?.tableIds?.includes?.(t.id) ? (
+                      {activeGroup?.tableIds?.includes?.(tbl.id) ? (
                         <span className="text-[10px] text-muted-foreground">
-                          {activeGroup.name ? activeGroup.name : "Nhóm"}
+                          {activeGroup.name
+                            ? activeGroup.name
+                            : t("pages.pos.cart.groupFallback")}
                         </span>
                       ) : null}
                     </span>
@@ -318,7 +329,7 @@ export function CartPanel({
               className="h-8 text-xs w-full"
               onClick={onOpenMoveTableDialog}
             >
-              Đổi bàn
+              {t("pages.pos.cart.moveTable")}
             </Button>
           )}
           <Button
@@ -327,7 +338,7 @@ export function CartPanel({
             className="h-8 text-xs w-full justify-between font-normal text-muted-foreground hover:text-foreground px-2"
             onClick={() => setTableOpsOpen((o) => !o)}
           >
-            <span>Ghép bàn · Tách món · Gộp bill</span>
+            <span>{t("pages.pos.cart.tableOpsToggle")}</span>
             {tableOpsOpen ? (
               <ChevronUp className="h-3.5 w-3.5 shrink-0" />
             ) : (
@@ -349,20 +360,17 @@ export function CartPanel({
                         className="h-7 px-2 text-[11px]"
                         onClick={() => onQuickSwitchTable(id)}
                       >
-                        {tables.find((t) => t.id === id)?.name || id}
+                        {tables.find((tbl) => tbl.id === id)?.name || id}
                       </Button>
                     ))}
                 </div>
               )}
               {activeGroup?.tableIds?.length > 1 && (
                 <p className="text-[10px] text-muted-foreground leading-snug">
-                  Ghép bàn giúp mở nhanh các đơn theo từng bàn trong nhóm. Mặc
-                  định vẫn thanh toán{" "}
-                  <span className="font-medium">theo từng đơn</span> (chọn
-                  tab/bàn → <span className="font-medium">Thanh toán</span>). Nếu
-                  muốn 1 hoá đơn chung, dùng{" "}
-                  <span className="font-medium">Gộp bill nhóm</span> (đơn khác
-                  sẽ huỷ).
+                  <Trans
+                    i18nKey="pages.pos.cart.mergeGroupHint"
+                    components={{ b: <span className="font-medium" /> }}
+                  />
                 </p>
               )}
               {activeGroup?.tableIds?.length > 1 && (
@@ -376,7 +384,7 @@ export function CartPanel({
                   {mergeGroupBusy && (
                     <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
                   )}
-                  Gộp bill nhóm
+                  {t("pages.pos.cart.mergeGroupBill")}
                 </Button>
               )}
               <div className="grid grid-cols-2 gap-2">
@@ -386,7 +394,7 @@ export function CartPanel({
                   className="h-8 text-xs"
                   onClick={onOpenGroupDialog}
                 >
-                  Ghép bàn
+                  {t("pages.pos.cart.mergeTables")}
                 </Button>
                 <Button
                   type="button"
@@ -395,7 +403,7 @@ export function CartPanel({
                   onClick={onOpenSplitDialog}
                   disabled={splitDisabled}
                 >
-                  Tách món
+                  {t("pages.pos.cart.splitItems")}
                 </Button>
               </div>
             </div>
@@ -409,9 +417,9 @@ export function CartPanel({
         <div className="flex items-center justify-center h-48 text-muted-foreground">
           <div className="text-center">
             <Receipt className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-xs">Chưa có sản phẩm nào</p>
+            <p className="text-xs">{t("pages.pos.cart.emptyCartTitle")}</p>
             <p className="text-[10px] mt-1">
-              Nhấn vào sản phẩm để thêm vào đơn
+              {t("pages.pos.cart.emptyCartHint")}
             </p>
           </div>
         </div>
@@ -440,15 +448,15 @@ export function CartPanel({
                   {item.hasDiscount ? (
                     <>
                       <span className="text-[11px] line-through text-muted-foreground">
-                        {item.originalPrice.toLocaleString("vi-VN")}₫
+                        {item.originalPrice.toLocaleString(numberLocale)}₫
                       </span>
                       <span className="text-[11px] font-semibold text-emerald-600">
-                        {item.price.toLocaleString("vi-VN")}₫
+                        {item.price.toLocaleString(numberLocale)}₫
                       </span>
                     </>
                   ) : (
                     <span className="text-[11px] text-muted-foreground">
-                      {item.price.toLocaleString("vi-VN")} ₫
+                      {item.price.toLocaleString(numberLocale)} ₫
                     </span>
                   )}
                 </div>
@@ -537,7 +545,7 @@ export function CartPanel({
                     (item.sellByWeight
                       ? Number(item.weight ?? 0)
                       : item.quantity)
-                  ).toLocaleString("vi-VN")}{" "}
+                  ).toLocaleString(numberLocale)}{" "}
                   ₫
                 </span>
               </div>
@@ -549,7 +557,7 @@ export function CartPanel({
 
     <div className="p-3 border-t">
       <Textarea
-        placeholder="Ghi chú đơn hàng..."
+        placeholder={t("pages.pos.cart.orderNotePlaceholder")}
         value={note}
         onChange={(e) => setNote(e.target.value)}
         className="text-xs min-h-[56px] resize-none"
@@ -561,28 +569,28 @@ export function CartPanel({
       {totalSavings > 0 && (
         <div className="flex justify-between items-center text-xs">
           <span className="text-emerald-600 flex items-center gap-1">
-            <Tag className="h-3 w-3" /> Tiết kiệm
+            <Tag className="h-3 w-3" /> {t("pages.pos.cart.savings")}
           </span>
           <span className="text-emerald-600 font-semibold tabular-nums">
-            -{totalSavings.toLocaleString("vi-VN")} ₫
+            -{totalSavings.toLocaleString(numberLocale)} ₫
           </span>
         </div>
       )}
       <div className="flex justify-between items-center">
-        <span className="text-sm text-muted-foreground">Tạm tính</span>
+        <span className="text-sm text-muted-foreground">{t("pages.pos.cart.subtotal")}</span>
         <span
           className={`tabular-nums font-semibold ${
             taxPreview || taxPreviewLoading ? "text-sm" : "text-lg font-bold"
           }`}
         >
-          {subtotal.toLocaleString("vi-VN")} ₫
+          {subtotal.toLocaleString(numberLocale)} ₫
         </span>
       </div>
       {pointsToRedeem > 0 && (
         <div className="flex justify-between items-center text-xs">
-          <span className="text-muted-foreground">Giảm điểm</span>
+          <span className="text-muted-foreground">{t("pages.pos.cart.pointsDiscount")}</span>
           <span className="text-emerald-600 font-medium tabular-nums">
-            -{(pointsToRedeem * 1000).toLocaleString("vi-VN")} ₫
+            -{(pointsToRedeem * 1000).toLocaleString(numberLocale)} ₫
           </span>
         </div>
       )}
@@ -597,7 +605,7 @@ export function CartPanel({
           onClick={onHoldOrder}
         >
           <Receipt className="h-4 w-4 mr-2" />
-          Treo / Lưu
+          {t("pages.pos.cart.holdSave")}
         </Button>
         {/* <Button
           variant="outline"
@@ -616,12 +624,14 @@ export function CartPanel({
           onClick={onCheckout}
         >
           <ShoppingCart className="h-4 w-4 mr-2" />
-          Thanh toán ({totalItems} món)
+          {t("pages.pos.cart.checkoutWithCount", { count: totalItems })}
         </Button>
       ) : (
         <p className="text-[11px] text-muted-foreground text-center px-2">
-          Bạn không có quyền thanh toán. Hãy{" "}
-          <span className="font-medium">Treo / Lưu</span> đơn để thu ngân xử lý.
+          <Trans
+            i18nKey="pages.pos.cart.noPayPermission"
+            components={{ b: <span className="font-medium" /> }}
+          />
         </p>
       )}
     </div>

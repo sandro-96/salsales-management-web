@@ -1,0 +1,97 @@
+{
+  "title": "Subscription & Billing",
+  "gateway": {
+    "manual": "Bank transfer — admin confirmation"
+  },
+  "status": {
+    "TRIAL": "Trial",
+    "ACTIVE": "Active",
+    "EXPIRED": "Expired",
+    "CANCELLED": "Cancelled"
+  },
+  "daysRemaining": "{{count}} days left",
+  "daysUnit": "{{count}} days",
+  "expiresAt": "Expires {{date}}",
+  "vndPerMonth": "VND / month",
+  "monthsUnit": "{{count}} months",
+  "loading": "Loading…",
+  "loadingTransfer": "Loading transfer details…",
+  "loadingHistory": "Loading history…",
+  "pickShopWarning": "You have multiple shops — <b>select a shop</b> from the menu (top) to view and pay for the correct subscription.",
+  "payingForShop": "Billing for shop",
+  "packageStatus": "Plan status:",
+  "dataMismatch": "Subscription data does not match the selected shop. Reload the page or switch shops.",
+  "transfer": {
+    "thisPayment": "This payment (code just created)",
+    "systemInfo": "System bank transfer details",
+    "bank": "Bank:",
+    "accountHolder": "Account holder:",
+    "accountNumber": "Account no.:",
+    "amount": "Amount:",
+    "transferContent": "Transfer memo:",
+    "copy": "Copy",
+    "copySuccess": "Transfer memo copied",
+    "qrHint": "Scan QR to pay (amount/memo prefilled when supported)",
+    "qrAlt": "Transfer QR code",
+    "perMonthShort": "/month",
+    "instructionsStatic": "Amount: {{amount}}{{perMonth}}.\nAfter you click \"Pay\", the system will provide a transaction ID — please use the exact transfer memo.\nAn admin will confirm during business hours; you will be notified when renewal succeeds.",
+    "instructionsPayment": "1) Transfer exactly {{amount}} to the account above.\n2) Transfer memo: {{content}} (must match exactly).\n3) After transferring, wait for admin confirmation — you will be notified when payment is recorded."
+  },
+  "reportTransfer": {
+    "hint": "After you have <b>transferred</b> the correct amount and memo, click the button on the right to notify admin for reconciliation — this does not replace admin confirmation.",
+    "cancelPending": "Cancel pending request",
+    "cancelling": "Cancelling…",
+    "iTransferred": "I have transferred",
+    "sending": "Sending…",
+    "reportedAt": "Admin notified at {{date}}. Please wait for confirmation (usually during business hours).",
+    "cancelWaiting": "Cancel pending confirmation"
+  },
+  "currentStatus": {
+    "title": "Current status",
+    "description": "Each shop gets a free <b>30-day</b> trial. After the trial, the fee is <b>99,000 VND/month</b>. Pay by <b>bank transfer</b> — your plan is extended after admin confirms receipt.",
+    "trialRemaining": "Remaining (trial)",
+    "activeRemaining": "Remaining (current period)",
+    "daysRemainingLabel": "Days remaining",
+    "recurringFee": "Recurring fee",
+    "lastPayment": "Last payment",
+    "lockedWarning": "Write operations (create/edit/delete orders, products, customers…) are locked. Pay to restore access.",
+    "paymentMethod": "Method:",
+    "payActive": "Create code & renew (bank transfer 99,000 VND)",
+    "payDefault": "Create payment code (bank transfer 99,000 VND)"
+  },
+  "history": {
+    "title": "Plan & payment history",
+    "description": "Status changes, payment transactions, and admin actions (if any). When admin confirms, the <b>PAYMENT</b> row records time and transaction ID.",
+    "empty": "No transactions yet.",
+    "colTime": "Time",
+    "colAction": "Action",
+    "colPeriod": "Period",
+    "colMethod": "Method",
+    "colTxnId": "Transaction ID"
+  },
+  "toast": {
+    "paymentSuccess": "{{gateway}} payment successful. Your plan will update within a few minutes.",
+    "paymentFail": "{{gateway}} payment failed (code {{code}}). Please try again or choose another method.",
+    "cancelConfirm": "Cancel the pending transfer request? You can create a new payment code afterwards.",
+    "cancelTitle": "Cancel pending request",
+    "cancelConfirmBtn": "Cancel request",
+    "cancelClose": "Close",
+    "cancelSuccess": "Pending request cancelled.",
+    "cancelFail": "Could not cancel. Try again or contact support.",
+    "reportFail": "Could not record transfer",
+    "reportSuccess": "Recorded: you reported the transfer. Admin will reconcile and confirm soon.",
+    "reportFailGeneric": "Could not record. Try again or contact support.",
+    "redirecting": "Redirecting to payment gateway…",
+    "txnCreated": "Transaction {{id}} created. Admin has been notified — after you transfer, please wait for confirmation (usually during business hours).",
+    "requestRecorded": "Request recorded. Please transfer using the account details — admin is notified when configured.",
+    "payInitFail": "Could not start payment. Please try again later."
+  },
+  "banner": {
+    "expired": "Your subscription has expired. Write operations are locked until you pay <b>99,000 VND</b> to renew.",
+    "payNow": "Pay now",
+    "trialEnding": "You have <b>{{days}} days</b> left on trial. After that, pay 99,000 VND/month to continue.",
+    "viewDetails": "View details",
+    "renewSoon": "Your plan expires in <b>{{days}} days</b>. Renew early to avoid interruption.",
+    "renew": "Renew"
+  }
+}

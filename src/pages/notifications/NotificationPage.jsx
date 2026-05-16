@@ -25,6 +25,10 @@ import {
   deleteNotification,
 } from "../../api/notificationApi.js";
 import { WebSocketMessageTypes } from "../../constants/websocket.js";
+import {
+  getNotificationMessage,
+  getNotificationTitle,
+} from "../../utils/notificationI18n.js";
 
 const NOTIFICATION_TYPE_ICON = {
   ORDER_CREATED: "🛒",
@@ -35,6 +39,12 @@ const NOTIFICATION_TYPE_ICON = {
   TICKET_CREATED: "🎫",
   TICKET_REPLIED: "💬",
   TICKET_STATUS_CHANGED: "🔄",
+  BILLING_PAYMENT_SUCCESS: "✅",
+  BILLING_PAYMENT_FAILED: "❌",
+  BILLING_MANUAL_TRANSFER_PENDING: "🏦",
+  BILLING_PLAN_EXPIRING_SOON: "⏳",
+  BILLING_PLAN_EXPIRED: "⚠️",
+  BROADCAST: "📢",
   SYSTEM: "⚙️",
 };
 
@@ -252,7 +262,7 @@ const NotificationPage = () => {
                       <div className="flex flex-col gap-1">
                         <div className="flex items-start gap-2 min-w-0">
                           <span className="text-sm font-medium break-words flex-1 min-w-0">
-                            {n.title}
+                            {getNotificationTitle(t, n)}
                           </span>
                           {!n.read && (
                             <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
@@ -265,7 +275,7 @@ const NotificationPage = () => {
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground mt-2 break-words">
-                        {n.message}
+                        {getNotificationMessage(t, n)}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-muted-foreground">

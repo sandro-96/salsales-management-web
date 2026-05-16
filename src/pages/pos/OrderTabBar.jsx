@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ export function OrderTabBar({
   onClose,
   tables,
 }) {
+  const { t } = useTranslation();
   return (
     <div className="border-b flex items-center gap-0.5 px-1.5 pt-1.5 overflow-x-auto bg-muted/30">
       {tabs.map((tab) => {
@@ -18,11 +20,15 @@ export function OrderTabBar({
         const itemCount = tab.cart.reduce((s, i) => s + i.quantity, 0);
         const tableName =
           tab.tableId && tab.tableId !== "none"
-            ? tables.find((t) => t.id === tab.tableId)?.name
+            ? tables.find((tbl) => tbl.id === tab.tableId)?.name
             : null;
         const codeLabel = tab.displayOrderCode || null;
         const label =
-          codeLabel || tableName || (tab.orderId ? "Đơn" : `Đơn ${tab.id}`);
+          codeLabel ||
+          tableName ||
+          (tab.orderId
+            ? t("pages.pos.tabs.placedOrderFallback")
+            : t("pages.pos.tabs.draftOrder", { id: tab.id }));
         return (
           <button
             key={tab.id}
@@ -47,7 +53,7 @@ export function OrderTabBar({
               <span
                 role="button"
                 tabIndex={0}
-                aria-label="Đóng đơn"
+                aria-label={t("pages.pos.tabs.closeTabAria")}
                 className="ml-0.5 shrink-0 inline-flex items-center justify-center rounded p-1 -m-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity active:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -71,7 +77,7 @@ export function OrderTabBar({
         type="button"
         onClick={onAdd}
         className="flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 ml-0.5"
-        title="Thêm đơn mới"
+        title={t("pages.pos.tabs.addTabTitle")}
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

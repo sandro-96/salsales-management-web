@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   Copy,
   History,
@@ -62,6 +63,8 @@ import {
 import {
   PRODUCT_UNITS,
   PRODUCT_CATEGORIES,
+  translateProductUnit,
+  translateProductCategory,
 } from "@/constants/productConstants.js";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -70,8 +73,10 @@ const isCustomUnit = (val) =>
 const isCustomCategory = (val) =>
   !!val && !PRODUCT_CATEGORIES.find((c) => c.value === val);
 
-const formatVND = (val) =>
-  val != null && val !== 0 ? Number(val).toLocaleString("vi-VN") + " ₫" : "-";
+const formatVND = (val, locale = "vi-VN") =>
+  val != null && val !== 0
+    ? Number(val).toLocaleString(locale) + " ₫"
+    : "-";
 
 const RECENT_PRODUCT_NAMES_KEY = "recentProductNames";
 const RECENT_PRODUCT_NAMES_MAX = 25;
@@ -103,6 +108,7 @@ function rememberProductName(name) {
 
 // ── ReadOnly display ─────────────────────────────────────────────────────────
 function ReadOnlyValue({ value, variant = "single", className }) {
+  const { t } = useTranslation();
   const text = value != null && value !== "" ? String(value) : "-";
   const textClass =
     variant === "multi"
@@ -123,13 +129,13 @@ function ReadOnlyValue({ value, variant = "single", className }) {
         <button
           type="button"
           className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label="Sao chép"
+          aria-label={t("pages.products.form.copy")}
           onClick={(e) => {
             e.stopPropagation();
             navigator.clipboard
               .writeText(String(value))
-              .then(() => toast.success("Đã sao chép!"))
-              .catch(() => toast.error("Không thể sao chép"));
+              .then(() => toast.success(t("pages.products.form.copied")))
+              .catch(() => toast.error(t("pages.products.form.copyFail")));
           }}
         >
           <Copy className="h-4 w-4" />
@@ -145,41 +151,44 @@ const variantAttributeSchema = z.object({
   value: z.string(),
 });
 
-const variantSchema = z.object({
-  variantId: z.string().optional(),
-  name: z.string().min(1, "Tên biến thể không được để trống"),
-  sku: z.string().optional().nullable(),
-  price: z.coerce.number().min(0).default(0),
-  costPrice: z.coerce.number().min(0).default(0),
-  images: z.array(z.string()).optional().default([]),
-  attributes: z.array(variantAttributeSchema).default([]),
-});
+function buildVariantSchema(t) {
+  return z.object({
+    variantId: z.string().optional(),
+    name: z.string().min(1, t("pages.products.form.validation.variantNameRequired")),
+    sku: z.string().optional().nullable(),
+    price: z.coerce.number().min(0).default(0),
+    costPrice: z.coerce.number().min(0).default(0),
+    images: z.array(z.string()).optional().default([]),
+    attributes: z.array(variantAttributeSchema).default([]),
+  });
+}
 
-// ── Zod Schema ───────────────────────────────────────────────────────────────
-const formSchema = z.object({
-  // Product fields
-  name: z.string().min(1, "Tên sản phẩm không được để trống."),
-  sku: z
-    .string()
-    .min(1, "SKU không được để trống.")
-    .regex(/^[A-Z0-9_]*$/, "SKU chỉ chứa chữ IN HOA, số và dấu _"),
-  unit: z.string().min(1, "Đơn vị tính không được để trống."),
-  category: z.string().optional().nullable(),
-  barcode: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
-  supplierId: z.string().optional().nullable(),
-  defaultPrice: z.coerce
-    .number({ invalid_type_error: "Vui lòng nhập giá bán mặc định." })
-    .positive("Giá bán mặc định phải > 0"),
-  costPrice: z.coerce.number().min(0).default(0),
-  active: z.boolean().default(true),
-  trackInventory: z.boolean().default(false),
-  sellByWeight: z.boolean().default(false),
-  reason: z.string().optional().nullable(),
-  variants: z.array(variantSchema).default([]),
-  /** ID topping shop được phép chọn khi bán */
-  assignedToppingIds: z.array(z.string()).default([]),
-});
+function buildFormSchema(t) {
+  return z.object({
+    name: z.string().min(1, t("pages.products.form.validation.nameRequired")),
+    sku: z
+      .string()
+      .min(1, t("pages.products.form.validation.skuRequired"))
+      .regex(/^[A-Z0-9_]*$/, t("pages.products.form.validation.skuFormat")),
+    unit: z.string().min(1, t("pages.products.form.validation.unitRequired")),
+    category: z.string().optional().nullable(),
+    barcode: z.string().optional().nullable(),
+    description: z.string().optional().nullable(),
+    supplierId: z.string().optional().nullable(),
+    defaultPrice: z.coerce
+      .number({
+        invalid_type_error: t("pages.products.form.validation.defaultPriceRequired"),
+      })
+      .positive(t("pages.products.form.validation.defaultPricePositive")),
+    costPrice: z.coerce.number().min(0).default(0),
+    active: z.boolean().default(true),
+    trackInventory: z.boolean().default(false),
+    sellByWeight: z.boolean().default(false),
+    reason: z.string().optional().nullable(),
+    variants: z.array(buildVariantSchema(t)).default([]),
+    assignedToppingIds: z.array(z.string()).default([]),
+  });
+}
 
 // ── Variant Card ─────────────────────────────────────────────────────────────
 function VariantCard({
@@ -193,6 +202,8 @@ function VariantCard({
   maxVariantImages,
   allowedImageTypes,
 }) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const { setValue, getValues } = useFormContext();
   const [variantFileInputKey, setVariantFileInputKey] = useState(0);
   const imageUrls =
@@ -236,18 +247,22 @@ function VariantCard({
     const pend = variantMedia[fieldId] ?? { files: [], previews: [] };
     const remaining = maxVariantImages - urlsNow.length - pend.files.length;
     if (remaining <= 0) {
-      toast.error(`Tối đa ${maxVariantImages} ảnh / biến thể.`);
+      toast.error(
+        t("pages.products.form.maxVariantImages", { max: maxVariantImages }),
+      );
       return;
     }
     const toProcess = selected.slice(0, remaining);
     if (selected.length > remaining) {
-      toast.warning(`Chỉ thêm ${remaining} ảnh cho biến thể này.`);
+      toast.warning(
+        t("pages.products.form.variantImagesRemaining", { count: remaining }),
+      );
     }
     const invalid = toProcess.filter(
       (f) => !allowedImageTypes.includes(f.type),
     );
     if (invalid.length) {
-      toast.error("Chỉ hỗ trợ JPG, PNG hoặc WEBP.");
+      toast.error(t("pages.products.form.imageTypeError"));
       return;
     }
     const processed = await Promise.all(
@@ -286,7 +301,9 @@ function VariantCard({
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm font-medium">Biến thể #{nestIndex + 1}</span>
+        <span className="text-sm font-medium">
+          {t("pages.products.form.variantNumber", { n: nestIndex + 1 })}
+        </span>
         {!isReadOnly && (
           <button
             type="button"
@@ -306,13 +323,17 @@ function VariantCard({
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-xs">
-                Tên biến thể <span className="text-red-500">*</span>
+                {t("pages.products.form.variantName")}{" "}
+                <span className="text-red-500">*</span>
               </FormLabel>
               {isReadOnly ? (
                 <ReadOnlyValue value={field.value} />
               ) : (
                 <FormControl>
-                  <Input placeholder="VD: Màu đỏ, Size L..." {...field} />
+                  <Input
+                    placeholder={t("pages.products.form.variantNamePlaceholder")}
+                    {...field}
+                  />
                 </FormControl>
               )}
               <FormMessage />
@@ -324,13 +345,15 @@ function VariantCard({
           name={`variants.${nestIndex}.sku`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs">SKU biến thể</FormLabel>
+              <FormLabel className="text-xs">
+                {t("pages.products.form.variantSku")}
+              </FormLabel>
               {isReadOnly ? (
                 <ReadOnlyValue value={field.value} />
               ) : (
                 <FormControl>
                   <Input
-                    placeholder="VD: SP001-RED-L"
+                    placeholder={t("pages.products.form.variantSkuPlaceholder")}
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) =>
@@ -352,9 +375,11 @@ function VariantCard({
           name={`variants.${nestIndex}.price`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs">Giá bán</FormLabel>
+              <FormLabel className="text-xs">
+                {t("pages.products.form.salePrice")}
+              </FormLabel>
               {isReadOnly ? (
-                <ReadOnlyValue value={formatVND(field.value)} />
+                <ReadOnlyValue value={formatVND(field.value, numberLocale)} />
               ) : (
                 <FormControl>
                   <NumericInput
@@ -376,9 +401,11 @@ function VariantCard({
           name={`variants.${nestIndex}.costPrice`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs">Giá vốn</FormLabel>
+              <FormLabel className="text-xs">
+                {t("pages.products.form.costPrice")}
+              </FormLabel>
               {isReadOnly ? (
-                <ReadOnlyValue value={formatVND(field.value)} />
+                <ReadOnlyValue value={formatVND(field.value, numberLocale)} />
               ) : (
                 <FormControl>
                   <NumericInput
@@ -401,7 +428,10 @@ function VariantCard({
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs font-medium text-muted-foreground">
-            Hình ảnh biến thể ({urlCount + pendingCount}/{maxVariantImages})
+            {t("pages.products.form.variantImagesLabel", {
+              current: urlCount + pendingCount,
+              max: maxVariantImages,
+            })}
           </span>
           {!isReadOnly && canAddMore && (
             <label className="cursor-pointer">
@@ -415,7 +445,7 @@ function VariantCard({
               />
               <span className="inline-flex items-center gap-1 text-xs text-primary border border-primary rounded px-2 py-0.5 hover:bg-primary/10 transition-colors">
                 <ImagePlus className="w-3 h-3" />
-                Thêm ảnh
+                {t("pages.products.form.addImage")}
               </span>
             </label>
           )}
@@ -433,7 +463,7 @@ function VariantCard({
                     type="button"
                     onClick={() => removeSavedVariantImage(i)}
                     className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white p-0.5 hover:bg-black/80"
-                    aria-label="Xóa ảnh"
+                    aria-label={t("pages.products.form.removeImage")}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -451,7 +481,7 @@ function VariantCard({
                     type="button"
                     onClick={() => removePendingVariantImage(i)}
                     className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white p-0.5 hover:bg-black/80"
-                    aria-label="Bỏ ảnh mới"
+                    aria-label={t("pages.products.form.discardNewImage")}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -462,7 +492,7 @@ function VariantCard({
         )}
         {!isReadOnly && urlCount === 0 && pendingCount === 0 && (
           <p className="text-xs text-muted-foreground italic">
-            Chưa có ảnh riêng cho biến thể này.
+            {t("pages.products.form.noVariantImagesYet")}
           </p>
         )}
       </div>
@@ -471,7 +501,7 @@ function VariantCard({
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs font-medium text-muted-foreground">
-            Thuộc tính
+            {t("pages.products.form.attributes")}
           </span>
           {!isReadOnly && (
             <button
@@ -480,14 +510,16 @@ function VariantCard({
               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
             >
               <Plus className="w-3 h-3" />
-              Thêm thuộc tính
+              {t("pages.products.form.addAttribute")}
             </button>
           )}
         </div>
 
         {attrFields.length === 0 && (
           <p className="text-xs text-muted-foreground italic">
-            {isReadOnly ? "Không có thuộc tính" : "Chưa có thuộc tính."}
+            {isReadOnly
+              ? t("pages.products.form.noAttributes")
+              : t("pages.products.form.noAttributesYet")}
           </p>
         )}
 
@@ -502,7 +534,10 @@ function VariantCard({
                     <ReadOnlyValue value={field.value} />
                   ) : (
                     <FormControl>
-                      <Input placeholder="Tên (VD: Màu sắc)" {...field} />
+                      <Input
+                        placeholder={t("pages.products.form.attrNamePlaceholder")}
+                        {...field}
+                      />
                     </FormControl>
                   )}
                   <FormMessage />
@@ -521,7 +556,10 @@ function VariantCard({
                     <ReadOnlyValue value={field.value} />
                   ) : (
                     <FormControl>
-                      <Input placeholder="Giá trị (VD: Đỏ)" {...field} />
+                      <Input
+                        placeholder={t("pages.products.form.attrValuePlaceholder")}
+                        {...field}
+                      />
                     </FormControl>
                   )}
                   <FormMessage />
@@ -555,6 +593,9 @@ export default function ProductForm({
   onCancel,
   handleDelete,
 }) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const formSchema = useMemo(() => buildFormSchema(t), [t]);
   const isReadOnly = mode === "view";
   const isCreate = mode === "create";
 
@@ -630,10 +671,10 @@ export default function ProductForm({
       const sku = res.data?.data;
       if (sku) {
         form.setValue("sku", String(sku).toUpperCase(), { shouldDirty: true });
-        toast.success("Đã gợi ý mã SKU.");
+        toast.success(t("pages.products.form.skuSuggested"));
       }
     } catch {
-      toast.error("Không thể lấy gợi ý SKU.");
+      toast.error(t("pages.products.form.skuSuggestFail"));
     } finally {
       setSuggestingSkU(false);
     }
@@ -646,16 +687,17 @@ export default function ProductForm({
       const resolved = resolveBarcodeForSave(barcode);
       if (resolved) bcForForm = resolved;
     } catch {
-      toast.error(
-        "Mã vạch không đúng chữ số kiểm tra GS1. Sửa tay trước khi lưu.",
-        { id: "barcode-lookup" },
-      );
+      toast.error(t("pages.products.form.barcodeChecksumInvalid"), {
+        id: "barcode-lookup",
+      });
     }
     form.setValue("barcode", bcForForm, { shouldDirty: true });
 
     // Tra cứu: catalog hệ thống
     setLookingUp(true);
-    toast.info("Đang tra cứu thông tin sản phẩm...", { id: "barcode-lookup" });
+    toast.info(t("pages.products.form.barcodeLookingUp"), {
+      id: "barcode-lookup",
+    });
     try {
       const info = await lookupBarcode(bcForForm);
       if (info) {
@@ -677,13 +719,15 @@ export default function ProductForm({
         }
         toast.success(
           info.name
-            ? `Đã điền: "${info.name}" từ catalog hệ thống`
-            : "Quét thành công, chưa tìm thấy thông tin trên CSDL",
+            ? t("pages.products.form.barcodeFilledFromCatalog", {
+                name: info.name,
+              })
+            : t("pages.products.form.barcodeScanNoCatalog"),
           { id: "barcode-lookup" },
         );
       } else {
         toast.success(
-          `Quét được: ${bcForForm} — không tìm thấy thông tin trên cơ sở dữ liệu`,
+          t("pages.products.form.barcodeScannedRaw", { barcode: bcForForm }),
           { id: "barcode-lookup" },
         );
       }
@@ -705,10 +749,10 @@ export default function ProductForm({
       const barcode = res.data?.data;
       if (barcode) {
         form.setValue("barcode", String(barcode), { shouldDirty: true });
-        toast.success("Đã gợi ý mã vạch EAN-13.");
+        toast.success(t("pages.products.form.barcodeSuggested"));
       }
     } catch {
-      toast.error("Không thể lấy gợi ý Barcode.");
+      toast.error(t("pages.products.form.barcodeSuggestFail"));
     } finally {
       setSuggestingBarcode(false);
     }
@@ -1009,7 +1053,7 @@ export default function ProductForm({
     setFiles([]);
     setPreviews([]);
     setFileInputKey(Date.now());
-    toast.success("Đã áp dụng thông tin từ catalog hệ thống");
+    toast.success(t("pages.products.form.catalogApplied"));
   };
 
   const removeExistingImage = (index) => {
@@ -1022,7 +1066,7 @@ export default function ProductForm({
 
     const remaining = MAX_IMAGES - keptImages.length - files.length;
     if (remaining <= 0) {
-      toast.error(`Tối đa ${MAX_IMAGES} ảnh.`);
+      toast.error(t("pages.products.form.maxProductImages", { max: MAX_IMAGES }));
       return;
     }
     const toProcess = selected.slice(0, remaining);
@@ -1034,7 +1078,7 @@ export default function ProductForm({
 
     const invalid = toProcess.filter((f) => !ALLOWED_TYPES.includes(f.type));
     if (invalid.length) {
-      toast.error("Chỉ hỗ trợ JPG, PNG hoặc WEBP.");
+      toast.error(t("pages.products.form.imageTypeError"));
       return;
     }
 
@@ -1144,7 +1188,7 @@ export default function ProductForm({
 
   const handleSubmit = async (data) => {
     if (!selectedShopId) {
-      toast.error("Chưa chọn cửa hàng.");
+      toast.error(t("pages.products.form.noShopSelected"));
       return;
     }
     try {
@@ -1186,8 +1230,7 @@ export default function ProductForm({
     } catch (e) {
       console.error(e);
       toast.error(
-        e.response?.data?.message ||
-          "Không lưu được sản phẩm hoặc ảnh biến thể. Vui lòng thử lại.",
+        e.response?.data?.message || t("pages.products.form.saveFail"),
       );
     }
   };
@@ -1200,14 +1243,12 @@ export default function ProductForm({
       render={({ field }) => (
         <FormItem>
           <FormLabel>
-            Đơn vị tính <span className="text-red-500">*</span>
+            {t("pages.products.form.unit")}{" "}
+            <span className="text-red-500">*</span>
           </FormLabel>
           {isReadOnly ? (
             <ReadOnlyValue
-              value={
-                PRODUCT_UNITS.find((u) => u.value === field.value)?.label ??
-                field.value
-              }
+              value={translateProductUnit(t, field.value)}
             />
           ) : (
             <div className="flex flex-col gap-2">
@@ -1227,22 +1268,26 @@ export default function ProductForm({
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Chọn đơn vị tính..." />
+                    <SelectValue
+                      placeholder={t("pages.products.form.unitPlaceholder")}
+                    />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {PRODUCT_UNITS.map((u) => (
                     <SelectItem key={u.value} value={u.value}>
-                      {u.label}
+                      {translateProductUnit(t, u.value)}
                     </SelectItem>
                   ))}
-                  <SelectItem value="__custom__">Tự nhập...</SelectItem>
+                  <SelectItem value="__custom__">
+                    {t("pages.products.form.customEntry")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               {unitMode === "custom" && (
                 <FormControl>
                   <Input
-                    placeholder="Nhập đơn vị tính..."
+                    placeholder={t("pages.products.form.unitCustomPlaceholder")}
                     value={field.value ?? ""}
                     onChange={(e) => field.onChange(e.target.value)}
                     autoFocus
@@ -1264,13 +1309,10 @@ export default function ProductForm({
       name="category"
       render={({ field }) => (
         <FormItem>
-          <FormLabel>Danh mục</FormLabel>
+          <FormLabel>{t("pages.products.form.category")}</FormLabel>
           {isReadOnly ? (
             <ReadOnlyValue
-              value={
-                PRODUCT_CATEGORIES.find((c) => c.value === field.value)
-                  ?.label ?? field.value
-              }
+              value={translateProductCategory(t, field.value)}
             />
           ) : (
             <div className="flex flex-col gap-2">
@@ -1290,22 +1332,26 @@ export default function ProductForm({
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Chọn danh mục..." />
+                    <SelectValue
+                      placeholder={t("pages.products.form.categoryPlaceholder")}
+                    />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {PRODUCT_CATEGORIES.map((c) => (
                     <SelectItem key={c.value} value={c.value}>
-                      {c.label}
+                      {translateProductCategory(t, c.value)}
                     </SelectItem>
                   ))}
-                  <SelectItem value="__custom__">Tự nhập...</SelectItem>
+                  <SelectItem value="__custom__">
+                    {t("pages.products.form.customEntry")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               {categoryMode === "custom" && (
                 <FormControl>
                   <Input
-                    placeholder="Nhập danh mục..."
+                    placeholder={t("pages.products.form.categoryCustomPlaceholder")}
                     value={field.value ?? ""}
                     onChange={(e) => field.onChange(e.target.value)}
                     autoFocus
@@ -1332,7 +1378,8 @@ export default function ProductForm({
             <div className="relative z-10" ref={nameHistoryWrapRef}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <FormLabel className="sm:mt-0.5">
-                  Tên sản phẩm <span className="text-red-500">*</span>
+                  {t("pages.products.form.productName")}{" "}
+                  <span className="text-red-500">*</span>
                 </FormLabel>
                 {!isReadOnly && (
                   <button
@@ -1347,7 +1394,7 @@ export default function ProductForm({
                     }}
                   >
                     <History className="h-3 w-3" />
-                    Đã nhập
+                    {t("pages.products.form.recentNamesBtn")}
                   </button>
                 )}
               </div>
@@ -1357,13 +1404,12 @@ export default function ProductForm({
                   role="listbox"
                 >
                   <p className="border-b px-2.5 py-1.5 text-[10px] text-muted-foreground">
-                    Tên đã nhập trước đó (theo máy)
+                    {t("pages.products.form.recentNamesTitle")}
                   </p>
                   <div className="max-h-52 touch-pan-y overflow-y-auto overscroll-y-contain">
                     {recentNamePickList.length === 0 ? (
                       <p className="px-3 py-3 text-xs text-muted-foreground">
-                        Chưa có. Sau khi lưu sản phẩm thành công, tên sẽ xuất hiện
-                        ở đây để chọn nhanh.
+                        {t("pages.products.form.recentNamesEmpty")}
                       </p>
                     ) : (
                       recentNamePickList.map((n, idx) => (
@@ -1395,7 +1441,7 @@ export default function ProductForm({
               <FormControl>
                 <div className="relative">
                   <Input
-                    placeholder="Nhập tên — gợi ý từ catalog hệ thống (chuẩn hoá)"
+                    placeholder={t("pages.products.form.namePlaceholder")}
                     autoComplete="off"
                     aria-invalid={!!fieldState.error}
                     {...field}
@@ -1409,8 +1455,7 @@ export default function ProductForm({
                     (field.value || "").trim().length >= 2 && (
                       <div className="absolute z-30 mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
                         <p className="px-2 py-1.5 text-[10px] text-muted-foreground border-b">
-                          Catalog hệ thống — chọn để điền nhanh tên, mã vạch,
-                          ảnh…
+                          {t("pages.products.form.catalogDropdownHint")}
                         </p>
                         {nameCatalogHits.map((p) => (
                           <button
@@ -1450,8 +1495,7 @@ export default function ProductForm({
             )}
             {isCreate && !isReadOnly && (
               <p className="text-[11px] text-muted-foreground">
-                Gõ từ khoá để tìm trong catalog hệ thống; chọn dòng để điền
-                nhanh form (tránh nhập trùng).
+                {t("pages.products.form.catalogSearchHint")}
               </p>
             )}
             <FormMessage />
@@ -1468,7 +1512,7 @@ export default function ProductForm({
             <FormItem className="min-w-0">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <FormLabel>
-                  Mã SKU <span className="text-red-500">*</span>
+                  {t("pages.products.form.sku")} <span className="text-red-500">*</span>
                 </FormLabel>
                 {!isReadOnly && (
                   <button
@@ -1476,16 +1520,18 @@ export default function ProductForm({
                     onClick={handleSuggestSku}
                     disabled={suggestingSkU || !watchedCategory}
                     title={
-                      !watchedCategory ? "Chọn danh mục trước để gợi ý SKU" : ""
+                      !watchedCategory
+                        ? t("pages.products.form.selectCategoryForSku")
+                        : ""
                     }
                     className="flex shrink-0 items-center gap-1 self-start text-xs text-muted-foreground transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 sm:self-auto"
                   >
                     <Sparkles className="w-3 h-3" />
                     {suggestingSkU
-                      ? "Đang lấy..."
+                      ? t("pages.products.form.fetching")
                       : !watchedCategory
-                        ? "Chọn DM trước"
-                        : "Gợi ý"}
+                        ? t("pages.products.form.selectCategoryFirst")
+                        : t("pages.products.form.suggest")}
                   </button>
                 )}
               </div>
@@ -1494,7 +1540,7 @@ export default function ProductForm({
               ) : (
                 <FormControl>
                   <Input
-                    placeholder="Ví dụ: SP_001"
+                    placeholder={t("pages.products.form.skuPlaceholder")}
                     {...field}
                     onChange={(e) =>
                       field.onChange(e.target.value.toUpperCase())
@@ -1512,7 +1558,7 @@ export default function ProductForm({
           render={({ field }) => (
             <FormItem className="min-w-0">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                <FormLabel>Mã vạch (Barcode)</FormLabel>
+                <FormLabel>{t("pages.products.form.barcode")}</FormLabel>
                 {!isReadOnly && (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:shrink-0 sm:justify-end">
                     {/* Scan button only in edit mode — create uses scan-first flow in modal */}
@@ -1528,7 +1574,9 @@ export default function ProductForm({
                         ) : (
                           <ScanLine className="w-3 h-3" />
                         )}
-                        {lookingUp ? "Tra cứu..." : "Quét"}
+                        {lookingUp
+                          ? t("pages.products.form.scanning")
+                          : t("pages.products.form.scan")}
                       </button>
                     )}
                     <button
@@ -1537,17 +1585,17 @@ export default function ProductForm({
                       disabled={suggestingBarcode || !watchedCategory}
                       title={
                         !watchedCategory
-                          ? "Chọn danh mục trước để gợi ý Barcode"
+                          ? t("pages.products.form.selectCategoryForBarcode")
                           : ""
                       }
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Sparkles className="w-3 h-3" />
                       {suggestingBarcode
-                        ? "Đang lấy..."
+                        ? t("pages.products.form.fetching")
                         : !watchedCategory
-                          ? "Chọn DM trước"
-                          : "Gợi ý EAN-13"}
+                          ? t("pages.products.form.selectCategoryFirst")
+                          : t("pages.products.form.suggestEan13")}
                     </button>
                   </div>
                 )}
@@ -1557,7 +1605,7 @@ export default function ProductForm({
               ) : (
                 <FormControl>
                   <Input
-                    placeholder="12-13 chữ số (EAN/UPC)"
+                    placeholder={t("pages.products.form.barcodePlaceholder")}
                     {...field}
                     value={field.value ?? ""}
                     onBlur={(e) => {
@@ -1571,7 +1619,7 @@ export default function ProductForm({
                         !isValidStandardGs1Barcode(digits)
                       ) {
                         toast.error(
-                          "Mã vạch có độ dài chuẩn GS1 nhưng sai chữ số kiểm tra. Kiểm tra lại số in trên bao bì.",
+                          t("pages.products.form.barcodeInvalidChecksum"),
                         );
                         return;
                       }
@@ -1586,7 +1634,7 @@ export default function ProductForm({
                               shouldDirty: true,
                             });
                             toast.info(
-                              "Đã chuẩn hoá UPC-12 → EAN-13 (thêm 0 đầu) để đồng bộ với catalog.",
+                              t("pages.products.form.barcodeNormalized"),
                             );
                           }
                         } catch {
@@ -1617,10 +1665,11 @@ export default function ProductForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                Giá bán mặc định <span className="text-red-500">*</span>
+                {t("pages.products.form.defaultSalePrice")}{" "}
+                <span className="text-red-500">*</span>
               </FormLabel>
               {isReadOnly ? (
-                <ReadOnlyValue value={formatVND(field.value)} />
+                <ReadOnlyValue value={formatVND(field.value, numberLocale)} />
               ) : (
                 <FormControl>
                   <NumericInput
@@ -1642,9 +1691,9 @@ export default function ProductForm({
           name="costPrice"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Giá vốn mặc định</FormLabel>
+              <FormLabel>{t("pages.products.form.defaultCostPrice")}</FormLabel>
               {isReadOnly ? (
-                <ReadOnlyValue value={formatVND(field.value)} />
+                <ReadOnlyValue value={formatVND(field.value, numberLocale)} />
               ) : (
                 <FormControl>
                   <NumericInput
@@ -1669,14 +1718,14 @@ export default function ProductForm({
         name="description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Mô tả sản phẩm</FormLabel>
+            <FormLabel>{t("pages.products.form.description")}</FormLabel>
             {isReadOnly ? (
               <ReadOnlyValue value={field.value} variant="multi" />
             ) : (
               <FormControl>
                 <Textarea
                   rows={3}
-                  placeholder="Mô tả chi tiết sản phẩm..."
+                  placeholder={t("pages.products.form.descriptionPlaceholder")}
                   className="min-h-[88px] resize-y"
                   {...field}
                   value={field.value ?? ""}
@@ -1696,7 +1745,7 @@ export default function ProductForm({
           <FormItem className="flex flex-col gap-1">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:items-center">
               <FormLabel className="mt-0.5 leading-snug sm:mt-0">
-                Theo dõi tồn kho
+                {t("pages.products.form.trackInventory")}
               </FormLabel>
               <FormControl>
                 <Switch
@@ -1708,14 +1757,12 @@ export default function ProductForm({
             </div>
             {!isReadOnly && (
               <p className="text-xs text-muted-foreground pl-0 max-w-xl">
-                Bật để nhập tồn kho, ngưỡng cảnh báo và hạn sử dụng theo chi
-                nhánh.
+                {t("pages.products.form.trackInventoryHint")}
               </p>
             )}
             {!isReadOnly && watchedSellByWeight && (
               <p className="text-xs text-muted-foreground pl-0 max-w-xl">
-                Sản phẩm bán theo cân/trọng lượng sẽ{" "}
-                <b>không theo dõi tồn kho</b> theo mặc định.
+                {t("pages.products.form.sellByWeightDisabledHint")}
               </p>
             )}
           </FormItem>
@@ -1730,7 +1777,7 @@ export default function ProductForm({
           <FormItem className="flex flex-col gap-1">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:items-center">
               <FormLabel className="mt-0.5 leading-snug sm:mt-0">
-                Bán theo cân / trọng lượng
+                {t("pages.products.form.sellByWeight")}
               </FormLabel>
               <FormControl>
                 <Switch
@@ -1742,9 +1789,7 @@ export default function ProductForm({
             </div>
             {!isReadOnly && (
               <p className="text-xs text-muted-foreground pl-0 max-w-xl">
-                Bật khi sản phẩm bán theo cân/trọng lượng (rau củ, thịt, nước
-                ép…). Tại POS sẽ nhập số cân thay vì số lượng; giá nhân với khối
-                lượng theo đơn vị đã chọn ở trên (ví dụ 30.000 ₫/kg).
+                {t("pages.products.form.sellByWeightHint")}
               </p>
             )}
           </FormItem>
@@ -1758,10 +1803,10 @@ export default function ProductForm({
           name="reason"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Lý do thay đổi giá</FormLabel>
+              <FormLabel>{t("pages.products.form.priceReason")}</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Lý do thay đổi giá (không bắt buộc)"
+                  placeholder={t("pages.products.form.priceReasonPlaceholder")}
                   {...field}
                   value={field.value ?? ""}
                 />
@@ -1780,21 +1825,35 @@ export default function ProductForm({
     return (
       <div className="flex flex-col gap-3">
         <span className="text-sm font-semibold">
-          Lịch sử thay đổi giá{" "}
+          {t("pages.products.form.priceHistoryTitle")}{" "}
           <span className="text-xs text-muted-foreground font-normal">
-            ({history.length} mục)
+            {t("pages.products.form.priceHistoryCount", {
+              count: history.length,
+            })}
           </span>
         </span>
         <div className="overflow-x-auto rounded-md border">
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-muted text-muted-foreground border-b">
-                <th className="text-left px-3 py-2 font-medium">Thời điểm</th>
-                <th className="text-right px-3 py-2 font-medium">Giá cũ</th>
-                <th className="text-right px-3 py-2 font-medium">Giá mới</th>
-                <th className="text-right px-3 py-2 font-medium">Vốn cũ</th>
-                <th className="text-right px-3 py-2 font-medium">Vốn mới</th>
-                <th className="text-left px-3 py-2 font-medium">Lý do</th>
+                <th className="text-left px-3 py-2 font-medium">
+                  {t("pages.products.form.priceHistoryColTime")}
+                </th>
+                <th className="text-right px-3 py-2 font-medium">
+                  {t("pages.products.form.priceHistoryColOldPrice")}
+                </th>
+                <th className="text-right px-3 py-2 font-medium">
+                  {t("pages.products.form.priceHistoryColNewPrice")}
+                </th>
+                <th className="text-right px-3 py-2 font-medium">
+                  {t("pages.products.form.priceHistoryColOldCost")}
+                </th>
+                <th className="text-right px-3 py-2 font-medium">
+                  {t("pages.products.form.priceHistoryColNewCost")}
+                </th>
+                <th className="text-left px-3 py-2 font-medium">
+                  {t("pages.products.form.priceHistoryColReason")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1810,22 +1869,22 @@ export default function ProductForm({
                   </td>
                   <td className="px-3 py-2 text-right">
                     {h.oldPrice != null
-                      ? Number(h.oldPrice).toLocaleString("vi-VN") + " ₫"
+                      ? Number(h.oldPrice).toLocaleString(numberLocale) + " ₫"
                       : "-"}
                   </td>
                   <td className="px-3 py-2 text-right font-medium">
                     {h.newPrice != null
-                      ? Number(h.newPrice).toLocaleString("vi-VN") + " ₫"
+                      ? Number(h.newPrice).toLocaleString(numberLocale) + " ₫"
                       : "-"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {h.oldCostPrice != null
-                      ? Number(h.oldCostPrice).toLocaleString("vi-VN") + " ₫"
+                      ? Number(h.oldCostPrice).toLocaleString(numberLocale) + " ₫"
                       : "-"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {h.newCostPrice != null
-                      ? Number(h.newCostPrice).toLocaleString("vi-VN") + " ₫"
+                      ? Number(h.newCostPrice).toLocaleString(numberLocale) + " ₫"
                       : "-"}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground italic">
@@ -1858,22 +1917,26 @@ export default function ProductForm({
       if (!apps.length) {
         return (
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-semibold">Topping áp dụng</span>
+            <span className="text-sm font-semibold">
+              {t("pages.products.form.toppingsSection")}
+            </span>
             <p className="text-xs text-muted-foreground">
-              Không gán topping cho sản phẩm này.
+              {t("pages.products.form.noToppingsAssigned")}
             </p>
           </div>
         );
       }
       return (
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-semibold">Topping áp dụng</span>
+          <span className="text-sm font-semibold">
+            {t("pages.products.form.toppingsSection")}
+          </span>
           <ul className="text-sm space-y-1 border rounded-md p-3 bg-muted/30">
-            {apps.map((t) => (
-              <li key={t.toppingId}>
-                {t.name}{" "}
+            {apps.map((top) => (
+              <li key={top.toppingId}>
+                {top.name}{" "}
                 <span className="text-muted-foreground">
-                  (+{Number(t.extraPrice).toLocaleString("vi-VN")} ₫)
+                  (+{Number(top.extraPrice).toLocaleString(numberLocale)} ₫)
                 </span>
               </li>
             ))}
@@ -1884,21 +1947,21 @@ export default function ProductForm({
     return (
       <div className="flex flex-col gap-3">
         <div>
-          <span className="text-sm font-semibold">Topping áp dụng</span>
+          <span className="text-sm font-semibold">
+            {t("pages.products.form.toppingsSection")}
+          </span>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Chọn từ danh mục topping chung của shop (nút &quot;Cài đặt
-            topping&quot; trên trang sản phẩm).
+            {t("pages.products.form.toppingsIntro")}
           </p>
         </div>
         {!shopToppingCatalog.length ? (
           <div className="text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-md px-3 py-2 dark:text-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10">
-            Chưa có topping trong danh mục shop. Hãy mở &quot;Cài đặt
-            topping&quot; trên trang sản phẩm.
+            {t("pages.products.form.emptyToppingsCatalog")}
           </div>
         ) : (
           <div className="flex flex-col gap-2 border rounded-md p-3">
-            {shopToppingCatalog.map((t) => {
-              const id = t.toppingId;
+            {shopToppingCatalog.map((top) => {
+              const id = top.toppingId;
               const checked = (watchedAssignedToppings ?? []).includes(id);
               return (
                 <label
@@ -1912,13 +1975,13 @@ export default function ProductForm({
                     onChange={() => toggleAssignedTopping(id)}
                   />
                   <span>
-                    {t.name}{" "}
+                    {top.name}{" "}
                     <span className="text-muted-foreground text-xs">
-                      (+{Number(t.extraPrice).toLocaleString("vi-VN")} ₫)
+                      (+{Number(top.extraPrice).toLocaleString(numberLocale)} ₫)
                     </span>
-                    {t.active === false && (
+                    {top.active === false && (
                       <span className="text-xs text-amber-600 ml-1">
-                        (đang tắt bán)
+                        {t("pages.products.form.toppingInactive")}
                       </span>
                     )}
                   </span>
@@ -1935,7 +1998,7 @@ export default function ProductForm({
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <span className="min-w-0 text-sm font-semibold">
-          Biến thể sản phẩm{" "}
+          {t("pages.products.form.variantsSection")}{" "}
           <span className="text-xs font-normal text-muted-foreground">
             ({variantFields.length})
           </span>
@@ -1959,7 +2022,7 @@ export default function ProductForm({
             className="flex h-9 w-full shrink-0 items-center justify-center gap-1 text-xs sm:h-8 sm:w-auto"
           >
             <Plus className="w-3.5 h-3.5" />
-            Thêm biến thể
+            {t("pages.products.form.addVariant")}
           </Button>
         )}
       </div>
@@ -1967,8 +2030,8 @@ export default function ProductForm({
       {variantFields.length === 0 ? (
         <div className="flex h-16 items-center justify-center rounded-md border border-dashed px-3 text-center text-sm text-muted-foreground">
           {isReadOnly
-            ? "Không có biến thể"
-            : 'Chưa có biến thể. Nhấn "Thêm biến thể" để bắt đầu.'}
+            ? t("pages.products.form.noVariants")
+            : t("pages.products.form.noVariantsHint")}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -2006,9 +2069,9 @@ export default function ProductForm({
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <span className="min-w-0 text-sm font-medium leading-snug">
-          Hình ảnh sản phẩm{" "}
+          {t("pages.products.form.imagesSection")}{" "}
           <span className="block text-xs font-normal text-muted-foreground sm:inline">
-            (JPG, PNG, WEBP — tối đa {MAX_IMAGES} ảnh, mỗi ảnh ≤ 2MB)
+            {t("pages.products.form.maxImagesHintShort", { max: MAX_IMAGES })}
           </span>
         </span>
         {!isReadOnly && keptImages.length + files.length < MAX_IMAGES && (
@@ -2023,7 +2086,7 @@ export default function ProductForm({
             />
             <span className="inline-flex items-center gap-1 text-xs text-primary border border-primary rounded px-2 py-1 hover:bg-primary/10 transition-colors">
               <ImagePlus className="w-3.5 h-3.5" />
-              Thêm ảnh
+              {t("pages.products.form.addImage")}
             </span>
           </label>
         )}
@@ -2085,13 +2148,13 @@ export default function ProductForm({
 
       {keptImages.length === 0 && previews.length === 0 && (
         <div className="flex items-center justify-center h-20 border border-dashed rounded-md text-muted-foreground text-sm">
-          Chưa có ảnh
+          {t("pages.products.form.noProductImages")}
         </div>
       )}
 
       {!isReadOnly && files.length > 0 && (
         <p className="text-xs text-blue-600">
-          {files.length} ảnh mới sẽ được thêm vào.
+          {t("pages.products.form.newImagesPending", { count: files.length })}
         </p>
       )}
     </div>
@@ -2103,7 +2166,7 @@ export default function ProductForm({
       {mode === "view" ? (
         <>
           <Button variant="outline" type="button" onClick={() => onCancel?.()}>
-            Quay lại
+            {t("pages.products.form.back")}
           </Button>
           {handleDelete && canDelete && (
             <Button
@@ -2112,7 +2175,7 @@ export default function ProductForm({
               onClick={handleDelete}
               disabled={isLoading}
             >
-              Xóa
+              {t("pages.products.form.delete")}
             </Button>
           )}
           {canUpdate && (
@@ -2121,7 +2184,7 @@ export default function ProductForm({
               type="button"
               onClick={() => onModeChange?.("edit")}
             >
-              Chỉnh sửa
+              {t("pages.products.form.edit")}
             </Button>
           )}
         </>
@@ -2134,7 +2197,7 @@ export default function ProductForm({
               mode === "create" ? onCancel?.() : onModeChange?.("view")
             }
           >
-            Hủy
+            {t("pages.products.form.cancel")}
           </Button>
           {((mode === "create" && canCreate) ||
             (mode === "edit" && canUpdate)) && (
@@ -2150,10 +2213,10 @@ export default function ProductForm({
               }
             >
               {isLoading
-                ? "Đang xử lý..."
+                ? t("pages.products.form.processing")
                 : mode === "edit"
-                  ? "Cập nhật"
-                  : "Thêm sản phẩm"}
+                  ? t("pages.products.form.update")
+                  : t("pages.products.form.addProduct")}
             </Button>
           )}
         </>

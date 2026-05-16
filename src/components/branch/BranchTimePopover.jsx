@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +47,7 @@ const BranchTimePopover = forwardRef(function BranchTimePopover(
   { value, onChange, disabled, className, ...props },
   ref,
 ) {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [draftH, setDraftH] = useState("00");
@@ -92,7 +94,7 @@ const BranchTimePopover = forwardRef(function BranchTimePopover(
         >
           <Clock className="h-4 w-4 shrink-0 opacity-70 sm:h-4" />
           <span className="min-w-0 truncate font-mono text-base sm:text-sm">
-            {display ?? "Chọn giờ"}
+            {display ?? t("pages.branches.timePopover.pickTime")}
           </span>
         </Button>
       </PopoverTrigger>
@@ -111,16 +113,16 @@ const BranchTimePopover = forwardRef(function BranchTimePopover(
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-[11px]">
-          Định dạng 24 giờ
+          {t("pages.branches.timePopover.format24h")}
         </p>
         <div className="flex min-h-0 gap-2 sm:gap-3">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 sm:gap-1.5">
             <span className="shrink-0 text-center text-xs font-medium text-muted-foreground sm:text-[11px]">
-              Giờ
+              {t("pages.branches.timePopover.hour")}
             </span>
             <div
               role="listbox"
-              aria-label="Chọn giờ"
+              aria-label={t("pages.branches.timePopover.pickHour")}
               className={cn(timeListScrollClass, "min-h-0")}
               style={{ WebkitOverflowScrolling: "touch" }}
             >
@@ -149,11 +151,11 @@ const BranchTimePopover = forwardRef(function BranchTimePopover(
           </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 sm:gap-1.5">
             <span className="shrink-0 text-center text-xs font-medium text-muted-foreground sm:text-[11px]">
-              Phút
+              {t("pages.branches.timePopover.minute")}
             </span>
             <div
               role="listbox"
-              aria-label="Chọn phút"
+              aria-label={t("pages.branches.timePopover.pickMinute")}
               className={cn(timeListScrollClass, "min-h-0")}
               style={{ WebkitOverflowScrolling: "touch" }}
             >
@@ -191,14 +193,14 @@ const BranchTimePopover = forwardRef(function BranchTimePopover(
               setOpen(false);
             }}
           >
-            Xóa giờ
+            {t("pages.branches.timePopover.clear")}
           </Button>
           <Button
             type="button"
             className="h-11 min-h-[44px] flex-1 text-sm sm:h-8 sm:min-h-0 sm:flex-initial sm:text-xs"
             onClick={() => setOpen(false)}
           >
-            Xong
+            {t("pages.branches.timePopover.done")}
           </Button>
         </div>
       </PopoverContent>

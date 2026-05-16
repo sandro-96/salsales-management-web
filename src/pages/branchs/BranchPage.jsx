@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
@@ -37,6 +38,7 @@ import {
 import { useAlertDialog } from "../../hooks/useAlertDialog";
 
 const BranchPage = () => {
+  const { t } = useTranslation();
   const { selectedShopId, branches, fetchBranches, isOwner } = useShop();
   const { hasShopPermission } = useShopPermissions();
   const canManage = hasShopPermission(PERM.BRANCH_MANAGE);
@@ -57,11 +59,11 @@ const BranchPage = () => {
   const handleDelete = async (branch) => {
     if (!branch) return;
     const ok = await confirm(
-      `Bạn có chắc muốn xóa chi nhánh "${branch.name}"? Hành động này không thể hoàn tác.`,
+      t("pages.branches.list.deleteConfirm", { name: branch.name }),
       {
-        title: "Xóa chi nhánh",
-        confirmText: "Xóa",
-        cancelText: "Hủy",
+        title: t("pages.branches.list.deleteTitle"),
+        confirmText: t("pages.branches.list.deleteConfirmBtn"),
+        cancelText: t("pages.branches.list.cancel"),
         variant: "destructive",
       },
     );
@@ -72,13 +74,13 @@ const BranchPage = () => {
         `branches/${branch.id}?shopId=${shopId}`,
       );
       if (res.data.success) {
-        toast.success("Xóa chi nhánh thành công.");
+        toast.success(t("pages.branches.list.deleteSuccess"));
         await fetchBranches?.(shopId);
       } else {
-        toast.error(res.data.message || "Xóa chi nhánh thất bại.");
+        toast.error(res.data.message || t("pages.branches.list.deleteFail"));
       }
     } catch {
-      toast.error("Đã xảy ra lỗi khi xóa chi nhánh.");
+      toast.error(t("pages.branches.list.deleteError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -111,15 +113,19 @@ const BranchPage = () => {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Quản lý chi nhánh
+              {t("pages.branches.list.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {stats.total} chi nhánh · {stats.active} hoạt động
+              {t("pages.branches.list.stats", {
+                total: stats.total,
+                active: stats.active,
+              })}
             </p>
           </div>
           {canManage && (
             <Button onClick={() => navigate("create")} size="sm" variant="success">
-              <Plus className="h-4 w-4 mr-1" /> Thêm chi nhánh
+              <Plus className="h-4 w-4 mr-1" />{" "}
+              {t("pages.branches.list.addBranch")}
             </Button>
           )}
         </div>
@@ -129,7 +135,7 @@ const BranchPage = () => {
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Tìm chi nhánh..."
+              placeholder={t("pages.branches.list.searchPlaceholder")}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               className="pl-9"
@@ -161,16 +167,19 @@ const BranchPage = () => {
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Building2 className="h-14 w-14 text-muted-foreground/40 mb-4" />
             <h3 className="text-lg font-semibold">
-              {keyword ? "Không tìm thấy chi nhánh" : "Chưa có chi nhánh nào"}
+              {keyword
+                ? t("pages.branches.list.emptySearchTitle")
+                : t("pages.branches.list.emptyTitle")}
             </h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm">
               {keyword
-                ? "Thử tìm kiếm với từ khóa khác."
-                : "Tạo chi nhánh đầu tiên để bắt đầu."}
+                ? t("pages.branches.list.emptySearchHint")
+                : t("pages.branches.list.emptyHint")}
             </p>
             {!keyword && canManage && (
               <Button className="mt-4" onClick={() => navigate("create")}>
-                <Plus className="h-4 w-4 mr-1" /> Tạo chi nhánh
+                <Plus className="h-4 w-4 mr-1" />{" "}
+                {t("pages.branches.list.createBranch")}
               </Button>
             )}
           </div>
@@ -223,6 +232,7 @@ const BranchCard = ({
   onNavigate,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   const isActive = branch.active;
   const isDefault = branch.default;
 
@@ -287,16 +297,18 @@ const BranchCard = ({
                     variant="outline"
                     className="text-[10px] font-normal text-amber-600 border-amber-300 px-1.5 py-0 dark:text-amber-300 dark:border-amber-500/40"
                   >
-                    Mặc định
+                    {t("pages.branches.list.defaultBadge")}
                   </Badge>
                 )}
                 {isActive ? (
                   <Badge className="text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15">
-                    <CheckCircle2 className="h-2.5 w-2.5" /> Hoạt động
+                    <CheckCircle2 className="h-2.5 w-2.5" />{" "}
+                    {t("pages.branches.list.active")}
                   </Badge>
                 ) : (
                   <Badge className="text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-muted dark:text-muted-foreground dark:border-border dark:hover:bg-muted">
-                    <XCircle className="h-2.5 w-2.5" /> Tạm ngưng
+                    <XCircle className="h-2.5 w-2.5" />{" "}
+                    {t("pages.branches.list.inactive")}
                   </Badge>
                 )}
               </div>
@@ -348,13 +360,17 @@ const BranchCard = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background w-40">
-                <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  {t("pages.branches.list.actions")}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onNavigate(`${branch.slug}?mode=edit`)}
                 >
                   <Pencil className="h-4 w-4 mr-2" />{" "}
-                  {canUpdate ? "Chỉnh sửa" : "Xem chi tiết"}
+                  {canUpdate
+                    ? t("pages.branches.list.edit")
+                    : t("pages.branches.list.viewDetail")}
                 </DropdownMenuItem>
                 {!isDefault && canDelete && (
                   <>
@@ -364,7 +380,8 @@ const BranchCard = ({
                       disabled={isSubmitting}
                       onClick={() => onDelete(branch)}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" /> Xóa
+                      <Trash2 className="h-4 w-4 mr-2" />{" "}
+                      {t("pages.branches.list.delete")}
                     </DropdownMenuItem>
                   </>
                 )}

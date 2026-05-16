@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -49,9 +50,9 @@ function baseUnitLabel(unit) {
   return u || "unit";
 }
 
-function formatBaseStock(baseUnits, unit) {
+function formatBaseStock(baseUnits, unit, locale) {
   if (baseUnits == null) return "—";
-  return `${Number(baseUnits).toLocaleString("vi-VN")} ${baseUnitLabel(unit)}`;
+  return `${Number(baseUnits).toLocaleString(locale)} ${baseUnitLabel(unit)}`;
 }
 
 function toBaseUnits(weight, unit) {
@@ -60,43 +61,47 @@ function toBaseUnits(weight, unit) {
   return Math.max(0, Math.round(Number(weight) * mult));
 }
 
-const ACTION_CONFIG = {
-  IMPORT: {
-    title: "Nhập hàng",
-    description: "Tăng số lượng tồn kho cho sản phẩm này",
-    icon: PackagePlus,
-    color: "text-emerald-600 dark:text-emerald-300",
-    bgColor: "bg-emerald-50 dark:bg-emerald-500/15",
-    borderColor: "border-emerald-200 dark:border-emerald-500/40",
-    buttonLabel: "Xác nhận nhập hàng",
-    quantityLabel: "Số lượng nhập",
-    quantityPlaceholder: "Nhập số lượng cần nhập...",
-  },
-  EXPORT: {
-    title: "Xuất hàng",
-    description: "Giảm số lượng tồn kho cho sản phẩm này",
-    icon: PackageMinus,
-    color: "text-orange-600 dark:text-orange-300",
-    bgColor: "bg-orange-50 dark:bg-orange-500/15",
-    borderColor: "border-orange-200 dark:border-orange-500/40",
-    buttonLabel: "Xác nhận xuất hàng",
-    quantityLabel: "Số lượng xuất",
-    quantityPlaceholder: "Nhập số lượng cần xuất...",
-  },
-  ADJUSTMENT: {
-    title: "Điều chỉnh tồn kho",
-    description: "Đặt lại số lượng tồn kho cho sản phẩm",
-    icon: SlidersHorizontal,
-    color: "text-blue-600 dark:text-blue-300",
-    bgColor: "bg-blue-50 dark:bg-blue-500/15",
-    borderColor: "border-blue-200 dark:border-blue-500/40",
-    buttonLabel: "Xác nhận điều chỉnh",
-    quantityLabel: "Số lượng mới",
-    quantityPlaceholder: "Nhập số lượng tồn kho mới...",
-  },
-};
+function getActionConfig(t) {
+  return {
+    IMPORT: {
+      title: t("pages.inventory.actionModal.importTitle"),
+      description: t("pages.inventory.actionModal.importDesc"),
+      icon: PackagePlus,
+      color: "text-emerald-600 dark:text-emerald-300",
+      bgColor: "bg-emerald-50 dark:bg-emerald-500/15",
+      borderColor: "border-emerald-200 dark:border-emerald-500/40",
+      buttonLabel: t("pages.inventory.actionModal.importBtn"),
+      quantityLabel: t("pages.inventory.actionModal.importQtyLabel"),
+      quantityPlaceholder: t("pages.inventory.actionModal.importQtyPlaceholder"),
+    },
+    EXPORT: {
+      title: t("pages.inventory.actionModal.exportTitle"),
+      description: t("pages.inventory.actionModal.exportDesc"),
+      icon: PackageMinus,
+      color: "text-orange-600 dark:text-orange-300",
+      bgColor: "bg-orange-50 dark:bg-orange-500/15",
+      borderColor: "border-orange-200 dark:border-orange-500/40",
+      buttonLabel: t("pages.inventory.actionModal.exportBtn"),
+      quantityLabel: t("pages.inventory.actionModal.exportQtyLabel"),
+      quantityPlaceholder: t("pages.inventory.actionModal.exportQtyPlaceholder"),
+    },
+    ADJUSTMENT: {
+      title: t("pages.inventory.actionModal.adjustTitle"),
+      description: t("pages.inventory.actionModal.adjustDesc"),
+      icon: SlidersHorizontal,
+      color: "text-blue-600 dark:text-blue-300",
+      bgColor: "bg-blue-50 dark:bg-blue-500/15",
+      borderColor: "border-blue-200 dark:border-blue-500/40",
+      buttonLabel: t("pages.inventory.actionModal.adjustBtn"),
+      quantityLabel: t("pages.inventory.actionModal.adjustQtyLabel"),
+      quantityPlaceholder: t("pages.inventory.actionModal.adjustQtyPlaceholder"),
+    },
+  };
+}
 
 const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess }) => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const { selectedShopId, selectedBranchId } = useShop();
 
   const [quantity, setQuantity] = useState("");
@@ -104,6 +109,8 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
   const [submitting, setSubmitting] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState("");
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+  const actionConfig = useMemo(() => getActionConfig(t), [t]);
 
   const branchVariantList = useMemo(() => {
     return product?.branchVariants?.length ? product.branchVariants : [];
@@ -145,10 +152,9 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
     return bv?.quantity ?? 0;
   }, [product, branchVariantList, effectiveVariantId, sellByWeight]);
 
-  const config = ACTION_CONFIG[actionType] || ACTION_CONFIG.IMPORT;
+  const config = actionConfig[actionType] || actionConfig.IMPORT;
   const IconComp = config.icon;
 
-  // ADJUSTMENT hiện chưa hỗ trợ SP cân — hạ action xuống IMPORT/EXPORT tương đương.
   const isAdjustmentForWeight = sellByWeight && actionType === "ADJUSTMENT";
 
   const handleSubmit = async () => {
@@ -156,23 +162,24 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
     const qty = Number(quantity);
     if (actionType !== "ADJUSTMENT" && (!qty || qty <= 0)) {
       toast.error(
-        sellByWeight ? "Trọng lượng phải lớn hơn 0." : "Số lượng phải lớn hơn 0.",
+        sellByWeight
+          ? t("pages.inventory.actionModal.weightPositive")
+          : t("pages.inventory.actionModal.qtyPositive"),
       );
       return;
     }
     if (actionType === "ADJUSTMENT" && !sellByWeight &&
         (quantity === "" || qty < 0)) {
-      toast.error("Số lượng mới phải >= 0.");
+      toast.error(t("pages.inventory.actionModal.qtyMinZero"));
       return;
     }
     if (!sellByWeight && branchVariantList.length > 1 && !effectiveVariantId) {
-      toast.error("Vui lòng chọn biến thể.");
+      toast.error(t("pages.inventory.actionModal.selectVariantRequired"));
       return;
     }
 
-    // SP cân: EXPORT check theo base unit sau khi quy đổi ở server; client best-effort warn.
     if (!sellByWeight && actionType === "EXPORT" && currentStock != null && qty > currentStock) {
-      toast.error("Số lượng xuất không được vượt quá tồn kho hiện tại.");
+      toast.error(t("pages.inventory.actionModal.exportExceedsStock"));
       return;
     }
 
@@ -188,7 +195,6 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
           note,
         };
         if (actionType === "IMPORT" || actionType === "ADJUSTMENT") {
-          // ADJUSTMENT cho SP cân hiện xem như IMPORT vì chưa có API set-absolute.
           res = await importProductWeight(selectedShopId, weightPayload);
         } else {
           res = await exportProductWeight(selectedShopId, weightPayload);
@@ -218,15 +224,22 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
 
       const newQty = res?.data?.data;
       const newStockLabel = sellByWeight
-        ? formatBaseStock(newQty, product?.unit)
-        : Number(newQty).toLocaleString("vi-VN");
+        ? formatBaseStock(newQty, product?.unit, numberLocale)
+        : Number(newQty).toLocaleString(numberLocale);
       toast.success(
-        `${config.title} thành công.${newQty != null ? ` Tồn mới: ${newStockLabel}` : ""}`,
+        newQty != null
+          ? t("pages.inventory.actionModal.successWithStock", {
+              title: config.title,
+              stock: newStockLabel,
+            })
+          : t("pages.inventory.actionModal.success", { title: config.title }),
       );
       onSuccess?.();
       onClose();
     } catch (err) {
-      const msg = err.response?.data?.message || "Đã xảy ra lỗi. Vui lòng thử lại.";
+      const msg =
+        err.response?.data?.message ||
+        t("pages.inventory.actionModal.genericError");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -251,6 +264,11 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
             ? currentStock - Number(quantity)
             : Number(quantity)
       : null;
+
+  const weightQtyLabel =
+    actionType === "EXPORT"
+      ? t("pages.inventory.actionModal.weightExport")
+      : t("pages.inventory.actionModal.weightImport");
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -297,30 +315,36 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
               </p>
             </div>
             <Badge variant="outline" className="shrink-0 whitespace-nowrap">
-              Tồn:{" "}
+              {t("pages.inventory.actionModal.stockLabel")}{" "}
               {currentStock === null
                 ? "—"
                 : sellByWeight
-                  ? formatBaseStock(currentStock, product?.unit)
-                  : Number(currentStock).toLocaleString("vi-VN")}
+                  ? formatBaseStock(currentStock, product?.unit, numberLocale)
+                  : Number(currentStock).toLocaleString(numberLocale)}
             </Badge>
           </div>
 
           {!sellByWeight && branchVariantList.length > 1 && (
             <div className="space-y-2">
-              <Label>Biến thể *</Label>
+              <Label>
+                {t("pages.inventory.actionModal.variantLabel")} *
+              </Label>
               <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
                 <SelectTrigger
                   className="h-9"
                   aria-invalid={attemptedSubmit && !effectiveVariantId}
                 >
-                  <SelectValue placeholder="Chọn biến thể" />
+                  <SelectValue
+                    placeholder={t("pages.inventory.actionModal.selectVariant")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {branchVariantList.map((bv) => (
                     <SelectItem key={bv.variantId} value={bv.variantId}>
-                      {variantLabel(product, bv.variantId)} — Tồn:{" "}
-                      {(bv.quantity ?? 0).toLocaleString("vi-VN")}
+                      {t("pages.inventory.actionModal.variantStock", {
+                        name: variantLabel(product, bv.variantId),
+                        qty: (bv.quantity ?? 0).toLocaleString(numberLocale),
+                      })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -335,12 +359,12 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
             >
               <span>
                 {sellByWeight
-                  ? `${actionType === "EXPORT" ? "Trọng lượng xuất" : "Trọng lượng nhập"} (${product?.unit || "kg"})`
+                  ? `${weightQtyLabel} (${product?.unit || "kg"})`
                   : config.quantityLabel}
               </span>
               {isAdjustmentForWeight && (
                 <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
-                  (SP cân chưa hỗ trợ set tồn tuyệt đối — sẽ cộng thêm)
+                  {t("pages.inventory.actionModal.weightAdjustHint")}
                 </span>
               )}
             </Label>
@@ -351,7 +375,9 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
               formatted={false}
               placeholder={
                 sellByWeight
-                  ? `Ví dụ 0.5 (${product?.unit || "kg"})`
+                  ? t("pages.inventory.actionModal.weightPlaceholder", {
+                      unit: product?.unit || "kg",
+                    })
                   : config.quantityPlaceholder
               }
               max={
@@ -363,30 +389,36 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
             />
             {sellByWeight && enteredWeightInBaseUnits != null && (
               <p className="text-xs text-muted-foreground">
-                = {enteredWeightInBaseUnits.toLocaleString("vi-VN")}{" "}
-                {baseUnitLabel(product?.unit)}
+                {t("pages.inventory.actionModal.weightEquals", {
+                  value: enteredWeightInBaseUnits.toLocaleString(numberLocale),
+                  unit: baseUnitLabel(product?.unit),
+                })}
               </p>
             )}
           </div>
 
           {previewStock !== null && (
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-              <span className="text-sm text-muted-foreground">Tồn kho sau thao tác</span>
+              <span className="text-sm text-muted-foreground">
+                {t("pages.inventory.actionModal.stockAfter")}
+              </span>
               <span className={`text-sm font-semibold ${previewStock < 0 ? "text-red-600" : previewStock === 0 ? "text-orange-600" : "text-emerald-600"}`}>
                 {sellByWeight
-                  ? formatBaseStock(previewStock, product?.unit)
-                  : previewStock.toLocaleString("vi-VN")}
+                  ? formatBaseStock(previewStock, product?.unit, numberLocale)
+                  : previewStock.toLocaleString(numberLocale)}
               </span>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="inv-note">Ghi chú</Label>
+            <Label htmlFor="inv-note">
+              {t("pages.inventory.actionModal.note")}
+            </Label>
             <Textarea
               id="inv-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Ghi chú cho giao dịch (tùy chọn)..."
+              placeholder={t("pages.inventory.actionModal.notePlaceholder")}
               rows={2}
             />
           </div>
@@ -394,7 +426,7 @@ const InventoryActionModal = ({ open, onClose, product, actionType, onSuccess })
 
         <DialogFooter className="shrink-0 gap-2 sm:justify-end">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Hủy
+            {t("pages.inventory.actionModal.cancel")}
           </Button>
           <Button
             onClick={handleSubmit}

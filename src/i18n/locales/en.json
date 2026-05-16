@@ -314,6 +314,14 @@
       "orders": "Orders"
     }
   },
+  "systemSupport": {
+    "title": "System contact",
+    "titleWithName": "System contact — {{name}}",
+    "contactShort": "Contact",
+    "contactShortWithName": "Contact — {{name}}",
+    "hours": "Support hours: 8:30 AM–5:30 PM (Mon–Fri)",
+    "zalo": "Zalo"
+  },
   "shop": {
     "kickedTitle": "You were removed from the shop",
     "kickedMessage": "The shop owner has removed you from this store. Press “Reload” to refresh permissions and menu.",

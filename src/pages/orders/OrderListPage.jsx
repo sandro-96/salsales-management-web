@@ -30,6 +30,7 @@ import {
   Globe,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
@@ -42,6 +43,9 @@ import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { getTables } from "../../api/tableApi.js";
 import { PosInvoiceReceipt } from "../../components/pos/PosInvoiceReceipt.jsx";
 import { printPosInvoiceReceipt } from "../../components/pos/printPosInvoiceReceipt.jsx";
+import { resolveInvoiceLocale } from "../../utils/invoiceLocale.js";
+import { getInvoiceT } from "../../utils/invoiceI18n.js";
+import { getPaymentMethodLabel } from "../../utils/posHelpers.js";
 import {
   getOrders,
   filterOrders,
@@ -103,39 +107,30 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const ORDER_STATUSES = {
+const ORDER_STATUS_META = {
   PENDING: {
-    label: "Chờ xử lý",
     icon: Clock,
     cls: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40",
   },
   CONFIRMED: {
-    label: "Đã xác nhận",
     icon: CheckCircle2,
     cls: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-500/40",
   },
   SHIPPING: {
-    label: "Đang giao",
     icon: Truck,
     cls: "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-500/15 dark:text-violet-200 dark:border-violet-500/40",
   },
   COMPLETED: {
-    label: "Hoàn tất",
     icon: CheckCircle2,
     cls: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40",
   },
   CANCELLED: {
-    label: "Đã hủy",
     icon: Ban,
     cls: "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/15 dark:text-red-200 dark:border-red-500/40",
   },
 };
 
-const PAYMENT_METHODS = [
-  { value: "Cash", label: "Tiền mặt" },
-  { value: "Card", label: "Thẻ" },
-  { value: "Transfer", label: "Chuyển khoản" },
-];
+const PAYMENT_METHOD_VALUES = ["Cash", "Card", "Transfer"];
 
 /** Mã đơn hàng hiển thị (API: orderCode); đơn cũ có thể chỉ có id. */
 function displayOrderCode(order) {
@@ -168,36 +163,49 @@ function orderHasPositiveTax(tax) {
   return (tax.taxes || []).some((l) => (l.amount ?? 0) > 0.005);
 }
 
-function fmtVndInt(v) {
+function fmtVndInt(v, locale = "vi-VN") {
   if (v == null) return "—";
   const n = Number(v);
   if (!Number.isFinite(n)) return "—";
-  return Math.round(n).toLocaleString("vi-VN") + " ₫";
+  return Math.round(n).toLocaleString(locale) + " ₫";
 }
 
-function orderTaxSummaryTooltip(order) {
-  const t = order.taxSnapshot;
-  if (!t) {
-    return "Đơn không có snapshot thuế (đơn rất cũ hoặc dữ liệu thiếu). Chỉ xem được tổng tiền hàng.";
+function orderTaxSummaryTooltip(order, tr, locale = "vi-VN") {
+  const tax = order.taxSnapshot;
+  if (!tax) {
+    return tr("pages.orders.tax.noSnapshotLong");
   }
   const lines = [
-    t.priceIncludesTax
-      ? "Chính sách: giá bán đã gồm thuế — «Tạm tính» là NET (đã tách VAT)."
-      : "Chính sách: giá chưa gồm thuế — thuế cộng thêm vào tạm tính.",
-    `Tạm tính (cơ sở thuế): ${fmtVndInt(t.netAmount ?? 0)}`,
+    tax.priceIncludesTax
+      ? tr("pages.orders.tax.policyIncludes")
+      : tr("pages.orders.tax.policyExcludes"),
+    tr("pages.orders.tax.subtotalBase", {
+      amount: fmtVndInt(tax.netAmount ?? 0, locale),
+    }),
   ];
-  if (orderHasPositiveTax(t)) {
-    lines.push(`Tổng thuế: ${fmtVndInt(t.taxTotal ?? 0)}`);
-    (t.taxes || []).forEach((x) => {
+  if (orderHasPositiveTax(tax)) {
+    lines.push(
+      tr("pages.orders.tax.taxTotal", {
+        amount: fmtVndInt(tax.taxTotal ?? 0, locale),
+      }),
+    );
+    (tax.taxes || []).forEach((x) => {
       if ((x.amount ?? 0) > 0.005) {
-        lines.push(`${x.label}: ${fmtVndInt(x.amount ?? 0)}`);
+        lines.push(
+          tr("pages.orders.tax.taxLine", {
+            label: x.label,
+            amount: fmtVndInt(x.amount ?? 0, locale),
+          }),
+        );
       }
     });
   } else {
-    lines.push("Không phát sinh tiền thuế (0 ₫) trên đơn này.");
+    lines.push(tr("pages.orders.tax.noTaxOnOrder"));
   }
   lines.push(
-    `Tổng thanh toán: ${fmtVndInt(t.grandTotal ?? order.totalPrice ?? 0)}`,
+    tr("pages.orders.tax.grandTotal", {
+      amount: fmtVndInt(tax.grandTotal ?? order.totalPrice ?? 0, locale),
+    }),
   );
   return lines.join("\n");
 }
@@ -209,12 +217,14 @@ function shortId(id) {
 }
 
 function OrderTaxBadge({ order }) {
-  const t = order.taxSnapshot;
-  if (!t) {
+  const { t: tr, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const tax = order.taxSnapshot;
+  if (!tax) {
     return (
       <span
         className="text-[11px] text-muted-foreground tabular-nums"
-        title="Không có snapshot thuế"
+        title={tr("pages.orders.tax.noSnapshotTitle")}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
@@ -222,7 +232,7 @@ function OrderTaxBadge({ order }) {
       </span>
     );
   }
-  const has = orderHasPositiveTax(t);
+  const has = orderHasPositiveTax(tax);
   return (
     <Badge
       variant={has ? "default" : "secondary"}
@@ -231,34 +241,35 @@ function OrderTaxBadge({ order }) {
           ? "text-[10px] gap-0.5 font-normal bg-sky-600 text-white hover:bg-sky-600/90 border-0 cursor-help"
           : "text-[10px] font-normal cursor-help"
       }
-      title={orderTaxSummaryTooltip(order)}
+      title={orderTaxSummaryTooltip(order, tr, numberLocale)}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
       <Percent className="h-3 w-3 opacity-90" />
-      {has ? "Có thuế" : "0 thuế"}
+      {has ? tr("pages.orders.tax.hasTax") : tr("pages.orders.tax.noTax")}
     </Badge>
   );
 }
 
 function PaymentCollectionBadge({ paid, paymentStatus }) {
+  const { t: tr } = useTranslation();
   if (paid) {
     return (
       <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40">
-        <CreditCard className="h-3 w-3" /> Đã thanh toán
+        <CreditCard className="h-3 w-3" /> {tr("pages.orders.payment.paid")}
       </Badge>
     );
   }
   if (paymentStatus === "PENDING_COLLECTION") {
     return (
       <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40">
-        <Truck className="h-3 w-3" /> Chờ thu COD
+        <Truck className="h-3 w-3" /> {tr("pages.orders.payment.pendingCod")}
       </Badge>
     );
   }
   return (
     <Badge variant="outline" className="text-[11px] gap-1">
-      Chưa thanh toán
+      {tr("pages.orders.payment.unpaid")}
     </Badge>
   );
 }
@@ -266,11 +277,13 @@ function PaymentCollectionBadge({ paid, paymentStatus }) {
 // ─── Status Badge ────────────────────────────────────────────────────────────
 
 const OrderStatusBadge = ({ status }) => {
-  const cfg = ORDER_STATUSES[status] || { label: status, icon: Clock, cls: "" };
+  const { t: tr } = useTranslation();
+  const cfg = ORDER_STATUS_META[status] || { icon: Clock, cls: "" };
   const IconComp = cfg.icon;
+  const label = tr(`pages.orders.status.${status}`, { defaultValue: status });
   return (
     <Badge className={`gap-1 text-[11px] ${cfg.cls} hover:${cfg.cls}`}>
-      <IconComp className="h-3 w-3" /> {cfg.label}
+      <IconComp className="h-3 w-3" /> {label}
     </Badge>
   );
 };
@@ -321,6 +334,8 @@ const OrderDetailDialog = ({
   onSaved,
   onOrderPatched,
 }) => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const [saving, setSaving] = useState(false);
   const [proofUploading, setProofUploading] = useState(false);
   const proofFileRef = useRef(null);
@@ -366,12 +381,12 @@ const OrderDetailDialog = ({
       };
       const res = await patchOrderFulfillment(order.id, shopId, payload);
       const updated = res.data?.data;
-      toast.success("Đã cập nhật thông tin đơn hàng.");
+      toast.success(t("pages.orders.detail.saveSuccess"));
       if (updated && onOrderPatched) onOrderPatched(updated);
       onSaved?.();
     } catch (e) {
       toast.error(
-        e.response?.data?.message || "Không thể cập nhật thông tin đơn hàng.",
+        e.response?.data?.message || t("pages.orders.detail.saveFail"),
       );
     } finally {
       setSaving(false);
@@ -388,12 +403,12 @@ const OrderDetailDialog = ({
       fd.append("file", file);
       const res = await uploadOrderPaymentProof(order.id, shopId, fd);
       const updated = res.data?.data;
-      toast.success("Đã cập nhật ảnh chứng từ thanh toán.");
+      toast.success(t("pages.orders.detail.proofUploadSuccess"));
       if (updated && onOrderPatched) onOrderPatched(updated);
       onSaved?.();
     } catch (err) {
       toast.error(
-        err.response?.data?.message || "Không thể tải lên ảnh chứng từ.",
+        err.response?.data?.message || t("pages.orders.detail.proofUploadFail"),
       );
     } finally {
       setProofUploading(false);
@@ -419,10 +434,10 @@ const OrderDetailDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
-            Chi tiết đơn hàng
+            {t("pages.orders.detail.title")}
           </DialogTitle>
           <DialogDescription>
-            Mã đơn hàng:{" "}
+            {t("pages.orders.detail.orderCode")}{" "}
             <span className="font-mono text-foreground">
               {displayOrderCode(order)}
             </span>
@@ -441,7 +456,7 @@ const OrderDetailDialog = ({
           {showCrmCustomerSummary && (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
               <p className="text-[11px] text-muted-foreground mb-0.5">
-                Khách hàng (CRM / loyalty)
+                {t("pages.orders.detail.crmCustomer")}
               </p>
               <span className="font-medium">
                 {order.customerName?.trim() || "—"}
@@ -463,17 +478,21 @@ const OrderDetailDialog = ({
           {showGuestSummary && (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
               <p className="text-[11px] text-muted-foreground mb-0.5">
-                Khách ghi nhận (POS / walk-in)
+                {t("pages.orders.detail.guestCustomer")}
               </p>
               {order.guestName?.trim() ? (
                 <p>
-                  <span className="text-muted-foreground">Tên: </span>
+                  <span className="text-muted-foreground">
+                    {t("pages.orders.detail.name")}{" "}
+                  </span>
                   <span className="font-medium">{order.guestName.trim()}</span>
                 </p>
               ) : null}
               {order.guestPhone?.trim() ? (
                 <p>
-                  <span className="text-muted-foreground">SĐT: </span>
+                  <span className="text-muted-foreground">
+                    {t("pages.orders.detail.phone")}{" "}
+                  </span>
                   <span className="font-mono">{order.guestPhone.trim()}</span>
                 </p>
               ) : null}
@@ -492,21 +511,23 @@ const OrderDetailDialog = ({
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm hover:bg-muted/40 rounded-md [&::-webkit-details-marker]:hidden">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Giao hàng &amp; tham chiếu
+                    {t("pages.orders.detail.shippingSection")}
                   </span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
                 </summary>
                 <div className="border-t px-3 py-2 space-y-1 text-sm">
                 {order.note && (
                   <p>
-                    <span className="text-muted-foreground">Ghi chú: </span>
+                    <span className="text-muted-foreground">
+                      {t("pages.orders.detail.note")}{" "}
+                    </span>
                     {order.note}
                   </p>
                 )}
                 {order.externalOrderRef && (
                   <p>
                     <span className="text-muted-foreground">
-                      Tham chiếu ngoài:{" "}
+                      {t("pages.orders.detail.externalRef")}{" "}
                     </span>
                     <span className="font-mono">{order.externalOrderRef}</span>
                   </p>
@@ -514,20 +535,24 @@ const OrderDetailDialog = ({
                 {order.shippingMethod && (
                   <p>
                     <span className="text-muted-foreground">
-                      Hình thức giao:{" "}
+                      {t("pages.orders.detail.shippingMethod")}{" "}
                     </span>
                     {order.shippingMethod}
                   </p>
                 )}
                 {order.shippingCarrier && (
                   <p>
-                    <span className="text-muted-foreground">Đơn vị VC: </span>
+                    <span className="text-muted-foreground">
+                      {t("pages.orders.detail.carrier")}{" "}
+                    </span>
                     {order.shippingCarrier}
                   </p>
                 )}
                 {order.trackingNumber && (
                   <p>
-                    <span className="text-muted-foreground">Vận đơn: </span>
+                    <span className="text-muted-foreground">
+                      {t("pages.orders.detail.tracking")}{" "}
+                    </span>
                     <span className="font-mono">{order.trackingNumber}</span>
                   </p>
                 )}
@@ -543,17 +568,17 @@ const OrderDetailDialog = ({
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm hover:bg-muted/40 rounded-md [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0 text-left">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Giao hàng &amp; tham chiếu
+                    {t("pages.orders.detail.shippingSection")}
                   </span>
                   <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground leading-snug">
-                    Lưu được cả đơn đã thanh toán — bấm để mở và chỉnh
+                    {t("pages.orders.detail.editHint")}
                   </span>
                 </div>
                 <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
               </summary>
               <div className="border-t p-3 space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Ghi chú</Label>
+                <Label className="text-xs">{t("pages.orders.detail.noteLabel")}</Label>
                 <Textarea
                   className="text-sm min-h-[56px]"
                   value={form.note}
@@ -564,48 +589,53 @@ const OrderDetailDialog = ({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Khách hàng (ID hệ thống)</Label>
+                <Label className="text-xs">
+                  {t("pages.orders.detail.customerIdLabel")}
+                </Label>
                 <Input
                   className="h-8 text-sm font-mono"
                   value={form.customerId}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, customerId: e.target.value }))
                   }
-                  placeholder="Dán ID khách hàng; để trống nếu không gắn"
+                  placeholder={t("pages.orders.detail.customerIdPlaceholder")}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Tên và SĐT CRM hiển thị theo ID đã lưu; đổi ID rồi bấm Lưu để
-                  cập nhật.
+                  {t("pages.orders.detail.customerIdHint")}
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Tên khách (POS / walk-in)</Label>
+                  <Label className="text-xs">
+                    {t("pages.orders.detail.guestNameLabel")}
+                  </Label>
                   <Input
                     className="h-8 text-sm"
                     value={form.guestName}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, guestName: e.target.value }))
                     }
-                    placeholder="Tách với khách CRM"
+                    placeholder={t("pages.orders.detail.guestNamePlaceholder")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">SĐT khách (POS / walk-in)</Label>
+                  <Label className="text-xs">
+                    {t("pages.orders.detail.guestPhoneLabel")}
+                  </Label>
                   <Input
                     className="h-8 text-sm font-mono"
                     value={form.guestPhone}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, guestPhone: e.target.value }))
                     }
-                    placeholder="Số điện thoại"
+                    placeholder={t("pages.orders.detail.guestPhonePlaceholder")}
                   />
                 </div>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label className="text-xs">
-                    Tham chiếu ngoài (Shopee, …)
+                    {t("pages.orders.detail.externalRefLabel")}
                   </Label>
                   <Input
                     className="h-8 text-sm"
@@ -619,18 +649,22 @@ const OrderDetailDialog = ({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Hình thức giao / kênh</Label>
+                  <Label className="text-xs">
+                    {t("pages.orders.detail.shippingMethodLabel")}
+                  </Label>
                   <Input
                     className="h-8 text-sm"
                     value={form.shippingMethod}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, shippingMethod: e.target.value }))
                     }
-                    placeholder="VD: Shopee, Ship COD ngoài"
+                    placeholder={t("pages.orders.detail.shippingMethodPlaceholder")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Đơn vị vận chuyển</Label>
+                  <Label className="text-xs">
+                    {t("pages.orders.detail.carrierLabel")}
+                  </Label>
                   <Input
                     className="h-8 text-sm"
                     value={form.shippingCarrier}
@@ -640,11 +674,13 @@ const OrderDetailDialog = ({
                         shippingCarrier: e.target.value,
                       }))
                     }
-                    placeholder="GHN, GHTK, …"
+                    placeholder={t("pages.orders.detail.carrierPlaceholder")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Mã vận đơn</Label>
+                  <Label className="text-xs">
+                    {t("pages.orders.detail.trackingLabel")}
+                  </Label>
                   <Input
                     className="h-8 text-sm font-mono"
                     value={form.trackingNumber}
@@ -662,10 +698,16 @@ const OrderDetailDialog = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Sản phẩm</TableHead>
-                  <TableHead className="text-right">SL</TableHead>
-                  <TableHead className="text-right">Đơn giá</TableHead>
-                  <TableHead className="text-right">Thành tiền</TableHead>
+                  <TableHead>{t("pages.orders.detail.product")}</TableHead>
+                  <TableHead className="text-right">
+                    {t("pages.orders.detail.qty")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("pages.orders.detail.unitPrice")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("pages.orders.detail.lineTotal")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -679,7 +721,7 @@ const OrderDetailDialog = ({
                     : (item.quantity ?? 0);
                   const lineTotal = unitAfter * lineMultiplier;
                   const qtyDisplay = isWeight
-                    ? `${Number(item.weight ?? 0).toLocaleString("vi-VN", {
+                    ? `${Number(item.weight ?? 0).toLocaleString(numberLocale, {
                         maximumFractionDigits: 3,
                       })} ${item.weightUnit || ""}`.trim()
                     : item.quantity;
@@ -705,7 +747,7 @@ const OrderDetailDialog = ({
                         )}
                         {showAttr && (
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Thuộc tính: {attrLabel}
+                            {t("pages.orders.detail.attributes")} {attrLabel}
                           </p>
                         )}
                         {tops.length > 0 && (
@@ -714,7 +756,7 @@ const OrderDetailDialog = ({
                               <p key={t?.toppingId ?? ti}>
                                 + {t?.name || t?.toppingId}
                                 {Number(t?.extraPrice) > 0
-                                  ? ` (${Number(t.extraPrice).toLocaleString("vi-VN")} ₫)`
+                                  ? ` (${Number(t.extraPrice).toLocaleString(numberLocale)} ₫)`
                                   : ""}
                               </p>
                             ))}
@@ -726,7 +768,8 @@ const OrderDetailDialog = ({
                               variant="secondary"
                               className="text-xs font-normal"
                             >
-                              KM: {promoBits.join(" · ")}
+                              {t("pages.orders.detail.promo")}{" "}
+                              {promoBits.join(" · ")}
                             </Badge>
                           </div>
                         )}
@@ -735,7 +778,7 @@ const OrderDetailDialog = ({
                           item.appliedPromotionId &&
                           promoBits.length === 0 && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              CTKM (không tìm thấy tên):{" "}
+                              {t("pages.orders.detail.promoMissing")}{" "}
                               <span className="font-mono">
                                 {item.appliedPromotionId.length > 10
                                   ? item.appliedPromotionId.slice(-8)
@@ -750,21 +793,21 @@ const OrderDetailDialog = ({
                       <TableCell className="text-right text-sm tabular-nums align-top">
                         {showOrig && (
                           <span className="line-through text-muted-foreground text-xs block">
-                            {basePrice.toLocaleString("vi-VN")} ₫
+                            {basePrice.toLocaleString(numberLocale)} ₫
                             {isWeight && item.weightUnit
                               ? `/${item.weightUnit}`
                               : ""}
                           </span>
                         )}
                         <span>
-                          {unitAfter.toLocaleString("vi-VN")} ₫
+                          {unitAfter.toLocaleString(numberLocale)} ₫
                           {isWeight && item.weightUnit
                             ? `/${item.weightUnit}`
                             : ""}
                         </span>
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums align-top">
-                        {lineTotal.toLocaleString("vi-VN")} ₫
+                        {lineTotal.toLocaleString(numberLocale)} ₫
                       </TableCell>
                     </TableRow>
                   );
@@ -776,20 +819,24 @@ const OrderDetailDialog = ({
           {order.pointsDiscount > 0 && (
             <div className="rounded-md border border-dashed px-3 py-2 text-sm space-y-1">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Tổng tiền hàng</span>
+                <span className="text-muted-foreground">
+                  {t("pages.orders.detail.itemsSubtotal")}
+                </span>
                 <span className="tabular-nums">
-                  {itemsSubtotal.toLocaleString("vi-VN")} ₫
+                  {itemsSubtotal.toLocaleString(numberLocale)} ₫
                 </span>
               </div>
               <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
                 <span>
-                  Giảm đổi điểm
+                  {t("pages.orders.detail.pointsDiscount")}
                   {order.pointsRedeemed
-                    ? ` (${order.pointsRedeemed} điểm)`
+                    ? t("pages.orders.detail.pointsCount", {
+                        points: order.pointsRedeemed,
+                      })
                     : ""}
                 </span>
                 <span className="tabular-nums">
-                  −{order.pointsDiscount.toLocaleString("vi-VN")} ₫
+                  −{order.pointsDiscount.toLocaleString(numberLocale)} ₫
                 </span>
               </div>
             </div>
@@ -798,14 +845,14 @@ const OrderDetailDialog = ({
           <div className="rounded-lg border border-sky-200/80 dark:border-sky-900/50 bg-sky-50/70 dark:bg-sky-950/30 px-3 py-3 space-y-2 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold text-foreground">
-                Thanh toán & thuế
+                {t("pages.orders.tax.paymentAndTax")}
               </span>
               {tax && (
                 <Badge
                   variant="outline"
                   className="text-[10px] shrink-0 font-normal border-sky-300/80 dark:border-sky-700"
                 >
-                  Snapshot lúc tạo đơn
+                  {t("pages.orders.tax.snapshotAtOrder")}
                 </Badge>
               )}
             </div>
@@ -814,17 +861,17 @@ const OrderDetailDialog = ({
               <>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {tax.priceIncludesTax
-                    ? "Giá bán đang cấu hình đã gồm thuế: «Tạm tính» là phần chưa thuế (NET) — VAT đã được tách ra khỏi giá để hiển thị đúng dòng thuế."
-                    : "Giá chưa gồm thuế: «Tạm tính» là tổng hàng; các dòng thuế cộng thêm; «Tổng thanh toán» là số khách phải trả."}
+                    ? t("pages.orders.tax.includesTaxHint")
+                    : t("pages.orders.tax.excludesTaxHint")}
                 </p>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
                     {tax.priceIncludesTax
-                      ? "Tạm tính (NET — đã trừ VAT khỏi giá bán)"
-                      : "Tạm tính (chưa gồm thuế)"}
+                      ? t("pages.orders.tax.netIncludesVat")
+                      : t("pages.orders.tax.netExcludesTax")}
                   </span>
                   <span className="tabular-nums font-medium">
-                    {fmtVndInt(tax.netAmount ?? 0)}
+                    {fmtVndInt(tax.netAmount ?? 0, numberLocale)}
                   </span>
                 </div>
                 {(tax.taxes || []).map((taxLine, i) => (
@@ -839,39 +886,37 @@ const OrderDetailDialog = ({
                         : ""}
                     </span>
                     <span className="tabular-nums">
-                      {fmtVndInt(taxLine.amount ?? 0)}
+                      {fmtVndInt(taxLine.amount ?? 0, numberLocale)}
                     </span>
                   </div>
                 ))}
                 {!orderHasPositiveTax(tax) && (
                   <p className="text-xs text-muted-foreground italic">
-                    Không phát sinh tiền thuế trên đơn (tổng thuế = 0 ₫).
+                    {t("pages.orders.tax.noTaxLines")}
                   </p>
                 )}
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Tổng thuế</span>
+                  <span>{t("pages.orders.tax.taxTotalLabel")}</span>
                   <span className="tabular-nums">
-                    {fmtVndInt(tax.taxTotal ?? 0)}
+                    {fmtVndInt(tax.taxTotal ?? 0, numberLocale)}
                   </span>
                 </div>
                 <div className="flex justify-between font-semibold text-base pt-2 border-t border-sky-200/90 dark:border-sky-800/60">
-                  <span>Tổng thanh toán</span>
+                  <span>{t("pages.orders.tax.grandTotalLabel")}</span>
                   <span className="tabular-nums text-sky-900 dark:text-sky-100">
-                    {fmtVndInt(tax.grandTotal ?? order.totalPrice ?? 0)}
+                    {fmtVndInt(tax.grandTotal ?? order.totalPrice ?? 0, numberLocale)}
                   </span>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Không có snapshot thuế trên đơn — thường gặp ở đơn tạo trước
-                  khi hệ thống lưu thuế. Xem tổng tiền hàng; cấu hình thuế tại
-                  mục chính sách thuế theo chi nhánh.
+                  {t("pages.orders.tax.noSnapshotDetail")}
                 </p>
                 <div className="flex justify-between font-semibold text-base pt-1">
-                  <span>Tổng cộng</span>
+                  <span>{t("pages.orders.tax.totalLabel")}</span>
                   <span className="tabular-nums">
-                    {fmtVndInt(order.totalPrice ?? 0)}
+                    {fmtVndInt(order.totalPrice ?? 0, numberLocale)}
                   </span>
                 </div>
               </>
@@ -880,9 +925,9 @@ const OrderDetailDialog = ({
 
           {order.paymentMethod && (
             <div className="text-sm text-muted-foreground">
-              Thanh toán: {order.paymentMethod}
+              {t("pages.orders.detail.paymentLabel")} {order.paymentMethod}
               {order.paymentTime &&
-                ` — ${new Date(order.paymentTime).toLocaleString("vi-VN")}`}
+                ` — ${new Date(order.paymentTime).toLocaleString(numberLocale)}`}
             </div>
           )}
 
@@ -891,7 +936,7 @@ const OrderDetailDialog = ({
               order.paymentProofImageUrl) && (
               <div className="rounded-md border p-3 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Ảnh chứng từ chuyển khoản
+                  {t("pages.orders.detail.proofTitle")}
                 </p>
                 {order.paymentProofImageUrl ? (
                   <a
@@ -902,13 +947,13 @@ const OrderDetailDialog = ({
                   >
                     <img
                       src={order.paymentProofImageUrl}
-                      alt="Chứng từ thanh toán"
+                      alt={t("pages.orders.detail.proofAlt")}
                       className="max-h-44 w-auto rounded-md border object-contain bg-muted/20"
                     />
                   </a>
                 ) : (
                   <p className="text-xs text-muted-foreground italic">
-                    Chưa có ảnh đính kèm.
+                    {t("pages.orders.detail.proofEmpty")}
                   </p>
                 )}
                 {canUploadPaymentProof ? (
@@ -934,8 +979,8 @@ const OrderDetailDialog = ({
                         <ImagePlus className="h-3.5 w-3.5" />
                       )}
                       {order.paymentProofImageUrl
-                        ? "Thay ảnh chứng từ"
-                        : "Thêm ảnh chứng từ"}
+                        ? t("pages.orders.detail.proofReplace")
+                        : t("pages.orders.detail.proofAdd")}
                     </Button>
                   </div>
                 ) : null}
@@ -946,7 +991,7 @@ const OrderDetailDialog = ({
         {canEdit && order.status !== "CANCELLED" && (
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={onClose}>
-              Đóng
+              {t("pages.orders.detail.close")}
             </Button>
             <Button
               type="button"
@@ -954,7 +999,7 @@ const OrderDetailDialog = ({
               disabled={saving}
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-              Lưu thông tin đơn
+              {t("pages.orders.detail.save")}
             </Button>
           </DialogFooter>
         )}
@@ -966,6 +1011,8 @@ const OrderDetailDialog = ({
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 const OrderListPage = () => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const {
@@ -1067,11 +1114,13 @@ const OrderListPage = () => {
         (selectedBranch?.id === bid ? selectedBranch : null);
       const branchName = br?.name || selectedBranch?.name || null;
       const tableName = order.tableId ? tableNameById.get(order.tableId) : null;
-      const pmLabel =
-        PAYMENT_METHODS.find((x) => x.value === order.paymentMethod)?.label ||
-        order.paymentMethod ||
-        null;
+      const invoiceLocale = resolveInvoiceLocale(br);
+      const invoiceT = getInvoiceT(invoiceLocale);
+      const pmLabel = order.paymentMethod
+        ? getPaymentMethodLabel(invoiceT, order.paymentMethod)
+        : null;
       setInvoicePayload({
+        invoiceLocale,
         shopName: selectedShop?.name || selectedShop?.shopName || null,
         shopAddress: selectedShop?.address || null,
         shopPhone: selectedShop?.phone || null,
@@ -1086,7 +1135,14 @@ const OrderListPage = () => {
       });
       setInvoiceOpen(true);
     },
-    [selectedShop, selectedBranch, branches, effectiveBranchId, tableNameById],
+    [
+      selectedShop,
+      selectedBranch,
+      branches,
+      effectiveBranchId,
+      tableNameById,
+      t,
+    ],
   );
 
   // ── Fetch ────────────────────────────────────────────────────────────────
@@ -1116,11 +1172,11 @@ const OrderListPage = () => {
         setTotalCount(list.length);
       }
     } catch {
-      toast.error("Không thể tải danh sách đơn hàng.");
+      toast.error(t("pages.orders.list.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, effectiveBranchId, pagination, statusFilter]);
+  }, [selectedShopId, effectiveBranchId, pagination, statusFilter, t]);
 
   useEffect(() => {
     fetchOrders();
@@ -1198,9 +1254,15 @@ const OrderListPage = () => {
     (msg) => {
       if (msg?.type !== WebSocketMessageTypes.ONLINE_ORDER_CREATED) return;
       const code = msg?.data?.orderCode || msg?.data?.orderId || "";
-      const customer = msg?.data?.customerName || "khách";
-      toast.info(`Có đơn online mới #${code}`, {
-        description: `Khách: ${customer}${msg?.data?.customerPhone ? " · " + msg.data.customerPhone : ""}`,
+      const customer =
+        msg?.data?.customerName || t("pages.orders.list.onlineOrderGuest");
+      toast.info(t("pages.orders.list.onlineOrderToast", { code }), {
+        description: t("pages.orders.list.onlineOrderDesc", {
+          customer,
+          phone: msg?.data?.customerPhone
+            ? ` · ${msg.data.customerPhone}`
+            : "",
+        }),
       });
       // Refetch trang đầu để đơn mới xuất hiện đúng vị trí.
       if (pagination.pageIndex === 0) {
@@ -1209,7 +1271,7 @@ const OrderListPage = () => {
         setTotalCount((c) => c + 1);
       }
     },
-    [fetchOrders, pagination.pageIndex],
+    [fetchOrders, pagination.pageIndex, t],
   );
   useShopChannel("orders/online", onOnlineOrderEvent);
 
@@ -1230,28 +1292,27 @@ const OrderListPage = () => {
   // ── Actions ──────────────────────────────────────────────────────────────
   const handleCancel = useCallback(
     async (order) => {
-      const ok = await confirm(
-        `Bạn có chắc muốn hủy đơn hàng này? Tồn kho sẽ được hoàn lại.`,
-        {
-          title: "Hủy đơn hàng",
-          confirmText: "Hủy đơn",
-          cancelText: "Đóng",
-          variant: "destructive",
-        },
-      );
+      const ok = await confirm(t("pages.orders.list.cancelConfirm"), {
+        title: t("pages.orders.list.cancelTitle"),
+        confirmText: t("pages.orders.list.cancelConfirmBtn"),
+        cancelText: t("pages.orders.list.close"),
+        variant: "destructive",
+      });
       if (!ok) return;
       try {
         setSubmitting(true);
         await cancelOrder(order.id, selectedShopId);
-        toast.success("Đã hủy đơn hàng.");
+        toast.success(t("pages.orders.list.cancelSuccess"));
         fetchOrders();
       } catch (err) {
-        toast.error(err.response?.data?.message || "Không thể hủy đơn hàng.");
+        toast.error(
+          err.response?.data?.message || t("pages.orders.list.cancelFail"),
+        );
       } finally {
         setSubmitting(false);
       }
     },
-    [confirm, selectedShopId, fetchOrders],
+    [confirm, selectedShopId, fetchOrders, t],
   );
 
   const handleStatusChange = useCallback(
@@ -1260,18 +1321,22 @@ const OrderListPage = () => {
         setSubmitting(true);
         await updateOrderStatus(order.id, selectedShopId, newStatus);
         toast.success(
-          `Đã cập nhật trạng thái: ${ORDER_STATUSES[newStatus]?.label || newStatus}`,
+          t("pages.orders.list.statusUpdated", {
+            status: t(`pages.orders.status.${newStatus}`, {
+              defaultValue: newStatus,
+            }),
+          }),
         );
         fetchOrders();
       } catch (err) {
         toast.error(
-          err.response?.data?.message || "Không thể cập nhật trạng thái.",
+          err.response?.data?.message || t("pages.orders.list.statusUpdateFail"),
         );
       } finally {
         setSubmitting(false);
       }
     },
-    [selectedShopId, fetchOrders],
+    [selectedShopId, fetchOrders, t],
   );
 
   const openPaymentDialog = useCallback((order) => {
@@ -1317,12 +1382,10 @@ const OrderListPage = () => {
           await uploadOrderPaymentProof(payingOrderId, selectedShopId, fd);
         } catch (upErr) {
           console.error(upErr);
-          toast.warning(
-            "Đã xác nhận thanh toán nhưng chưa tải lên được ảnh chứng từ. Bạn có thể bổ sung trong chi tiết đơn.",
-          );
+          toast.warning(t("pages.orders.list.paymentProofWarning"));
         }
       }
-      toast.success("Thanh toán thành công.");
+      toast.success(t("pages.orders.list.paymentSuccess"));
       setPaymentDialogOpen(false);
       setPayingOrderSnapshot(null);
       setPayingOrderId(null);
@@ -1330,7 +1393,7 @@ const OrderListPage = () => {
       fetchOrders();
     } catch (err) {
       toast.error(
-        err.response?.data?.message || "Không thể xác nhận thanh toán.",
+        err.response?.data?.message || t("pages.orders.list.paymentConfirmFail"),
       );
     } finally {
       setSubmitting(false);
@@ -1341,7 +1404,7 @@ const OrderListPage = () => {
   const columns = useMemo(() => {
     const tableColumn = {
       id: "table",
-      header: "Bàn",
+      header: t("pages.orders.list.colTable"),
       enableSorting: false,
       cell: ({ row }) => {
         const tableId = row.original?.tableId;
@@ -1350,7 +1413,10 @@ const OrderListPage = () => {
         return (
           <div className="max-w-[140px]">
             <p className="text-sm font-medium truncate">
-              {name || `Bàn #${shortId(tableId)}`}
+              {name ||
+                t("pages.orders.list.tableFallback", {
+                  id: shortId(tableId),
+                })}
             </p>
             {name && (
               <p className="text-[10px] text-muted-foreground font-mono truncate">
@@ -1365,7 +1431,7 @@ const OrderListPage = () => {
     return [
       {
         accessorKey: "orderCode",
-        header: "Mã đơn hàng",
+        header: t("pages.orders.list.colOrderCode"),
         cell: ({ row }) => {
           const o = row.original;
           const isOnline = (o?.orderSource || "").toUpperCase() === "ONLINE";
@@ -1377,10 +1443,10 @@ const OrderListPage = () => {
               {isOnline && (
                 <Badge
                   className="text-[10px] gap-0.5 px-1.5 py-0 h-4 bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:border-sky-500/40"
-                  title="Đơn từ storefront online"
+                  title={t("pages.orders.list.onlineBadgeTitle")}
                 >
                   <Globe className="h-2.5 w-2.5" />
-                  Online
+                  {t("pages.orders.list.onlineBadge")}
                 </Badge>
               )}
             </div>
@@ -1390,7 +1456,10 @@ const OrderListPage = () => {
       {
         accessorKey: "createdAt",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Thời gian" />
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.orders.list.colTime")}
+          />
         ),
         cell: ({ row }) => {
           const d = row.original.createdAt;
@@ -1398,9 +1467,9 @@ const OrderListPage = () => {
           const date = new Date(d);
           return (
             <div>
-              <p className="text-sm">{date.toLocaleDateString("vi-VN")}</p>
+              <p className="text-sm">{date.toLocaleDateString(numberLocale)}</p>
               <p className="text-xs text-muted-foreground">
-                {date.toLocaleTimeString("vi-VN")}
+                {date.toLocaleTimeString(numberLocale)}
               </p>
             </div>
           );
@@ -1409,7 +1478,7 @@ const OrderListPage = () => {
       ...(shopHasTableManagement ? [tableColumn] : []),
       {
         id: "customerGuest",
-        header: "Khách hàng",
+        header: t("pages.orders.list.colCustomer"),
         enableSorting: false,
         cell: ({ row }) => {
           const o = row.original;
@@ -1434,7 +1503,7 @@ const OrderListPage = () => {
                   className={`text-xs truncate ${crm ? "text-muted-foreground" : "text-sm font-medium"}`}
                   title={guest}
                 >
-                  {crm ? "POS: " : ""}
+                  {crm ? t("pages.orders.list.posGuestPrefix") : ""}
                   {guest}
                 </p>
               ) : null}
@@ -1444,7 +1513,7 @@ const OrderListPage = () => {
       },
       {
         accessorKey: "items",
-        header: "Sản phẩm",
+        header: t("pages.orders.list.colProducts"),
         enableSorting: false,
         cell: ({ row }) => {
           const items = row.original.items ?? [];
@@ -1457,7 +1526,9 @@ const OrderListPage = () => {
               </p>
               {items.length > 1 && (
                 <p className="text-xs text-muted-foreground">
-                  +{items.length - 1} sản phẩm khác
+                  {t("pages.orders.list.moreProducts", {
+                    count: items.length - 1,
+                  })}
                 </p>
               )}
             </div>
@@ -1466,7 +1537,7 @@ const OrderListPage = () => {
       },
       {
         id: "totalQuantity",
-        header: "SL",
+        header: t("pages.orders.list.colQty"),
         cell: ({ row }) => {
           const items = row.original.items ?? [];
           const qty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
@@ -1479,14 +1550,17 @@ const OrderListPage = () => {
       },
       {
         id: "taxSnapshot",
-        header: "Thuế",
+        header: t("pages.orders.list.colTax"),
         enableSorting: false,
         cell: ({ row }) => <OrderTaxBadge order={row.original} />,
       },
       {
         accessorKey: "totalPrice",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Tổng tiền" />
+          <DataTableColumnHeader
+            column={column}
+            title={t("pages.orders.list.colTotal")}
+          />
         ),
         cell: ({ row }) => {
           const total =
@@ -1495,19 +1569,19 @@ const OrderListPage = () => {
             0;
           return (
             <span className="text-sm font-semibold tabular-nums">
-              {total.toLocaleString("vi-VN")} ₫
+              {total.toLocaleString(numberLocale)} ₫
             </span>
           );
         },
       },
       {
         accessorKey: "status",
-        header: "Trạng thái",
+        header: t("pages.orders.list.colStatus"),
         cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: "paid",
-        header: "Thanh toán",
+        header: t("pages.orders.list.colPayment"),
         cell: ({ row }) => {
           const o = row.original;
           return (
@@ -1536,12 +1610,12 @@ const OrderListPage = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Mở menu</span>
+                  <span className="sr-only">{t("pages.orders.list.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background w-48">
-                <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("pages.orders.list.actions")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
@@ -1549,13 +1623,13 @@ const OrderListPage = () => {
                     setDetailOpen(true);
                   }}
                 >
-                  <Eye className="h-4 w-4 mr-2" /> Xem chi tiết
+                  <Eye className="h-4 w-4 mr-2" /> {t("pages.orders.list.viewDetail")}
                 </DropdownMenuItem>
 
                 {!order.paid && !isTerminal && canUpdate && (
                   <DropdownMenuItem onClick={() => goEditOrderOnPos(order)}>
                     <Pencil className="h-4 w-4 mr-2 text-primary" />
-                    Chỉnh sửa trên POS
+                    {t("pages.orders.list.editOnPos")}
                   </DropdownMenuItem>
                 )}
 
@@ -1563,13 +1637,14 @@ const OrderListPage = () => {
                   onClick={() => openInvoiceDialog(order)}
                   disabled={!order?.items || order.items.length === 0}
                 >
-                  <Printer className="h-4 w-4 mr-2" /> In lại bill
+                  <Printer className="h-4 w-4 mr-2" />{" "}
+                  {t("pages.orders.list.reprintBill")}
                 </DropdownMenuItem>
 
                 {!order.paid && !isTerminal && canPay && (
                   <DropdownMenuItem onClick={() => openPaymentDialog(order)}>
                     <CreditCard className="h-4 w-4 mr-2 text-emerald-600" />{" "}
-                    Thanh toán
+                    {t("pages.orders.list.pay")}
                   </DropdownMenuItem>
                 )}
 
@@ -1578,8 +1653,8 @@ const OrderListPage = () => {
                     onClick={() => handleStatusChange(order, "CONFIRMED")}
                     disabled={submitting}
                   >
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-600" /> Xác
-                    nhận
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-600" />{" "}
+                    {t("pages.orders.list.confirm")}
                   </DropdownMenuItem>
                 )}
 
@@ -1588,7 +1663,8 @@ const OrderListPage = () => {
                     onClick={() => handleStatusChange(order, "SHIPPING")}
                     disabled={submitting}
                   >
-                    <Truck className="h-4 w-4 mr-2 text-violet-600" /> Giao hàng
+                    <Truck className="h-4 w-4 mr-2 text-violet-600" />{" "}
+                    {t("pages.orders.list.ship")}
                   </DropdownMenuItem>
                 )}
 
@@ -1600,7 +1676,7 @@ const OrderListPage = () => {
                       disabled={submitting}
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />{" "}
-                      Hoàn tất
+                      {t("pages.orders.list.complete")}
                     </DropdownMenuItem>
                   )}
 
@@ -1612,7 +1688,8 @@ const OrderListPage = () => {
                       onClick={() => handleCancel(order)}
                       disabled={submitting}
                     >
-                      <XCircle className="h-4 w-4 mr-2" /> Hủy đơn
+                      <XCircle className="h-4 w-4 mr-2" />{" "}
+                      {t("pages.orders.list.cancelOrder")}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -1634,6 +1711,8 @@ const OrderListPage = () => {
     goEditOrderOnPos,
     tableNameById,
     openInvoiceDialog,
+    t,
+    numberLocale,
   ]);
 
   // Client-side filter theo nguồn đơn (POS / ONLINE). BE chưa hỗ trợ
@@ -1672,10 +1751,10 @@ const OrderListPage = () => {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Quản lý đơn hàng
+              {t("pages.orders.list.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Theo dõi và xử lý đơn hàng
+              {t("pages.orders.list.subtitle")}
             </p>
           </div>
           {/* {canManage && (
@@ -1690,29 +1769,29 @@ const OrderListPage = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
             icon={ShoppingCart}
-            label="Tổng đơn hàng"
+            label={t("pages.orders.list.stats.total")}
             value={stats.total}
             iconClassName="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300"
             loading={loading && orders.length === 0}
           />
           <StatCard
             icon={Clock}
-            label="Chờ xử lý"
+            label={t("pages.orders.list.stats.pending")}
             value={stats.pending}
             iconClassName="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300"
             loading={loading && orders.length === 0}
           />
           <StatCard
             icon={CheckCircle2}
-            label="Hoàn tất"
+            label={t("pages.orders.list.stats.completed")}
             value={stats.completed}
             iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300"
             loading={loading && orders.length === 0}
           />
           <StatCard
             icon={CreditCard}
-            label="Doanh thu"
-            value={stats.revenue.toLocaleString("vi-VN") + " ₫"}
+            label={t("pages.orders.list.stats.revenue")}
+            value={stats.revenue.toLocaleString(numberLocale) + " ₫"}
             iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300"
             loading={loading && orders.length === 0}
           />
@@ -1733,10 +1812,12 @@ const OrderListPage = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
-                {Object.entries(ORDER_STATUSES).map(([key, cfg]) => (
+                <SelectItem value="ALL">
+                  {t("pages.orders.list.filterAllStatus")}
+                </SelectItem>
+                {Object.keys(ORDER_STATUS_META).map((key) => (
                   <SelectItem key={key} value={key}>
-                    {cfg.label}
+                    {t(`pages.orders.status.${key}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1750,9 +1831,15 @@ const OrderListPage = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="ALL">Tất cả nguồn</SelectItem>
-                <SelectItem value="POS">POS / Tại quầy</SelectItem>
-                <SelectItem value="ONLINE">Đơn online</SelectItem>
+                <SelectItem value="ALL">
+                  {t("pages.orders.list.filterAllSource")}
+                </SelectItem>
+                <SelectItem value="POS">
+                  {t("pages.orders.list.sourcePos")}
+                </SelectItem>
+                <SelectItem value="ONLINE">
+                  {t("pages.orders.list.sourceOnline")}
+                </SelectItem>
               </SelectContent>
             </Select>
             {branches.length > 1 && (
@@ -1763,10 +1850,14 @@ const OrderListPage = () => {
                 }
               >
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Tất cả chi nhánh" />
+                  <SelectValue
+                    placeholder={t("pages.orders.list.allBranches")}
+                  />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
-                  <SelectItem value="ALL">Tất cả chi nhánh</SelectItem>
+                  <SelectItem value="ALL">
+                    {t("pages.orders.list.allBranches")}
+                  </SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
@@ -1807,7 +1898,7 @@ const OrderListPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    Đang tải...
+                    {t("pages.orders.list.loading")}
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
@@ -1846,7 +1937,7 @@ const OrderListPage = () => {
                   >
                     <div className="flex flex-col items-center gap-2 py-4">
                       <ShoppingCart className="h-8 w-8 text-muted-foreground/40" />
-                      <p>Chưa có đơn hàng nào.</p>
+                      <p>{t("pages.orders.list.empty")}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1885,13 +1976,13 @@ const OrderListPage = () => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-emerald-600" /> Xác nhận thanh
-              toán
+              <CreditCard className="h-5 w-5 text-emerald-600" />{" "}
+              {t("pages.orders.paymentDialog.title")}
             </DialogTitle>
             <DialogDescription>
               {payingOrderSnapshot?.paymentStatus === "PENDING_COLLECTION"
-                ? "Đơn Ship COD — chọn phương thức tiền đã thu thực tế (thường là Tiền mặt), rồi xác nhận để đánh dấu đã thanh toán."
-                : "Chọn phương thức thanh toán cho đơn hàng."}
+                ? t("pages.orders.paymentDialog.codHint")
+                : t("pages.orders.paymentDialog.defaultHint")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1906,9 +1997,9 @@ const OrderListPage = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
+                {PAYMENT_METHOD_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`pages.orders.paymentMethod.${value}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1916,7 +2007,7 @@ const OrderListPage = () => {
             {paymentMethod === "Transfer" && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">
-                  Ảnh chứng từ CK (tuỳ chọn)
+                  {t("pages.orders.paymentDialog.proofLabel")}
                 </Label>
                 <Input
                   type="file"
@@ -1939,13 +2030,13 @@ const OrderListPage = () => {
                 onClick={() => setPaymentDialogOpen(false)}
                 disabled={submitting}
               >
-                Hủy
+                {t("pages.orders.paymentDialog.cancel")}
               </Button>
               <Button onClick={handleConfirmPayment} disabled={submitting}>
                 {submitting && (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
                 )}
-                Xác nhận
+                {t("pages.orders.paymentDialog.confirm")}
               </Button>
             </div>
           </div>
@@ -1964,10 +2055,10 @@ const OrderListPage = () => {
           <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Printer className="h-5 w-5" />
-              In lại bill
+              {t("pages.orders.invoice.title")}
             </DialogTitle>
             <DialogDescription>
-              Kiểm tra nội dung, sau đó chọn In hóa đơn.
+              {t("pages.orders.invoice.description")}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 min-h-0 max-h-[55vh] px-6">
@@ -1985,7 +2076,7 @@ const OrderListPage = () => {
                 setInvoicePayload(null);
               }}
             >
-              Đóng
+              {t("pages.orders.invoice.close")}
             </Button>
             <Button
               onClick={() => {
@@ -1997,7 +2088,7 @@ const OrderListPage = () => {
               }}
             >
               <Printer className="h-4 w-4 mr-2" />
-              In hóa đơn
+              {t("pages.orders.invoice.print")}
             </Button>
           </DialogFooter>
         </DialogContent>

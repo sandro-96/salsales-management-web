@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
@@ -53,6 +54,10 @@ import {
 import { COUNTRIES } from "@/constants/countries";
 import { getFlagUrl } from "@/utils/commonUtils";
 import { useSubscription } from "@/hooks/useSubscription";
+import {
+  getBusinessModelLabel,
+  getShopTypeLabel,
+} from "@/utils/shopLabels";
 
 function subscriptionPillClass(status) {
   switch (status) {
@@ -69,20 +74,26 @@ function subscriptionPillClass(status) {
   }
 }
 
-function subscriptionPillLabel(sub) {
-  if (!sub?.status) return "Đang tải…";
+function subscriptionPillLabel(sub, t) {
+  if (!sub?.status) return t("pages.shops.subscription.loading");
   if (sub.status === "TRIAL") {
-    return `Dùng thử · ${sub.trialDaysRemaining ?? 0} ngày`;
+    return t("pages.shops.subscription.trialPill", {
+      days: sub.trialDaysRemaining ?? 0,
+    });
   }
   if (sub.status === "ACTIVE") {
-    return `Đang hoạt động · ${sub.periodDaysRemaining ?? 0} ngày`;
+    return t("pages.shops.subscription.activePill", {
+      days: sub.periodDaysRemaining ?? 0,
+    });
   }
-  if (sub.status === "EXPIRED") return "Hết hạn";
-  if (sub.status === "CANCELLED") return "Đã huỷ";
+  if (sub.status === "EXPIRED") return t("pages.shops.subscription.expiredPill");
+  if (sub.status === "CANCELLED")
+    return t("pages.shops.subscription.cancelledPill");
   return sub.status;
 }
 
 const ShopSettingsPage = () => {
+  const { t } = useTranslation();
   const { confirm } = useAlertDialog();
   const { enums } = useAuth();
   const { selectedShop, setSelectedShop, fetchShops, isOwner } = useShop();
@@ -154,21 +165,21 @@ const ShopSettingsPage = () => {
     if (!file) return;
     const ALLOWED = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!ALLOWED.includes(file.type)) {
-      toast.error("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP");
+      toast.error(t("pages.shops.settings.imageTypeError"));
       return;
     }
     let processed = file;
     if (file.size > 5 * 1024 * 1024) {
-      const tid = toast.loading("Đang nén ảnh...");
+      const tid = toast.loading(t("pages.shops.settings.compressing"));
       try {
         processed = await imageCompression(file, {
           maxSizeMB: 1,
           maxWidthOrHeight: 1024,
           useWebWorker: true,
         });
-        toast.success("Nén ảnh thành công!", { id: tid });
+        toast.success(t("pages.shops.settings.compressSuccess"), { id: tid });
       } catch {
-        toast.error("Nén ảnh thất bại.", { id: tid });
+        toast.error(t("pages.shops.settings.compressFail"), { id: tid });
       }
     }
     setLogoFile(processed);
@@ -178,7 +189,7 @@ const ShopSettingsPage = () => {
   const handleSubmit = async () => {
     setAttemptedSubmit(true);
     if (!name.trim()) {
-      toast.error("Tên cửa hàng không được để trống.");
+      toast.error(t("pages.shops.settings.nameRequiredToast"));
       return;
     }
     try {
@@ -213,17 +224,17 @@ const ShopSettingsPage = () => {
       );
 
       if (res.data.success) {
-        toast.success("Cập nhật cửa hàng thành công.");
+        toast.success(t("pages.shops.settings.updateSuccess"));
         const response = res.data.data;
         response.role = selectedShop.role;
         setSelectedShop(response);
         await fetchShops();
         setIsEditMode(false);
       } else {
-        toast.error(res.data.message || "Cập nhật thất bại.");
+        toast.error(res.data.message || t("pages.shops.settings.updateFail"));
       }
     } catch (err) {
-      toast.error("Đã xảy ra lỗi khi cập nhật cửa hàng.");
+      toast.error(t("pages.shops.settings.updateError"));
       console.error("Error updating shop:", err);
     } finally {
       setIsSubmitting(false);
@@ -232,30 +243,27 @@ const ShopSettingsPage = () => {
 
   const handleDelete = async () => {
     if (!selectedShop) return;
-    const ok = await confirm(
-      "Bạn có chắc muốn xóa cửa hàng này không? Hành động này không thể hoàn tác.",
-      {
-        title: "Xóa cửa hàng",
-        confirmText: "Xóa",
-        cancelText: "Hủy",
-        variant: "destructive",
-      },
-    );
+    const ok = await confirm(t("pages.shops.settings.deleteConfirm"), {
+      title: t("pages.shops.settings.deleteTitle"),
+      confirmText: t("pages.shops.settings.deleteConfirmBtn"),
+      cancelText: t("pages.shops.settings.cancel"),
+      variant: "destructive",
+    });
     if (!ok) return;
 
     try {
       setIsSubmitting(true);
       const res = await deleteShop(selectedShop.id);
       if (res.data.success) {
-        toast.success("Xóa cửa hàng thành công.");
+        toast.success(t("pages.shops.settings.deleteSuccess"));
         setSelectedShop(null);
         await fetchShops();
         navigate("/shops");
       } else {
-        toast.error(res.data.message || "Xóa cửa hàng thất bại.");
+        toast.error(res.data.message || t("pages.shops.settings.deleteFail"));
       }
     } catch (err) {
-      toast.error("Đã xảy ra lỗi khi xóa cửa hàng.");
+      toast.error(t("pages.shops.settings.deleteError"));
       console.error("Error deleting shop:", err);
     } finally {
       setIsSubmitting(false);
@@ -266,8 +274,8 @@ const ShopSettingsPage = () => {
     if (selectedShop?.slug) {
       navigator.clipboard
         .writeText(selectedShop.slug)
-        .then(() => toast.success("Đã sao chép slug!"))
-        .catch(() => toast.error("Không thể sao chép."));
+        .then(() => toast.success(t("pages.shops.settings.copySlugSuccess")))
+        .catch(() => toast.error(t("pages.shops.settings.copyFail")));
     }
   };
 
@@ -280,14 +288,14 @@ const ShopSettingsPage = () => {
     if (!storefrontUrl) return;
     navigator.clipboard
       .writeText(storefrontUrl)
-      .then(() => toast.success("Đã sao chép link bán hàng!"))
-      .catch(() => toast.error("Không thể sao chép."));
+      .then(() => toast.success(t("pages.shops.settings.copyStorefrontSuccess")))
+      .catch(() => toast.error(t("pages.shops.settings.copyFail")));
   };
 
   const toggleOnlineSales = async (nextValue) => {
     if (!selectedShop) return;
     if (!selectedShop.slug) {
-      toast.error("Cửa hàng chưa có slug, không thể bật bán online.");
+      toast.error(t("pages.shops.settings.noSlugOnline"));
       return;
     }
     try {
@@ -326,14 +334,14 @@ const ShopSettingsPage = () => {
         await fetchShops();
         toast.success(
           nextValue
-            ? "Đã bật chế độ bán hàng online!"
-            : "Đã tắt chế độ bán hàng online.",
+            ? t("pages.shops.settings.onlineEnabled")
+            : t("pages.shops.settings.onlineDisabled"),
         );
       } else {
-        toast.error(res.data.message || "Cập nhật thất bại.");
+        toast.error(res.data.message || t("pages.shops.settings.updateFail"));
       }
     } catch (err) {
-      toast.error("Đã xảy ra lỗi khi cập nhật.");
+      toast.error(t("pages.shops.settings.toggleError"));
       console.error("Error toggling online sales:", err);
     } finally {
       setTogglingOnline(false);
@@ -343,8 +351,20 @@ const ShopSettingsPage = () => {
   if (!selectedShop) return null;
 
   const country = COUNTRIES.find((c) => c.code === (isEditMode ? countryCode : selectedShop.countryCode)) || COUNTRIES[0];
-  const shopTypeLabel = shopTypes.find((s) => s.value === selectedShop.type)?.label || selectedShop.type;
-  const bizModelLabel = businessModels.find((b) => b.value === selectedShop.businessModel)?.label || selectedShop.businessModel;
+  const shopTypeHit = shopTypes.find((s) => s.value === selectedShop.type);
+  const bizModelHit = businessModels.find(
+    (b) => b.value === selectedShop.businessModel,
+  );
+  const shopTypeLabel = getShopTypeLabel(
+    t,
+    selectedShop.type,
+    shopTypeHit?.label,
+  );
+  const bizModelLabel = getBusinessModelLabel(
+    t,
+    selectedShop.businessModel,
+    bizModelHit?.label,
+  );
   const subscriptionPillCls = subscriptionPillClass(subscription?.status);
   const logoSrc = logoPreview || selectedShop.logoUrl;
 
@@ -352,10 +372,10 @@ const ShopSettingsPage = () => {
     <div className="flex-1 flex-col gap-6 p-4 md:p-8 md:flex max-w-4xl mx-auto w-full">
       <div className="mb-6">
         <h2 className="text-2xl font-semibold tracking-tight">
-          Cài đặt cửa hàng
+          {t("pages.shops.settings.title")}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Quản lý thông tin và cấu hình cửa hàng
+          {t("pages.shops.settings.subtitle")}
         </p>
       </div>
 
@@ -367,14 +387,18 @@ const ShopSettingsPage = () => {
                 <Percent className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">Chính sách thuế</p>
+                <p className="font-medium text-sm">
+                  {t("pages.shops.settings.taxCardTitle")}
+                </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Cấu hình VAT và thuế khác cho POS — chỉ Chủ cửa hàng và Quản lý.
+                  {t("pages.shops.settings.taxCardDesc")}
                 </p>
               </div>
             </div>
             <Button variant="secondary" size="sm" className="shrink-0" asChild>
-              <Link to="/tax-policies">Mở cài đặt thuế</Link>
+              <Link to="/tax-policies">
+                {t("pages.shops.settings.openTaxSettings")}
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -385,22 +409,22 @@ const ShopSettingsPage = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <ShoppingBag className="h-4 w-4 text-primary" />
-              Bán hàng online (Storefront)
+              {t("pages.shops.settings.storefrontTitle")}
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Khi bật, cửa hàng sẽ có một trang bán hàng công khai theo slug.
-              Khách (guest) có thể truy cập trực tiếp để xem sản phẩm và đặt
-              đơn COD — không cần đăng nhập.
+              {t("pages.shops.settings.storefrontDesc")}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-medium">
-                  {onlineSalesEnabled ? "Đang bật" : "Đang tắt"}
+                  {onlineSalesEnabled
+                    ? t("pages.shops.settings.storefrontOn")
+                    : t("pages.shops.settings.storefrontOff")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Đơn đặt từ storefront sẽ vào danh sách đơn với nhãn “Online”.
+                  {t("pages.shops.settings.storefrontOrdersHint")}
                 </p>
               </div>
               <Switch
@@ -413,15 +437,15 @@ const ShopSettingsPage = () => {
 
             {!selectedShop?.slug && (
               <p className="text-xs text-amber-600">
-                Cửa hàng chưa có slug. Slug sẽ được tạo tự động từ tên — vui
-                lòng kiểm tra lại thông tin cửa hàng.
+                {t("pages.shops.settings.noSlugWarning")}
               </p>
             )}
 
             {onlineSalesEnabled && storefrontUrl && (
               <div className="rounded-md border bg-muted/40 p-3 space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Globe className="h-3.5 w-3.5" /> Đường dẫn bán hàng công khai
+                  <Globe className="h-3.5 w-3.5" />{" "}
+                  {t("pages.shops.settings.publicStorefrontUrl")}
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -434,7 +458,7 @@ const ShopSettingsPage = () => {
                     variant="outline"
                     size="sm"
                     onClick={copyStorefrontUrl}
-                    title="Sao chép"
+                    title={t("pages.shops.settings.copy")}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -443,7 +467,7 @@ const ShopSettingsPage = () => {
                     variant="outline"
                     size="sm"
                     asChild
-                    title="Xem storefront"
+                    title={t("pages.shops.settings.viewStorefront")}
                   >
                     <a
                       href={storefrontUrl}
@@ -455,8 +479,7 @@ const ShopSettingsPage = () => {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Chia sẻ link này lên Zalo, Facebook, namecard… để khách đặt
-                  hàng online.
+                  {t("pages.shops.settings.shareStorefrontHint")}
                 </p>
               </div>
             )}
@@ -499,25 +522,27 @@ const ShopSettingsPage = () => {
               <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start mt-1.5">
                 {selectedShop.active ? (
                   <Badge className="text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15">
-                    <CheckCircle2 className="h-2.5 w-2.5" /> Hoạt động
+                    <CheckCircle2 className="h-2.5 w-2.5" />{" "}
+                    {t("pages.shops.settings.active")}
                   </Badge>
                 ) : (
                   <Badge className="text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-muted dark:text-muted-foreground dark:border-border dark:hover:bg-muted">
-                    <XCircle className="h-2.5 w-2.5" /> Tạm ngưng
+                    <XCircle className="h-2.5 w-2.5" />{" "}
+                    {t("pages.shops.settings.inactive")}
                   </Badge>
                 )}
                 {showSubscriptionStatus && (
                   <Link to="/billing" className="contents">
                     <Badge
                       className={`text-[10px] gap-0.5 cursor-pointer ${subscriptionPillCls}`}
-                      title="Xem chi tiết gói dịch vụ"
+                      title={t("pages.shops.subscription.viewPlanTitle")}
                     >
                       {subscription?.status === "ACTIVE" ? (
                         <CreditCard className="h-2.5 w-2.5" />
                       ) : (
                         <Clock className="h-2.5 w-2.5" />
                       )}
-                      {subscriptionPillLabel(subscription)}
+                      {subscriptionPillLabel(subscription, t)}
                     </Badge>
                   </Link>
                 )}
@@ -543,12 +568,14 @@ const ShopSettingsPage = () => {
                       size="sm"
                       onClick={() => setIsEditMode(true)}
                     >
-                      <Pencil className="h-4 w-4 mr-1" /> Chỉnh sửa
+                      <Pencil className="h-4 w-4 mr-1" />{" "}
+                      {t("pages.shops.settings.edit")}
                     </Button>
                   )
                 : (
                     <Button variant="ghost" size="sm" onClick={cancelEdit}>
-                      <X className="h-4 w-4 mr-1" /> Hủy
+                      <X className="h-4 w-4 mr-1" />{" "}
+                      {t("pages.shops.settings.cancel")}
                     </Button>
                   )}
             </div>
@@ -560,21 +587,23 @@ const ShopSettingsPage = () => {
       <Card className="mb-6">
         <CardHeader className="pb-4">
           <CardTitle className="text-base font-medium">
-            Thông tin cửa hàng
+            {t("pages.shops.settings.shopInfo")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Name */}
-          <FieldWrapper label="Tên cửa hàng *" icon={Store}>
+          <FieldWrapper label={t("pages.shops.settings.nameRequired")} icon={Store}>
             {isEditMode ? (
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nhập tên cửa hàng"
+                placeholder={t("pages.shops.settings.namePlaceholder")}
                 aria-invalid={attemptedSubmit && !name.trim()}
               />
             ) : (
-              <FieldValue>{selectedShop.name}</FieldValue>
+              <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
+                {selectedShop.name}
+              </FieldValue>
             )}
           </FieldWrapper>
 
@@ -582,7 +611,10 @@ const ShopSettingsPage = () => {
 
           {/* Type & Business model */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldWrapper label="Loại hình kinh doanh" icon={Building2}>
+            <FieldWrapper
+              label={t("pages.shops.settings.businessType")}
+              icon={Building2}
+            >
               {isEditMode ? (
                 <Select
                   value={type}
@@ -595,39 +627,46 @@ const ShopSettingsPage = () => {
                   }}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Chọn loại hình" />
+                    <SelectValue placeholder={t("pages.shops.settings.selectType")} />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
                     {shopTypes.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {getShopTypeLabel(t, opt.value, opt.label)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
-                <FieldValue>{shopTypeLabel}</FieldValue>
+                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
+                  {shopTypeLabel}
+                </FieldValue>
               )}
             </FieldWrapper>
-            <FieldWrapper label="Mô hình kinh doanh" icon={Briefcase}>
+            <FieldWrapper
+              label={t("pages.shops.settings.businessModel")}
+              icon={Briefcase}
+            >
               {isEditMode ? (
                 <Select
                   value={businessModel}
                   onValueChange={setBusinessModel}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Chọn mô hình" />
+                    <SelectValue placeholder={t("pages.shops.settings.selectModel")} />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
                     {businessModels.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {getBusinessModelLabel(t, opt.value, opt.label)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
-                <FieldValue>{bizModelLabel}</FieldValue>
+                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
+                  {bizModelLabel}
+                </FieldValue>
               )}
             </FieldWrapper>
           </div>
@@ -636,7 +675,7 @@ const ShopSettingsPage = () => {
 
           {/* Country & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldWrapper label="Quốc gia" icon={Globe}>
+            <FieldWrapper label={t("pages.shops.settings.country")} icon={Globe}>
               {isEditMode ? (
                 <Select value={countryCode} onValueChange={setCountryCode}>
                   <SelectTrigger className="w-full">
@@ -671,7 +710,7 @@ const ShopSettingsPage = () => {
                   </SelectContent>
                 </Select>
               ) : (
-                <FieldValue>
+                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
                   {country && (
                     <span className="flex items-center gap-2">
                       <img
@@ -685,7 +724,7 @@ const ShopSettingsPage = () => {
                 </FieldValue>
               )}
             </FieldWrapper>
-            <FieldWrapper label="Số điện thoại" icon={Phone}>
+            <FieldWrapper label={t("pages.shops.settings.phone")} icon={Phone}>
               {isEditMode ? (
                 <div className="flex">
                   <span className="px-3 py-2 bg-muted border border-r-0 rounded-l-md text-muted-foreground text-xs flex items-center">
@@ -694,12 +733,12 @@ const ShopSettingsPage = () => {
                   <Input
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0912345678"
+                    placeholder={t("pages.shops.settings.phonePlaceholder")}
                     className="flex-1 rounded-l-none"
                   />
                 </div>
               ) : (
-                <FieldValue>
+                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
                   {selectedShop.phone
                     ? `${country?.dialCode || ""} ${selectedShop.phone}`
                     : null}
@@ -711,37 +750,40 @@ const ShopSettingsPage = () => {
           <Separator />
 
           {/* Address */}
-          <FieldWrapper label="Địa chỉ" icon={MapPin}>
+          <FieldWrapper label={t("pages.shops.settings.address")} icon={MapPin}>
             {isEditMode ? (
               <Textarea
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Nhập địa chỉ chi tiết"
+                placeholder={t("pages.shops.settings.addressPlaceholder")}
                 rows={2}
               />
             ) : (
-              <FieldValue>{selectedShop.address}</FieldValue>
+              <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
+                {selectedShop.address}
+              </FieldValue>
             )}
           </FieldWrapper>
 
           <Separator />
 
-          <FieldWrapper label="Mã số thuế (MST)" icon={IdCard}>
+          <FieldWrapper label={t("pages.shops.settings.taxId")} icon={IdCard}>
             {isEditMode ? (
               <Input
                 value={taxRegistrationNumber}
                 onChange={(e) => setTaxRegistrationNumber(e.target.value)}
-                placeholder="Ví dụ: 0123456789"
+                placeholder={t("pages.shops.settings.taxIdPlaceholder")}
                 maxLength={32}
               />
             ) : (
-              <FieldValue>{selectedShop.taxRegistrationNumber}</FieldValue>
+              <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
+                {selectedShop.taxRegistrationNumber}
+              </FieldValue>
             )}
           </FieldWrapper>
           {isEditMode && (
             <p className="text-xs text-muted-foreground -mt-2">
-              MST mặc định của cửa hàng. Chi nhánh có thể nhập MST riêng trong
-              cài đặt chi nhánh; để trống ở chi nhánh thì dùng MST này.
+              {t("pages.shops.settings.taxIdHint")}
             </p>
           )}
 
@@ -750,15 +792,14 @@ const ShopSettingsPage = () => {
           <div className="space-y-1">
             <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
               <Link2 className="h-3.5 w-3.5" />
-              Liên kết Zalo, Facebook, TikTok, Shopee
+              {t("pages.shops.settings.socialLinks")}
             </Label>
             <p className="text-xs text-muted-foreground pb-2">
-              Dán URL đầy đủ (ví dụ https://zalo.me/...) để hiển thị trên cài đặt
-              và kênh marketing.
+              {t("pages.shops.settings.socialLinksHint")}
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldWrapper label="Zalo Page / OA">
+            <FieldWrapper label={t("pages.shops.settings.zalo")}>
               {isEditMode ? (
                 <Input
                   value={zaloPageUrl}
@@ -775,10 +816,10 @@ const ShopSettingsPage = () => {
                   {selectedShop.zaloPageUrl}
                 </a>
               ) : (
-                <FieldValue />
+                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")} />
               )}
             </FieldWrapper>
-            <FieldWrapper label="Facebook">
+            <FieldWrapper label={t("pages.shops.settings.facebook")}>
               {isEditMode ? (
                 <Input
                   value={facebookUrl}
@@ -795,10 +836,10 @@ const ShopSettingsPage = () => {
                   {selectedShop.facebookUrl}
                 </a>
               ) : (
-                <FieldValue />
+                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")} />
               )}
             </FieldWrapper>
-            <FieldWrapper label="TikTok">
+            <FieldWrapper label={t("pages.shops.settings.tiktok")}>
               {isEditMode ? (
                 <Input
                   value={tiktokUrl}
@@ -815,10 +856,10 @@ const ShopSettingsPage = () => {
                   {selectedShop.tiktokUrl}
                 </a>
               ) : (
-                <FieldValue />
+                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")} />
               )}
             </FieldWrapper>
-            <FieldWrapper label="Shopee">
+            <FieldWrapper label={t("pages.shops.settings.shopee")}>
               {isEditMode ? (
                 <Input
                   value={shopeeUrl}
@@ -835,19 +876,18 @@ const ShopSettingsPage = () => {
                   {selectedShop.shopeeUrl}
                 </a>
               ) : (
-                <FieldValue />
+                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")} />
               )}
             </FieldWrapper>
           </div>
 
           {/* Tính năng topping — mặc định tắt; bật để cấu hình & POS */}
           <Separator />
-          <FieldWrapper label="Topping (POS / sản phẩm)">
+          <FieldWrapper label={t("pages.shops.settings.toppings")}>
             {isEditMode ? (
               <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-2">
                 <p className="text-sm text-muted-foreground pr-2">
-                  Khi bật: POS có thể chọn topping; trang sản phẩm hiện nút &quot;Cài
-                  đặt topping&quot; và form sản phẩm cho phép gán topping.
+                  {t("pages.shops.settings.toppingsHint")}
                 </p>
                 <Switch
                   checked={toppingsEnabled}
@@ -856,8 +896,10 @@ const ShopSettingsPage = () => {
                 />
               </div>
             ) : (
-              <FieldValue>
-                {selectedShop.toppingsEnabled ? "Đang bật" : "Đang tắt"}
+              <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
+                {selectedShop.toppingsEnabled
+                  ? t("pages.shops.settings.storefrontOn")
+                  : t("pages.shops.settings.storefrontOff")}
               </FieldValue>
             )}
           </FieldWrapper>
@@ -866,7 +908,7 @@ const ShopSettingsPage = () => {
           {isEditMode && (
             <>
               <Separator />
-              <FieldWrapper label="Trạng thái hoạt động">
+              <FieldWrapper label={t("pages.shops.settings.activeStatus")}>
                 <Select
                   value={active ? "true" : "false"}
                   onValueChange={(v) => setActive(v === "true")}
@@ -875,8 +917,12 @@ const ShopSettingsPage = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
-                    <SelectItem value="true">Hoạt động</SelectItem>
-                    <SelectItem value="false">Tạm ngưng</SelectItem>
+                    <SelectItem value="true">
+                      {t("pages.shops.settings.active")}
+                    </SelectItem>
+                    <SelectItem value="false">
+                      {t("pages.shops.settings.inactive")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </FieldWrapper>
@@ -892,7 +938,7 @@ const ShopSettingsPage = () => {
                 onClick={cancelEdit}
                 disabled={isSubmitting}
               >
-                Hủy
+                {t("pages.shops.settings.cancel")}
               </Button>
               <Button
                 type="button"
@@ -904,7 +950,9 @@ const ShopSettingsPage = () => {
                 ) : (
                   <Save className="h-4 w-4 mr-1" />
                 )}
-                {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+                {isSubmitting
+                  ? t("pages.shops.settings.saving")
+                  : t("pages.shops.settings.save")}
               </Button>
             </div>
           )}
@@ -916,16 +964,17 @@ const ShopSettingsPage = () => {
         <Card className="border-destructive/30">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-medium text-destructive">
-              Vùng nguy hiểm
+              {t("pages.shops.settings.dangerZone")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <p className="text-sm font-medium">Xóa cửa hàng</p>
+                <p className="text-sm font-medium">
+                  {t("pages.shops.settings.deleteShop")}
+                </p>
                 <p className="text-sm text-muted-foreground">
-                  Xóa vĩnh viễn cửa hàng và tất cả dữ liệu liên quan. Hành
-                  động này không thể hoàn tác.
+                  {t("pages.shops.settings.deleteShopHint")}
                 </p>
               </div>
               <Button
@@ -935,7 +984,8 @@ const ShopSettingsPage = () => {
                 disabled={isSubmitting}
                 className="shrink-0"
               >
-                <Trash2 className="h-4 w-4 mr-1" /> Xóa cửa hàng
+                <Trash2 className="h-4 w-4 mr-1" />{" "}
+                {t("pages.shops.settings.deleteShop")}
               </Button>
             </div>
           </CardContent>
@@ -957,11 +1007,11 @@ function FieldWrapper({ label, icon: IconComp, children }) {
   );
 }
 
-function FieldValue({ children }) {
+function FieldValue({ children, emptyLabel }) {
   return (
     <p className="text-sm font-medium py-2 px-3 rounded-md bg-muted/50 min-h-9 flex items-center">
       {children || (
-        <span className="text-muted-foreground">Chưa cập nhật</span>
+        <span className="text-muted-foreground">{emptyLabel}</span>
       )}
     </p>
   );

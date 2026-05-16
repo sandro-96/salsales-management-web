@@ -14,6 +14,7 @@ import ProductForm from "./ProductForm.jsx";
 import { createProduct, updateProduct } from "../../api/productApi.js";
 import { lookupBarcode } from "@/utils/barcodeUtils.js";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 const EMPTY_PREFILL_DEFAULTS = {};
@@ -35,6 +36,7 @@ export default function ProductFormModal({
   startStep, // "scan" | "form" — overrides default for create mode
   prefillDefaults,
 }) {
+  const { t } = useTranslation();
   const isEdit = !!product;
 
   const effectivePrefillDefaults =
@@ -127,13 +129,11 @@ export default function ProductFormModal({
     } catch (err) {
       console.error("Camera error:", err);
       if (err?.name === "NotAllowedError") {
-        setScanError(
-          "Trình duyệt bị từ chối quyền camera. Vui lòng cấp quyền và thử lại.",
-        );
+        setScanError(t("pages.products.formModal.cameraDenied"));
       } else if (err?.name === "NotFoundError") {
-        setScanError("Không tìm thấy camera trên thiết bị này.");
+        setScanError(t("pages.products.formModal.cameraNotFound"));
       } else {
-        setScanError("Không thể khởi động camera.");
+        setScanError(t("pages.products.formModal.cameraStartFail"));
       }
     }
   };
@@ -162,9 +162,13 @@ export default function ProductFormModal({
         images: Array.isArray(info?.images) ? info.images : [],
       });
       if (info?.name) {
-        toast.success(`Tìm thấy: "${info.name}"`);
+        toast.success(
+          t("pages.products.formModal.foundProduct", { name: info.name }),
+        );
       } else {
-        toast.success(`Quét được: ${barcode}`);
+        toast.success(
+          t("pages.products.formModal.scannedBarcode", { barcode }),
+        );
       }
     } finally {
       setLookingUp(false);
@@ -184,25 +188,29 @@ export default function ProductFormModal({
       if (isEdit) {
         const res = await updateProduct(shopId, product.productId, data, files);
         if (res.data?.success) {
-          toast.success("Cập nhật sản phẩm thành công.");
+          toast.success(t("pages.products.formModal.updateSuccess"));
           onSuccess?.();
           onClose?.();
         } else {
-          toast.error(res.data?.message || "Cập nhật thất bại.");
+          toast.error(
+            res.data?.message || t("pages.products.formModal.updateFail"),
+          );
         }
       } else {
         const res = await createProduct(shopId, data, files);
         if (res.data?.success) {
-          toast.success("Thêm sản phẩm thành công.");
+          toast.success(t("pages.products.formModal.createSuccess"));
           onSuccess?.();
           onClose?.();
         } else {
-          toast.error(res.data?.message || "Thêm sản phẩm thất bại.");
+          toast.error(
+            res.data?.message || t("pages.products.formModal.createFail"),
+          );
         }
       }
     } catch (err) {
       console.error("ProductFormModal error:", err);
-      toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
+      toast.error(t("pages.products.formModal.genericError"));
     } finally {
       setLoading(false);
     }
@@ -231,19 +239,19 @@ export default function ProductFormModal({
         >
           <DialogTitle>
             {step === "scan"
-              ? "Quét mã vạch sản phẩm"
+              ? t("pages.products.formModal.scanTitle")
               : !isEdit
-                ? "Thêm sản phẩm mới"
+                ? t("pages.products.formModal.createTitle")
                 : mode === "view"
-                  ? "Chi tiết sản phẩm"
-                  : "Chỉnh sửa sản phẩm"}
+                  ? t("pages.products.formModal.viewTitle")
+                  : t("pages.products.formModal.editTitle")}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {step === "scan"
-              ? "Đưa mã vạch sản phẩm vào khung camera để quét tự động."
+              ? t("pages.products.formModal.scanDesc")
               : isEdit
-                ? "Chỉnh sửa thông tin sản phẩm."
-                : "Điền thông tin để thêm sản phẩm mới."}
+                ? t("pages.products.formModal.editDesc")
+                : t("pages.products.formModal.createDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -286,7 +294,7 @@ export default function ProductFormModal({
                     }}
                   >
                     <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                    Thử lại
+                    {t("pages.products.formModal.retry")}
                   </Button>
                 </div>
               )}
@@ -296,7 +304,7 @@ export default function ProductFormModal({
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/75">
                   <Loader2 className="h-8 w-8 animate-spin text-white" />
                   <p className="text-sm text-white">
-                    Đang tra cứu thông tin...
+                    {t("pages.products.formModal.lookingUp")}
                   </p>
                   <p className="text-xs text-white/60 font-mono">
                     {scannedCode}
@@ -314,10 +322,10 @@ export default function ProductFormModal({
                 )}
               >
                 {scanning
-                  ? "Đưa mã vạch vào khung để quét..."
+                  ? t("pages.products.formModal.scanHint")
                   : scanError
-                    ? "Không thể khởi động camera"
-                    : "Đang khởi động camera..."}
+                    ? t("pages.products.formModal.cameraFailed")
+                    : t("pages.products.formModal.cameraStarting")}
               </p>
               <div className="flex items-center gap-2">
                 {cameras.length > 1 && (
@@ -327,14 +335,14 @@ export default function ProductFormModal({
                     onClick={() =>
                       setCameraIdx((i) => (i + 1) % cameras.length)
                     }
-                    title="Đổi camera"
+                    title={t("pages.products.formModal.switchCamera")}
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 )}
                 <Button size="sm" variant="outline" onClick={handleSkip}>
                   <Keyboard className="h-3.5 w-3.5 mr-1.5" />
-                  Nhập thủ công
+                  {t("pages.products.formModal.manualEntry")}
                 </Button>
               </div>
             </div>

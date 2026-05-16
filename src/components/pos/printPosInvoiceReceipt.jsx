@@ -1,8 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { PosInvoiceReceipt } from "./PosInvoiceReceipt";
+import { getInvoiceT } from "../../utils/invoiceI18n.js";
+import { normalizeInvoiceLocale } from "../../utils/invoiceLocale.js";
 
 export function printPosInvoiceReceipt(props) {
   const markup = renderToStaticMarkup(<PosInvoiceReceipt {...props} />);
+  const invoiceT = getInvoiceT(normalizeInvoiceLocale(props.invoiceLocale));
   const iframe = document.createElement("iframe");
   iframe.setAttribute(
     "style",
@@ -12,8 +15,10 @@ export function printPosInvoiceReceipt(props) {
   const doc = iframe.contentDocument;
   doc.open();
   const title = props.isDraft
-    ? "Hóa đơn dự thảo"
-    : `Hóa đơn ${props.order?.id || ""}`;
+    ? invoiceT("pages.pos.print.titleDraft")
+    : invoiceT("pages.pos.print.titleInvoice", {
+        id: props.order?.id || "",
+      });
   doc.write(
     `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${title}</title><style>@page{margin:10mm}body{margin:0;background:#fff}</style></head><body>${markup}</body></html>`,
   );

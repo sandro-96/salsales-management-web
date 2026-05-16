@@ -31,6 +31,7 @@ export function ShopSwitcher() {
     ? formatSubscriptionLine(
         selectedShop.subscriptionStatus,
         selectedShop.subscriptionDaysRemaining,
+        t,
       )
     : null;
   return (
@@ -92,6 +93,7 @@ export function ShopSwitcher() {
                   ? formatSubscriptionLine(
                       shop.subscriptionStatus,
                       shop.subscriptionDaysRemaining,
+                      t,
                     )
                   : null;
                 return (

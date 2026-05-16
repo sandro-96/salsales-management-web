@@ -314,6 +314,14 @@
       "orders": "Đơn hàng"
     }
   },
+  "systemSupport": {
+    "title": "Liên hệ hệ thống",
+    "titleWithName": "Liên hệ hệ thống — {{name}}",
+    "contactShort": "Liên hệ",
+    "contactShortWithName": "Liên hệ — {{name}}",
+    "hours": "Giờ hỗ trợ: 8:30–17:30 (T2–T6)",
+    "zalo": "Zalo"
+  },
   "shop": {
     "kickedTitle": "Bạn đã bị gỡ khỏi shop",
     "kickedMessage": "Chủ shop đã gỡ bạn khỏi cửa hàng này. Bấm “Tải lại” để cập nhật quyền và menu.",

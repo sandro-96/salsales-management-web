@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { vi } from "date-fns/locale";
+import { enUS, vi } from "date-fns/locale";
 import {
   CalendarIcon,
   Loader2,
@@ -66,6 +67,9 @@ export default function PromotionFormModal({
   branches,
   onSuccess,
 }) {
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const dateLocale = i18n.language?.startsWith("en") ? enUS : vi;
   const isEdit = !!promotion;
   const { hasShopPermission } = useShopPermissions();
   const canUpdate = hasShopPermission(PERM.PROMOTION_UPDATE);
@@ -172,27 +176,27 @@ export default function PromotionFormModal({
 
   const validate = () => {
     if (!name.trim()) {
-      toast.error("Tên khuyến mãi không được để trống.");
+      toast.error(t("pages.promotions.formModal.nameRequired"));
       return false;
     }
     if (!discountValue || Number(discountValue) <= 0) {
-      toast.error("Giá trị giảm giá phải lớn hơn 0.");
+      toast.error(t("pages.promotions.formModal.discountPositive"));
       return false;
     }
     if (discountType === "PERCENT" && Number(discountValue) > 100) {
-      toast.error("Phần trăm giảm giá không được vượt quá 100%.");
+      toast.error(t("pages.promotions.formModal.percentMax"));
       return false;
     }
     if (!startDate) {
-      toast.error("Vui lòng chọn ngày bắt đầu.");
+      toast.error(t("pages.promotions.formModal.startRequired"));
       return false;
     }
     if (!endDate) {
-      toast.error("Vui lòng chọn ngày kết thúc.");
+      toast.error(t("pages.promotions.formModal.endRequired"));
       return false;
     }
     if (startDate >= endDate) {
-      toast.error("Ngày kết thúc phải sau ngày bắt đầu.");
+      toast.error(t("pages.promotions.formModal.endAfterStart"));
       return false;
     }
     return true;
@@ -225,25 +229,25 @@ export default function PromotionFormModal({
       if (isEdit) {
         const res = await updatePromotion(promotion.id, shopId, payload);
         if (res.data?.success) {
-          toast.success("Cập nhật khuyến mãi thành công.");
+          toast.success(t("pages.promotions.formModal.updateSuccess"));
           onSuccess?.();
           onClose?.();
         } else {
-          toast.error(res.data?.message || "Cập nhật thất bại.");
+          toast.error(res.data?.message || t("pages.promotions.formModal.updateFail"));
         }
       } else {
         const res = await createPromotion(shopId, payload);
         if (res.data?.success) {
-          toast.success("Tạo khuyến mãi thành công.");
+          toast.success(t("pages.promotions.formModal.createSuccess"));
           onSuccess?.();
           onClose?.();
         } else {
-          toast.error(res.data?.message || "Tạo khuyến mãi thất bại.");
+          toast.error(res.data?.message || t("pages.promotions.formModal.createFail"));
         }
       }
     } catch (err) {
       const msg =
-        err.response?.data?.message || "Đã xảy ra lỗi. Vui lòng thử lại.";
+        err.response?.data?.message || t("pages.promotions.formModal.genericError");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -259,15 +263,15 @@ export default function PromotionFormModal({
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {readOnly
-              ? "Chi tiết khuyến mãi"
+              ? t("pages.promotions.formModal.viewTitle")
               : isEdit
-                ? "Chỉnh sửa khuyến mãi"
-                : "Tạo khuyến mãi mới"}
+                ? t("pages.promotions.formModal.editTitle")
+                : t("pages.promotions.formModal.createTitle")}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {isEdit
-              ? "Chỉnh sửa thông tin khuyến mãi."
-              : "Điền thông tin để tạo khuyến mãi mới."}
+              ? t("pages.promotions.formModal.editDesc")
+              : t("pages.promotions.formModal.createDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -281,13 +285,13 @@ export default function PromotionFormModal({
               htmlFor="promo-name"
               className={attemptedSubmit && !name.trim() ? "text-destructive" : undefined}
             >
-              Tên khuyến mãi *
+              {t("pages.promotions.formModal.nameLabel")} *
             </Label>
             <Input
               id="promo-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="VD: Giảm giá mùa hè"
+              placeholder={t("pages.promotions.formModal.namePlaceholder")}
               autoFocus
               aria-invalid={attemptedSubmit && !name.trim()}
             />
@@ -297,15 +301,19 @@ export default function PromotionFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className={attemptedSubmit && !discountType ? "text-destructive" : undefined}>
-                Loại giảm giá *
+                {t("pages.promotions.formModal.discountTypeLabel")} *
               </Label>
               <Select value={discountType} onValueChange={setDiscountType}>
                 <SelectTrigger aria-invalid={attemptedSubmit && !discountType}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
-                  <SelectItem value="PERCENT">Phần trăm (%)</SelectItem>
-                  <SelectItem value="AMOUNT">Số tiền (đ)</SelectItem>
+                  <SelectItem value="PERCENT">
+                    {t("pages.promotions.formModal.discountPercent")}
+                  </SelectItem>
+                  <SelectItem value="AMOUNT">
+                    {t("pages.promotions.formModal.discountAmount")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -318,8 +326,10 @@ export default function PromotionFormModal({
                     : undefined
                 }
               >
-                Giá trị giảm *{" "}
-                {discountType === "PERCENT" ? "(max 100%)" : "(VNĐ)"}
+                {t("pages.promotions.formModal.discountValueLabel")} *{" "}
+                {discountType === "PERCENT"
+                  ? t("pages.promotions.formModal.discountValueMaxPercent")
+                  : t("pages.promotions.formModal.discountValueVnd")}
               </Label>
               <NumericInput
                 id="promo-value"
@@ -327,14 +337,20 @@ export default function PromotionFormModal({
                 onChange={setDiscountValue}
                 formatted={discountType === "AMOUNT"}
                 max={discountType === "PERCENT" ? 100 : undefined}
-                placeholder={discountType === "PERCENT" ? "VD: 15" : "VD: 50000"}
+                placeholder={
+                  discountType === "PERCENT"
+                    ? t("pages.promotions.formModal.valuePlaceholderPercent")
+                    : t("pages.promotions.formModal.valuePlaceholderAmount")
+                }
                 aria-invalid={attemptedSubmit && (!discountValue || Number(discountValue) <= 0)}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="promo-priority">Độ ưu tiên</Label>
+            <Label htmlFor="promo-priority">
+              {t("pages.promotions.formModal.priorityLabel")}
+            </Label>
             <NumericInput
               id="promo-priority"
               value={priority}
@@ -344,9 +360,7 @@ export default function PromotionFormModal({
               placeholder="0"
             />
             <p className="text-xs text-muted-foreground">
-              Khi nhiều khuyến mãi cùng thời gian và cùng áp vào một sản phẩm,
-              số cao hơn được áp dụng trước. Nếu trùng mức ưu tiên, hệ thống
-              chọn mức giảm lợi hơn cho khách.
+              {t("pages.promotions.formModal.priorityHint")}
             </p>
           </div>
 
@@ -354,7 +368,7 @@ export default function PromotionFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className={attemptedSubmit && !startDate ? "text-destructive" : undefined}>
-                Ngày bắt đầu *
+                {t("pages.promotions.formModal.startDateLabel")} *
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -369,8 +383,8 @@ export default function PromotionFormModal({
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {startDate
-                      ? format(startDate, "dd/MM/yyyy", { locale: vi })
-                      : "Chọn ngày"}
+                      ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
+                      : t("pages.promotions.formModal.pickDate")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -383,7 +397,7 @@ export default function PromotionFormModal({
                         setStartDate(d);
                       }
                     }}
-                    locale={vi}
+                    locale={dateLocale}
                     initialFocus
                   />
                 </PopoverContent>
@@ -391,7 +405,7 @@ export default function PromotionFormModal({
             </div>
             <div className="space-y-2">
               <Label className={attemptedSubmit && !endDate ? "text-destructive" : undefined}>
-                Ngày kết thúc *
+                {t("pages.promotions.formModal.endDateLabel")} *
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -406,8 +420,8 @@ export default function PromotionFormModal({
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {endDate
-                      ? format(endDate, "dd/MM/yyyy", { locale: vi })
-                      : "Chọn ngày"}
+                      ? format(endDate, "dd/MM/yyyy", { locale: dateLocale })
+                      : t("pages.promotions.formModal.pickDate")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -421,7 +435,7 @@ export default function PromotionFormModal({
                       }
                     }}
                     disabled={(d) => startDate && d < startDate}
-                    locale={vi}
+                    locale={dateLocale}
                     initialFocus
                   />
                 </PopoverContent>
@@ -431,18 +445,20 @@ export default function PromotionFormModal({
 
           {/* Branch scope */}
           <div className="space-y-2">
-            <Label>Phạm vi áp dụng</Label>
+            <Label>{t("pages.promotions.formModal.scopeLabel")}</Label>
             <Select
               value={branchId || "__all__"}
               onValueChange={(v) => setBranchId(v === "__all__" ? "" : v)}
               disabled={isEdit}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Toàn shop" />
+                <SelectValue
+                  placeholder={t("pages.promotions.list.scopeAllShop")}
+                />
               </SelectTrigger>
               <SelectContent className="bg-background">
                 <SelectItem value="__all__">
-                  Toàn shop (tất cả chi nhánh)
+                  {t("pages.promotions.formModal.scopeAllShop")}
                 </SelectItem>
                 {branches?.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
@@ -453,8 +469,7 @@ export default function PromotionFormModal({
             </Select>
             {isEdit && (
               <p className="text-xs text-muted-foreground">
-                Không thể thay đổi phạm vi (toàn shop / chi nhánh) khi chỉnh
-                sửa.
+                {t("pages.promotions.formModal.scopeLockedHint")}
               </p>
             )}
           </div>
@@ -462,9 +477,11 @@ export default function PromotionFormModal({
           {/* Active switch */}
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <Label className="text-sm font-medium">Kích hoạt</Label>
+              <Label className="text-sm font-medium">
+                {t("pages.promotions.formModal.activeLabel")}
+              </Label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Bật để khuyến mãi có hiệu lực trong thời gian áp dụng.
+                {t("pages.promotions.formModal.activeHint")}
               </p>
             </div>
             <Switch checked={active} onCheckedChange={setActive} />
@@ -472,7 +489,7 @@ export default function PromotionFormModal({
 
           {/* Product scope */}
           <div className="space-y-3">
-            <Label>Sản phẩm áp dụng</Label>
+            <Label>{t("pages.promotions.formModal.productsLabel")}</Label>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -485,7 +502,9 @@ export default function PromotionFormModal({
                   }}
                   className="accent-primary"
                 />
-                <span className="text-sm">Tất cả sản phẩm</span>
+                <span className="text-sm">
+                  {t("pages.promotions.formModal.applyAllProducts")}
+                </span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -495,7 +514,9 @@ export default function PromotionFormModal({
                   onChange={() => setApplyAll(false)}
                   className="accent-primary"
                 />
-                <span className="text-sm">Chọn sản phẩm cụ thể</span>
+                <span className="text-sm">
+                  {t("pages.promotions.formModal.applySelected")}
+                </span>
               </label>
             </div>
 
@@ -507,7 +528,7 @@ export default function PromotionFormModal({
                     <Input
                       value={productKeyword}
                       onChange={(e) => setProductKeyword(e.target.value)}
-                      placeholder="Tìm sản phẩm..."
+                      placeholder={t("pages.promotions.formModal.searchProducts")}
                       className="pl-8 h-8 text-sm"
                     />
                   </div>
@@ -515,7 +536,9 @@ export default function PromotionFormModal({
                 {selectedProductIds.length > 0 && (
                   <div className="px-3 py-1.5 border-b bg-muted/30">
                     <span className="text-xs text-muted-foreground">
-                      Đã chọn {selectedProductIds.length} sản phẩm
+                      {t("pages.promotions.formModal.selectedCount", {
+                        count: selectedProductIds.length,
+                      })}
                     </span>
                   </div>
                 )}
@@ -547,7 +570,7 @@ export default function PromotionFormModal({
                           </div>
                           {p.defaultPrice != null && (
                             <span className="text-xs text-muted-foreground shrink-0">
-                              {Number(p.defaultPrice).toLocaleString("vi-VN")}đ
+                              {Number(p.defaultPrice).toLocaleString(numberLocale)}đ
                             </span>
                           )}
                         </label>
@@ -555,7 +578,7 @@ export default function PromotionFormModal({
                     })
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-6">
-                      Không tìm thấy sản phẩm.
+                      {t("pages.promotions.formModal.noProductsFound")}
                     </p>
                   )}
                 </div>
@@ -566,12 +589,16 @@ export default function PromotionFormModal({
 
         <DialogFooter className="shrink-0 gap-2 sm:gap-0 pt-4 border-t">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            {readOnly ? "Đóng" : "Hủy"}
+            {readOnly
+              ? t("pages.promotions.formModal.close")
+              : t("pages.promotions.formModal.cancel")}
           </Button>
           {!readOnly && (
             <Button onClick={handleSubmit} disabled={submitting} variant="success">
               {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-              {isEdit ? "Lưu thay đổi" : "Tạo khuyến mãi"}
+              {isEdit
+                ? t("pages.promotions.formModal.save")
+                : t("pages.promotions.formModal.create")}
             </Button>
           )}
         </DialogFooter>

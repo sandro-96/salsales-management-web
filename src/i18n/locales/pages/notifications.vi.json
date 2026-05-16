@@ -28,6 +28,59 @@
     "TICKET_CREATED": "Ticket mới",
     "TICKET_REPLIED": "Phản hồi ticket",
     "TICKET_STATUS_CHANGED": "Cập nhật ticket",
+    "BILLING_PAYMENT_SUCCESS": "Thanh toán gói",
+    "BILLING_PAYMENT_FAILED": "Thanh toán thất bại",
+    "BILLING_MANUAL_TRANSFER_PENDING": "Chờ xác nhận CK",
+    "BILLING_PLAN_EXPIRING_SOON": "Sắp hết hạn",
+    "BILLING_PLAN_EXPIRED": "Gói hết hạn",
+    "BILLING_PLAN_UPGRADED": "Nâng cấp gói",
+    "BILLING_PLAN_DOWNGRADED": "Hạ gói",
+    "BILLING_INVOICE_CREATED": "Hóa đơn",
+    "BROADCAST": "Thông báo chung",
     "SYSTEM": "Hệ thống"
+  },
+  "titles": {
+    "BILLING_PAYMENT_SUCCESS": "Thanh toán thành công",
+    "BILLING_PAYMENT_FAILED": "Thanh toán không thành công",
+    "BILLING_MANUAL_TRANSFER_PENDING": "Chờ xác nhận chuyển khoản",
+    "BILLING_PLAN_EXPIRED": "Gói dịch vụ đã hết hạn",
+    "BILLING_PLAN_EXPIRED_TRIAL": "Thời gian dùng thử đã kết thúc",
+    "BILLING_PLAN_EXPIRING_SOON_TRIAL": "Thời gian dùng thử sắp kết thúc",
+    "BILLING_PLAN_EXPIRING_SOON_TRIAL_URGENT": "Thời gian dùng thử kết thúc ngày mai",
+    "BILLING_PLAN_EXPIRING_SOON_ACTIVE": "Gói dịch vụ sắp hết hạn",
+    "BILLING_PLAN_EXPIRING_SOON_ACTIVE_URGENT": "Gói dịch vụ hết hạn ngày mai",
+    "TICKET_CREATED": "Yêu cầu hỗ trợ mới",
+    "TICKET_REPLIED": "Phản hồi mới trên ticket",
+    "TICKET_REPLIED_UNASSIGNED": "Phản hồi mới trên ticket (chưa assign)",
+    "TICKET_STATUS_CHANGED": "Trạng thái ticket đã thay đổi",
+    "STAFF_ADDED": "Bạn đã được thêm vào cửa hàng",
+    "STAFF_REMOVED": "Bạn đã bị gỡ khỏi cửa hàng"
+  },
+  "messages": {
+    "BILLING_PAYMENT_SUCCESS": "Shop \"{{shopName}}\" đã được gia hạn tới ngày {{untilDate}}. Ghi nhận thanh toán lúc {{paidAt}}. Chu kỳ hiện tại kết thúc: {{periodEndAt}}.",
+    "BILLING_PAYMENT_FAILED": "Giao dịch thanh toán cho cửa hàng \"{{shopName}}\" {{resultLabel}}. Mã giao dịch: {{transactionId}}{{reasonPart}}",
+    "BILLING_PLAN_EXPIRED": "Vui lòng thanh toán 99.000đ để tiếp tục sử dụng đầy đủ tính năng.",
+    "BILLING_PLAN_EXPIRING_SOON_TRIAL": "Shop \"{{shopName}}\" sẽ hết hạn vào {{expiryDate}} (còn {{daysLeft}} ngày). Vui lòng thanh toán 99.000đ để tiếp tục sử dụng sau khi hết trial.",
+    "BILLING_PLAN_EXPIRING_SOON_TRIAL_URGENT": "Shop \"{{shopName}}\" sẽ hết hạn vào {{expiryDate}} (còn 1 ngày). Vui lòng thanh toán 99.000đ để tiếp tục sử dụng sau khi hết trial.",
+    "BILLING_PLAN_EXPIRING_SOON_ACTIVE": "Shop \"{{shopName}}\" sẽ hết hạn vào {{expiryDate}} (còn {{daysLeft}} ngày). Vui lòng thanh toán 99.000đ để gia hạn và tránh gián đoạn dịch vụ.",
+    "BILLING_PLAN_EXPIRING_SOON_ACTIVE_URGENT": "Shop \"{{shopName}}\" sẽ hết hạn vào {{expiryDate}} (còn 1 ngày). Vui lòng thanh toán 99.000đ để gia hạn và tránh gián đoạn dịch vụ.",
+    "BILLING_MANUAL_TRANSFER_PENDING": "Shop \"{{shopName}}\" ({{shopId}}) đã báo đã chuyển khoản {{amount}} ₫. Mã tham chiếu: {{transactionId}}. Vui lòng đối soát và xác nhận trên trang admin billing.",
+    "TICKET_CREATED": "{{actor}} đã tạo ticket: {{subject}}",
+    "TICKET_REPLIED": "{{actor}} đã phản hồi: {{subject}}",
+    "TICKET_STATUS_CHANGED": "Ticket \"{{subject}}\" đã chuyển sang {{statusLabel}}",
+    "STAFF_ADDED": "Bạn đã được thêm vào cửa hàng \"{{shopName}}\" với vai trò {{roleLabel}}.",
+    "STAFF_REMOVED": "Bạn không còn là thành viên của cửa hàng \"{{shopName}}\"."
+  },
+  "reasonPrefix": "Lý do: {{reason}}",
+  "paymentResult": {
+    "CANCELLED": "đã bị huỷ",
+    "FAILED": "không thành công"
+  },
+  "ticketStatus": {
+    "OPEN": "Mở",
+    "IN_PROGRESS": "Đang xử lý",
+    "WAITING_CUSTOMER": "Chờ khách",
+    "RESOLVED": "Đã giải quyết",
+    "CLOSED": "Đã đóng"
   }
 }

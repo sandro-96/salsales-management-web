@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import {
   Armchair,
   Plus,
@@ -8,7 +9,6 @@ import {
   Pencil,
   Trash2,
   CheckCircle2,
-  XCircle,
   Lock,
   Search,
   Warehouse,
@@ -61,34 +61,45 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { resolveApiError } from "@/utils/apiMessage";
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const TABLE_STATUSES = {
+const TABLE_STATUS_STYLE = {
   AVAILABLE: {
-    label: "Trống",
     icon: CheckCircle2,
     cls: "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40",
     ring: "ring-emerald-300 dark:ring-emerald-500/40",
   },
   OCCUPIED: {
-    label: "Đang phục vụ",
     icon: Users,
     cls: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40",
     ring: "ring-amber-300 dark:ring-amber-500/40",
   },
   CLOSED: {
-    label: "Đã đóng",
     icon: Lock,
     cls: "bg-gray-100 text-gray-600 border-gray-300 dark:bg-muted dark:text-muted-foreground dark:border-border",
     ring: "ring-gray-300 dark:ring-border",
   },
 };
 
-// ─── Table Status Badge ──────────────────────────────────────────────────────
+function useTableStatuses() {
+  const { t } = useTranslation();
+  return useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(TABLE_STATUS_STYLE).map(([key, style]) => [
+          key,
+          {
+            ...style,
+            label: t(`pages.tables.status.${key}`),
+          },
+        ]),
+      ),
+    [t],
+  );
+}
 
-const TableStatusBadge = ({ status }) => {
-  const cfg = TABLE_STATUSES[status] || TABLE_STATUSES.AVAILABLE;
+const TableStatusBadge = ({ status, tableStatuses }) => {
+  const cfg = tableStatuses[status] || tableStatuses.AVAILABLE;
   const IconComp = cfg.icon;
   return (
     <Badge className={`gap-1 text-[11px] ${cfg.cls} hover:${cfg.cls}`}>
@@ -109,6 +120,7 @@ const TableFormDialog = ({
   canCreate = false,
   canUpdate = false,
 }) => {
+  const { t } = useTranslation();
   const isEdit = !!editTable;
   const readOnly = isEdit ? !canUpdate : !canCreate;
   const [name, setName] = useState("");
@@ -135,7 +147,7 @@ const TableFormDialog = ({
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      toast.error("Tên bàn không được để trống.");
+      toast.error(t("pages.tables.form.nameRequired"));
       return;
     }
     setSubmitting(true);
@@ -151,16 +163,18 @@ const TableFormDialog = ({
       if (isEdit) {
         data.status = editTable.status;
         await updateTable(editTable.id, shopId, data);
-        toast.success("Cập nhật bàn thành công.");
+        toast.success(t("pages.tables.form.updateSuccess"));
       } else {
         data.status = "AVAILABLE";
         await createTable(shopId, data);
-        toast.success("Tạo bàn thành công.");
+        toast.success(t("pages.tables.form.createSuccess"));
       }
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Đã xảy ra lỗi.");
+      toast.error(
+        resolveApiError(t, err) || t("pages.tables.form.genericError"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -172,40 +186,46 @@ const TableFormDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Armchair className="h-5 w-5" />
-            {isEdit ? "Chỉnh sửa bàn" : "Thêm bàn mới"}
+            {isEdit
+              ? t("pages.tables.form.editTitle")
+              : t("pages.tables.form.createTitle")}
           </DialogTitle>
           <DialogDescription>
-            {isEdit ? "Cập nhật thông tin bàn." : "Tạo bàn mới cho chi nhánh."}
+            {isEdit
+              ? t("pages.tables.form.editDesc")
+              : t("pages.tables.form.createDesc")}
           </DialogDescription>
         </DialogHeader>
         <fieldset disabled={readOnly} className="space-y-4 disabled:opacity-70">
           <div className="space-y-2">
-            <Label htmlFor="table-name">Tên bàn *</Label>
+            <Label htmlFor="table-name">{t("pages.tables.form.nameLabel")}</Label>
             <Input
               id="table-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="VD: Bàn 01"
+              placeholder={t("pages.tables.form.namePlaceholder")}
               autoFocus
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="table-capacity">Sức chứa (người)</Label>
+            <Label htmlFor="table-capacity">
+              {t("pages.tables.form.capacityLabel")}
+            </Label>
             <NumericInput
               id="table-capacity"
               value={capacity}
               onChange={setCapacity}
               formatted={false}
-              placeholder="VD: 4"
+              placeholder={t("pages.tables.form.capacityPlaceholder")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="table-note">Ghi chú</Label>
+            <Label htmlFor="table-note">{t("pages.tables.form.noteLabel")}</Label>
             <Textarea
               id="table-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="VD: Bàn VIP gần cửa sổ"
+              placeholder={t("pages.tables.form.notePlaceholder")}
               rows={2}
             />
           </div>
@@ -219,20 +239,19 @@ const TableFormDialog = ({
             />
             <div className="space-y-1">
               <p className="text-sm font-medium leading-none">
-                Bàn luôn trống (không chuyển sang “Đang phục vụ”)
+                {t("pages.tables.form.alwaysAvailableTitle")}
               </p>
               <p className="text-xs text-muted-foreground leading-snug">
-                Dùng cho các “bàn ảo” như{" "}
-                <span className="font-medium">Mang đi</span>: trạng thái bàn
-                luôn hiển thị trống, không gắn một đơn lên bàn — có thể có nhiều
-                đơn mở cùng lúc (POS quản lý theo tab/đơn).
+                <Trans i18nKey="pages.tables.form.alwaysAvailableHint" />
               </p>
             </div>
           </label>
         </fieldset>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            {readOnly ? "Đóng" : "Hủy"}
+            {readOnly
+              ? t("pages.tables.form.close")
+              : t("pages.tables.form.cancel")}
           </Button>
           {!readOnly && (
             <Button
@@ -240,7 +259,7 @@ const TableFormDialog = ({
               disabled={submitting || !name.trim()}
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-              {isEdit ? "Lưu thay đổi" : "Tạo bàn"}
+              {isEdit ? t("pages.tables.form.save") : t("pages.tables.form.create")}
             </Button>
           )}
         </DialogFooter>
@@ -253,6 +272,7 @@ const TableFormDialog = ({
 
 const TableCard = ({
   table,
+  tableStatuses,
   canUpdate,
   canDelete,
   onEdit,
@@ -260,8 +280,9 @@ const TableCard = ({
   onStatusChange,
   onOpenPos,
 }) => {
+  const { t } = useTranslation();
   const canManage = canUpdate || canDelete;
-  const cfg = TABLE_STATUSES[table.status] || TABLE_STATUSES.AVAILABLE;
+  const cfg = tableStatuses[table.status] || tableStatuses.AVAILABLE;
   const isOccupied = table.status === "OCCUPIED";
   const isAlwaysAvailable = !!table.alwaysAvailable;
   const isClosed = table.status === "CLOSED";
@@ -297,7 +318,8 @@ const TableCard = ({
               <p className="font-semibold text-sm truncate">{table.name}</p>
               {table.capacity && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Users className="h-3 w-3" /> {table.capacity} người
+                  <Users className="h-3 w-3" />{" "}
+                  {t("pages.tables.capacityGuests", { count: table.capacity })}
                 </p>
               )}
             </div>
@@ -317,14 +339,14 @@ const TableCard = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background w-44">
-                <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("pages.tables.card.actions")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {canUpdate && (
                   <DropdownMenuItem
                     onClick={() => onEdit(table)}
                     disabled={isOccupied}
                   >
-                    <Pencil className="h-4 w-4 mr-2" /> Chỉnh sửa
+                    <Pencil className="h-4 w-4 mr-2" /> {t("pages.tables.card.edit")}
                   </DropdownMenuItem>
                 )}
                 {canUpdate && table.status !== "AVAILABLE" && !isOccupied && (
@@ -332,14 +354,15 @@ const TableCard = ({
                     onClick={() => onStatusChange(table, "AVAILABLE")}
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />{" "}
-                    Mở bàn
+                    {t("pages.tables.card.openTable")}
                   </DropdownMenuItem>
                 )}
                 {canUpdate && table.status !== "CLOSED" && !isOccupied && (
                   <DropdownMenuItem
                     onClick={() => onStatusChange(table, "CLOSED")}
                   >
-                    <Lock className="h-4 w-4 mr-2 text-gray-600" /> Đóng bàn
+                    <Lock className="h-4 w-4 mr-2 text-gray-600" />{" "}
+                    {t("pages.tables.card.closeTable")}
                   </DropdownMenuItem>
                 )}
                 {canDelete && (
@@ -350,7 +373,7 @@ const TableCard = ({
                       onClick={() => onDelete(table)}
                       disabled={isOccupied}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" /> Xóa bàn
+                      <Trash2 className="h-4 w-4 mr-2" /> {t("pages.tables.card.delete")}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -361,10 +384,10 @@ const TableCard = ({
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <TableStatusBadge status={table.status} />
+            <TableStatusBadge status={table.status} tableStatuses={tableStatuses} />
             {isAlwaysAvailable && (
               <Badge className="text-[10px] bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:border-sky-500/40 dark:hover:bg-sky-500/15">
-                Luôn trống
+                {t("pages.tables.alwaysAvailableBadge")}
               </Badge>
             )}
           </div>
@@ -386,6 +409,9 @@ const TableCard = ({
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 const TableListPage = () => {
+  const { t, i18n } = useTranslation();
+  const tableStatuses = useTableStatuses();
+  const sortLocale = i18n.language?.startsWith("en") ? "en" : "vi";
   const navigate = useNavigate();
   const {
     selectedShopId,
@@ -423,11 +449,11 @@ const TableListPage = () => {
         setTables(Array.isArray(data) ? data : []);
       }
     } catch {
-      toast.error("Không thể tải danh sách bàn.");
+      toast.error(t("pages.tables.toast.fetchFail"));
     } finally {
       setLoading(false);
     }
-  }, [selectedShopId, selectedBranchId]);
+  }, [selectedShopId, selectedBranchId, t]);
 
   useEffect(() => {
     fetchTables();
@@ -446,7 +472,7 @@ const TableListPage = () => {
         if (prev.some((t) => t.id === payload.id)) return prev;
         const next = [...prev, payload];
         next.sort((a, b) =>
-          (a.name || "").localeCompare(b.name || "", "vi"),
+          (a.name || "").localeCompare(b.name || "", sortLocale),
         );
         return next;
       });
@@ -461,7 +487,7 @@ const TableListPage = () => {
         prev.map((t) => (t.id === payload.id ? { ...t, ...payload } : t)),
       );
     }
-  }, []);
+  }, [sortLocale]);
   useBranchChannel("tables", onRealtimeTable);
 
   // ── Stats ────────────────────────────────────────────────────────────────
@@ -494,21 +520,23 @@ const TableListPage = () => {
 
   const handleDelete = async (table) => {
     const ok = await confirm(
-      `Bạn có chắc muốn xóa "${table.name}"? Hành động này không thể hoàn tác.`,
+      t("pages.tables.confirm.deleteMessage", { name: table.name }),
       {
-        title: "Xóa bàn",
-        confirmText: "Xóa",
-        cancelText: "Hủy",
+        title: t("pages.tables.confirm.deleteTitle"),
+        confirmText: t("pages.tables.confirm.deleteConfirm"),
+        cancelText: t("pages.tables.confirm.cancel"),
         variant: "destructive",
       },
     );
     if (!ok) return;
     try {
       await deleteTable(table.id, selectedShopId);
-      toast.success("Đã xóa bàn.");
+      toast.success(t("pages.tables.toast.deleteSuccess"));
       fetchTables();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Không thể xóa bàn.");
+      toast.error(
+        resolveApiError(t, err) || t("pages.tables.toast.deleteFail"),
+      );
     }
   };
 
@@ -516,12 +544,14 @@ const TableListPage = () => {
     try {
       await updateTableStatus(table.id, selectedShopId, newStatus);
       toast.success(
-        `Đã cập nhật trạng thái: ${TABLE_STATUSES[newStatus]?.label || newStatus}`,
+        t("pages.tables.toast.statusUpdated", {
+          status: tableStatuses[newStatus]?.label || newStatus,
+        }),
       );
       fetchTables();
     } catch (err) {
       toast.error(
-        err.response?.data?.message || "Không thể cập nhật trạng thái.",
+        resolveApiError(t, err) || t("pages.tables.toast.statusFail"),
       );
     }
   };
@@ -535,12 +565,14 @@ const TableListPage = () => {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Quản lý bàn
+              {t("pages.tables.title")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
               {selectedBranch
-                ? `Chi nhánh: ${selectedBranch.name}`
-                : "Chọn chi nhánh để xem danh sách bàn"}
+                ? t("pages.tables.branchSubtitle", {
+                    name: selectedBranch.name,
+                  })
+                : t("pages.tables.branchSubtitleEmpty")}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -551,7 +583,7 @@ const TableListPage = () => {
               >
                 <SelectTrigger className="w-[220px]">
                   <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="Chọn chi nhánh" />
+                  <SelectValue placeholder={t("pages.tables.selectBranch")} />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
                   {branches.map((b) => (
@@ -571,7 +603,7 @@ const TableListPage = () => {
                 size="sm"
                 variant="success"
               >
-                <Plus className="h-4 w-4 mr-1" /> Thêm bàn
+                <Plus className="h-4 w-4 mr-1" /> {t("pages.tables.addTable")}
               </Button>
             )}
           </div>
@@ -581,9 +613,11 @@ const TableListPage = () => {
         {noBranch ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Warehouse className="h-16 w-16 text-muted-foreground/40 mb-4" />
-            <h3 className="text-lg font-semibold">Chưa chọn chi nhánh</h3>
+            <h3 className="text-lg font-semibold">
+              {t("pages.tables.noBranch.title")}
+            </h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-              Vui lòng chọn một chi nhánh để xem và quản lý bàn.
+              {t("pages.tables.noBranch.hint")}
             </p>
           </div>
         ) : (
@@ -604,7 +638,7 @@ const TableListPage = () => {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Tổng bàn
+                      {t("pages.tables.stats.total")}
                     </p>
                   </div>
                 </CardContent>
@@ -622,7 +656,9 @@ const TableListPage = () => {
                         {stats.available}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">Trống</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("pages.tables.stats.available")}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -640,7 +676,7 @@ const TableListPage = () => {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Đang phục vụ
+                      {t("pages.tables.stats.occupied")}
                     </p>
                   </div>
                 </CardContent>
@@ -659,7 +695,7 @@ const TableListPage = () => {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Đã đóng
+                      {t("pages.tables.stats.closed")}
                     </p>
                   </div>
                 </CardContent>
@@ -671,7 +707,7 @@ const TableListPage = () => {
               <div className="relative flex-1 min-w-0 sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
-                  placeholder="Tìm bàn..."
+                  placeholder={t("pages.tables.searchPlaceholder")}
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   className="pl-9"
@@ -682,8 +718,8 @@ const TableListPage = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background">
-                  <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
-                  {Object.entries(TABLE_STATUSES).map(([key, cfg]) => (
+                  <SelectItem value="ALL">{t("pages.tables.filterAll")}</SelectItem>
+                  {Object.entries(tableStatuses).map(([key, cfg]) => (
                     <SelectItem key={key} value={key}>
                       {cfg.label}
                     </SelectItem>
@@ -711,6 +747,7 @@ const TableListPage = () => {
                   <TableCard
                     key={table.id}
                     table={table}
+                    tableStatuses={tableStatuses}
                     canUpdate={canUpdate}
                     canDelete={canDelete}
                     onEdit={handleEdit}
@@ -728,8 +765,8 @@ const TableListPage = () => {
                 <Armchair className="h-12 w-12 text-muted-foreground/40 mb-3" />
                 <p className="text-muted-foreground">
                   {keyword || statusFilter !== "ALL"
-                    ? "Không tìm thấy bàn phù hợp."
-                    : "Chưa có bàn nào. Hãy thêm bàn mới."}
+                    ? t("pages.tables.empty.filtered")
+                    : t("pages.tables.empty.none")}
                 </p>
               </div>
             )}

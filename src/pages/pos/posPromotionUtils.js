@@ -87,8 +87,8 @@ export function getWinningPromo(promoMap, productId, baseUnitPrice) {
   );
 }
 
-export function formatDiscount(promo) {
+export function formatDiscount(promo, numberLocale = "vi-VN") {
   if (!promo) return "";
   if (promo.discountType === "PERCENT") return `-${promo.discountValue}%`;
-  return `-${Number(promo.discountValue).toLocaleString("vi-VN")}₫`;
+  return `-${Number(promo.discountValue).toLocaleString(numberLocale)}₫`;
 }

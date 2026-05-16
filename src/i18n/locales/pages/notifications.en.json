@@ -28,6 +28,59 @@
     "TICKET_CREATED": "New ticket",
     "TICKET_REPLIED": "Ticket reply",
     "TICKET_STATUS_CHANGED": "Ticket status",
+    "BILLING_PAYMENT_SUCCESS": "Subscription payment",
+    "BILLING_PAYMENT_FAILED": "Payment failed",
+    "BILLING_MANUAL_TRANSFER_PENDING": "Transfer pending",
+    "BILLING_PLAN_EXPIRING_SOON": "Expiring soon",
+    "BILLING_PLAN_EXPIRED": "Plan expired",
+    "BILLING_PLAN_UPGRADED": "Plan upgraded",
+    "BILLING_PLAN_DOWNGRADED": "Plan downgraded",
+    "BILLING_INVOICE_CREATED": "Invoice",
+    "BROADCAST": "Broadcast",
     "SYSTEM": "System"
+  },
+  "titles": {
+    "BILLING_PAYMENT_SUCCESS": "Payment successful",
+    "BILLING_PAYMENT_FAILED": "Payment failed",
+    "BILLING_MANUAL_TRANSFER_PENDING": "Transfer pending confirmation",
+    "BILLING_PLAN_EXPIRED": "Subscription expired",
+    "BILLING_PLAN_EXPIRED_TRIAL": "Trial period ended",
+    "BILLING_PLAN_EXPIRING_SOON_TRIAL": "Trial ending soon",
+    "BILLING_PLAN_EXPIRING_SOON_TRIAL_URGENT": "Trial ends tomorrow",
+    "BILLING_PLAN_EXPIRING_SOON_ACTIVE": "Subscription ending soon",
+    "BILLING_PLAN_EXPIRING_SOON_ACTIVE_URGENT": "Subscription ends tomorrow",
+    "TICKET_CREATED": "New support request",
+    "TICKET_REPLIED": "New reply on ticket",
+    "TICKET_REPLIED_UNASSIGNED": "New reply on ticket (unassigned)",
+    "TICKET_STATUS_CHANGED": "Ticket status changed",
+    "STAFF_ADDED": "Added to shop",
+    "STAFF_REMOVED": "Removed from shop"
+  },
+  "messages": {
+    "BILLING_PAYMENT_SUCCESS": "Shop \"{{shopName}}\" has been extended until {{untilDate}}. Payment recorded at {{paidAt}}. Current period ends: {{periodEndAt}}.",
+    "BILLING_PAYMENT_FAILED": "Payment for shop \"{{shopName}}\" {{resultLabel}}. Transaction ID: {{transactionId}}{{reasonPart}}",
+    "BILLING_PLAN_EXPIRED": "Please pay 99,000 VND to continue using all features.",
+    "BILLING_PLAN_EXPIRING_SOON_TRIAL": "Shop \"{{shopName}}\" expires on {{expiryDate}} ({{daysLeft}} days left). Please pay 99,000 VND to continue after the trial ends.",
+    "BILLING_PLAN_EXPIRING_SOON_TRIAL_URGENT": "Shop \"{{shopName}}\" expires on {{expiryDate}} (1 day left). Please pay 99,000 VND to continue after the trial ends.",
+    "BILLING_PLAN_EXPIRING_SOON_ACTIVE": "Shop \"{{shopName}}\" expires on {{expiryDate}} ({{daysLeft}} days left). Please pay 99,000 VND to renew and avoid service interruption.",
+    "BILLING_PLAN_EXPIRING_SOON_ACTIVE_URGENT": "Shop \"{{shopName}}\" expires on {{expiryDate}} (1 day left). Please pay 99,000 VND to renew and avoid service interruption.",
+    "BILLING_MANUAL_TRANSFER_PENDING": "Shop \"{{shopName}}\" ({{shopId}}) reported a bank transfer of {{amount}} VND. Reference: {{transactionId}}. Please reconcile and confirm in admin billing.",
+    "TICKET_CREATED": "{{actor}} created a ticket: {{subject}}",
+    "TICKET_REPLIED": "{{actor}} replied: {{subject}}",
+    "TICKET_STATUS_CHANGED": "Ticket \"{{subject}}\" is now {{statusLabel}}",
+    "STAFF_ADDED": "You were added to shop \"{{shopName}}\" as {{roleLabel}}.",
+    "STAFF_REMOVED": "You are no longer a member of shop \"{{shopName}}\"."
+  },
+  "reasonPrefix": "Reason: {{reason}}",
+  "paymentResult": {
+    "CANCELLED": "was cancelled",
+    "FAILED": "failed"
+  },
+  "ticketStatus": {
+    "OPEN": "Open",
+    "IN_PROGRESS": "In progress",
+    "WAITING_CUSTOMER": "Waiting on customer",
+    "RESOLVED": "Resolved",
+    "CLOSED": "Closed"
   }
 }

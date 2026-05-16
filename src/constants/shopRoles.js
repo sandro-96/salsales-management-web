@@ -20,6 +20,7 @@ export const SHOP_ROLES_ASSIGNABLE = [
   { value: SHOP_ROLE.CASHIER, label: "Thu ngân" },
 ];
 
+/** @deprecated Use {@link getShopRoleLabel} from `@/utils/shopLabels` with i18n. */
 export const SHOP_ROLE_LABELS = {
   [SHOP_ROLE.OWNER]: "Chủ cửa hàng",
   [SHOP_ROLE.MANAGER]: "Quản lý",
