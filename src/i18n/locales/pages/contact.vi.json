@@ -12,5 +12,6 @@
   "ticketsTitle": "Yêu cầu hỗ trợ kỹ thuật",
   "ticketsDesc": "Báo lỗi, góp ý tính năng hoặc theo dõi phiếu đã gửi — dùng mục phiếu hỗ trợ.",
   "ticketsCta": "Mở phiếu hỗ trợ",
-  "empty": "Chưa cấu hình thông tin liên hệ. Vui lòng liên hệ quản trị hệ thống."
+  "emptyTitle": "Chưa có thông tin liên hệ",
+  "empty": "Chưa cấu hình thông tin liên hệ. Vui lòng liên hệ quản trị hệ thống hoặc gửi phiếu hỗ trợ."
 }

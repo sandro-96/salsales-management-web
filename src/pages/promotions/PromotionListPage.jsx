@@ -72,6 +72,7 @@ import {
   listToolbarFilters,
   listToolbarRoot,
 } from "@/components/table/listPageLayout.js";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 
 import { getPromotions, deletePromotion } from "../../api/promotionApi.js";
 import PromotionFormModal from "./PromotionFormModal.jsx";
@@ -627,14 +628,11 @@ const PromotionListPage = () => {
   return (
     <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex min-w-0">
       <div className="flex flex-col gap-4 min-w-0">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            {t("pages.promotions.list.title")}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("pages.promotions.list.subtitle")}
-          </p>
-        </div>
+        <ListPageHeader
+          icon={Tag}
+          title={t("pages.promotions.list.title")}
+          subtitle={t("pages.promotions.list.subtitle")}
+        />
 
         <PromotionListStatCards
           stats={stats}

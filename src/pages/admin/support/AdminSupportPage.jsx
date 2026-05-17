@@ -48,6 +48,7 @@ import {
   ticketStatusBadgeClass,
 } from "@/constants/supportTicketStatus.js";
 import { WebSocketMessageTypes } from "@/constants/websocket.js";
+import { parseSpringPage } from "@/utils/springPage.js";
 
 const PRIORITY_BADGE_CLASS = {
   LOW: "bg-gray-100 text-gray-800 dark:bg-muted dark:text-foreground",
@@ -122,15 +123,9 @@ const AdminSupportPage = () => {
         if (keyword.trim()) params.keyword = keyword.trim();
 
         const res = await adminListTickets(params);
-        const data = res.data?.data;
-        if (data && "content" in data) {
-          setTickets(data.content ?? []);
-          setTotalCount(data.totalElements ?? 0);
-        } else {
-          const list = Array.isArray(data) ? data : [];
-          setTickets(list);
-          setTotalCount(list.length);
-        }
+        const { content, totalElements } = parseSpringPage(res.data?.data);
+        setTickets(content);
+        setTotalCount(totalElements);
       } catch (err) {
         console.error("Admin fetch tickets error:", err);
         toast.error(t("pages.support.admin.fetchError"));

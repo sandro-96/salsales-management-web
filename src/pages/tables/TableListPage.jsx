@@ -13,6 +13,7 @@ import {
   Search,
   Warehouse,
 } from "lucide-react";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -571,53 +572,50 @@ const TableListPage = () => {
   return (
     <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-6">
-        {/* ── Header ──────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("pages.tables.title")}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {selectedBranch
-                ? t("pages.tables.branchSubtitle", {
-                    name: selectedBranch.name,
-                  })
-                : t("pages.tables.branchSubtitleEmpty")}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {branches.length > 1 && (
-              <Select
-                value={selectedBranchId ?? ""}
-                onValueChange={setSelectedBranchId}
-              >
-                <SelectTrigger className="w-[220px]">
-                  <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder={t("pages.tables.selectBranch")} />
-                </SelectTrigger>
-                <SelectContent className="bg-background">
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {canCreate && !noBranch && (
-              <Button
-                onClick={() => {
-                  setEditingTable(null);
-                  setFormOpen(true);
-                }}
-                size="sm"
-                variant="success"
-              >
-                <Plus className="h-4 w-4 mr-1" /> {t("pages.tables.addTable")}
-              </Button>
-            )}
-          </div>
-        </div>
+        <ListPageHeader
+          icon={Armchair}
+          title={t("pages.tables.title")}
+          subtitle={
+            selectedBranch
+              ? t("pages.tables.branchSubtitle", { name: selectedBranch.name })
+              : t("pages.tables.branchSubtitleEmpty")
+          }
+          actions={
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              {branches.length > 1 && (
+                <Select
+                  value={selectedBranchId ?? ""}
+                  onValueChange={setSelectedBranchId}
+                >
+                  <SelectTrigger className="w-full sm:w-[220px]">
+                    <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder={t("pages.tables.selectBranch")} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {canCreate && !noBranch && (
+                <Button
+                  onClick={() => {
+                    setEditingTable(null);
+                    setFormOpen(true);
+                  }}
+                  size="sm"
+                  variant="success"
+                  className="shrink-0"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> {t("pages.tables.addTable")}
+                </Button>
+              )}
+            </div>
+          }
+        />
 
         {/* ── No branch ───────────────────────────────────────────── */}
         {noBranch ? (

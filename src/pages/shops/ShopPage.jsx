@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useShop } from "../../hooks/useShop";
@@ -6,35 +6,48 @@ import { useAuth } from "../../hooks/useAuth";
 import {
   Store,
   Plus,
-  MapPin,
-  Phone,
-  Building2,
-  Briefcase,
-  CheckCircle2,
-  XCircle,
   Search,
-  Clock,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getFlagUrl } from "../../utils/commonUtils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { COUNTRIES } from "../../constants/countries";
 import {
   getBusinessModelLabel,
-  getShopRoleLabel,
   getShopTypeLabel,
-  formatShopSubscriptionLine,
 } from "../../utils/shopLabels.js";
+import { ShopListStatCards } from "@/components/shops/ShopListStatCards.jsx";
+import { ShopCard } from "@/components/shops/ShopCard.jsx";
+import {
+  listSearchWrap,
+  listToolbarActions,
+  listToolbarFilters,
+  listToolbarRoot,
+} from "@/components/table/listPageLayout.js";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
+
+const matchShopSegment = (shop, segment) => {
+  if (segment === "ALL") return true;
+  if (segment === "ACTIVE") return Boolean(shop.active);
+  if (segment === "INACTIVE") return !shop.active;
+  if (segment === "OWNER") return shop.role === "OWNER";
+  return true;
+};
 
 const ShopPage = () => {
-  const { t } = useTranslation();
-  const { shops, setSelectedShop } = useShop();
+  const { t, i18n } = useTranslation();
+  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const { shops, setSelectedShop, fetchShops } = useShop();
   const { enums, fetchEnums } = useAuth();
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [segmentFilter, setSegmentFilter] = useState("ALL");
+  const [refreshing, setRefreshing] = useState(false);
+  const debounceRef = useRef(null);
 
   useEffect(() => {
     if (!enums && typeof fetchEnums === "function") fetchEnums();
@@ -43,32 +56,105 @@ const ShopPage = () => {
   const shopTypes = enums?.shopTypes || [];
   const businessModels = enums?.businessModels || [];
 
-  const industryLabel = (industry) =>
-    industry
-      ? t(`pages.shops.industry.${industry}`, { defaultValue: industry })
-      : null;
+  const industryLabel = useCallback(
+    (industry) =>
+      industry
+        ? t(`pages.shops.industry.${industry}`, { defaultValue: industry })
+        : null,
+    [t],
+  );
+
+  const handleKeywordChange = (value) => {
+    setKeyword(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedKeyword(value), 400);
+  };
+
+  const stats = useMemo(
+    () => ({
+      total: shops.length,
+      active: shops.filter((s) => s.active).length,
+      inactive: shops.filter((s) => !s.active).length,
+      owner: shops.filter((s) => s.role === "OWNER").length,
+    }),
+    [shops],
+  );
 
   const filteredShops = useMemo(() => {
-    if (!keyword.trim()) return shops;
-    const kw = keyword.toLowerCase();
-    return shops.filter(
+    let list = shops.filter((s) => matchShopSegment(s, segmentFilter));
+    const kw = debouncedKeyword.trim().toLowerCase();
+    if (!kw) return list;
+    return list.filter(
       (s) =>
         s.name?.toLowerCase().includes(kw) ||
-        s.address?.toLowerCase().includes(kw),
+        s.address?.toLowerCase().includes(kw) ||
+        s.phone?.toLowerCase().includes(kw),
     );
-  }, [shops, keyword]);
+  }, [shops, segmentFilter, debouncedKeyword]);
+
+  const hasActiveFilters =
+    segmentFilter !== "ALL" || Boolean(debouncedKeyword.trim());
+
+  const clearFilters = () => {
+    setSegmentFilter("ALL");
+    setKeyword("");
+    setDebouncedKeyword("");
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchShops();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleShopSelect = (shop) => {
     setSelectedShop(shop);
     navigate(shop.slug);
   };
 
+  const resolveShopLabels = (shop) => {
+    const typeHit = shopTypes.find((s) => s.value === shop.type);
+    const bizHit = businessModels.find((b) => b.value === shop.businessModel);
+    return {
+      country: COUNTRIES.find((c) => c.code === shop.countryCode),
+      typeLabel: getShopTypeLabel(t, shop.type, typeHit?.label),
+      bizLabel: getBusinessModelLabel(t, shop.businessModel, bizHit?.label),
+      indLabel: industryLabel(shop.industry),
+    };
+  };
+
+  const showFeatured =
+    segmentFilter === "ALL" &&
+    !debouncedKeyword.trim() &&
+    filteredShops.length > 1;
+  const featuredShop = showFeatured
+    ? filteredShops.find((s) => s.active) ?? filteredShops[0]
+    : null;
+  const gridShops = showFeatured
+    ? filteredShops.filter((s) => s.id !== featuredShop?.id)
+    : filteredShops;
+
+  const emptyTitle = hasActiveFilters
+    ? t("pages.shops.list.emptyFilter")
+    : debouncedKeyword.trim()
+      ? t("pages.shops.list.emptySearchTitle")
+      : t("pages.shops.list.emptyTitle");
+
+  const emptyHint = hasActiveFilters
+    ? t("pages.shops.list.emptyFilterHint")
+    : debouncedKeyword.trim()
+      ? t("pages.shops.list.emptySearchHint")
+      : t("pages.shops.list.emptyHint");
+
   if (shops.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center h-full p-8">
+      <div className="flex flex-col items-center justify-center text-center h-full min-h-[50vh] p-8">
         <div className="max-w-md">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-            <Store className="h-10 w-10 text-primary" />
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-muted">
+            <Store className="h-10 w-10 text-muted-foreground" />
           </div>
           <h2 className="text-2xl font-semibold mb-2">
             {t("pages.shops.list.emptyWelcome")}
@@ -86,154 +172,124 @@ const ShopPage = () => {
 
   return (
     <div className="h-full min-w-0 flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("pages.shops.list.title")}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("pages.shops.list.shopCount", { count: shops.length })}
-            </p>
+      <div className="flex flex-col gap-4 min-w-0">
+        <ListPageHeader
+          icon={Store}
+          title={t("pages.shops.list.title")}
+          subtitle={t("pages.shops.list.subtitle")}
+          actions={
+            <Button
+              onClick={() => navigate("create")}
+              size="sm"
+              variant="success"
+              className="shrink-0 w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-1" /> {t("pages.shops.list.createShop")}
+            </Button>
+          }
+        />
+
+        <ShopListStatCards
+          stats={stats}
+          activeFilter={segmentFilter}
+          loading={refreshing && shops.length === 0}
+          numberLocale={numberLocale}
+          onFilterChange={setSegmentFilter}
+        />
+
+        <div className={listToolbarRoot}>
+          <div className={listToolbarFilters}>
+            <div className={listSearchWrap}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder={t("pages.shops.list.searchPlaceholder")}
+                value={keyword}
+                onChange={(e) => handleKeywordChange(e.target.value)}
+                className="pl-9 w-full"
+              />
+            </div>
           </div>
-          <Button onClick={() => navigate("create")} size="sm" variant="success">
-            <Plus className="h-4 w-4 mr-1" /> {t("pages.shops.list.createShop")}
-          </Button>
+          <div className={listToolbarActions}>
+            {hasActiveFilters && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 shrink-0"
+                onClick={clearFilters}
+              >
+                {t("pages.shops.list.clearFilters")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 shrink-0"
+              disabled={refreshing}
+              onClick={handleRefresh}
+            >
+              {refreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {t("pages.shops.list.refresh")}
+            </Button>
+          </div>
         </div>
 
-        {shops.length > 4 && (
-          <div className="relative max-w-sm w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder={t("pages.shops.list.searchPlaceholder")}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="pl-9 w-full"
-            />
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredShops.map((shop) => {
-            const country = COUNTRIES.find((c) => c.code === shop.countryCode);
-            const typeHit = shopTypes.find((s) => s.value === shop.type);
-            const bizHit = businessModels.find(
-              (b) => b.value === shop.businessModel,
-            );
-            const typeLabel = getShopTypeLabel(t, shop.type, typeHit?.label);
-            const bizLabel = getBusinessModelLabel(
-              t,
-              shop.businessModel,
-              bizHit?.label,
-            );
-            const indLabel = industryLabel(shop.industry);
-            const roleLabel = getShopRoleLabel(t, shop.role);
-            const isShopOwner = shop.role === "OWNER";
-
-            return (
-              <Card
-                key={shop.id}
-                className="group relative py-0 gap-0 transition-all cursor-pointer hover:shadow-md"
-                onClick={() => handleShopSelect(shop)}
-              >
-                <CardContent className="p-5">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-12 w-12 rounded-xl border shrink-0">
-                        <AvatarImage src={shop.logoUrl} alt={shop.name} className="object-cover" />
-                        <AvatarFallback className="rounded-xl bg-primary/10 text-primary">
-                          <Store className="h-6 w-6" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm truncate">{shop.name}</h3>
-                        {typeLabel && (
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                            {typeLabel}
-                          </p>
-                        )}
-                      </div>
-                      {shop.active ? (
-                        <Badge className="shrink-0 text-[10px] gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40 dark:hover:bg-emerald-500/15">
-                          <CheckCircle2 className="h-2.5 w-2.5" /> {t("pages.shops.list.active")}
-                        </Badge>
-                      ) : (
-                        <Badge className="shrink-0 text-[10px] gap-0.5 bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-muted dark:text-muted-foreground dark:border-border dark:hover:bg-muted">
-                          <XCircle className="h-2.5 w-2.5" /> {t("pages.shops.list.inactive")}
-                        </Badge>
-                      )}
+        {refreshing && shops.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="py-0 gap-0">
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-12 w-12 rounded-xl" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-3 w-48" />
                     </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      {shop.address && (
-                        <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                          <span className="truncate">{shop.address}</span>
-                        </span>
-                      )}
-                      {shop.phone && (
-                        <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                          {country ? `${country.dialCode} ` : ""}{shop.phone}
-                        </span>
-                      )}
-                      {indLabel && (
-                        <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                          {indLabel}
-                        </span>
-                      )}
-                      {bizLabel && (
-                        <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Briefcase className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                          {bizLabel}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-2 border-t flex-wrap">
-                      {country && (
-                        <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 font-normal">
-                          <img
-                            src={getFlagUrl(shop.countryCode)}
-                            alt={shop.countryCode}
-                            className="h-3 w-auto rounded-sm"
-                          />
-                          {country.name}
-                        </Badge>
-                      )}
-                      {roleLabel && (
-                        <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 font-normal">
-                          {roleLabel}
-                        </Badge>
-                      )}
-                    </div>
-
-                    {isShopOwner && shop.subscriptionStatus != null && (
-                      <div className="flex items-start gap-2 text-xs pt-2 border-t text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/70" />
-                        <span>
-                          <span className="font-medium text-foreground">
-                            {formatShopSubscriptionLine(
-                              t,
-                              shop.subscriptionStatus,
-                              shop.subscriptionDaysRemaining,
-                            )}
-                          </span>
-                        </span>
-                      </div>
-                    )}
                   </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
-
-        {filteredShops.length === 0 && keyword && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Store className="h-12 w-12 text-muted-foreground/40 mb-3" />
-            <p className="text-muted-foreground">{t("pages.shops.list.emptySearch")}</p>
+            ))}
+          </div>
+        ) : filteredShops.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Store className="h-14 w-14 text-muted-foreground/40 mb-4" />
+            <h3 className="text-lg font-semibold">{emptyTitle}</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">{emptyHint}</p>
+            {hasActiveFilters && (
+              <Button className="mt-4" variant="outline" onClick={clearFilters}>
+                {t("pages.shops.list.clearFilters")}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {featuredShop && (
+              <ShopCard
+                shop={featuredShop}
+                isHero
+                onSelect={handleShopSelect}
+                {...resolveShopLabels(featuredShop)}
+              />
+            )}
+            {gridShops.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {gridShops.map((shop) => (
+                  <ShopCard
+                    key={shop.id}
+                    shop={shop}
+                    onSelect={handleShopSelect}
+                    {...resolveShopLabels(shop)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

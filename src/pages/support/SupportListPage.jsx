@@ -3,6 +3,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -18,7 +19,27 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Plus, Loader2, MessageSquarePlus } from "lucide-react";
+import {
+  Headphones,
+  Loader2,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Search,
+  Ticket,
+  X,
+} from "lucide-react";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
+import { SupportTicketStatCards } from "@/components/support/SupportTicketStatCards.jsx";
+import {
+  dataTableContainer,
+  listFilterSelectWrap,
+  listSearchWrap,
+  listToolbarActions,
+  listToolbarFilters,
+  listToolbarRoot,
+} from "@/components/table/listPageLayout.js";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -53,11 +74,11 @@ import { listMyTickets, deleteTicket } from "../../api/supportApi.js";
 import CreateTicketModal from "./CreateTicketModal.jsx";
 import TicketDetailModal from "./TicketDetailModal.jsx";
 import {
-  TICKET_STATUS_MAP,
   TICKET_LIST_WS_TYPES,
   ticketStatusBadgeClass,
 } from "@/constants/supportTicketStatus.js";
 import { WebSocketMessageTypes } from "@/constants/websocket.js";
+import { parseSpringPage } from "@/utils/springPage.js";
 
 const PRIORITY_BADGE_CLASS = {
   LOW: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
@@ -83,6 +104,12 @@ const SupportListPage = () => {
   const isMobile = useIsMobile();
   const { confirm } = useAlertDialog();
   const { t, i18n } = useTranslation();
+  const debounceRef = useRef(null);
+
+  const numberLocale = useMemo(
+    () => (i18n.language?.startsWith("en") ? "en-US" : "vi-VN"),
+    [i18n.language],
+  );
 
   const dateFnsLocale = useMemo(
     () => (i18n.language?.startsWith("en") ? enUS : vi),
@@ -135,6 +162,37 @@ const SupportListPage = () => {
   const [statusFilter, setStatusFilter] = useState("__all__");
   const [categoryFilter, setCategoryFilter] = useState("__all__");
   const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [ticketStats, setTicketStats] = useState({
+    total: 0,
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+    closed: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const handleKeywordChange = useCallback((value) => {
+    setKeyword(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedKeyword(value);
+      setPagination((p) => ({ ...p, pageIndex: 0 }));
+    }, 400);
+  }, []);
+
+  const hasActiveFilters =
+    statusFilter !== "__all__" ||
+    categoryFilter !== "__all__" ||
+    Boolean(debouncedKeyword.trim());
+
+  const clearFilters = useCallback(() => {
+    setKeyword("");
+    setDebouncedKeyword("");
+    setStatusFilter("__all__");
+    setCategoryFilter("__all__");
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
 
   useEffect(() => {
     setColumnVisibility((prev) => ({
@@ -155,19 +213,12 @@ const SupportListPage = () => {
         };
         if (statusFilter !== "__all__") params.status = statusFilter;
         if (categoryFilter !== "__all__") params.category = categoryFilter;
-        if (keyword.trim()) params.keyword = keyword.trim();
+        if (debouncedKeyword.trim()) params.keyword = debouncedKeyword.trim();
 
         const res = await listMyTickets(params);
-        const data = res.data?.data;
-
-        if (data && typeof data === "object" && "content" in data) {
-          setTickets(data.content ?? []);
-          setTotalCount(data.totalElements ?? 0);
-        } else {
-          const list = Array.isArray(data) ? data : [];
-          setTickets(list);
-          setTotalCount(list.length);
-        }
+        const { content, totalElements } = parseSpringPage(res.data?.data);
+        setTickets(content);
+        setTotalCount(totalElements);
       } catch (err) {
         console.error("Fetch tickets error:", err);
         toast.error(t("pages.support.list.fetchError"));
@@ -175,12 +226,53 @@ const SupportListPage = () => {
         if (!silent) setLoading(false);
       }
     },
-    [pagination, statusFilter, categoryFilter, keyword, t],
+    [pagination, statusFilter, categoryFilter, debouncedKeyword, t],
   );
+
+  const fetchTicketStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const buckets = [
+        { field: "total", status: null },
+        { field: "open", status: "OPEN" },
+        { field: "inProgress", status: "IN_PROGRESS" },
+        { field: "resolved", status: "RESOLVED" },
+        { field: "closed", status: "CLOSED" },
+      ];
+      const counts = await Promise.all(
+        buckets.map(async ({ status }) => {
+          const params = { page: 0, size: 1 };
+          if (status) params.status = status;
+          const res = await listMyTickets(params);
+          return parseSpringPage(res.data?.data).totalElements;
+        }),
+      );
+      setTicketStats({
+        total: counts[0],
+        open: counts[1],
+        inProgress: counts[2],
+        resolved: counts[3],
+        closed: counts[4],
+      });
+    } catch (err) {
+      console.error("Fetch ticket stats error:", err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  const refreshList = useCallback(() => {
+    fetchTickets(false);
+    fetchTicketStats();
+  }, [fetchTickets, fetchTicketStats]);
 
   useEffect(() => {
     fetchTickets(false);
   }, [fetchTickets]);
+
+  useEffect(() => {
+    fetchTicketStats();
+  }, [fetchTicketStats]);
 
   useEffect(() => {
     if (!user?.id || !connected) return;
@@ -191,8 +283,9 @@ const SupportListPage = () => {
       if (d.referenceType !== "TICKET") return;
       if (!TICKET_LIST_WS_TYPES.has(d.type)) return;
       fetchTickets(true);
+      fetchTicketStats();
     });
-  }, [user?.id, connected, subscribe, fetchTickets]);
+  }, [user?.id, connected, subscribe, fetchTickets, fetchTicketStats]);
 
   const handleDelete = useCallback(
     async (ticket) => {
@@ -210,7 +303,7 @@ const SupportListPage = () => {
         const res = await deleteTicket(ticket.id);
         if (res.data?.success) {
           toast.success(t("pages.support.list.deleteSuccess"));
-          fetchTickets();
+          refreshList();
         } else {
           toast.error(
             res.data?.message || t("pages.support.list.deleteFail"),
@@ -221,7 +314,7 @@ const SupportListPage = () => {
         toast.error(t("pages.support.list.deleteError"));
       }
     },
-    [confirm, t, fetchTickets],
+    [confirm, t, refreshList],
   );
 
   const handleOpenDetail = useCallback((ticket) => {
@@ -390,7 +483,10 @@ const SupportListPage = () => {
   const table = useReactTable({
     data: tickets,
     columns,
-    pageCount: Math.ceil(totalCount / pagination.pageSize),
+    pageCount: Math.max(
+      1,
+      Math.ceil(totalCount / pagination.pageSize),
+    ),
     state: { sorting, columnVisibility, pagination },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
@@ -400,88 +496,138 @@ const SupportListPage = () => {
     manualSorting: true,
   });
 
+  const showEmptyCta =
+    !loading && tickets.length === 0 && !hasActiveFilters;
+
   return (
-    <div className="w-full p-4 md:p-6 space-y-4 md:max-w-7xl md:mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {t("pages.support.list.title")}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {t("pages.support.list.subtitle")}{" "}
-            <Link
-              to="/contact"
-              className="text-primary font-medium hover:underline"
+    <div className="h-full min-w-0 flex-1 flex-col gap-6 p-4 md:p-8 md:max-w-7xl md:mx-auto w-full">
+      <div className="flex flex-col gap-4 min-w-0">
+        <ListPageHeader
+          icon={Ticket}
+          title={t("pages.support.list.title")}
+          subtitle={
+            <>
+              {t("pages.support.list.subtitle")}{" "}
+              <Link
+                to="/contact"
+                className="text-primary font-medium underline-offset-4 hover:underline inline-flex items-center gap-1"
+              >
+                <Headphones className="h-3.5 w-3.5" />
+                {t("pages.contact.title")}
+              </Link>
+            </>
+          }
+          actions={
+            <Button
+              onClick={() => setCreateOpen(true)}
+              variant="success"
+              className="shrink-0 w-full sm:w-auto"
             >
-              {t("pages.contact.title")}
-            </Link>
-          </p>
-        </div>
-        <Button onClick={() => setCreateOpen(true)} variant="success">
-          <Plus className="mr-2 h-4 w-4" />
-          {t("pages.support.list.create")}
-        </Button>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
-        <Input
-          placeholder={t("pages.support.list.searchPlaceholder")}
-          value={keyword}
-          onChange={(e) => {
-            setKeyword(e.target.value);
-            setPagination((p) => ({ ...p, pageIndex: 0 }));
-          }}
-          className="w-full sm:w-64"
+              <Plus className="mr-2 h-4 w-4" />
+              {t("pages.support.list.create")}
+            </Button>
+          }
         />
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v);
-            setPagination((p) => ({ ...p, pageIndex: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue
-              placeholder={t("pages.support.list.statusPlaceholder")}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">
-              {t("pages.support.list.allStatus")}
-            </SelectItem>
-            {Object.keys(TICKET_STATUS_MAP).map((k) => (
-              <SelectItem key={k} value={k}>
-                {t(`pages.support.ticketStatus.${k}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={categoryFilter}
-          onValueChange={(v) => {
-            setCategoryFilter(v);
-            setPagination((p) => ({ ...p, pageIndex: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue
-              placeholder={t("pages.support.list.categoryPlaceholder")}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">
-              {t("pages.support.list.allCategories")}
-            </SelectItem>
-            {CATEGORY_KEYS.map((k) => (
-              <SelectItem key={k} value={k}>
-                {t(`pages.support.category.${k}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
-      <div className="rounded-md border overflow-x-auto">
+        <SupportTicketStatCards
+          stats={ticketStats}
+          activeFilter={statusFilter}
+          loading={statsLoading && tickets.length === 0}
+          numberLocale={numberLocale}
+          onFilterChange={(key) => {
+            setStatusFilter(key);
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
+        />
+
+        <div className={listToolbarRoot}>
+          <div className={listToolbarFilters}>
+            <div className={listSearchWrap}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder={t("pages.support.list.searchPlaceholder")}
+                value={keyword}
+                onChange={(e) => handleKeywordChange(e.target.value)}
+                className="pl-9 w-full"
+              />
+            </div>
+            <Select
+              value={categoryFilter}
+              onValueChange={(v) => {
+                setCategoryFilter(v);
+                setPagination((p) => ({ ...p, pageIndex: 0 }));
+              }}
+            >
+              <SelectTrigger className={listFilterSelectWrap}>
+                <SelectValue
+                  placeholder={t("pages.support.list.categoryPlaceholder")}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  {t("pages.support.list.allCategories")}
+                </SelectItem>
+                {CATEGORY_KEYS.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {t(`pages.support.category.${k}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className={listToolbarActions}>
+            {hasActiveFilters && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 shrink-0"
+                onClick={clearFilters}
+              >
+                <X className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {t("pages.support.list.clearFilters")}
+                </span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 shrink-0"
+              disabled={loading}
+              onClick={refreshList}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">
+                {t("pages.support.list.refresh")}
+              </span>
+            </Button>
+          </div>
+        </div>
+
+        {showEmptyCta ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center rounded-lg border border-dashed bg-muted/20">
+            <MessageSquarePlus className="h-14 w-14 text-muted-foreground/35 mb-4" />
+            <h3 className="text-lg font-semibold">
+              {t("pages.support.list.emptyTitle")}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+              {t("pages.support.list.empty")}
+            </p>
+            <Button
+              className="mt-5"
+              variant="success"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {t("pages.support.list.emptyCreate")}
+            </Button>
+          </div>
+        ) : (
+          <div className={dataTableContainer}>
         <Table className="min-w-[640px]">
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
@@ -519,9 +665,17 @@ const SupportListPage = () => {
                   className="text-center py-12"
                 >
                   <MessageSquarePlus className="h-10 w-10 mx-auto mb-2 text-muted-foreground/40" />
-                  <p className="text-muted-foreground">
-                    {t("pages.support.list.empty")}
-                  </p>
+                  <p className="font-medium">{t("pages.support.list.emptyFilter")}</p>
+                  {hasActiveFilters && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={clearFilters}
+                    >
+                      {t("pages.support.list.clearFilters")}
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (
@@ -544,14 +698,16 @@ const SupportListPage = () => {
             )}
           </TableBody>
         </Table>
-      </div>
+          </div>
+        )}
 
-      <DataTablePagination table={table} />
+        {!showEmptyCta && <DataTablePagination table={table} />}
+      </div>
 
       <CreateTicketModal
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreated={fetchTickets}
+        onCreated={refreshList}
       />
 
       <TicketDetailModal
@@ -560,7 +716,7 @@ const SupportListPage = () => {
         shopId={null}
         ticketId={detailTicketId}
         isManager={false}
-        onUpdated={fetchTickets}
+        onUpdated={refreshList}
       />
     </div>
   );

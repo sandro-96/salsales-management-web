@@ -1,4 +1,29 @@
 {
+  "header": {
+    "subtitle": "Đặt hàng online · Thanh toán COD",
+    "cart": "Giỏ hàng"
+  },
+  "layout": {
+    "loading": "Đang tải cửa hàng…"
+  },
+  "unavailable": {
+    "notFoundTitle": "Không tìm thấy cửa hàng",
+    "notFoundDesc": "Đường dẫn không tồn tại hoặc cửa hàng đã bị xoá.",
+    "disabledTitle": "Cửa hàng chưa mở bán online",
+    "disabledDesc": "Chủ cửa hàng chưa bật chế độ bán hàng online. Vui lòng liên hệ trực tiếp với cửa hàng."
+  },
+  "footer": {
+    "codNote": "Đặt hàng online — Thanh toán khi nhận hàng (COD). Shop sẽ gọi điện xác nhận trước khi giao.",
+    "contactTitle": "Liên hệ",
+    "followTitle": "Theo dõi shop",
+    "zalo": "Zalo",
+    "facebook": "Facebook",
+    "tiktok": "TikTok",
+    "shopee": "Shopee",
+    "branchesTitle": "Hệ thống chi nhánh ({{count}})",
+    "branchDefault": "Chính",
+    "poweredBy": "© {{year}} {{shop}}. Cung cấp bởi {{brand}}."
+  },
   "home": {
     "loadError": "Không tải được danh sách sản phẩm",
     "subtitleDefault": "Đặt hàng online · Giao COD tận nơi",
@@ -33,6 +58,7 @@
     "phoneError": "Số điện thoại không hợp lệ",
     "phonePlaceholder": "0901234567",
     "emailLabel": "Email (tuỳ chọn)",
+    "emailPlaceholder": "email@example.com",
     "addressSection": "Địa chỉ giao hàng",
     "addressLineLabel": "Số nhà / đường *",
     "addressLineError": "Vui lòng nhập địa chỉ",
@@ -50,6 +76,7 @@
     "orderTitle": "Đơn hàng ({{count}})",
     "total": "Tổng cộng",
     "submit": "Đặt hàng",
+    "submitting": "Đang đặt hàng…",
     "toastFill": "Vui lòng điền đầy đủ thông tin bắt buộc.",
     "toastSuccess": "Đặt hàng thành công!",
     "toastFail": "Đặt hàng thất bại. Vui lòng thử lại."

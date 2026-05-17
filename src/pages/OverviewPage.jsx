@@ -13,6 +13,7 @@ import {
   Clock,
   RefreshCw,
   BarChart3,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   AreaChart,
@@ -295,10 +296,13 @@ const OverviewPage = () => {
     <div className="p-4 md:p-6 space-y-5 md:space-y-6 min-h-full bg-muted/20">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            {t("overview.hello", {
-              name: user?.fullName || t("overview.you"),
-            })}
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2 min-w-0">
+            <LayoutDashboard className="h-6 w-6 shrink-0 text-primary" aria-hidden />
+            <span className="truncate">
+              {t("overview.hello", {
+                name: user?.fullName || t("overview.you"),
+              })}
+            </span>
           </h1>
           <p className="text-muted-foreground text-sm mt-1 flex flex-wrap items-center gap-2">
             <span className="truncate">{selectedShop.name}</span>

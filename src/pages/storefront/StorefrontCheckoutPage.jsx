@@ -144,7 +144,7 @@ export default function StorefrontCheckoutPage() {
               label={t("pages.storefront.checkout.emailLabel")}
               value={form.customerEmail}
               onChange={setField("customerEmail")}
-              placeholder="email@example.com"
+              placeholder={t("pages.storefront.checkout.emailPlaceholder")}
               type="email"
             />
           </section>
@@ -264,7 +264,9 @@ export default function StorefrontCheckoutPage() {
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
-              {t("pages.storefront.checkout.submit")}
+              {submitting
+                ? t("pages.storefront.checkout.submitting")
+                : t("pages.storefront.checkout.submit")}
             </Button>
           </div>
         </aside>

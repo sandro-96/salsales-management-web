@@ -30,7 +30,7 @@ export default function StorefrontHeader() {
           <div className="flex flex-col min-w-0">
             <span className="font-semibold text-sm truncate">{shop.name}</span>
             <span className="text-[11px] text-muted-foreground truncate">
-              {t("storefront.header.subtitle")}
+              {t("pages.storefront.header.subtitle")}
             </span>
           </div>
         </Link>
@@ -40,7 +40,7 @@ export default function StorefrontHeader() {
           <Link
             to={`${base}/cart`}
             className="relative inline-flex items-center justify-center h-10 w-10 rounded-md hover:bg-muted transition-colors"
-            aria-label={t("storefront.header.cart")}
+            aria-label={t("pages.storefront.header.cart")}
           >
             <ShoppingCart className="h-5 w-5" />
             {totalQuantity > 0 && (

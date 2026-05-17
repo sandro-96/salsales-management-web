@@ -6,6 +6,7 @@ import {
   Store,
   Clock,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useStorefrontShop } from "./useStorefrontShop.js";
 
 const Social = ({ href, icon: Icon, label }) =>
@@ -23,29 +24,28 @@ const Social = ({ href, icon: Icon, label }) =>
 
 function formatTime(t) {
   if (!t) return null;
-  // BE trả LocalTime dạng "HH:mm:ss" hoặc "HH:mm".
   const s = String(t);
   const m = s.match(/^(\d{2}):(\d{2})/);
   return m ? `${m[1]}:${m[2]}` : s;
 }
 
-function BranchCard({ branch }) {
+function BranchCard({ branch, defaultLabel }) {
   const open = formatTime(branch.openingTime);
   const close = formatTime(branch.closingTime);
   const hours = open && close ? `${open} – ${close}` : open || close;
   return (
     <li className="rounded-md border bg-muted/30 px-3 py-2.5 space-y-1">
-      <div className="flex items-center gap-1.5">
+      <section className="flex items-center gap-1.5">
         <Store className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         <p className="text-sm font-medium truncate" title={branch.name}>
           {branch.name}
         </p>
         {branch.isDefault && (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-            Chính
+            {defaultLabel}
           </span>
         )}
-      </div>
+      </section>
       {branch.address && (
         <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
           <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
@@ -75,7 +75,9 @@ function BranchCard({ branch }) {
 
 export default function StorefrontFooter() {
   const { shop } = useStorefrontShop();
+  const { t } = useTranslation();
   const branches = Array.isArray(shop.branches) ? shop.branches : [];
+  const year = new Date().getFullYear();
 
   return (
     <footer className="border-t bg-background mt-10">
@@ -83,13 +85,12 @@ export default function StorefrontFooter() {
         <div>
           <h3 className="font-semibold mb-2">{shop.name}</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Đặt hàng online — Thanh toán khi nhận hàng (COD).
-            Shop sẽ gọi điện xác nhận trước khi giao.
+            {t("pages.storefront.footer.codNote")}
           </p>
         </div>
         <div className="space-y-1.5">
           <h4 className="font-medium mb-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-            Liên hệ
+            {t("pages.storefront.footer.contactTitle")}
           </h4>
           {shop.phone && (
             <a
@@ -109,14 +110,30 @@ export default function StorefrontFooter() {
         </div>
         <div className="space-y-1.5">
           <h4 className="font-medium mb-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-            Theo dõi shop
+            {t("pages.storefront.footer.followTitle")}
           </h4>
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            <Social href={shop.zaloPageUrl} icon={MessageCircle} label="Zalo" />
-            <Social href={shop.facebookUrl} icon={Facebook} label="Facebook" />
-            <Social href={shop.tiktokUrl} icon={MessageCircle} label="TikTok" />
-            <Social href={shop.shopeeUrl} icon={MessageCircle} label="Shopee" />
-          </div>
+          <section className="flex flex-wrap gap-x-4 gap-y-1.5">
+            <Social
+              href={shop.zaloPageUrl}
+              icon={MessageCircle}
+              label={t("pages.storefront.footer.zalo")}
+            />
+            <Social
+              href={shop.facebookUrl}
+              icon={Facebook}
+              label={t("pages.storefront.footer.facebook")}
+            />
+            <Social
+              href={shop.tiktokUrl}
+              icon={MessageCircle}
+              label={t("pages.storefront.footer.tiktok")}
+            />
+            <Social
+              href={shop.shopeeUrl}
+              icon={MessageCircle}
+              label={t("pages.storefront.footer.shopee")}
+            />
+          </section>
         </div>
       </div>
 
@@ -125,11 +142,17 @@ export default function StorefrontFooter() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
             <h4 className="font-medium mb-3 text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
               <Store className="h-3.5 w-3.5" />
-              Hệ thống chi nhánh ({branches.length})
+              {t("pages.storefront.footer.branchesTitle", {
+                count: branches.length,
+              })}
             </h4>
             <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {branches.map((b) => (
-                <BranchCard key={b.id} branch={b} />
+                <BranchCard
+                  key={b.id}
+                  branch={b}
+                  defaultLabel={t("pages.storefront.footer.branchDefault")}
+                />
               ))}
             </ul>
           </div>
@@ -137,9 +160,13 @@ export default function StorefrontFooter() {
       )}
 
       <div className="border-t">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 text-[11px] text-muted-foreground text-center">
-          © {new Date().getFullYear()} {shop.name}. Powered by SalesApp Storefront.
-        </div>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-3 text-[11px] text-muted-foreground text-center">
+          {t("pages.storefront.footer.poweredBy", {
+            year,
+            shop: shop.name,
+            brand: t("brand.appName"),
+          })}
+        </section>
       </div>
     </footer>
   );

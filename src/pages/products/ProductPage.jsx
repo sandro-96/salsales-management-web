@@ -73,6 +73,7 @@ import {
   listSearchWrap,
   listFilterSelectWrap,
 } from "@/components/table/listPageLayout.js";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import {
   getProducts,
@@ -602,30 +603,26 @@ const ProductPage = () => {
   return (
     <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex w-full min-w-0">
       <div className="flex flex-col gap-4">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {t("pages.products.list.title")}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {t("pages.products.list.subtitle")}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            disabled={loading}
-            onClick={() => fetchProducts()}
-          >
-            <RefreshCw
-              className={cn("h-4 w-4 mr-1.5", loading && "animate-spin")}
-            />
-            {t("pages.products.list.refresh")}
-          </Button>
-        </div>
+        <ListPageHeader
+          icon={Package}
+          title={t("pages.products.list.title")}
+          subtitle={t("pages.products.list.subtitle")}
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={loading}
+              onClick={() => fetchProducts()}
+            >
+              <RefreshCw
+                className={cn("h-4 w-4 mr-1.5", loading && "animate-spin")}
+              />
+              {t("pages.products.list.refresh")}
+            </Button>
+          }
+        />
 
         <ProductListStatCards
           stats={stats}

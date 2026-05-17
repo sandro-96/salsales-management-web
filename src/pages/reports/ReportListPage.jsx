@@ -70,6 +70,7 @@ import {
   listToolbarFilters,
   listToolbarRoot,
 } from "@/components/table/listPageLayout.js";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 
 import {
   getReportSummary,
@@ -398,15 +399,11 @@ const ReportListPage = () => {
   return (
     <div className="h-full min-w-0 flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-4 min-w-0">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary shrink-0" />
-            {t("pages.reports.list.title")}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("pages.reports.list.subtitle")}
-          </p>
-        </div>
+        <ListPageHeader
+          icon={BarChart3}
+          title={t("pages.reports.list.title")}
+          subtitle={t("pages.reports.list.subtitle")}
+        />
 
         <div className={listToolbarRoot}>
           <div className={cn(listToolbarFilters, "flex-col items-stretch")}>

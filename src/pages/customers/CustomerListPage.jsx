@@ -76,6 +76,7 @@ import {
   listToolbarFilters,
   listToolbarRoot,
 } from "@/components/table/listPageLayout.js";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 
 import {
   getCustomers,
@@ -583,14 +584,11 @@ const CustomerListPage = () => {
   return (
     <div className="h-full min-w-0 flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-4 min-w-0">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            {t("pages.customers.list.title")}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("pages.customers.list.subtitle")}
-          </p>
-        </div>
+        <ListPageHeader
+          icon={Users}
+          title={t("pages.customers.list.title")}
+          subtitle={t("pages.customers.list.subtitle")}
+        />
 
         <CustomerListStatCards
           stats={stats}

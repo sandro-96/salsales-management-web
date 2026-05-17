@@ -28,6 +28,12 @@
     "appName": "Sổ thu chi",
     "heroEyebrow": "Shop management system"
   },
+  "dashboard": {
+    "default": {
+      "welcome": "Welcome to {{brand}}",
+      "notConfigured": "Your dashboard is not yet configured for this role or business type."
+    }
+  },
   "app": {
     "documentTitleSuffix": "Sổ thu chi"
   },
@@ -122,6 +128,7 @@
     "registerBreadcrumb": "Sign up",
     "verifyEmail": "Verify email",
     "forgotPassword": "Forgot password",
+    "resetPassword": "Reset password",
     "storefront": "Storefront",
     "storefrontProduct": "Product",
     "storefrontCart": "Cart",
@@ -197,12 +204,6 @@
       "markAllRead": "Mark all read",
       "empty": "No new notifications.",
       "viewAll": "View all notifications"
-    }
-  },
-  "storefront": {
-    "header": {
-      "subtitle": "Order online · Cash on delivery",
-      "cart": "Cart"
     }
   },
   "auth": {
@@ -308,11 +309,28 @@
     },
     "forgot": {
       "title": "Forgot password",
+      "hint": "Enter the email you used to sign up. We will send you a link to reset your password.",
       "placeholder": "Enter your email",
-      "submit": "Send request",
-      "success": "Password reset request sent. Please check your email.",
+      "submit": "Send reset link",
+      "success": "If an account exists for this email, we sent a reset link. Please check your inbox (and spam folder).",
       "failure": "Request failed.",
-      "generalError": "Something went wrong. Please try again."
+      "generalError": "Something went wrong. Please try again.",
+      "backToLogin": "Back to sign in"
+    },
+    "reset": {
+      "title": "Set a new password",
+      "subtitle": "Choose a new password for your account.",
+      "passwordPlaceholder": "New password (min. 6 characters)",
+      "confirmPlaceholder": "Confirm new password",
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "success": "Password updated. You can sign in now.",
+      "failure": "Could not reset password. The link may be invalid or expired.",
+      "missingToken": "Reset link is invalid or missing.",
+      "requestNew": "Request a new reset link",
+      "passwordMin": "Password must be at least 6 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "backToLogin": "Back to sign in"
     },
     "verify": {
       "title": "Verify email",

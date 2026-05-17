@@ -29,6 +29,7 @@ import {
   EyeOff,
   CalendarIcon,
 } from "lucide-react";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 import { format } from "date-fns";
 import { enUS, vi } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -247,10 +248,11 @@ const AccountPage = () => {
     <div className="flex-1 flex-col gap-6 p-4 md:p-8 md:flex max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight">{t("pages.accounts.title")}</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t("pages.accounts.subtitle")}
-        </p>
+        <ListPageHeader
+          icon={User}
+          title={t("pages.accounts.title")}
+          subtitle={t("pages.accounts.subtitle")}
+        />
       </div>
 
       <Tabs defaultValue="profile" className="gap-6">

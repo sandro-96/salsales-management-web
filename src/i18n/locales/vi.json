@@ -28,6 +28,12 @@
     "appName": "Sổ thu chi",
     "heroEyebrow": "Phần mềm quản lý bán hàng"
   },
+  "dashboard": {
+    "default": {
+      "welcome": "Chào mừng đến {{brand}}",
+      "notConfigured": "Dashboard chưa được cấu hình cho vai trò hoặc loại hình kinh doanh này."
+    }
+  },
   "app": {
     "documentTitleSuffix": "Sổ thu chi"
   },
@@ -122,6 +128,7 @@
     "registerBreadcrumb": "Đăng ký",
     "verifyEmail": "Xác thực email",
     "forgotPassword": "Quên mật khẩu",
+    "resetPassword": "Đặt lại mật khẩu",
     "storefront": "Cửa hàng",
     "storefrontProduct": "Sản phẩm",
     "storefrontCart": "Giỏ hàng",
@@ -197,12 +204,6 @@
       "markAllRead": "Đọc tất cả",
       "empty": "Không có thông báo mới.",
       "viewAll": "Xem tất cả thông báo"
-    }
-  },
-  "storefront": {
-    "header": {
-      "subtitle": "Đặt hàng online · Thanh toán COD",
-      "cart": "Giỏ hàng"
     }
   },
   "auth": {
@@ -308,11 +309,28 @@
     },
     "forgot": {
       "title": "Quên mật khẩu",
+      "hint": "Nhập email đã đăng ký. Chúng tôi sẽ gửi liên kết đặt lại mật khẩu.",
       "placeholder": "Nhập email của bạn",
-      "submit": "Gửi yêu cầu",
-      "success": "Đã gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra email của bạn.",
+      "submit": "Gửi liên kết đặt lại",
+      "success": "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại. Vui lòng kiểm tra hộp thư (và thư mục spam).",
       "failure": "Yêu cầu thất bại.",
-      "generalError": "Có lỗi xảy ra. Vui lòng thử lại sau."
+      "generalError": "Có lỗi xảy ra. Vui lòng thử lại sau.",
+      "backToLogin": "Quay lại đăng nhập"
+    },
+    "reset": {
+      "title": "Đặt mật khẩu mới",
+      "subtitle": "Chọn mật khẩu mới cho tài khoản của bạn.",
+      "passwordPlaceholder": "Mật khẩu mới (tối thiểu 6 ký tự)",
+      "confirmPlaceholder": "Nhập lại mật khẩu mới",
+      "submit": "Cập nhật mật khẩu",
+      "submitting": "Đang cập nhật…",
+      "success": "Đã đổi mật khẩu. Bạn có thể đăng nhập ngay.",
+      "failure": "Không thể đặt lại mật khẩu. Liên kết có thể đã hết hạn hoặc không hợp lệ.",
+      "missingToken": "Liên kết đặt lại không hợp lệ hoặc thiếu.",
+      "requestNew": "Yêu cầu liên kết mới",
+      "passwordMin": "Mật khẩu phải có ít nhất 6 ký tự.",
+      "passwordMismatch": "Mật khẩu nhập lại không khớp.",
+      "backToLogin": "Quay lại đăng nhập"
     },
     "verify": {
       "title": "Xác minh email",

@@ -12,5 +12,6 @@
   "ticketsTitle": "Technical support requests",
   "ticketsDesc": "Report issues, request features, or track tickets you have submitted.",
   "ticketsCta": "Open support tickets",
-  "empty": "Contact details are not configured yet. Please contact your system administrator."
+  "emptyTitle": "No contact details yet",
+  "empty": "Contact details are not configured yet. Please contact your system administrator or open a support ticket."
 }

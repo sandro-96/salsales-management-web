@@ -1,72 +1,86 @@
-// src/pages/ForgotPasswordPage.jsx
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import axiosInstance from "../api/axiosInstance";
-import LanguageSwitcher from "../components/common/LanguageSwitcher.jsx";
+import AuthPageLayout, {
+  authInputClass,
+  authPrimaryButtonClass,
+} from "@/components/auth/AuthPageLayout.jsx";
+import { forgotPassword } from "@/api/authApi.js";
 
 const ForgotPasswordPage = () => {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState("");
-  const [error, setError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [errorKey, setErrorKey] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus("");
-    setError("");
+    setSubmitted(false);
+    setErrorKey(null);
     try {
-      const res = await axiosInstance.post(
-        `/auth/forgot-password?email=${email}`,
-      );
-      if (res.data.success) {
-        setStatus(t("auth.forgot.success"));
+      setLoading(true);
+      const res = await forgotPassword(email);
+      if (res.data?.success) {
+        setSubmitted(true);
       } else {
-        setError(res.data.message || t("auth.forgot.failure"));
+        setErrorKey("auth.forgot.failure");
       }
-    } catch (err) {
-      console.log(err);
-      setError(t("auth.forgot.generalError"));
+    } catch {
+      setErrorKey("auth.forgot.generalError");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-background px-4 text-foreground relative">
-      <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
-        <LanguageSwitcher />
-      </div>
-      <form
-        onSubmit={handleSubmit}
-        className="bg-card text-card-foreground p-8 rounded-lg shadow w-full max-w-md border"
-      >
-        <h2 className="text-xl font-semibold text-center mb-6">
+    <AuthPageLayout loading={loading}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-xl font-semibold text-center">
           {t("auth.forgot.title")}
         </h2>
-        {status && (
-          <p className="text-green-600 dark:text-green-400 text-sm mb-4 text-center">
-            {status}
+        <p className="text-sm text-muted-foreground text-center">
+          {t("auth.forgot.hint")}
+        </p>
+        {submitted && (
+          <p className="text-sm text-emerald-600 dark:text-emerald-400 text-center">
+            {t("auth.forgot.success")}
           </p>
         )}
-        {error && (
-          <p className="text-red-600 dark:text-red-400 text-sm mb-4 text-center">
-            {error}
-          </p>
+        {errorKey && (
+          <p className="text-sm text-destructive text-center">{t(errorKey)}</p>
         )}
         <input
           type="email"
-          className="w-full mb-4 p-3 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={authInputClass}
           placeholder={t("auth.forgot.placeholder")}
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (submitted) setSubmitted(false);
+            if (errorKey) setErrorKey(null);
+          }}
+          autoComplete="email"
           required
+          disabled={loading || submitted}
         />
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
+          disabled={loading || submitted}
+          className={authPrimaryButtonClass}
         >
           {t("auth.forgot.submit")}
         </button>
+        <p className="text-center text-sm">
+          <Link
+            to="/login"
+            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            {t("auth.forgot.backToLogin")}
+          </Link>
+        </p>
       </form>
-    </div>
+    </AuthPageLayout>
   );
 };
 

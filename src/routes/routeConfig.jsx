@@ -13,6 +13,7 @@ const LoginPage = lazy(() => import("../pages/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/RegisterPage"));
 const VerifyEmailPage = lazy(() => import("../pages/VerifyEmailPage"));
 const ForgotPasswordPage = lazy(() => import("../pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("../pages/ResetPasswordPage"));
 const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
 const AdminLayout = lazy(() => import("../layouts/common/AdminLayout.jsx"));
 const AdminSupportPage = lazy(
@@ -137,8 +138,16 @@ export const routeConfig = [
   {
     path: "/forgot-password",
     element: <ForgotPasswordPage />,
+    guestOnly: true,
     titleKey: "routes.forgotPassword",
     breadcrumbKey: "routes.forgotPassword",
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPasswordPage />,
+    guestOnly: true,
+    titleKey: "routes.resetPassword",
+    breadcrumbKey: "routes.resetPassword",
   },
   {
     // Storefront công khai cho guest user — không yêu cầu đăng nhập,

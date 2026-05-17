@@ -102,6 +102,7 @@ import {
   listToolbarActions,
   listToolbarFilters,
 } from "@/components/table/listPageLayout.js";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 
 import InventoryActionModal from "./InventoryActionModal.jsx";
 
@@ -929,40 +930,39 @@ const InventoryListPage = () => {
     <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-6">
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("pages.inventory.list.title")}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {selectedBranch
-                ? t("pages.inventory.list.subtitleBranch", {
-                    name: selectedBranch.name,
-                  })
-                : t("pages.inventory.list.subtitleSelectBranch")}
-            </p>
-          </div>
-          {branches.length > 1 && (
-            <Select
-              value={selectedBranchId ?? ""}
-              onValueChange={setSelectedBranchId}
-            >
-              <SelectTrigger className="w-[220px]">
-                <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue
-                  placeholder={t("pages.inventory.list.selectBranch")}
-                />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        <ListPageHeader
+          icon={Package}
+          title={t("pages.inventory.list.title")}
+          subtitle={
+            selectedBranch
+              ? t("pages.inventory.list.subtitleBranch", {
+                  name: selectedBranch.name,
+                })
+              : t("pages.inventory.list.subtitleSelectBranch")
+          }
+          actions={
+            branches.length > 1 ? (
+              <Select
+                value={selectedBranchId ?? ""}
+                onValueChange={setSelectedBranchId}
+              >
+                <SelectTrigger className="w-full sm:w-[220px]">
+                  <Warehouse className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue
+                    placeholder={t("pages.inventory.list.selectBranch")}
+                  />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null
+          }
+        />
 
         {/* ── No branch fallback ──────────────────────────────────────── */}
         {noBranch ? (

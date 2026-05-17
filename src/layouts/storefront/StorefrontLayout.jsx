@@ -6,6 +6,7 @@ import StorefrontHeader from "./StorefrontHeader.jsx";
 import StorefrontFooter from "./StorefrontFooter.jsx";
 import StorefrontUnavailable from "./StorefrontUnavailable.jsx";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   StorefrontShopContext,
   STOREFRONT_STATUS,
@@ -17,6 +18,7 @@ import {
  * Toàn bộ trang con đều có thể đọc shop hiện tại qua `useStorefrontShop()`.
  */
 export default function StorefrontLayout() {
+  const { t } = useTranslation();
   const { slug } = useParams();
   const [status, setStatus] = useState(STOREFRONT_STATUS.LOADING);
   const [shop, setShop] = useState(null);
@@ -48,9 +50,12 @@ export default function StorefrontLayout() {
 
   if (status === STOREFRONT_STATUS.LOADING) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <section className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
+        <p className="text-sm text-muted-foreground">
+          {t("pages.storefront.layout.loading")}
+        </p>
+      </section>
     );
   }
 

@@ -29,6 +29,7 @@ import {
   ChevronDown,
   Globe,
 } from "lucide-react";
+import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -1959,22 +1960,11 @@ const OrderListPage = () => {
     <div className="h-full flex-1 flex-col gap-6 p-4 md:p-8 md:flex">
       <div className="flex flex-col gap-6">
         {/* ── Header ──────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("pages.orders.list.title")}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("pages.orders.list.subtitle")}
-            </p>
-          </div>
-          {/* {canManage && (
-            <Button onClick={() => setCreateOrderOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Tạo đơn hàng
-            </Button>
-          )} */}
-        </div>
+        <ListPageHeader
+          icon={ShoppingCart}
+          title={t("pages.orders.list.title")}
+          subtitle={t("pages.orders.list.subtitle")}
+        />
 
         {/* ── Stat Cards ──────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 min-w-0">

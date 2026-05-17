@@ -1,4 +1,29 @@
 {
+  "header": {
+    "subtitle": "Order online · Cash on delivery",
+    "cart": "Cart"
+  },
+  "layout": {
+    "loading": "Loading shop…"
+  },
+  "unavailable": {
+    "notFoundTitle": "Shop not found",
+    "notFoundDesc": "This link does not exist or the shop has been removed.",
+    "disabledTitle": "Online sales not enabled",
+    "disabledDesc": "The shop owner has not turned on online sales. Please contact the shop directly."
+  },
+  "footer": {
+    "codNote": "Order online — Pay on delivery (COD). The shop will call to confirm before shipping.",
+    "contactTitle": "Contact",
+    "followTitle": "Follow us",
+    "zalo": "Zalo",
+    "facebook": "Facebook",
+    "tiktok": "TikTok",
+    "shopee": "Shopee",
+    "branchesTitle": "Branches ({{count}})",
+    "branchDefault": "Main",
+    "poweredBy": "© {{year}} {{shop}}. Powered by {{brand}}."
+  },
   "home": {
     "loadError": "Could not load products",
     "subtitleDefault": "Order online · Cash on delivery",
@@ -33,6 +58,7 @@
     "phoneError": "Invalid phone number",
     "phonePlaceholder": "+1 234 567 890",
     "emailLabel": "Email (optional)",
+    "emailPlaceholder": "email@example.com",
     "addressSection": "Delivery address",
     "addressLineLabel": "Street / number *",
     "addressLineError": "Please enter address",
@@ -50,6 +76,7 @@
     "orderTitle": "Order ({{count}})",
     "total": "Total",
     "submit": "Place order",
+    "submitting": "Placing order…",
     "toastFill": "Please fill in all required fields.",
     "toastSuccess": "Order placed successfully!",
     "toastFail": "Order failed. Please try again."
