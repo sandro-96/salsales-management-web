@@ -7,7 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Copy, Calendar as CalendarIcon, Wifi } from "lucide-react";
+import { Copy, Calendar as CalendarIcon, Wifi, Banknote } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -95,6 +95,27 @@ function buildBranchFormSchema(t) {
       .optional()
       .nullable(),
 
+    paymentBankName: z
+      .string()
+      .max(120, t("pages.branches.form.validation.paymentBankMax"))
+      .optional()
+      .nullable(),
+    paymentAccountNumber: z
+      .string()
+      .max(32, t("pages.branches.form.validation.paymentAccountMax"))
+      .optional()
+      .nullable(),
+    paymentAccountHolder: z
+      .string()
+      .max(120, t("pages.branches.form.validation.paymentHolderMax"))
+      .optional()
+      .nullable(),
+    paymentTransferNote: z
+      .string()
+      .max(200, t("pages.branches.form.validation.paymentNoteMax"))
+      .optional()
+      .nullable(),
+
     invoiceLocale: z.enum(["vi", "en"]).default("vi"),
 
     isDefault: z.boolean().default(false),
@@ -141,6 +162,10 @@ export default function BranchForm({
       taxRegistrationNumber: "",
       wifiSsid: "",
       wifiPassword: "",
+      paymentBankName: "",
+      paymentAccountNumber: "",
+      paymentAccountHolder: "",
+      paymentTransferNote: "",
       invoiceLocale: "vi",
       isDefault: false,
       active: true,
@@ -171,6 +196,10 @@ export default function BranchForm({
       taxRegistrationNumber: branch.taxRegistrationNumber ?? "",
       wifiSsid: branch.wifiSsid ?? "",
       wifiPassword: branch.wifiPassword ?? "",
+      paymentBankName: branch.paymentBankName ?? "",
+      paymentAccountNumber: branch.paymentAccountNumber ?? "",
+      paymentAccountHolder: branch.paymentAccountHolder ?? "",
+      paymentTransferNote: branch.paymentTransferNote ?? "",
       invoiceLocale:
         branch.invoiceLocale === "en" || branch.invoiceLocale?.startsWith?.("en")
           ? "en"
@@ -232,6 +261,10 @@ export default function BranchForm({
     const trimmedMst = data.taxRegistrationNumber?.trim?.() ?? "";
     const wifiSsid = data.wifiSsid?.trim?.() ?? "";
     const wifiPassword = data.wifiPassword?.trim?.() ?? "";
+    const paymentBankName = data.paymentBankName?.trim?.() ?? "";
+    const paymentAccountNumber = data.paymentAccountNumber?.trim?.() ?? "";
+    const paymentAccountHolder = data.paymentAccountHolder?.trim?.() ?? "";
+    const paymentTransferNote = data.paymentTransferNote?.trim?.() ?? "";
     const toLocalTimePayload = (t) => {
       const s = typeof t === "string" ? t.trim() : "";
       if (!s) return undefined;
@@ -249,6 +282,10 @@ export default function BranchForm({
       taxRegistrationNumber: trimmedMst || null,
       wifiSsid: wifiSsid || null,
       wifiPassword: wifiPassword || null,
+      paymentBankName: paymentBankName || null,
+      paymentAccountNumber: paymentAccountNumber || null,
+      paymentAccountHolder: paymentAccountHolder || null,
+      paymentTransferNote: paymentTransferNote || null,
     };
     onSubmit(submitData);
   };
@@ -687,6 +724,137 @@ export default function BranchForm({
                   )}
                 />
               </div>
+            </div>
+
+            <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-5 space-y-5">
+              <div className="space-y-1">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Banknote className="h-4 w-4 shrink-0" />
+                  {t("pages.branches.form.paymentSectionTitle")}
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("pages.branches.form.paymentSectionHint")}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
+                <FormField
+                  control={form.control}
+                  name="paymentBankName"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>{t("pages.branches.form.paymentBankName")}</FormLabel>
+                      {isReadOnly ? (
+                        <FormControl>
+                          <ReadOnlyValue value={field.value} />
+                        </FormControl>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            placeholder={t(
+                              "pages.branches.form.paymentBankNamePlaceholder",
+                            )}
+                            maxLength={120}
+                            className="h-10 px-3.5"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="paymentAccountNumber"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>
+                        {t("pages.branches.form.paymentAccountNumber")}
+                      </FormLabel>
+                      {isReadOnly ? (
+                        <FormControl>
+                          <ReadOnlyValue value={field.value} />
+                        </FormControl>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            placeholder={t(
+                              "pages.branches.form.paymentAccountNumberPlaceholder",
+                            )}
+                            maxLength={32}
+                            className="h-10 px-3.5 font-mono"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="paymentAccountHolder"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2 sm:col-span-2">
+                      <FormLabel>
+                        {t("pages.branches.form.paymentAccountHolder")}
+                      </FormLabel>
+                      {isReadOnly ? (
+                        <FormControl>
+                          <ReadOnlyValue value={field.value} />
+                        </FormControl>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            placeholder={t(
+                              "pages.branches.form.paymentAccountHolderPlaceholder",
+                            )}
+                            maxLength={120}
+                            className="h-10 px-3.5"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="paymentTransferNote"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2 sm:col-span-2">
+                      <FormLabel>
+                        {t("pages.branches.form.paymentTransferNote")}
+                      </FormLabel>
+                      {isReadOnly ? (
+                        <FormControl>
+                          <ReadOnlyValue value={field.value} />
+                        </FormControl>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            placeholder={t(
+                              "pages.branches.form.paymentTransferNotePlaceholder",
+                            )}
+                            maxLength={200}
+                            className="h-10 px-3.5"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-5 space-y-5">
               <FormField
                 control={form.control}
                 name="invoiceLocale"

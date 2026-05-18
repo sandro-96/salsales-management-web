@@ -88,6 +88,8 @@
     "variantTitle": "Phân loại",
     "qtyTitle": "Số lượng",
     "descTitle": "Mô tả",
+    "descSeeMore": "Xem thêm",
+    "descSeeLess": "Thu gọn",
     "addToCart": "Thêm vào giỏ",
     "buyNow": "Mua ngay",
     "toastSelectVariant": "Vui lòng chọn phân loại sản phẩm.",

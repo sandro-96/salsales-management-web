@@ -45,12 +45,16 @@ const AuthProvider = ({ children }) => {
       // gọi API để lấy thông tin chi tiết
       const res = await getCurrentUser();
 
+      const profile = res.data.data;
       setUser({
         id: decoded.sub,
-        email: res.data.data.email,
-        role: res.data.data.role,
-        fullName: res.data.data.fullName,
-        avatarUrl: res.data.data.avatarUrl,
+        email: profile.email,
+        role: profile.role,
+        fullName: profile.fullName,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        avatarUrl: profile.avatarUrl,
       });
     } catch (err) {
       console.error("Không load được user:", err);

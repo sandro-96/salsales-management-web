@@ -10,7 +10,7 @@ export const DEFAULT_NAV_PERMISSION_MAP = {
   "/customers": [PERM.CUSTOMER_VIEW],
   "/inventory": [PERM.INVENTORY_VIEW, PERM.INVENTORY_MANAGE],
   "/promotions": [PERM.PROMOTION_VIEW],
-  "/tables": [PERM.TABLE_VIEW],
+  "/tables": [PERM.TABLE_VIEW, PERM.TABLE_CREATE, PERM.TABLE_UPDATE],
   "/branches": [PERM.BRANCH_VIEW, PERM.BRANCH_MANAGE],
   "/reports": [PERM.REPORT_VIEW],
   "/pos": [PERM.ORDER_CREATE],
@@ -51,7 +51,29 @@ export const isNavItemAllowed = (
 /**
  * Lọc danh sách navItems theo quyền. Hỗ trợ lồng nhau thông qua trường `items`.
  */
-export const filterNavByShopPermissions = (navItems, permHelpers) => {
+const TABLES_NAV_ITEM = {
+  to: "/tables",
+  labelKey: "nav.tables",
+};
+
+/**
+ * Đảm bảo menu Bàn có trên sidebar F&B (nếu layout thiếu hoặc bị lọc nhầm).
+ */
+export function ensureFnbTablesNav(items, { industry, canAccessTables, TableIcon }) {
+  if (industry !== "FNB" || !canAccessTables) return items;
+  if (!Array.isArray(items) || items.some((i) => i?.to === "/tables")) {
+    return items ?? [];
+  }
+  const next = [...items];
+  const tablesEntry = { ...TABLES_NAV_ITEM, icon: TableIcon };
+  const afterOrders = next.findIndex((i) => i.to === "/orders");
+  const insertAt = afterOrders >= 0 ? afterOrders + 1 : next.length;
+  next.splice(insertAt, 0, tablesEntry);
+  return next;
+}
+
+export const filterNavByShopPermissions = (navItems, permHelpers, options = {}) => {
+  if (options.skipFilter) return Array.isArray(navItems) ? navItems : [];
   if (!Array.isArray(navItems)) return navItems;
   return navItems
     .map((item) => {

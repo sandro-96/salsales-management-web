@@ -91,6 +91,8 @@ const ShopProvider = ({ children }) => {
           setSelectedIndustry(null);
           localStorage.removeItem(shopIdKey);
           localStorage.removeItem(branchIdKey);
+          localStorage.removeItem("selectedShopId");
+          localStorage.removeItem("selectedBranchId");
           console.log("Người dùng không có cửa hàng nào.");
         }
       }

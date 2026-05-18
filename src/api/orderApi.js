@@ -4,7 +4,7 @@ import axiosInstance from "./axiosInstance";
  * 📋 Lấy danh sách đơn hàng (phân trang)
  * GET /api/orders?shopId=&branchId=&orderSource=&page=&size=&sort=
  * branchId: tùy chọn — có thì chỉ đơn của chi nhánh đó; không có thì mọi chi nhánh.
- * orderSource: POS | ONLINE — lọc server-side (khuyến nghị cho đơn online).
+ * orderSource: POS | ONLINE — ONLINE gồm cả đơn storefront và đơn QR tại bàn (IN_STORE).
  */
 export const getOrders = (shopId, params = {}) =>
   axiosInstance.get("/orders", { params: { shopId, ...params } });

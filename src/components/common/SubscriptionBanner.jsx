@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Clock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useShop } from "@/hooks/useShop";
 
 /**
  * Banner nhắc trạng thái billing:
@@ -14,7 +15,11 @@ import { useSubscription } from "@/hooks/useSubscription";
  */
 export default function SubscriptionBanner() {
   const { t } = useTranslation();
-  const { data } = useSubscription();
+  const { selectedShopId } = useShop();
+  const { data } = useSubscription({
+    enabled: Boolean(selectedShopId),
+    shopId: selectedShopId,
+  });
   const navigate = useNavigate();
 
   if (!data) return null;

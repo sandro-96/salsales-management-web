@@ -88,6 +88,8 @@
     "variantTitle": "Variant",
     "qtyTitle": "Quantity",
     "descTitle": "Description",
+    "descSeeMore": "See more",
+    "descSeeLess": "Show less",
     "addToCart": "Add to cart",
     "buyNow": "Buy now",
     "toastSelectVariant": "Please select a variant.",

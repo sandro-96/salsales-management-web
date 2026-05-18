@@ -32,7 +32,8 @@
     "edit": "Edit",
     "openTable": "Open table",
     "closeTable": "Close table",
-    "delete": "Delete table"
+    "delete": "Delete table",
+    "showQr": "Show QR code"
   },
   "form": {
     "editTitle": "Edit table",
@@ -47,6 +48,8 @@
     "notePlaceholder": "e.g. VIP table by the window",
     "alwaysAvailableTitle": "Always available (never marked “In service”)",
     "alwaysAvailableHint": "For virtual tables such as <b>Takeaway</b>: the table always shows as available, orders are not bound to the table — multiple open orders are managed in POS by tab/order.",
+    "qrOrderingTitle": "Allow QR self-ordering",
+    "qrOrderingHint": "When enabled, guests can scan the table QR to browse the menu and place orders themselves. Disable to take orders only via staff.",
     "close": "Close",
     "cancel": "Cancel",
     "save": "Save changes",
@@ -68,5 +71,36 @@
     "deleteFail": "Could not delete table.",
     "statusUpdated": "Status updated: {{status}}",
     "statusFail": "Could not update status."
+  },
+  "qr": {
+    "title": "QR for {{name}}",
+    "desc": "Print a table tent (shop name, QR, Wi‑Fi, bank transfer) for guests to scan and order.",
+    "copy": "Copy link",
+    "copied": "Link copied.",
+    "copyFail": "Could not copy link.",
+    "download": "Download QR PNG",
+    "print": "Print QR",
+    "printPoster": "Print table tent",
+    "printBlocked": "Browser blocked the print window. Allow popups.",
+    "printTable": "Table",
+    "printScanHint": "Scan to browse the menu and order",
+    "printPhone": "Phone",
+    "printAddress": "Address",
+    "printBranch": "Branch",
+    "printWifi": "Wi‑Fi",
+    "printWifiPassword": "Password",
+    "printTransfer": "Bank transfer",
+    "printAccountNumber": "Account",
+    "printAccountHolder": "Account holder",
+    "printTransferNote": "Transfer memo",
+    "printPayAtCounter": "Pay at the counter when you leave",
+    "configureBranchHint": "Add Wi‑Fi and bank transfer details in Branch settings to print them on the table tent.",
+    "regenerate": "Regenerate QR",
+    "regenerateConfirmTitle": "Regenerate QR code?",
+    "regenerateConfirmMsg": "Every printed QR for this table will stop working — you will need to reprint a new one.",
+    "regenerateConfirmYes": "Regenerate",
+    "regenerateSuccess": "New QR generated.",
+    "regenerateFail": "Could not regenerate QR.",
+    "missing": "This table has no QR token yet."
   }
 }

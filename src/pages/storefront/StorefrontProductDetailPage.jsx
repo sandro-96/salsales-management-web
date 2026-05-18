@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Loader2, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getStorefrontProductDetail } from "@/api/storefrontApi.js";
 import { useStorefrontShop } from "@/layouts/storefront/useStorefrontShop.js";
 import { useStorefrontCart } from "@/hooks/useStorefrontCart.js";
-import { formatCurrency, pickVariantImage } from "./storefrontUtils.js";
+import { ProductImageGallery } from "@/components/products/ProductImageGallery.jsx";
+import { StorefrontProductDescription } from "./StorefrontProductDescription.jsx";
+import {
+  collectGalleryImages,
+  formatCurrency,
+  pickVariantImage,
+} from "./storefrontUtils.js";
 
 export default function StorefrontProductDetailPage() {
   const { slug, productId } = useParams();
@@ -23,6 +29,7 @@ export default function StorefrontProductDetailPage() {
   const [error, setError] = useState(null);
   const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -52,9 +59,19 @@ export default function StorefrontProductDetailPage() {
   }, [product, selectedVariantId]);
 
   const displayPrice = selectedVariant?.price ?? product?.price ?? 0;
-  const displayImage = selectedVariant
-    ? pickVariantImage(selectedVariant, product)
-    : product?.images?.[0];
+
+  const galleryImages = useMemo(
+    () => (product ? collectGalleryImages(product, selectedVariant) : []),
+    [product, selectedVariant],
+  );
+
+  useEffect(() => {
+    setGalleryIndex(0);
+  }, [selectedVariantId, galleryImages.length]);
+
+  const displayImage =
+    galleryImages[galleryIndex] ??
+    pickVariantImage(selectedVariant, product);
 
   const handleAddToCart = (goToCart = false) => {
     if (!product) return;
@@ -112,19 +129,14 @@ export default function StorefrontProductDetailPage() {
       </Button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
-        <div className="bg-background border rounded-lg overflow-hidden">
-          <div className="aspect-square w-full bg-muted flex items-center justify-center">
-            {displayImage ? (
-              <img
-                src={displayImage}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <ShoppingBag className="h-16 w-16 text-muted-foreground/40" />
-            )}
-          </div>
-        </div>
+        <ProductImageGallery
+          images={galleryImages}
+          activeIndex={galleryIndex}
+          onActiveIndexChange={setGalleryIndex}
+          alt={product.name}
+          className="rounded-lg border bg-background p-2"
+          mainClassName="aspect-square w-full"
+        />
 
         <div className="space-y-4">
           {product.category && (
@@ -194,17 +206,6 @@ export default function StorefrontProductDetailPage() {
             </div>
           </div>
 
-          {product.description && (
-            <div>
-              <p className="text-sm font-medium mb-1">
-                {t("pages.storefront.product.descTitle")}
-              </p>
-              <p className="text-sm text-muted-foreground whitespace-pre-line">
-                {product.description}
-              </p>
-            </div>
-          )}
-
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <Button
               variant="outline"
@@ -222,6 +223,8 @@ export default function StorefrontProductDetailPage() {
           </div>
         </div>
       </div>
+
+      <StorefrontProductDescription content={product.description} />
     </div>
   );
 }

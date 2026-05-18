@@ -49,3 +49,14 @@ export const updateProfile = (data, avatarFile) => {
 export const changePassword = (data) => {
   return axiosInstance.post(`${USER_API}/change-password`, data);
 };
+
+/**
+ * Lịch sử đơn storefront theo SĐT trong hồ sơ user.
+ * @param {{ page?: number, size?: number }} params
+ */
+export const getUserOrderHistory = (params = {}) => {
+  const { page = 0, size = 20 } = params;
+  return axiosInstance.get(`${USER_API}/order-history`, {
+    params: { page, size },
+  });
+};

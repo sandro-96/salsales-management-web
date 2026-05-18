@@ -113,6 +113,9 @@ const StorefrontCheckoutPage = lazy(
 const StorefrontOrderSuccessPage = lazy(
   () => import("../pages/storefront/StorefrontOrderSuccessPage.jsx"),
 );
+const TableOrderingPage = lazy(
+  () => import("../pages/table/TableOrderingPage.jsx"),
+);
 
 export const routeConfig = [
   {
@@ -183,6 +186,14 @@ export const routeConfig = [
         titleKey: "routes.storefrontSuccess",
       },
     ],
+  },
+  {
+    // QR self-ordering tại bàn — guest user, không cần đăng nhập, không có sidebar.
+    // shopSlug trong URL chỉ là cosmetic (đẹp hơn); backend resolve qua qrToken.
+    path: "/t/:shopSlug/:qrToken",
+    element: <TableOrderingPage />,
+    titleKey: "routes.tableOrdering",
+    breadcrumbKey: "routes.tableOrdering",
   },
   {
     path: "/admin",
@@ -361,7 +372,11 @@ export const routeConfig = [
         element: <TableListPage />,
         titleKey: "routes.tables",
         breadcrumbKey: "routes.tables",
-        shopPermissionAny: [PERM.TABLE_VIEW],
+        shopPermissionAny: [
+          PERM.TABLE_VIEW,
+          PERM.TABLE_CREATE,
+          PERM.TABLE_UPDATE,
+        ],
       },
       {
         path: "promotions",

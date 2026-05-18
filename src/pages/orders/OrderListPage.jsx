@@ -1092,9 +1092,9 @@ const OrderListPage = () => {
   // Deeplink: /orders?branchId=... | ?source=ONLINE
   useEffect(() => {
     const src = searchParams.get("source");
-    if (src === "ONLINE" || src === "POS") {
-      setSourceFilter(src);
-      if (src === "ONLINE") setOrdersBranchFilter("ALL");
+    if (src === "ONLINE" || src === "IN_STORE" || src === "POS") {
+      setSourceFilter(src === "IN_STORE" ? "ONLINE" : src);
+      if (src === "ONLINE" || src === "IN_STORE") setOrdersBranchFilter("ALL");
     }
     const bid = searchParams.get("branchId");
     if (!bid) return;
@@ -1396,21 +1396,6 @@ const OrderListPage = () => {
   const onOnlineOrderEvent = useCallback(
     (msg) => {
       if (msg?.type !== WebSocketMessageTypes.ONLINE_ORDER_CREATED) return;
-      const code = msg?.data?.orderCode || msg?.data?.orderId || "";
-      const customer =
-        msg?.data?.customerName || t("pages.orders.list.onlineOrderGuest");
-      toast.info(t("pages.orders.list.onlineOrderToast", { code }), {
-        description: t("pages.orders.list.onlineOrderDesc", {
-          customer,
-          phone: msg?.data?.customerPhone
-            ? ` · ${msg.data.customerPhone}`
-            : "",
-        }),
-        action: {
-          label: t("pages.orders.list.viewOnlineOrders"),
-          onClick: () => applySourceFilter("ONLINE"),
-        },
-      });
       fetchSourcePendingCounts();
       if (sourceFilter === "ONLINE") {
         if (pagination.pageIndex === 0) {
@@ -1420,14 +1405,7 @@ const OrderListPage = () => {
         }
       }
     },
-    [
-      applySourceFilter,
-      fetchOrders,
-      fetchSourcePendingCounts,
-      pagination.pageIndex,
-      sourceFilter,
-      t,
-    ],
+    [fetchOrders, fetchSourcePendingCounts, pagination.pageIndex, sourceFilter],
   );
   useShopChannel("orders/online", onOnlineOrderEvent);
 
@@ -1713,7 +1691,9 @@ const OrderListPage = () => {
         header: t("pages.orders.list.colOrderCode"),
         cell: ({ row }) => {
           const o = row.original;
-          const isOnline = (o?.orderSource || "").toUpperCase() === "ONLINE";
+          const source = (o?.orderSource || "").toUpperCase();
+          const isOnline = source === "ONLINE";
+          const isInStore = source === "IN_STORE";
           return (
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-mono text-muted-foreground">
@@ -1726,6 +1706,14 @@ const OrderListPage = () => {
                 >
                   <Globe className="h-2.5 w-2.5" />
                   {t("pages.orders.list.onlineBadge")}
+                </Badge>
+              )}
+              {isInStore && (
+                <Badge
+                  className="text-[10px] gap-0.5 px-1.5 py-0 h-4 bg-violet-100 text-violet-800 border-violet-200 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200 dark:border-violet-500/40"
+                  title={t("pages.orders.list.inStoreBadgeTitle")}
+                >
+                  {t("pages.orders.list.inStoreBadge")}
                 </Badge>
               )}
             </div>

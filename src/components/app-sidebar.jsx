@@ -1,12 +1,16 @@
 import * as React from "react";
 import {
   HelpCircleIcon,
+  History,
+  Home,
   PhoneIcon,
+  Plus,
   StoreIcon,
   ShoppingCart,
+  Table,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
@@ -21,11 +25,24 @@ import { BranchSwitcher } from "./branch-switcher";
 import { useShop } from "@/hooks/useShop";
 import { useShopPermissions } from "@/hooks/useShopPermissions";
 import { useNavOrderBadge } from "@/hooks/useNavOrderBadge";
-import { filterNavByShopPermissions } from "@/utils/navPermissionMap";
+import {
+  ensureFnbTablesNav,
+  filterNavByShopPermissions,
+} from "@/utils/navPermissionMap";
 import { groupNavItems } from "@/utils/navGroups";
 import { PERM } from "@/constants/shopPermissions";
+import { Button } from "@/components/ui/button";
+
+const ZERO_SHOP_NAV = [
+  { to: "/main", icon: Home, labelKey: "nav.home" },
+  { to: "/history", icon: History, labelKey: "nav.history" },
+  { to: "/shops", icon: StoreIcon, labelKey: "nav.shopsLabel" },
+];
+
 export function AppSidebar({ navItems, ...props }) {
-  const { shops, selectedShopId, selectedBranchId } = useShop();
+  const navigate = useNavigate();
+  const { shops, selectedShopId, selectedBranchId, selectedIndustry, isOwner } =
+    useShop();
   const { hasShopPermission, hasAnyShopPermission, hasAllShopPermissions } =
     useShopPermissions();
   const { t } = useTranslation();
@@ -58,8 +75,33 @@ export function AppSidebar({ navItems, ...props }) {
         ...base,
       ];
     }
-    return filterNavByShopPermissions(base, permHelpers);
-  }, [selectedShopId, navItems, permHelpers]);
+    const canAccessTables =
+      isOwner ||
+      hasAnyShopPermission([
+        PERM.TABLE_VIEW,
+        PERM.TABLE_CREATE,
+        PERM.TABLE_UPDATE,
+      ]);
+
+    let filtered = filterNavByShopPermissions(base, permHelpers, {
+      skipFilter: isOwner,
+    });
+
+    filtered = ensureFnbTablesNav(filtered, {
+      industry: selectedIndustry,
+      canAccessTables,
+      TableIcon: Table,
+    });
+
+    return filtered;
+  }, [
+    selectedShopId,
+    selectedIndustry,
+    isOwner,
+    navItems,
+    permHelpers,
+    hasAnyShopPermission,
+  ]);
 
   const { pinnedItem, navGroups } = React.useMemo(() => {
     const pos = mainNavItems.find((i) => i.to === "/pos") ?? null;
@@ -77,8 +119,11 @@ export function AppSidebar({ navItems, ...props }) {
     };
   }, [mainNavItems, orderBadge]);
 
+  const hasShops = shops.length > 0;
+
   const navSecondary = React.useMemo(() => {
     const items = [
+      { labelKey: "nav.history", to: "/history", icon: History },
       { labelKey: "nav.shopsLabel", to: "/shops", icon: StoreIcon },
       { labelKey: "nav.contact", to: "/contact", icon: PhoneIcon },
       {
@@ -87,31 +132,58 @@ export function AppSidebar({ navItems, ...props }) {
         icon: HelpCircleIcon,
       },
     ];
-    return items.filter((i) => i.allow !== false);
-  }, []);
+    const zeroShopMainPaths = new Set(ZERO_SHOP_NAV.map((i) => i.to));
+    return items.filter((i) => {
+      if (i.allow === false) return false;
+      if (!hasShops && zeroShopMainPaths.has(i.to)) return false;
+      return true;
+    });
+  }, [hasShops]);
 
   const showGroupLabels = navGroups.length > 1;
 
+  const zeroShopNavGroups = React.useMemo(
+    () => [{ section: "other", items: ZERO_SHOP_NAV }],
+    [],
+  );
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      {shops.length > 0 ? (
+      {hasShops ? (
         <SidebarHeader className="gap-1 border-b border-sidebar-border/60 pb-2">
           <ShopSwitcher />
           <BranchSwitcher />
         </SidebarHeader>
       ) : (
-        <SidebarHeader className="border-b border-sidebar-border/60 pb-2">
-          <Link
-            to="/shops"
-            className="flex items-center gap-2 px-2 py-1.5 text-sm font-semibold text-sidebar-foreground no-underline hover:text-sidebar-accent-foreground"
+        <SidebarHeader className="gap-2 border-b border-sidebar-border/60 px-2 pb-3 pt-1">
+          <div className="flex items-center gap-2 px-1">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-muted">
+              <StoreIcon className="size-4 text-muted-foreground" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-tight">
+                {t("sidebar.noShop.title")}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                {t("sidebar.noShop.hint")}
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="success"
+            className="w-full"
+            onClick={() => navigate("/shops/create")}
           >
-            <StoreIcon className="h-4 w-4 shrink-0" />
-            {t("nav.shopsLabel")}
-          </Link>
+            <Plus className="size-4" />
+            {t("sidebar.noShop.create")}
+          </Button>
         </SidebarHeader>
       )}
       <SidebarContent className="gap-0 overflow-y-auto">
-        {selectedShopId ? (
+        {!hasShops ? (
+          <NavMain groups={zeroShopNavGroups} showGroupLabels={false} />
+        ) : selectedShopId ? (
           <NavMain
             pinnedItem={pinnedItem}
             groups={navGroups}

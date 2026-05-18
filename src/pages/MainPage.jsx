@@ -1,25 +1,26 @@
-import { useTranslation } from "react-i18next";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Navigate } from "react-router-dom";
+import { useShop } from "@/hooks/useShop";
+import Loading from "@/components/loading/Loading.jsx";
+import { OnboardingZeroShop } from "@/components/onboarding/OnboardingZeroShop.jsx";
 
 const MainPage = () => {
-  const { t } = useTranslation();
+  const { shops, isShopContextReady } = useShop();
+
+  if (!isShopContextReady) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loading />
+      </div>
+    );
+  }
+
+  if (shops.length > 0) {
+    return <Navigate to="/shops" replace />;
+  }
+
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center bg-muted/40 px-4 py-10 dark:bg-muted/15">
-      <Card className="w-full max-w-md border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-center text-xl">{t("main.title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-center text-sm text-muted-foreground">
-            {t("main.description")}
-          </p>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-full w-full flex-col bg-muted/40 dark:bg-muted/15">
+      <OnboardingZeroShop />
     </div>
   );
 };

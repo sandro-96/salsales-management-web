@@ -36,3 +36,14 @@ export function pickVariantImage(variant, fallbackProduct) {
   }
   return pickProductImage(fallbackProduct);
 }
+
+/** Danh sách URL gallery: ưu tiên ảnh biến thể đang chọn, không thì ảnh sản phẩm. */
+export function collectGalleryImages(product, variant = null) {
+  if (Array.isArray(variant?.images) && variant.images.length > 0) {
+    return variant.images.filter(Boolean);
+  }
+  if (Array.isArray(product?.images) && product.images.length > 0) {
+    return product.images.filter(Boolean);
+  }
+  return [];
+}

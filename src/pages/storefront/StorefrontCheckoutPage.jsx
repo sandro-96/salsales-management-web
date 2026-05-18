@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Loader2, Wallet } from "lucide-react";
@@ -11,6 +11,7 @@ import { createStorefrontOrder } from "@/api/storefrontApi.js";
 import { useStorefrontShop } from "@/layouts/storefront/useStorefrontShop.js";
 import { useStorefrontCart } from "@/hooks/useStorefrontCart.js";
 import { formatCurrency } from "./storefrontUtils.js";
+import { useAuth } from "@/hooks/useAuth.js";
 
 const initialForm = {
   customerName: "",
@@ -30,9 +31,24 @@ export default function StorefrontCheckoutPage() {
   const { items, totalAmount, clearCart } = useStorefrontCart();
   const { t, i18n } = useTranslation();
   const moneyLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
+  const { user, isUserContextReady } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    if (!isUserContextReady || !user) return;
+    setForm((prev) => ({
+      ...prev,
+      customerPhone: prev.customerPhone || user.phone || "",
+      customerName:
+        prev.customerName ||
+        user.fullName ||
+        [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+        "",
+      customerEmail: prev.customerEmail || user.email || "",
+    }));
+  }, [isUserContextReady, user]);
 
   if (items.length === 0) {
     return (

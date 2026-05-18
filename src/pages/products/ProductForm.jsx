@@ -33,6 +33,7 @@ import {
 } from "@/api/productApi.js";
 import { getShopToppings } from "../../api/shopApi.js";
 import BarcodeScanner from "@/components/products/BarcodeScanner.jsx";
+import { ProductImageGallery } from "@/components/products/ProductImageGallery.jsx";
 import { lookupBarcode } from "@/utils/barcodeUtils.js";
 import {
   isValidStandardGs1Barcode,
@@ -51,6 +52,8 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/markdown/MarkdownEditor.jsx";
+import { MarkdownContent } from "@/components/markdown/MarkdownContent.jsx";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -1017,8 +1020,18 @@ export default function ProductForm({
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [fileInputKey, setFileInputKey] = useState(Date.now());
+  const [galleryIndex, setGalleryIndex] = useState(0);
   /** fieldId (useFieldArray) → ảnh mới chưa upload staging */
   const [variantMedia, setVariantMedia] = useState({});
+
+  const galleryImages = useMemo(
+    () => [...keptImages, ...previews],
+    [keptImages, previews],
+  );
+
+  useEffect(() => {
+    setGalleryIndex(0);
+  }, [keptImages.length, previews.length, product?.id]);
 
   // Reset images when product changes
   useEffect(() => {
@@ -1112,6 +1125,16 @@ export default function ProductForm({
     URL.revokeObjectURL(previews[index]);
     setFiles((prev) => prev.filter((_, i) => i !== index));
     setPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleGalleryRemove = (index) => {
+    const keptCount = keptImages.length;
+    if (index < keptCount) {
+      removeExistingImage(index);
+    } else {
+      removeImage(index - keptCount);
+    }
+    setGalleryIndex((prev) => Math.max(0, prev > index ? prev - 1 : prev === index ? 0 : prev));
   };
 
   const imageDirty =
@@ -1720,15 +1743,29 @@ export default function ProductForm({
           <FormItem>
             <FormLabel>{t("pages.products.form.description")}</FormLabel>
             {isReadOnly ? (
-              <ReadOnlyValue value={field.value} variant="multi" />
+              <div
+                className={cn(
+                  "rounded-md border border-input bg-muted/50 px-3 py-2 text-sm",
+                  !field.value?.trim() && "text-muted-foreground",
+                )}
+              >
+                {field.value?.trim() ? (
+                  <MarkdownContent
+                    content={field.value}
+                    className="max-h-64 overflow-auto"
+                  />
+                ) : (
+                  "-"
+                )}
+              </div>
             ) : (
               <FormControl>
-                <Textarea
-                  rows={3}
+                <MarkdownEditor
+                  shopId={selectedShopId}
                   placeholder={t("pages.products.form.descriptionPlaceholder")}
-                  className="min-h-[88px] resize-y"
-                  {...field}
                   value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
                 />
               </FormControl>
             )}
@@ -2092,62 +2129,17 @@ export default function ProductForm({
         )}
       </div>
 
-      {/* Existing images (view/edit mode) */}
-      {keptImages.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {keptImages.map((url, i) => (
-            <div
-              key={i}
-              className="relative size-20 rounded-md overflow-hidden border"
-            >
-              <img
-                src={url}
-                alt={`product-${i}`}
-                className="size-full object-cover"
-              />
-              {!isReadOnly && (
-                <button
-                  type="button"
-                  onClick={() => removeExistingImage(i)}
-                  className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* New previews */}
-      {previews.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {previews.map((src, i) => (
-            <div
-              key={i}
-              className="relative size-20 rounded-md overflow-hidden border"
-            >
-              <img
-                src={src}
-                alt={`preview-${i}`}
-                className="size-full object-cover"
-              />
-              {!isReadOnly && (
-                <button
-                  type="button"
-                  onClick={() => removeImage(i)}
-                  className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {keptImages.length === 0 && previews.length === 0 && (
-        <div className="flex items-center justify-center h-20 border border-dashed rounded-md text-muted-foreground text-sm">
+      {galleryImages.length > 0 ? (
+        <ProductImageGallery
+          images={galleryImages}
+          activeIndex={galleryIndex}
+          onActiveIndexChange={setGalleryIndex}
+          alt={watch("name") || "product"}
+          mainClassName="aspect-[4/3] max-h-72 w-full sm:max-h-80"
+          onRemoveAt={!isReadOnly ? handleGalleryRemove : undefined}
+        />
+      ) : (
+        <div className="flex h-40 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
           {t("pages.products.form.noProductImages")}
         </div>
       )}

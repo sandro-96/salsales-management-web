@@ -5,9 +5,12 @@ const SUBSCRIPTION_API = "/subscription";
 /**
  * Lấy trạng thái subscription của shop hiện tại
  * (status + trial/period ngày còn lại + amount).
+ * @param {string} [shopId] — bắt buộc khi user có nhiều shop (query + header X-Shop-Id).
  */
-export const getCurrentSubscription = () =>
-  axiosInstance.get(`${SUBSCRIPTION_API}/me`);
+export const getCurrentSubscription = (shopId) =>
+  axiosInstance.get(`${SUBSCRIPTION_API}/me`, {
+    params: shopId ? { shopId } : undefined,
+  });
 
 /** Thông tin TK nhận / QR (chưa có mã giao dịch) — hiển thị trên trang billing. */
 export const getSubscriptionTransferInfo = () =>

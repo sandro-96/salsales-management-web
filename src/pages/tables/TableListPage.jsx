@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import {
   Armchair,
@@ -12,7 +12,13 @@ import {
   Lock,
   Search,
   Warehouse,
+  QrCode,
+  RefreshCw,
+  Download,
+  Printer,
+  Copy,
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -31,7 +37,9 @@ import {
   updateTable,
   updateTableStatus,
   deleteTable,
+  regenerateTableQrToken,
 } from "../../api/tableApi.js";
+import { openTableQrPrintWindow } from "@/utils/tableQrPrint.js";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,6 +138,7 @@ const TableFormDialog = ({
   const [capacity, setCapacity] = useState("");
   const [note, setNote] = useState("");
   const [alwaysAvailable, setAlwaysAvailable] = useState(false);
+  const [qrOrderingEnabled, setQrOrderingEnabled] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -139,11 +148,13 @@ const TableFormDialog = ({
         setCapacity(editTable.capacity ? String(editTable.capacity) : "");
         setNote(editTable.note || "");
         setAlwaysAvailable(!!editTable.alwaysAvailable);
+        setQrOrderingEnabled(editTable.qrOrderingEnabled !== false);
       } else {
         setName("");
         setCapacity("");
         setNote("");
         setAlwaysAvailable(false);
+        setQrOrderingEnabled(true);
       }
     }
   }, [open, editTable]);
@@ -162,6 +173,7 @@ const TableFormDialog = ({
         capacity: capacity ? Number(capacity) : null,
         note: note.trim() || null,
         alwaysAvailable,
+        qrOrderingEnabled,
       };
       if (isEdit) {
         data.status = editTable.status;
@@ -249,6 +261,23 @@ const TableFormDialog = ({
               </p>
             </div>
           </label>
+
+          <label className="flex items-start gap-2 rounded-md border p-3 cursor-pointer hover:bg-muted/40">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={qrOrderingEnabled}
+              onChange={(e) => setQrOrderingEnabled(e.target.checked)}
+            />
+            <div className="space-y-1">
+              <p className="text-sm font-medium leading-none">
+                {t("pages.tables.form.qrOrderingTitle")}
+              </p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                {t("pages.tables.form.qrOrderingHint")}
+              </p>
+            </div>
+          </label>
         </fieldset>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
@@ -271,6 +300,255 @@ const TableFormDialog = ({
   );
 };
 
+// ─── QR Modal ────────────────────────────────────────────────────────────────
+
+const TableQrDialog = ({
+  open,
+  onClose,
+  table,
+  shop,
+  branch,
+  shopId,
+  onRegenerated,
+}) => {
+  const { t } = useTranslation();
+  const qrRef = useRef(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const { confirm } = useAlertDialog();
+
+  const qrUrl = table?.qrUrl
+    || (table?.qrToken
+      ? `${window.location.origin}/t/${encodeURIComponent(table?.shopSlug || shop?.slug || "shop")}/${table.qrToken}`
+      : "");
+
+  const printLabels = useMemo(
+    () => ({
+      table: t("pages.tables.qr.printTable"),
+      scanHint: t("pages.tables.qr.printScanHint"),
+      wifi: t("pages.tables.qr.printWifi"),
+      wifiPassword: t("pages.tables.qr.printWifiPassword"),
+      transfer: t("pages.tables.qr.printTransfer"),
+      accountNumber: t("pages.tables.qr.printAccountNumber"),
+      accountHolder: t("pages.tables.qr.printAccountHolder"),
+      transferNote: t("pages.tables.qr.printTransferNote"),
+      payAtCounter: t("pages.tables.qr.printPayAtCounter"),
+    }),
+    [t],
+  );
+
+  const getQrDataUrl = () => {
+    const canvas = qrRef.current?.querySelector("canvas");
+    return canvas?.toDataURL("image/png") || null;
+  };
+
+  const buildPrintParams = (dataUrl) => ({
+    shopName: shop?.name,
+    shopAddress: shop?.address,
+    tableName: table?.name,
+    qrDataUrl: dataUrl,
+    wifiSsid: branch?.wifiSsid,
+    wifiPassword: branch?.wifiPassword,
+    paymentBankName: branch?.paymentBankName,
+    paymentAccountNumber: branch?.paymentAccountNumber,
+    paymentAccountHolder: branch?.paymentAccountHolder,
+    paymentTransferNote: branch?.paymentTransferNote,
+    labels: printLabels,
+  });
+
+  const handleDownload = () => {
+    const dataUrl = getQrDataUrl();
+    if (!dataUrl) return;
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `qr-${table.name || table.id}.png`;
+    link.click();
+  };
+
+  const handlePrint = () => {
+    const dataUrl = getQrDataUrl();
+    if (!dataUrl) return;
+    if (!openTableQrPrintWindow(buildPrintParams(dataUrl))) {
+      toast.error(t("pages.tables.qr.printBlocked"));
+    }
+  };
+
+  const hasWifi = !!(branch?.wifiSsid?.trim());
+  const hasPayment = !!(
+    branch?.paymentBankName?.trim() || branch?.paymentAccountNumber?.trim()
+  );
+  const hasPosterInfo = hasWifi || hasPayment;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(qrUrl);
+      toast.success(t("pages.tables.qr.copied"));
+    } catch {
+      toast.error(t("pages.tables.qr.copyFail"));
+    }
+  };
+
+  const handleRegenerate = async () => {
+    const ok = await confirm(t("pages.tables.qr.regenerateConfirmMsg"), {
+      title: t("pages.tables.qr.regenerateConfirmTitle"),
+      confirmText: t("pages.tables.qr.regenerateConfirmYes"),
+      cancelText: t("pages.tables.form.cancel"),
+      variant: "destructive",
+    });
+    if (!ok) return;
+    setRegenerating(true);
+    try {
+      const res = await regenerateTableQrToken(table.id, shopId);
+      const updated = res.data?.data;
+      if (updated) onRegenerated?.(updated);
+      toast.success(t("pages.tables.qr.regenerateSuccess"));
+    } catch (err) {
+      toast.error(
+        resolveApiError(t, err) || t("pages.tables.qr.regenerateFail"),
+      );
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            {t("pages.tables.qr.title", { name: table?.name || "" })}
+          </DialogTitle>
+          <DialogDescription>{t("pages.tables.qr.desc")}</DialogDescription>
+        </DialogHeader>
+
+        {qrUrl ? (
+          <div className="flex flex-col gap-4">
+            <div className="mx-auto w-full max-w-[280px] rounded-lg border bg-muted/30 p-4 space-y-2.5">
+              {shop?.name ? (
+                <p className="text-center font-semibold text-base">{shop.name}</p>
+              ) : null}
+              <p className="text-center text-sm text-muted-foreground">
+                {t("pages.tables.qr.printTable")}:{" "}
+                <span className="font-medium text-foreground">{table?.name}</span>
+              </p>
+              <div
+                ref={qrRef}
+                className="flex justify-center rounded-md border bg-white p-3 mx-auto w-fit"
+              >
+                <QRCodeCanvas value={qrUrl} size={168} level="M" includeMargin />
+              </div>
+              <p className="text-xs text-center text-muted-foreground">
+                {t("pages.tables.qr.printScanHint")}
+              </p>
+              {shop?.address?.trim() ? (
+                <p className="text-[11px] text-center text-muted-foreground leading-snug">
+                  {shop.address}
+                </p>
+              ) : null}
+              {(hasWifi || hasPayment) && (
+                <div className="text-xs space-y-1 pt-1">
+                  {hasWifi ? (
+                    <p>
+                      <span className="text-muted-foreground">
+                        {t("pages.tables.qr.printWifi")}:{" "}
+                      </span>
+                      <span className="font-medium">{branch.wifiSsid}</span>
+                      {branch.wifiPassword?.trim() ? (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {t("pages.tables.qr.printWifiPassword")}:{" "}
+                          <span className="font-medium text-foreground">
+                            {branch.wifiPassword}
+                          </span>
+                        </span>
+                      ) : null}
+                    </p>
+                  ) : null}
+                  {hasPayment ? (
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground">
+                        {t("pages.tables.qr.printTransfer")}
+                      </p>
+                      {branch.paymentBankName?.trim() ? (
+                        <p className="font-medium">{branch.paymentBankName}</p>
+                      ) : null}
+                      {branch.paymentAccountNumber?.trim() ? (
+                        <p>
+                          {t("pages.tables.qr.printAccountNumber")}:{" "}
+                          <span className="font-mono font-medium">
+                            {branch.paymentAccountNumber}
+                          </span>
+                        </p>
+                      ) : null}
+                      {branch.paymentAccountHolder?.trim() ? (
+                        <p>
+                          {t("pages.tables.qr.printAccountHolder")}:{" "}
+                          {branch.paymentAccountHolder}
+                        </p>
+                      ) : null}
+                      {branch.paymentTransferNote?.trim() ? (
+                        <p className="italic text-muted-foreground">
+                          {branch.paymentTransferNote}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+              <p className="text-[11px] text-center text-muted-foreground italic">
+                {t("pages.tables.qr.printPayAtCounter")}
+              </p>
+            </div>
+
+            {!hasPosterInfo ? (
+              <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
+                {t("pages.tables.qr.configureBranchHint")}
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2 justify-center w-full">
+              <Button size="sm" variant="outline" onClick={handleCopy}>
+                <Copy className="h-4 w-4 mr-1" />
+                {t("pages.tables.qr.copy")}
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-1" />
+                {t("pages.tables.qr.download")}
+              </Button>
+              <Button size="sm" onClick={handlePrint}>
+                <Printer className="h-4 w-4 mr-1" />
+                {t("pages.tables.qr.printPoster")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-center py-4 text-muted-foreground">
+            {t("pages.tables.qr.missing")}
+          </p>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose}>
+            {t("pages.tables.form.close")}
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleRegenerate}
+            disabled={regenerating}
+          >
+            {regenerating ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-1" />
+            )}
+            {t("pages.tables.qr.regenerate")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // ─── Table Card ──────────────────────────────────────────────────────────────
 
 const TableCard = ({
@@ -282,6 +560,7 @@ const TableCard = ({
   onDelete,
   onStatusChange,
   onOpenPos,
+  onShowQr,
 }) => {
   const { t } = useTranslation();
   const canManage = canUpdate || canDelete;
@@ -290,28 +569,33 @@ const TableCard = ({
   const isAlwaysAvailable = !!table.alwaysAvailable;
   const isClosed = table.status === "CLOSED";
 
+  const openPos = () => {
+    if (isClosed) return;
+    onOpenPos?.(table);
+  };
+
+  const stopCardNavigation = (e) => {
+    e.stopPropagation();
+  };
+
   return (
     <Card
-      role="button"
-      tabIndex={0}
-      onClick={() => {
-        if (isClosed) return;
-        onOpenPos?.(table);
-      }}
-      onKeyDown={(e) => {
-        if (isClosed) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpenPos?.(table);
-        }
-      }}
-      className={`relative py-0 gap-0 transition-shadow hover:shadow-md cursor-pointer ${
-        isClosed ? "opacity-80 cursor-not-allowed" : ""
+      className={`relative py-0 gap-0 transition-shadow hover:shadow-md ${
+        isClosed ? "opacity-80" : ""
       } ${isOccupied ? "ring-2 " + cfg.ring : ""}`}
     >
       <CardContent className="p-4 flex flex-col gap-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <button
+            type="button"
+            disabled={isClosed}
+            onClick={openPos}
+            className={`flex items-center gap-2 min-w-0 flex-1 text-left rounded-md -m-1 p-1 transition-colors ${
+              isClosed
+                ? "cursor-not-allowed"
+                : "cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            }`}
+          >
             <div
               className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${cfg.cls}`}
             >
@@ -326,35 +610,43 @@ const TableCard = ({
                 </p>
               )}
             </div>
-          </div>
-          {canManage && !isOccupied && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 shrink-0"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background w-44">
-                <DropdownMenuLabel>{t("pages.tables.card.actions")}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
+          </button>
+          <div
+            className="shrink-0"
+            onClick={stopCardNavigation}
+            onPointerDown={stopCardNavigation}
+          >
+          <DropdownMenu modal>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 w-8 p-0 shrink-0"
+                onClick={stopCardNavigation}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="bg-background w-44"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <DropdownMenuLabel>{t("pages.tables.card.actions")}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => onShowQr?.(table)}>
+                <QrCode className="h-4 w-4 mr-2" /> {t("pages.tables.card.showQr")}
+              </DropdownMenuItem>
+              {canManage && !isOccupied && (
+                <>
                 {canUpdate && (
-                  <DropdownMenuItem
-                    onClick={() => onEdit(table)}
-                    disabled={isOccupied}
-                  >
+                  <DropdownMenuItem onSelect={() => onEdit(table)}>
                     <Pencil className="h-4 w-4 mr-2" /> {t("pages.tables.card.edit")}
                   </DropdownMenuItem>
                 )}
                 {canUpdate && table.status !== "AVAILABLE" && !isOccupied && (
                   <DropdownMenuItem
-                    onClick={() => onStatusChange(table, "AVAILABLE")}
+                    onSelect={() => onStatusChange(table, "AVAILABLE")}
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />{" "}
                     {t("pages.tables.card.openTable")}
@@ -362,7 +654,7 @@ const TableCard = ({
                 )}
                 {canUpdate && table.status !== "CLOSED" && !isOccupied && (
                   <DropdownMenuItem
-                    onClick={() => onStatusChange(table, "CLOSED")}
+                    onSelect={() => onStatusChange(table, "CLOSED")}
                   >
                     <Lock className="h-4 w-4 mr-2 text-gray-600" />{" "}
                     {t("pages.tables.card.closeTable")}
@@ -373,19 +665,29 @@ const TableCard = ({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-red-600 focus:bg-red-100 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-500/15 dark:focus:text-red-200"
-                      onClick={() => onDelete(table)}
-                      disabled={isOccupied}
+                      onSelect={() => onDelete(table)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" /> {t("pages.tables.card.delete")}
                     </DropdownMenuItem>
                   </>
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <button
+          type="button"
+          disabled={isClosed}
+          onClick={openPos}
+          className={`flex items-center justify-between w-full text-left rounded-md -mx-1 px-1 py-0.5 ${
+            isClosed
+              ? "cursor-not-allowed"
+              : "cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          }`}
+        >
           <div className="flex items-center gap-2 min-w-0">
             <TableStatusBadge status={table.status} tableStatuses={tableStatuses} />
             {isAlwaysAvailable && (
@@ -399,7 +701,7 @@ const TableCard = ({
               #{table.currentOrderId.slice(-6)}
             </span>
           )}
-        </div>
+        </button>
 
         {table.note && (
           <p className="text-xs text-muted-foreground truncate">{table.note}</p>
@@ -418,6 +720,7 @@ const TableListPage = () => {
   const navigate = useNavigate();
   const {
     selectedShopId,
+    selectedShop,
     selectedBranchId,
     selectedBranch,
     branches,
@@ -435,6 +738,7 @@ const TableListPage = () => {
   const [keyword, setKeyword] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
+  const [qrTable, setQrTable] = useState(null);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const { connected: wsConnected } = useWebSocket();
@@ -761,8 +1065,8 @@ const TableListPage = () => {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onStatusChange={handleStatusChange}
+                    onShowQr={(tbl) => setQrTable(tbl)}
                     onOpenPos={(t) => {
-                      // Go straight to POS to take orders for this table.
                       navigate(`/pos?tableId=${encodeURIComponent(t.id)}`);
                     }}
                   />
@@ -792,6 +1096,25 @@ const TableListPage = () => {
         canCreate={canCreate}
         canUpdate={canUpdate}
         onSuccess={fetchTables}
+      />
+
+      <TableQrDialog
+        open={!!qrTable}
+        onClose={() => setQrTable(null)}
+        table={
+          qrTable
+            ? { ...qrTable, shopSlug: qrTable.shopSlug || selectedShop?.slug }
+            : null
+        }
+        shop={selectedShop}
+        branch={selectedBranch}
+        shopId={selectedShopId}
+        onRegenerated={(updated) => {
+          setQrTable(updated);
+          setTables((prev) =>
+            prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)),
+          );
+        }}
       />
     </div>
   );

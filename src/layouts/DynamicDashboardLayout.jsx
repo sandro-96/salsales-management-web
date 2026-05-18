@@ -6,11 +6,13 @@ import { useShop } from "../hooks/useShop";
 import { useShopPermissions } from "../hooks/useShopPermissions";
 import { getFirstValidNavItem } from "../utils/getFirstValidNavItem";
 import { filterNavByShopPermissions } from "../utils/navPermissionMap";
+import { isZeroShopAllowedPath } from "../utils/zeroShopRoutes.js";
 import ImpersonationBanner from "../components/common/ImpersonationBanner";
 import SubscriptionBanner from "../components/common/SubscriptionBanner";
+import OrderAlertListener from "../components/common/OrderAlertListener.jsx";
 
 const DynamicDashboardLayout = ({ children }) => {
-    const { device = "web", selectedIndustry, selectedRole, isShopContextReady } = useShop();
+    const { device = "web", selectedIndustry, selectedRole, isShopContextReady, shops } = useShop();
     const { hasShopPermission, hasAnyShopPermission, hasAllShopPermissions } = useShopPermissions();
     const navigate = useNavigate();
     const location = useLocation();
@@ -31,15 +33,39 @@ const DynamicDashboardLayout = ({ children }) => {
     }, [layoutProps?.navItems, hasShopPermission, hasAnyShopPermission, hasAllShopPermissions]);
 
     useEffect(() => {
-        if (location.pathname !== "/" || !isShopContextReady) return;
+        if (!isShopContextReady) return;
+
+        if (shops.length === 0) {
+            const path = location.pathname;
+            if (path === "/") {
+                navigate("/main", { replace: true });
+                return;
+            }
+            if (!isZeroShopAllowedPath(path)) {
+                navigate("/main", { replace: true, state: { from: path } });
+            }
+            return;
+        }
+
+        if (location.pathname !== "/") return;
         const target = firstNavItem?.to || "/accounts";
         navigate(target, { replace: true });
-    }, [location.pathname, firstNavItem, navigate, industry, device, role, isShopContextReady]);
+    }, [
+        location.pathname,
+        firstNavItem,
+        navigate,
+        industry,
+        device,
+        role,
+        isShopContextReady,
+        shops.length,
+    ]);
 
     return (
         <>
             <ImpersonationBanner />
             <SubscriptionBanner />
+            <OrderAlertListener />
             <Layout {...layoutProps}>{children}</Layout>
         </>
     );

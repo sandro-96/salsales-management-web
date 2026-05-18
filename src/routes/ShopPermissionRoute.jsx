@@ -19,13 +19,14 @@ const ShopPermissionRoute = ({
   fallbackPath = "/accounts",
   children,
 }) => {
-  const { isShopContextReady, selectedShopId } = useShop();
+  const { isShopContextReady, selectedShopId, isOwner } = useShop();
   const { hasShopPermission, hasAnyShopPermission, hasAllShopPermissions } =
     useShopPermissions();
   const location = useLocation();
 
   if (!isShopContextReady) return null;
   if (!selectedShopId) return children;
+  if (isOwner) return children;
 
   let allowed = true;
   if (permission) allowed = allowed && hasShopPermission(permission);

@@ -6,6 +6,15 @@ import { isRetryableGetError } from "@/utils/networkError.js";
 const GET_RETRY_MAX = 2;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Không gắn X-Shop-Id — tránh 4002 khi user chưa có shop hoặc id cũ trong localStorage. */
+const PATHS_WITHOUT_SHOP_HEADER = [
+  "/shop/my",
+  "/user/",
+  "/notifications",
+  "/auth/",
+  "/enums",
+];
+
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
@@ -66,7 +75,12 @@ axiosInstance.interceptors.request.use(
         }
         if (!sid) sid = localStorage.getItem("selectedShopId");
 
-        if (sid) {
+        const url = config.url || "";
+        const skipShopHeader = PATHS_WITHOUT_SHOP_HEADER.some((p) =>
+          url.includes(p),
+        );
+
+        if (sid && !skipShopHeader) {
           if (typeof config.headers.set === "function") {
             config.headers.set("X-Shop-Id", sid);
           } else {

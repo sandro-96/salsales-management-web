@@ -43,6 +43,7 @@ import {
   cancelSubscriptionManualTransferPending,
 } from "@/api/subscriptionApi";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { getShopRoleLabel } from "@/utils/shopLabels";
 
 /** Push WS từ server khi có thông báo billing (NotificationType). */
@@ -243,14 +244,18 @@ export default function BillingPage() {
     isShopContextReady &&
     (shops?.length ?? 0) > 1 &&
     !selectedShopId;
+  const canLoadBilling = Boolean(
+    isShopContextReady && selectedShopId && !needsShopPick,
+  );
   const { data, loading, refresh } = useSubscription({
-    enabled: isShopContextReady && !needsShopPick,
+    enabled: canLoadBilling,
+    shopId: selectedShopId,
   });
   const [paying, setPaying] = useState(false);
   const [history, setHistory] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [transferPreview, setTransferPreview] = useState(null);
-  const [transferPreviewLoading, setTransferPreviewLoading] = useState(true);
+  const [transferPreviewLoading, setTransferPreviewLoading] = useState(false);
   /** Sau khi bấm Thanh toán MANUAL — có mã + QR đầy đủ */
   const [lastPaymentTransfer, setLastPaymentTransfer] = useState(null);
   /** Mã MANUAL vừa tạo trong phiên (trước khi /me kịp có pendingManualProviderTxnRef). */
@@ -273,34 +278,38 @@ export default function BillingPage() {
   }, []);
 
   useEffect(() => {
-    if (!isShopContextReady || needsShopPick) return;
+    if (!canLoadBilling) {
+      setTransferPreviewLoading(false);
+      setTransferPreview(null);
+      return;
+    }
     let cancelled = false;
     (async () => {
+      setTransferPreviewLoading(true);
       try {
-        setTransferPreviewLoading(true);
         const res = await getSubscriptionTransferInfo();
         const dto = res?.data?.data ?? res?.data ?? null;
         if (!cancelled) setTransferPreview(dto);
       } catch {
         if (!cancelled) setTransferPreview(null);
       } finally {
-        if (!cancelled) setTransferPreviewLoading(false);
+        setTransferPreviewLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [selectedShopId, isShopContextReady, needsShopPick]);
+  }, [canLoadBilling]);
 
   useEffect(() => {
-    if (!isShopContextReady || needsShopPick) return;
+    if (!canLoadBilling) return;
     refresh();
     loadHistory();
-  }, [selectedShopId, isShopContextReady, needsShopPick, refresh, loadHistory]);
+  }, [canLoadBilling, refresh, loadHistory]);
 
   /** Chủ shop nhận WS /topic/notifications/{userId} khi có thanh toán — làm mới lịch sử ngay. */
   useEffect(() => {
-    if (!user?.id || !connected || !isShopContextReady || needsShopPick) return;
+    if (!user?.id || !connected || !canLoadBilling) return;
     return subscribe(`/topic/notifications/${user.id}`, (message) => {
       if (message.type !== WebSocketMessageTypes.NOTIFICATION || !message.data) return;
       const msgType = message.data.type;
@@ -315,8 +324,7 @@ export default function BillingPage() {
     connected,
     subscribe,
     selectedShopId,
-    needsShopPick,
-    isShopContextReady,
+    canLoadBilling,
     refresh,
     loadHistory,
   ]);
@@ -329,7 +337,7 @@ export default function BillingPage() {
   );
 
   useEffect(() => {
-    if (!isShopContextReady || needsShopPick) return;
+    if (!canLoadBilling) return;
     const intervalMs = waitingBillingSync ? 18000 : 42000;
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
@@ -337,13 +345,7 @@ export default function BillingPage() {
       loadHistory({ silent: true });
     }, intervalMs);
     return () => clearInterval(id);
-  }, [
-    isShopContextReady,
-    needsShopPick,
-    waitingBillingSync,
-    refresh,
-    loadHistory,
-  ]);
+  }, [canLoadBilling, waitingBillingSync, refresh, loadHistory]);
 
   // Xử lý redirect từ VNPay / MoMo về /billing (nếu bật lại sau này)
   useEffect(() => {
@@ -512,6 +514,17 @@ export default function BillingPage() {
         <h1 className="text-xl font-semibold">{t("pages.billing.title")}</h1>
       </div>
 
+      {isShopContextReady && (shops?.length ?? 0) === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col gap-3 py-6 text-sm text-muted-foreground">
+            <p>{t("sidebar.noShop.hint")}</p>
+            <Button asChild variant="success" className="w-fit">
+              <Link to="/shops/create">{t("sidebar.noShop.create")}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {needsShopPick && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
             <AlertTriangle className="inline h-4 w-4 mr-1 align-text-bottom" />
@@ -574,12 +587,12 @@ export default function BillingPage() {
         </div>
       )}
 
-      {transferPreviewLoading ? (
+      {canLoadBilling && transferPreviewLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           {t("pages.billing.loadingTransfer")}
         </div>
-      ) : displayTransfer?.accountNumber ? (
+      ) : canLoadBilling && displayTransfer?.accountNumber ? (
         <div className="space-y-3">
           <TransferBlock
             title={transferTitle}

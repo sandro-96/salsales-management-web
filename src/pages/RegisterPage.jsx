@@ -19,6 +19,7 @@ const RegisterPage = () => {
     firstName: "",
     lastName: "",
     middleName: "",
+    phone: "",
   });
   const [errors, setErrors] = useState({
     email: "",
@@ -27,6 +28,7 @@ const RegisterPage = () => {
     firstName: "",
     lastName: "",
     middleName: "",
+    phone: "",
   });
   const [success, setSuccess] = useState("");
   const { subscribe, connected } = useWebSocket();
@@ -47,8 +49,12 @@ const RegisterPage = () => {
       firstName: "",
       lastName: "",
       middleName: "",
+      phone: "",
     };
     let isValid = true;
+
+    const phoneCompact = form.phone.trim().replace(/\s+/g, "");
+    const vnPhoneRegex = /^0(3|5|7|8|9)\d{8}$/;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!form.email) {
@@ -96,6 +102,14 @@ const RegisterPage = () => {
       isValid = false;
     }
 
+    if (!phoneCompact) {
+      tempErrors.phone = t("auth.register.errors.phoneRequired");
+      isValid = false;
+    } else if (!vnPhoneRegex.test(phoneCompact)) {
+      tempErrors.phone = t("auth.register.errors.phoneInvalid");
+      isValid = false;
+    }
+
     setErrors(tempErrors);
     return isValid;
   };
@@ -103,6 +117,8 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+
+    const phoneCompact = form.phone.trim().replace(/\s+/g, "");
 
     try {
       setLoading(true);
@@ -112,6 +128,8 @@ const RegisterPage = () => {
         firstName: form.firstName,
         lastName: form.lastName,
         middleName: form.middleName || null,
+        phone: phoneCompact,
+        countryCode: "VN",
       });
       if (response.data.success) {
         setSuccess(t("auth.register.successVerifyEmail"));
@@ -256,6 +274,25 @@ const RegisterPage = () => {
               required
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="reg-phone" className="text-sm font-medium">
+            {t("auth.register.phone")}
+          </label>
+          <input
+            id="reg-phone"
+            type="tel"
+            name="phone"
+            autoComplete="tel"
+            inputMode="tel"
+            className={cn(authInputClass, errors.phone && "border-destructive")}
+            value={form.phone}
+            onChange={handleChange}
+            placeholder={t("auth.register.phonePlaceholder")}
+            disabled={loading}
+            required
+          />
         </div>
 
         <div className="space-y-2">

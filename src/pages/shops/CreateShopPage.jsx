@@ -35,7 +35,7 @@ export default function CreateShopPage() {
         toast.success(t("pages.shops.create.success"));
         const createdId = res.data.data?.id;
         await fetchShops(createdId);
-        navigate(-1);
+        navigate("/shops", { replace: true });
       } else {
         toast.error(res.data.message || t("pages.shops.create.fail"));
       }

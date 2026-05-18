@@ -45,3 +45,10 @@ export const updateTableStatus = (id, shopId, status) =>
  */
 export const deleteTable = (id, shopId) =>
   axiosInstance.delete(`shops/${shopId}/tables/${id}`);
+
+/**
+ * 🔁 Tạo lại QR token cho bàn — token cũ ngừng hoạt động ngay.
+ * POST /api/shops/{shopId}/tables/{id}/qr-token/regenerate
+ */
+export const regenerateTableQrToken = (id, shopId) =>
+  axiosInstance.post(`shops/${shopId}/tables/${id}/qr-token/regenerate`);

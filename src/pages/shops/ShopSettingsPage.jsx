@@ -33,7 +33,9 @@ import {
   IdCard,
   ShoppingBag,
   ExternalLink,
+  Volume2,
 } from "lucide-react";
+import { useOrderAlertSound } from "@/hooks/useOrderAlertSound.js";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,8 +76,9 @@ function subscriptionPillClass(status) {
   }
 }
 
-function subscriptionPillLabel(sub, t) {
-  if (!sub?.status) return t("pages.shops.subscription.loading");
+function subscriptionPillLabel(sub, t, { loading, error } = {}) {
+  if (loading) return t("pages.shops.subscription.loading");
+  if (error || !sub?.status) return t("pages.shops.subscription.unavailable");
   if (sub.status === "TRIAL") {
     return t("pages.shops.subscription.trialPill", {
       days: sub.trialDaysRemaining ?? 0,
@@ -97,10 +100,23 @@ const ShopSettingsPage = () => {
   const { confirm } = useAlertDialog();
   const { enums } = useAuth();
   const { selectedShop, setSelectedShop, fetchShops, isOwner } = useShop();
-  const { data: subscription } = useSubscription();
+  const {
+    data: subscription,
+    loading: subscriptionLoading,
+    error: subscriptionError,
+  } = useSubscription({
+    enabled: Boolean(selectedShop?.id),
+    shopId: selectedShop?.id,
+  });
   const { hasShopPermission } = useShopPermissions();
   const canManageTax = hasShopPermission(PERM.SHOP_UPDATE);
   const canDeleteShop = hasShopPermission(PERM.SHOP_DELETE);
+  const canViewOrders = hasShopPermission(PERM.ORDER_VIEW);
+  const {
+    enabled: orderSoundEnabled,
+    setSoundEnabled: setOrderSoundEnabled,
+    testSound,
+  } = useOrderAlertSound();
   const showSubscriptionStatus = isOwner;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -125,6 +141,8 @@ const ShopSettingsPage = () => {
   const [toppingsEnabled, setToppingsEnabled] = useState(false);
   const [onlineSalesEnabled, setOnlineSalesEnabled] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
+  const [tableOrderingEnabled, setTableOrderingEnabled] = useState(false);
+  const [togglingTableOrdering, setTogglingTableOrdering] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
 
@@ -144,6 +162,7 @@ const ShopSettingsPage = () => {
     setActive(selectedShop.active !== false);
     setToppingsEnabled(selectedShop.toppingsEnabled === true);
     setOnlineSalesEnabled(selectedShop.onlineSalesEnabled === true);
+    setTableOrderingEnabled(selectedShop.tableOrderingEnabled === true);
     setLogoFile(null);
     setLogoPreview(null);
     setAttemptedSubmit(false);
@@ -209,6 +228,7 @@ const ShopSettingsPage = () => {
         active,
         toppingsEnabled,
         onlineSalesEnabled,
+        tableOrderingEnabled,
       };
       const formData = new FormData();
       formData.append(
@@ -315,6 +335,7 @@ const ShopSettingsPage = () => {
         active: selectedShop.active !== false,
         toppingsEnabled: selectedShop.toppingsEnabled === true,
         onlineSalesEnabled: nextValue,
+        tableOrderingEnabled: selectedShop.tableOrderingEnabled === true,
       };
       const formData = new FormData();
       formData.append(
@@ -345,6 +366,63 @@ const ShopSettingsPage = () => {
       console.error("Error toggling online sales:", err);
     } finally {
       setTogglingOnline(false);
+    }
+  };
+
+  const toggleTableOrdering = async (nextValue) => {
+    if (!selectedShop) return;
+    if (!selectedShop.slug) {
+      toast.error(t("pages.shops.settings.noSlugTable"));
+      return;
+    }
+    try {
+      setTogglingTableOrdering(true);
+      const data = {
+        name: selectedShop.name || "",
+        type: selectedShop.type,
+        businessModel: selectedShop.businessModel,
+        address: selectedShop.address || "",
+        phone: selectedShop.phone || "",
+        taxRegistrationNumber: selectedShop.taxRegistrationNumber || null,
+        zaloPageUrl: selectedShop.zaloPageUrl || null,
+        facebookUrl: selectedShop.facebookUrl || null,
+        tiktokUrl: selectedShop.tiktokUrl || null,
+        shopeeUrl: selectedShop.shopeeUrl || null,
+        countryCode: selectedShop.countryCode || "VN",
+        active: selectedShop.active !== false,
+        toppingsEnabled: selectedShop.toppingsEnabled === true,
+        onlineSalesEnabled: selectedShop.onlineSalesEnabled === true,
+        tableOrderingEnabled: nextValue,
+      };
+      const formData = new FormData();
+      formData.append(
+        "shop",
+        new Blob([JSON.stringify(data)], { type: "application/json" }),
+      );
+      const res = await axiosInstance.put(
+        `/shop/${selectedShop.id}`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      if (res.data.success) {
+        const response = res.data.data;
+        response.role = selectedShop.role;
+        setSelectedShop(response);
+        setTableOrderingEnabled(response.tableOrderingEnabled === true);
+        await fetchShops();
+        toast.success(
+          nextValue
+            ? t("pages.shops.settings.tableOrderingEnabled")
+            : t("pages.shops.settings.tableOrderingDisabled"),
+        );
+      } else {
+        toast.error(res.data.message || t("pages.shops.settings.updateFail"));
+      }
+    } catch (err) {
+      toast.error(t("pages.shops.settings.toggleError"));
+      console.error("Error toggling table ordering:", err);
+    } finally {
+      setTogglingTableOrdering(false);
     }
   };
 
@@ -483,6 +561,78 @@ const ShopSettingsPage = () => {
                 </p>
               </div>
             )}
+
+            <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {tableOrderingEnabled
+                    ? t("pages.shops.settings.tableOrderingOn")
+                    : t("pages.shops.settings.tableOrderingOff")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t("pages.shops.settings.tableOrderingHint")}
+                </p>
+              </div>
+              <Switch
+                checked={tableOrderingEnabled}
+                onCheckedChange={(v) => toggleTableOrdering(v)}
+                disabled={togglingTableOrdering || !selectedShop?.slug}
+                className="shrink-0"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {canViewOrders && (
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Volume2 className="h-4 w-4 text-primary" />
+              {t("pages.shops.settings.orderSoundTitle")}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t("pages.shops.settings.orderSoundDesc")}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {orderSoundEnabled
+                    ? t("pages.shops.settings.orderSoundOn")
+                    : t("pages.shops.settings.orderSoundOff")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t("pages.shops.settings.orderSoundHint")}
+                </p>
+              </div>
+              <Switch
+                checked={orderSoundEnabled}
+                onCheckedChange={setOrderSoundEnabled}
+                className="shrink-0"
+              />
+            </div>
+            {orderSoundEnabled ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => testSound("ONLINE")}
+                >
+                  {t("pages.shops.settings.orderSoundTestOnline")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => testSound("IN_STORE")}
+                >
+                  {t("pages.shops.settings.orderSoundTestInStore")}
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       )}
@@ -542,7 +692,10 @@ const ShopSettingsPage = () => {
                       ) : (
                         <Clock className="h-2.5 w-2.5" />
                       )}
-                      {subscriptionPillLabel(subscription, t)}
+                      {subscriptionPillLabel(subscription, t, {
+                        loading: subscriptionLoading,
+                        error: subscriptionError,
+                      })}
                     </Badge>
                   </Link>
                 )}

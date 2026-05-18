@@ -32,7 +32,8 @@
     "edit": "Chỉnh sửa",
     "openTable": "Mở bàn",
     "closeTable": "Đóng bàn",
-    "delete": "Xóa bàn"
+    "delete": "Xóa bàn",
+    "showQr": "Hiện mã QR"
   },
   "form": {
     "editTitle": "Chỉnh sửa bàn",
@@ -47,6 +48,8 @@
     "notePlaceholder": "VD: Bàn VIP gần cửa sổ",
     "alwaysAvailableTitle": "Bàn luôn trống (không chuyển sang “Đang phục vụ”)",
     "alwaysAvailableHint": "Dùng cho các “bàn ảo” như <b>Mang đi</b>: trạng thái bàn luôn hiển thị trống, không gắn một đơn lên bàn — có thể có nhiều đơn mở cùng lúc (POS quản lý theo tab/đơn).",
+    "qrOrderingTitle": "Cho phép khách tự order qua QR",
+    "qrOrderingHint": "Khi bật, khách có thể quét QR ở bàn để xem menu và đặt món. Tắt nếu chỉ muốn nhận order qua nhân viên.",
     "close": "Đóng",
     "cancel": "Hủy",
     "save": "Lưu thay đổi",
@@ -68,5 +71,36 @@
     "deleteFail": "Không thể xóa bàn.",
     "statusUpdated": "Đã cập nhật trạng thái: {{status}}",
     "statusFail": "Không thể cập nhật trạng thái."
+  },
+  "qr": {
+    "title": "QR cho bàn {{name}}",
+    "desc": "In tem bàn (tên quán, QR, Wi‑Fi, chuyển khoản) để khách quét và tự đặt món.",
+    "copy": "Sao chép link",
+    "copied": "Đã sao chép link.",
+    "copyFail": "Không thể sao chép link.",
+    "download": "Tải PNG QR",
+    "print": "In QR",
+    "printPoster": "In tem bàn",
+    "printBlocked": "Trình duyệt chặn cửa sổ in. Hãy cho phép popup.",
+    "printTable": "Bàn",
+    "printScanHint": "Quét mã để xem menu và gọi món",
+    "printPhone": "Điện thoại",
+    "printAddress": "Địa chỉ",
+    "printBranch": "Chi nhánh",
+    "printWifi": "Wi‑Fi",
+    "printWifiPassword": "Mật khẩu",
+    "printTransfer": "Chuyển khoản",
+    "printAccountNumber": "Số TK",
+    "printAccountHolder": "Chủ TK",
+    "printTransferNote": "Nội dung CK",
+    "printPayAtCounter": "Thanh toán tại quầy khi rời quán",
+    "configureBranchHint": "Thêm Wi‑Fi và thông tin chuyển khoản tại Cài đặt chi nhánh để in đầy đủ trên tem bàn.",
+    "regenerate": "Tạo lại QR",
+    "regenerateConfirmTitle": "Tạo lại mã QR?",
+    "regenerateConfirmMsg": "Mọi QR đã in cho bàn này sẽ ngừng hoạt động và bạn cần in lại bản mới.",
+    "regenerateConfirmYes": "Tạo lại",
+    "regenerateSuccess": "Đã tạo QR mới.",
+    "regenerateFail": "Không tạo lại được QR.",
+    "missing": "Bàn này chưa có QR token."
   }
 }
