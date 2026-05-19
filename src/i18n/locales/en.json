@@ -22,7 +22,12 @@
     "viewAll": "View all",
     "more": "More",
     "all": "All",
-    "goHome": "Go home"
+    "goHome": "Go home",
+    "phoneNumbers": {
+      "placeholder": "Phone number",
+      "add": "Add number",
+      "remove": "Remove number"
+    }
   },
   "brand": {
     "appName": "Sổ thu chi",

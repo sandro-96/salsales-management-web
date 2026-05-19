@@ -33,6 +33,11 @@ import {
   getBusinessModelLabel,
   getShopTypeLabel,
 } from "@/utils/shopLabels";
+import { PhoneNumbersField } from "@/components/common/PhoneNumbersField.jsx";
+import {
+  normalizePhoneInputs,
+  resolvePhones,
+} from "@/utils/phoneContactUtils.js";
 
 function buildShopFormSchema(t) {
   return z
@@ -40,20 +45,34 @@ function buildShopFormSchema(t) {
       name: z.string().min(1, t("pages.shops.form.nameRequired")),
       type: z.string(),
       address: z.string().min(10, t("pages.shops.form.addressMin")),
-      phone: z.string().min(1, t("pages.shops.form.phoneRequired")),
+      phones: z.array(z.string()),
       countryCode: z.string(),
       businessModel: z.string(),
       taxRegistrationNumber: z.string().max(32, t("pages.shops.form.taxMax")),
     })
     .superRefine((data, ctx) => {
-      const countryInfo = COUNTRIES.find((c) => c.code === data.countryCode);
-      if (countryInfo && !countryInfo.phonePattern.test(data.phone)) {
+      const normalized = normalizePhoneInputs(data.phones);
+      if (normalized.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: t("pages.shops.form.phoneInvalid", { country: countryInfo.name }),
-          path: ["phone"],
+          message: t("pages.shops.form.phoneRequired"),
+          path: ["phones"],
         });
+        return;
       }
+      const countryInfo = COUNTRIES.find((c) => c.code === data.countryCode);
+      if (!countryInfo) return;
+      normalized.forEach((p, index) => {
+        if (!countryInfo.phonePattern.test(p)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("pages.shops.form.phoneInvalid", {
+              country: countryInfo.name,
+            }),
+            path: ["phones", index],
+          });
+        }
+      });
     });
 }
 
@@ -74,7 +93,7 @@ export default function ShopForm({
       name: "",
       type: "RESTAURANT",
       address: "",
-      phone: "",
+      phones: [""],
       countryCode: "VN",
       businessModel: "DINE_IN",
       taxRegistrationNumber: "",
@@ -153,8 +172,11 @@ export default function ShopForm({
 
   // --- Submit handler ---
   const handleSubmit = (data) => {
+    const normalizedPhones = normalizePhoneInputs(data.phones);
     const payload = {
       ...data,
+      phone: normalizedPhones[0],
+      phones: normalizedPhones,
       taxRegistrationNumber: data.taxRegistrationNumber?.trim() || null,
     };
     if (onSubmit) onSubmit(payload, file);
@@ -498,42 +520,23 @@ export default function ShopForm({
               {/* Số điện thoại */}
               <FormField
                 control={form.control}
-                name="phone"
-                render={({ field, fieldState }) => {
-                  if (isReadOnly) {
-                    const val = form.getValues("phone");
-                    const display = `${country.dialCode} ${val || "-"}`;
-                    return (
-                      <FormItem>
-                        <FormLabel>{t("pages.shops.form.phone")}</FormLabel>
-                        <FormControl>
-                          <ReadOnlyValue value={display} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }
-
-                  return (
-                    <FormItem>
-                      <FormLabel>{t("pages.shops.form.phoneRequired")}</FormLabel>
-                      <FormControl>
-                        <div className="flex">
-                          <span className="px-3 py-2 bg-gray-200 border border-r-0 rounded-l-md text-gray-700 text-xs">
-                            {country.dialCode}
-                          </span>
-                          <Input
-                            aria-invalid={!!fieldState.error}
-                            placeholder={t("pages.shops.form.phonePlaceholder")}
-                            className="flex-1 rounded-l-none"
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
+                name="phones"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>{t("pages.shops.form.phoneRequired")}</FormLabel>
+                    <FormControl>
+                      <PhoneNumbersField
+                        value={
+                          isReadOnly ? resolvePhones(shop) : field.value
+                        }
+                        onChange={field.onChange}
+                        dialCode={country.dialCode}
+                        readOnly={isReadOnly}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
 

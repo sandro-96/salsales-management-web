@@ -127,6 +127,10 @@ const ShopProvider = ({ children }) => {
 
   const setSelectedBranchId = useCallback(
     (id) => {
+      const assignedId = selectedShop?.assignedBranchId;
+      if (assignedId) {
+        if (!id || id !== assignedId) return;
+      }
       setSelectedBranchIdState(id);
       if (id) {
         const { branchIdKey } = storageKeys();
@@ -139,7 +143,7 @@ const ShopProvider = ({ children }) => {
         setSelectedBranchState(null);
       }
     },
-    [branches, storageKeys],
+    [branches, storageKeys, selectedShop?.assignedBranchId],
   );
 
   const setSelectedShop = useCallback(
@@ -188,30 +192,45 @@ const ShopProvider = ({ children }) => {
           params: { shopId: id },
         });
         const list = res.data.data || [];
-        setBranches(list);
-
-        // Restore saved branch selection for this shop
         const { branchIdKey } = storageKeys();
-        const savedBranchId = localStorage.getItem(branchIdKey);
-        const validBranch = list.find((b) => b.id === savedBranchId);
-        if (validBranch) {
-          setSelectedBranchIdState(savedBranchId);
-          setSelectedBranchState(validBranch);
-        } else if (list.length === 1) {
-          // Auto-select if only one branch
-          setSelectedBranchIdState(list[0].id);
-          setSelectedBranchState(list[0]);
-          localStorage.setItem(branchIdKey, list[0].id);
+        const shopForScope =
+          selectedShop?.id === id ? selectedShop : null;
+        const assignedId = shopForScope?.assignedBranchId;
+
+        if (assignedId) {
+          const branch = list.find((b) => b.id === assignedId);
+          const scoped = branch ? [branch] : [];
+          setBranches(scoped);
+          if (branch) {
+            setSelectedBranchIdState(assignedId);
+            setSelectedBranchState(branch);
+            localStorage.setItem(branchIdKey, assignedId);
+          } else {
+            setSelectedBranchIdState(null);
+            setSelectedBranchState(null);
+          }
         } else {
-          setSelectedBranchIdState(null);
-          setSelectedBranchState(null);
+          setBranches(list);
+          const savedBranchId = localStorage.getItem(branchIdKey);
+          const validBranch = list.find((b) => b.id === savedBranchId);
+          if (validBranch) {
+            setSelectedBranchIdState(savedBranchId);
+            setSelectedBranchState(validBranch);
+          } else if (list.length === 1) {
+            setSelectedBranchIdState(list[0].id);
+            setSelectedBranchState(list[0]);
+            localStorage.setItem(branchIdKey, list[0].id);
+          } else {
+            setSelectedBranchIdState(null);
+            setSelectedBranchState(null);
+          }
         }
       } catch (err) {
         console.error("Lỗi khi tải danh sách chi nhánh", err);
         setBranches([]);
       }
     },
-    [selectedShopId, storageKeys],
+    [selectedShopId, selectedShop, storageKeys],
   );
 
   useEffect(() => {

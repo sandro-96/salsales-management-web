@@ -41,6 +41,8 @@ import { useAlertDialog } from "../../hooks/useAlertDialog";
 import { getBranchBySlug } from "@/api/branchApi";
 import { getBranchProducts } from "@/api/productApi";
 import axiosInstance from "../../api/axiosInstance";
+import { resolvePhones } from "@/utils/phoneContactUtils.js";
+import { PhoneNumbersDisplay } from "@/components/common/PhoneNumbersDisplay.jsx";
 
 const BranchSettingsPage = () => {
   const { t } = useTranslation();
@@ -286,11 +288,13 @@ const BranchSettingsPage = () => {
                 <span className="min-w-0 break-words">{branch.address}</span>
               </span>
             )}
-            {branch.phone && (
-              <span className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 shrink-0" />
-                {branch.phone}
-              </span>
+            {resolvePhones(branch).some((p) => p.trim()) && (
+              <div className="min-w-0 pl-0">
+                <PhoneNumbersDisplay
+                  phones={resolvePhones(branch)}
+                  variant="inline"
+                />
+              </div>
             )}
             <span className="flex items-start gap-2">
               <Calendar className="h-3.5 w-3.5 shrink-0 mt-0.5" />

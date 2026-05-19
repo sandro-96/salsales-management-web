@@ -22,6 +22,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -804,17 +805,18 @@ export function PosPageShell(props) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min={0}
+                      <NumericInput
+                        formatted={false}
                         max={selectedCustomer.loyaltyPoints}
-                        value={pointsToRedeem || ""}
-                        onChange={(e) => {
+                        value={
+                          pointsToRedeem ? String(pointsToRedeem) : ""
+                        }
+                        onChange={(raw) => {
                           const v = Math.max(
                             0,
                             Math.min(
                               selectedCustomer.loyaltyPoints,
-                              parseInt(e.target.value) || 0,
+                              parseInt(raw, 10) || 0,
                             ),
                           );
                           setPointsToRedeem(v);

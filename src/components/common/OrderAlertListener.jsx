@@ -9,6 +9,7 @@ import { useShopPermissions } from "@/hooks/useShopPermissions.js";
 import { PERM } from "@/constants/shopPermissions.js";
 import { WebSocketMessageTypes } from "@/constants/websocket.js";
 import { unlockOrderAlertAudio } from "@/utils/orderAlertSound.js";
+import { buildOrdersListUrl } from "@/utils/orderNavigation.js";
 
 /**
  * Phát âm thanh + toast khi có đơn online hoặc đơn tại bàn (WS shop channel).
@@ -41,6 +42,11 @@ export default function OrderAlertListener() {
       const code = data.orderCode || data.orderId || "";
       const customer =
         data.customerName || t("pages.orders.list.onlineOrderGuest");
+      const ordersUrl = buildOrdersListUrl({
+        source: "ONLINE",
+        branchId: data.branchId || undefined,
+        orderId: data.orderId || undefined,
+      });
 
       if (isInStore) {
         playInStore();
@@ -48,7 +54,7 @@ export default function OrderAlertListener() {
           description: t("pages.orders.list.inStoreOrderDesc", { customer }),
           action: {
             label: t("pages.orders.list.viewOnlineOrders"),
-            onClick: () => navigate("/orders?source=ONLINE"),
+            onClick: () => navigate(ordersUrl),
           },
         });
       } else {
@@ -60,7 +66,7 @@ export default function OrderAlertListener() {
           }),
           action: {
             label: t("pages.orders.list.viewOnlineOrders"),
-            onClick: () => navigate("/orders?source=ONLINE"),
+            onClick: () => navigate(ordersUrl),
           },
         });
       }

@@ -18,6 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -479,14 +480,16 @@ export function CartPanel({
                     >
                       <Minus className="h-3 w-3" />
                     </Button>
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      step="0.01"
-                      min="0"
-                      value={item.weight ?? ""}
-                      onChange={(e) =>
-                        updateWeight?.(item.lineKey, e.target.value)
+                    <NumericInput
+                      formatted={false}
+                      decimalScale={3}
+                      value={
+                        item.weight == null || item.weight === 0
+                          ? ""
+                          : String(item.weight)
+                      }
+                      onChange={(raw) =>
+                        updateWeight?.(item.lineKey, raw)
                       }
                       className="h-6 w-16 text-xs text-center tabular-nums px-1"
                     />

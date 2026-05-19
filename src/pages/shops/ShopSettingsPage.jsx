@@ -54,12 +54,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { COUNTRIES } from "@/constants/countries";
+import { cn } from "@/lib/utils";
 import { getFlagUrl } from "@/utils/commonUtils";
 import { useSubscription } from "@/hooks/useSubscription";
 import {
   getBusinessModelLabel,
   getShopTypeLabel,
 } from "@/utils/shopLabels";
+import { SHOP_INDUSTRY } from "@/constants/ShopIndustry.js";
+import { PhoneNumbersField } from "@/components/common/PhoneNumbersField.jsx";
+import { PhoneNumbersDisplay } from "@/components/common/PhoneNumbersDisplay.jsx";
+import {
+  normalizePhoneInputs,
+  resolvePhones,
+} from "@/utils/phoneContactUtils.js";
 
 function subscriptionPillClass(status) {
   switch (status) {
@@ -99,7 +107,9 @@ const ShopSettingsPage = () => {
   const { t } = useTranslation();
   const { confirm } = useAlertDialog();
   const { enums } = useAuth();
-  const { selectedShop, setSelectedShop, fetchShops, isOwner } = useShop();
+  const { selectedShop, setSelectedShop, fetchShops, isOwner, selectedIndustry } =
+    useShop();
+  const shopHasTableManagement = selectedIndustry === SHOP_INDUSTRY.FNB;
   const {
     data: subscription,
     loading: subscriptionLoading,
@@ -130,7 +140,7 @@ const ShopSettingsPage = () => {
   const [type, setType] = useState("");
   const [businessModel, setBusinessModel] = useState("");
   const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phones, setPhones] = useState([""]);
   const [taxRegistrationNumber, setTaxRegistrationNumber] = useState("");
   const [zaloPageUrl, setZaloPageUrl] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
@@ -152,7 +162,7 @@ const ShopSettingsPage = () => {
     setType(selectedShop.type || "");
     setBusinessModel(selectedShop.businessModel || "");
     setAddress(selectedShop.address || "");
-    setPhone(selectedShop.phone || "");
+    setPhones(resolvePhones(selectedShop));
     setTaxRegistrationNumber(selectedShop.taxRegistrationNumber || "");
     setZaloPageUrl(selectedShop.zaloPageUrl || "");
     setFacebookUrl(selectedShop.facebookUrl || "");
@@ -213,12 +223,18 @@ const ShopSettingsPage = () => {
     }
     try {
       setIsSubmitting(true);
+      const normalizedPhones = normalizePhoneInputs(phones);
+      if (normalizedPhones.length === 0) {
+        toast.error(t("pages.shops.form.phoneRequired"));
+        return;
+      }
       const data = {
         name: name.trim(),
         type,
         businessModel,
         address: address.trim(),
-        phone: phone.trim(),
+        phone: normalizedPhones[0],
+        phones: normalizedPhones,
         taxRegistrationNumber: taxRegistrationNumber.trim() || null,
         zaloPageUrl: zaloPageUrl.trim() || null,
         facebookUrl: facebookUrl.trim() || null,
@@ -325,7 +341,8 @@ const ShopSettingsPage = () => {
         type: selectedShop.type,
         businessModel: selectedShop.businessModel,
         address: selectedShop.address || "",
-        phone: selectedShop.phone || "",
+        phone: resolvePhones(selectedShop)[0] || "",
+        phones: normalizePhoneInputs(resolvePhones(selectedShop)),
         taxRegistrationNumber: selectedShop.taxRegistrationNumber || null,
         zaloPageUrl: selectedShop.zaloPageUrl || null,
         facebookUrl: selectedShop.facebookUrl || null,
@@ -382,7 +399,8 @@ const ShopSettingsPage = () => {
         type: selectedShop.type,
         businessModel: selectedShop.businessModel,
         address: selectedShop.address || "",
-        phone: selectedShop.phone || "",
+        phone: resolvePhones(selectedShop)[0] || "",
+        phones: normalizePhoneInputs(resolvePhones(selectedShop)),
         taxRegistrationNumber: selectedShop.taxRegistrationNumber || null,
         zaloPageUrl: selectedShop.zaloPageUrl || null,
         facebookUrl: selectedShop.facebookUrl || null,
@@ -562,6 +580,7 @@ const ShopSettingsPage = () => {
               </div>
             )}
 
+            {shopHasTableManagement && (
             <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-medium">
@@ -580,6 +599,7 @@ const ShopSettingsPage = () => {
                 className="shrink-0"
               />
             </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -877,25 +897,23 @@ const ShopSettingsPage = () => {
                 </FieldValue>
               )}
             </FieldWrapper>
-            <FieldWrapper label={t("pages.shops.settings.phone")} icon={Phone}>
+            <FieldWrapper
+              label={t("pages.shops.settings.phone")}
+              icon={Phone}
+              className="sm:col-span-2"
+            >
               {isEditMode ? (
-                <div className="flex">
-                  <span className="px-3 py-2 bg-muted border border-r-0 rounded-l-md text-muted-foreground text-xs flex items-center">
-                    {country.dialCode}
-                  </span>
-                  <Input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder={t("pages.shops.settings.phonePlaceholder")}
-                    className="flex-1 rounded-l-none"
-                  />
-                </div>
+                <PhoneNumbersField
+                  value={phones}
+                  onChange={setPhones}
+                  dialCode={country.dialCode}
+                />
               ) : (
-                <FieldValue emptyLabel={t("pages.shops.settings.notUpdated")}>
-                  {selectedShop.phone
-                    ? `${country?.dialCode || ""} ${selectedShop.phone}`
-                    : null}
-                </FieldValue>
+                <PhoneNumbersDisplay
+                  phones={resolvePhones(selectedShop)}
+                  dialCode={country?.dialCode}
+                  emptyLabel={t("pages.shops.settings.notUpdated")}
+                />
               )}
             </FieldWrapper>
           </div>
@@ -1148,9 +1166,9 @@ const ShopSettingsPage = () => {
   );
 };
 
-function FieldWrapper({ label, icon: IconComp, children }) {
+function FieldWrapper({ label, icon: IconComp, children, className }) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5", className)}>
       <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
         {IconComp && <IconComp className="h-3.5 w-3.5" />}
         {label}

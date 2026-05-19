@@ -22,7 +22,12 @@
     "viewAll": "Xem tất cả",
     "more": "Thêm",
     "all": "Tất cả",
-    "goHome": "Về trang chủ"
+    "goHome": "Về trang chủ",
+    "phoneNumbers": {
+      "placeholder": "Số điện thoại",
+      "add": "Thêm số",
+      "remove": "Xóa số"
+    }
   },
   "brand": {
     "appName": "Sổ thu chi",

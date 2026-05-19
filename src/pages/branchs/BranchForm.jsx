@@ -18,6 +18,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -36,7 +37,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getFlagUrl } from "@/utils/commonUtils";
-import { cn } from "@/lib/utils"; // giả sử bạn có utils cn cho className
+import { cn } from "@/lib/utils";
+import { PhoneNumbersField } from "@/components/common/PhoneNumbersField.jsx";
+import {
+  normalizePhoneInputs,
+  resolvePhones,
+} from "@/utils/phoneContactUtils.js"; // giả sử bạn có utils cn cho className
 import { useShopPermissions } from "@/hooks/useShopPermissions.js";
 import { PERM } from "@/constants/shopPermissions.js";
 import BranchTimePopover from "@/components/branch/BranchTimePopover.jsx";
@@ -57,7 +63,7 @@ function buildBranchFormSchema(t) {
   .object({
     name: z.string().min(1, t("pages.branches.form.validation.nameRequired")),
     address: z.string().min(10, t("pages.branches.form.validation.addressMin")),
-    phone: z.string().min(1, t("pages.branches.form.validation.phoneRequired")),
+    phones: z.array(z.string()),
     countryCode: z.string().optional().default("VN"),
 
     openingDate: z.date().optional().nullable(),
@@ -122,20 +128,28 @@ function buildBranchFormSchema(t) {
     active: z.boolean().default(true),
   })
   .superRefine((data, ctx) => {
-    const countryInfo = COUNTRIES.find((c) => c.code === data.countryCode);
-    if (
-      countryInfo &&
-      data.phone &&
-      !countryInfo.phonePattern.test(data.phone)
-    ) {
+    const normalized = normalizePhoneInputs(data.phones);
+    if (normalized.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: t("pages.branches.form.validation.phoneInvalidForCountry", {
-          country: countryInfo.name,
-        }),
-        path: ["phone"],
+        message: t("pages.branches.form.validation.phoneRequired"),
+        path: ["phones"],
       });
+      return;
     }
+    const countryInfo = COUNTRIES.find((c) => c.code === data.countryCode);
+    if (!countryInfo) return;
+    normalized.forEach((p, index) => {
+      if (!countryInfo.phonePattern.test(p)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("pages.branches.form.validation.phoneInvalidForCountry", {
+            country: countryInfo.name,
+          }),
+          path: ["phones", index],
+        });
+      }
+    });
   });
 }
 
@@ -157,7 +171,7 @@ export default function BranchForm({
     defaultValues: branch || {
       name: "",
       address: "",
-      phone: "",
+      phones: [""],
       countryCode: shop?.countryCode ?? "VN",
       taxRegistrationNumber: "",
       wifiSsid: "",
@@ -182,7 +196,7 @@ export default function BranchForm({
     reset({
       name: branch.name ?? "",
       address: branch.address ?? "",
-      phone: branch.phone ?? "",
+      phones: resolvePhones(branch),
       countryCode: shop?.countryCode || "VN",
       openingDate: branch.openingDate
         ? new Date(branch.openingDate)
@@ -272,8 +286,11 @@ export default function BranchForm({
       if (m) return `${m[1]}:${m[2]}:00`;
       return s;
     };
+    const normalizedPhones = normalizePhoneInputs(data.phones);
     const submitData = {
       ...data,
+      phone: normalizedPhones[0],
+      phones: normalizedPhones,
       openingDate: data.openingDate
         ? data.openingDate.toISOString().split("T")[0]
         : undefined,
@@ -353,44 +370,20 @@ export default function BranchForm({
 
               <FormField
                 control={form.control}
-                name="phone"
-                render={({ field, fieldState }) => (
-                  <FormItem className="min-w-0">
+                name="phones"
+                render={({ field }) => (
+                  <FormItem className="min-w-0 md:col-span-2">
                     <FormLabel>
                       {t("pages.branches.form.phone")} *
                     </FormLabel>
-                    {isReadOnly ? (
-                      <FormControl>
-                        <ReadOnlyValue
-                          value={`${country.dialCode} ${field.value || "-"}`}
-                        />
-                      </FormControl>
-                    ) : (
-                      <div
-                        className={cn(
-                          "flex min-h-10 w-full min-w-0 rounded-md border bg-background transition-[color,box-shadow]",
-                          fieldState.error
-                            ? "border-destructive ring-2 ring-destructive/25"
-                            : "border-input focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/35",
-                        )}
-                      >
-                        <span
-                          className="flex min-h-10 shrink-0 items-center border-r border-input bg-muted/80 px-3.5 text-sm tabular-nums text-muted-foreground"
-                          aria-hidden
-                        >
-                          {country.dialCode}
-                        </span>
-                        <FormControl>
-                          <Input
-                            placeholder={t("pages.branches.form.phonePlaceholder")}
-                            className="h-10 min-h-10 flex-1 min-w-0 rounded-none border-0 bg-transparent px-3.5 py-2 shadow-none focus-visible:ring-0 focus-visible:border-0 focus-visible:outline-none md:text-sm"
-                            inputMode="tel"
-                            autoComplete="tel"
-                            {...field}
-                          />
-                        </FormControl>
-                      </div>
-                    )}
+                    <FormControl>
+                      <PhoneNumbersField
+                        value={field.value}
+                        onChange={field.onChange}
+                        dialCode={country.dialCode}
+                        readOnly={isReadOnly}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -523,10 +516,16 @@ export default function BranchForm({
                     {isReadOnly ? (
                       <ReadOnlyValue value={field.value} />
                     ) : (
-                      <Input
-                        type="number"
+                      <NumericInput
+                        formatted={false}
                         placeholder={t("pages.branches.form.capacityPlaceholder")}
-                        {...field}
+                        value={field.value == null ? "" : String(field.value)}
+                        onChange={(raw) =>
+                          field.onChange(raw === "" ? undefined : Number(raw))
+                        }
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
                       />
                     )}
                     <FormMessage />

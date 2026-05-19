@@ -34,7 +34,12 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 import { useShop } from "../../hooks/useShop.js";
+import { useAuth } from "../../hooks/useAuth.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
+import {
+  readOrdersBranchFilter,
+  writeOrdersBranchFilter,
+} from "../../utils/ordersBranchFilterStorage.js";
 import { useBranchChannel } from "../../hooks/useBranchChannel.js";
 import { useShopChannel } from "../../hooks/useShopChannel.js";
 import { useWebSocket } from "../../hooks/useWebSocket.js";
@@ -1045,6 +1050,7 @@ const OrderListPage = () => {
   const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     selectedShopId,
     selectedShop,
@@ -1055,6 +1061,7 @@ const OrderListPage = () => {
     setSelectedBranchId,
   } = useShop();
   const { hasShopPermission } = useShopPermissions();
+  const ordersFilterShopRef = useRef(null);
 
   const shopHasTableManagement = selectedIndustry === SHOP_INDUSTRY.FNB;
   const { confirm } = useAlertDialog();
@@ -1089,29 +1096,47 @@ const OrderListPage = () => {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [invoicePayload, setInvoicePayload] = useState(null);
 
-  // Deeplink: /orders?branchId=... | ?source=ONLINE
+  const setOrdersBranchFilterPersisted = useCallback(
+    (value) => {
+      setOrdersBranchFilter(value);
+      if (selectedShopId && user?.id && value) {
+        writeOrdersBranchFilter(String(user.id), selectedShopId, value);
+      }
+    },
+    [selectedShopId, user?.id],
+  );
+
+  // Deeplink + ghi nhớ lọc chi nhánh (localStorage theo user + shop)
   useEffect(() => {
+    if (!selectedShopId || !user?.id || !Array.isArray(branches)) return;
+
     const src = searchParams.get("source");
     if (src === "ONLINE" || src === "IN_STORE" || src === "POS") {
       setSourceFilter(src === "IN_STORE" ? "ONLINE" : src);
-      if (src === "ONLINE" || src === "IN_STORE") setOrdersBranchFilter("ALL");
     }
-    const bid = searchParams.get("branchId");
-    if (!bid) return;
-    if (!Array.isArray(branches) || branches.length === 0) return;
-    const ok = branches.some((b) => b.id === bid);
-    if (!ok) return;
-    setOrdersBranchFilter(bid);
-    if (src !== "ONLINE") setSelectedBranchId(bid);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, branches]);
 
-  useEffect(() => {
-    if (sourceFilter === "ONLINE") return;
-    if (selectedBranchId) setOrdersBranchFilter(selectedBranchId);
-    else if (branches.length === 1) setOrdersBranchFilter(branches[0]?.id ?? "ALL");
-    else setOrdersBranchFilter("ALL");
-  }, [sourceFilter, selectedBranchId, branches]);
+    const urlBranch = searchParams.get("branchId");
+    if (urlBranch && branches.some((b) => b.id === urlBranch)) {
+      setOrdersBranchFilterPersisted(urlBranch);
+      ordersFilterShopRef.current = selectedShopId;
+      if (src !== "ONLINE" && src !== "IN_STORE") {
+        setSelectedBranchId(urlBranch);
+      }
+      return;
+    }
+
+    if (ordersFilterShopRef.current === selectedShopId) return;
+    ordersFilterShopRef.current = selectedShopId;
+    const saved = readOrdersBranchFilter(user.id, selectedShopId, branches);
+    setOrdersBranchFilterPersisted(saved);
+  }, [
+    searchParams,
+    branches,
+    selectedShopId,
+    user?.id,
+    setSelectedBranchId,
+    setOrdersBranchFilterPersisted,
+  ]);
 
   const effectiveBranchId = useMemo(
     () => selectedBranchId ?? (branches.length === 1 ? branches[0]?.id : null),
@@ -1133,16 +1158,20 @@ const OrderListPage = () => {
     (next) => {
       setSourceFilter(next);
       setPagination((p) => ({ ...p, pageIndex: 0 }));
-      if (next === "ONLINE") {
-        setOrdersBranchFilter("ALL");
-        navigate("/orders?source=ONLINE", { replace: true });
-      } else if (next === "POS") {
-        navigate("/orders?source=POS", { replace: true });
-      } else {
-        navigate("/orders", { replace: true });
+      const params = new URLSearchParams();
+      if (next === "ONLINE") params.set("source", "ONLINE");
+      else if (next === "POS") params.set("source", "POS");
+      if (
+        ordersBranchFilter &&
+        ordersBranchFilter !== "ALL" &&
+        branches.length > 1
+      ) {
+        params.set("branchId", ordersBranchFilter);
       }
+      const q = params.toString();
+      navigate(q ? `/orders?${q}` : "/orders", { replace: true });
     },
-    [navigate],
+    [navigate, ordersBranchFilter, branches.length],
   );
 
   // Load tables để hiển thị tên bàn — chỉ shop FNB (có màn Quản lý bàn)
@@ -1225,8 +1254,9 @@ const OrderListPage = () => {
     if (ordersBranchFilter && ordersBranchFilter !== "ALL") {
       return ordersBranchFilter;
     }
-    return effectiveBranchId;
-  }, [ordersBranchFilter, effectiveBranchId]);
+    if (branches.length === 1) return branches[0]?.id ?? null;
+    return null;
+  }, [ordersBranchFilter, branches]);
 
   const fetchSourcePendingCounts = useCallback(async () => {
     if (!selectedShopId) return;
@@ -1235,7 +1265,7 @@ const OrderListPage = () => {
       : {};
     try {
       const [onlineRes, posRes] = await Promise.all([
-        countOnlinePendingOrders(selectedShopId),
+        countOnlinePendingOrders(selectedShopId, branchParams),
         countPosPendingOrders(selectedShopId, branchParams),
       ]);
       const onlineData = onlineRes.data?.data;
@@ -2060,8 +2090,14 @@ const OrderListPage = () => {
               <Select
                 value={ordersBranchFilter}
                 onValueChange={(v) => {
-                  setOrdersBranchFilter(v);
+                  setOrdersBranchFilterPersisted(v);
                   setPagination((p) => ({ ...p, pageIndex: 0 }));
+                  const params = new URLSearchParams();
+                  if (sourceFilter === "ONLINE") params.set("source", "ONLINE");
+                  else if (sourceFilter === "POS") params.set("source", "POS");
+                  if (v && v !== "ALL") params.set("branchId", v);
+                  const q = params.toString();
+                  navigate(q ? `/orders?${q}` : "/orders", { replace: true });
                 }}
               >
                 <SelectTrigger className="w-[200px]">

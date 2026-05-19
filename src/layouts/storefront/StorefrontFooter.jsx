@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useStorefrontShop } from "./useStorefrontShop.js";
+import { resolvePhones } from "@/utils/phoneContactUtils.js";
+import { PhoneNumbersDisplay } from "@/components/common/PhoneNumbersDisplay.jsx";
 
 const Social = ({ href, icon: Icon, label }) =>
   href ? (
@@ -29,10 +31,23 @@ function formatTime(t) {
   return m ? `${m[1]}:${m[2]}` : s;
 }
 
+function PhoneLinks({ phoneList, className }) {
+  const list = (phoneList || []).filter(Boolean);
+  if (list.length === 0) return null;
+  return (
+    <PhoneNumbersDisplay
+      phones={list}
+      variant="inline"
+      className={className}
+    />
+  );
+}
+
 function BranchCard({ branch, defaultLabel }) {
   const open = formatTime(branch.openingTime);
   const close = formatTime(branch.closingTime);
   const hours = open && close ? `${open} – ${close}` : open || close;
+  const branchPhones = resolvePhones(branch);
   return (
     <li className="rounded-md border bg-muted/30 px-3 py-2.5 space-y-1">
       <section className="flex items-center gap-1.5">
@@ -53,15 +68,10 @@ function BranchCard({ branch, defaultLabel }) {
         </p>
       )}
       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-        {branch.phone && (
-          <a
-            href={`tel:${branch.phone}`}
-            className="inline-flex items-center gap-1 text-[11px] hover:text-foreground"
-          >
-            <Phone className="h-3 w-3" />
-            {branch.phone}
-          </a>
-        )}
+        <PhoneLinks
+          phoneList={branchPhones}
+          className="text-[11px] [&_a]:text-[11px] flex flex-wrap gap-x-3 gap-y-1"
+        />
         {hours && (
           <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
             <Clock className="h-3 w-3" />
@@ -77,6 +87,7 @@ export default function StorefrontFooter() {
   const { shop } = useStorefrontShop();
   const { t } = useTranslation();
   const branches = Array.isArray(shop.branches) ? shop.branches : [];
+  const shopPhones = resolvePhones(shop);
   const year = new Date().getFullYear();
 
   return (
@@ -92,15 +103,10 @@ export default function StorefrontFooter() {
           <h4 className="font-medium mb-1.5 text-xs uppercase tracking-wide text-muted-foreground">
             {t("pages.storefront.footer.contactTitle")}
           </h4>
-          {shop.phone && (
-            <a
-              href={`tel:${shop.phone}`}
-              className="flex items-center gap-2 text-xs hover:text-foreground"
-            >
-              <Phone className="h-3.5 w-3.5" />
-              {shop.phone}
-            </a>
-          )}
+          <PhoneLinks
+            phoneList={shopPhones}
+            className="text-xs [&_a]:text-xs"
+          />
           {shop.address && (
             <p className="flex items-start gap-2 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
