@@ -124,6 +124,8 @@ export const routeConfig = [
     element: <LandingPage />,
     titleKey: "routes.landing",
     breadcrumbKey: "routes.landing",
+    seoKey: "pages.landing.seo",
+    seoPath: "/landing",
   },
   {
     path: "/login",
@@ -131,6 +133,8 @@ export const routeConfig = [
     guestOnly: true,
     titleKey: "routes.login",
     breadcrumbKey: "routes.login",
+    seoKey: "seo.login",
+    seoPath: "/login",
   },
   {
     path: "/register",
@@ -138,6 +142,8 @@ export const routeConfig = [
     guestOnly: true,
     titleKey: "routes.register",
     breadcrumbKey: "routes.registerBreadcrumb",
+    seoKey: "seo.register",
+    seoPath: "/register",
   },
   {
     path: "/verify",
@@ -151,6 +157,8 @@ export const routeConfig = [
     guestOnly: true,
     titleKey: "routes.forgotPassword",
     breadcrumbKey: "routes.forgotPassword",
+    seoKey: "seo.forgotPassword",
+    seoPath: "/forgot-password",
   },
   {
     path: "/reset-password",

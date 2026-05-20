@@ -34,6 +34,7 @@ import PricingSection from "./sections/PricingSection.jsx";
 import ScrollToTopButton from "./sections/ScrollToTopButton.jsx";
 import SocialProofStrip from "./sections/SocialProofStrip.jsx";
 import TestimonialsSection from "./sections/TestimonialsSection.jsx";
+import { useLandingPageJsonLd } from "@/hooks/useLandingPageJsonLd.js";
 
 const FEATURE_IDS = [
   "pos",
@@ -86,6 +87,7 @@ function SectionHeading({ id, title, subtitle, className }) {
 
 export default function LandingPage() {
   const { t } = useTranslation();
+  useLandingPageJsonLd();
   const brand = t("brand.appName");
   const year = new Date().getFullYear();
 

@@ -34,7 +34,7 @@
     "qrHint": "Quét mã QR để chuyển (điền sẵn số tiền / nội dung nếu hỗ trợ)",
     "qrAlt": "QR chuyển khoản",
     "perMonthShort": "/tháng",
-    "instructionsStatic": "Số tiền: {{amount}}{{perMonth}}.\nSau khi bấm \"Thanh toán\", hệ thống sẽ cấp mã giao dịch — vui lòng ghi đúng nội dung chuyển khoản.\nAdmin sẽ xác nhận trong thời gian làm việc; bạn nhận thông báo khi gia hạn thành công.",
+    "instructionsStatic": "Tổng thanh toán: {{amount}} ({{months}} tháng × {{monthly}}/tháng).\nSau khi bấm \"Thanh toán\", hệ thống sẽ cấp mã giao dịch — vui lòng ghi đúng nội dung chuyển khoản.\nAdmin sẽ xác nhận trong thời gian làm việc; gói được gia hạn đủ {{months}} tháng sau khi xác nhận.",
     "instructionsPayment": "1) Chuyển đúng {{amount}} tới tài khoản trên.\n2) Nội dung CK: {{content}} (bắt buộc khớp).\n3) Sau khi chuyển, chờ admin xác nhận — bạn sẽ nhận thông báo khi thanh toán được ghi nhận."
   },
   "reportTransfer": {
@@ -48,7 +48,7 @@
   },
   "currentStatus": {
     "title": "Trạng thái hiện tại",
-    "description": "Mỗi shop được dùng thử miễn phí <b>30 ngày</b>. Sau thời gian dùng thử, phí dịch vụ là <b>99.000đ/tháng</b>. Thanh toán qua <b>chuyển khoản</b> — gói được gia hạn sau khi admin xác nhận đã nhận tiền.",
+    "description": "Mỗi shop được dùng thử miễn phí <b>30 ngày</b>. Sau thời gian dùng thử, phí <b>99.000đ/tháng</b> — bạn có thể thanh toán trước <b>3, 6, 9 hoặc 12 tháng</b> một lần qua chuyển khoản. Gói được gia hạn sau khi admin xác nhận.",
     "trialRemaining": "Còn lại (dùng thử)",
     "activeRemaining": "Còn lại (chu kỳ hiện tại)",
     "daysRemainingLabel": "Số ngày còn lại",
@@ -56,8 +56,16 @@
     "lastPayment": "Thanh toán gần nhất",
     "lockedWarning": "Các thao tác ghi (thêm/sửa/xoá đơn, sản phẩm, khách hàng…) đang bị khoá. Hãy thanh toán để khôi phục quyền thao tác.",
     "paymentMethod": "Phương thức:",
-    "payActive": "Tạo mã & gia hạn (chuyển khoản 99.000đ)",
-    "payDefault": "Tạo mã thanh toán (chuyển khoản 99.000đ)"
+    "payActive": "Tạo mã & gia hạn ({{amount}})",
+    "payDefault": "Tạo mã thanh toán ({{amount}})"
+  },
+  "billingPeriod": {
+    "title": "Chọn kỳ thanh toán",
+    "subtitle": "Thanh toán một lần cho nhiều tháng — không cần chuyển khoản hàng tháng.",
+    "monthLabel": "{{count}} tháng",
+    "monthlyRate": "99.000 ₫/tháng",
+    "total": "Tổng thanh toán",
+    "savingsHint": "Gia hạn {{months}} tháng một lần, admin xác nhận một lần."
   },
   "history": {
     "title": "Lịch sử gói & thanh toán",

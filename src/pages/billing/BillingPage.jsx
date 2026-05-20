@@ -45,6 +45,10 @@ import {
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { getShopRoleLabel } from "@/utils/shopLabels";
+import { cn } from "@/lib/utils";
+
+const DEFAULT_BILLING_MONTHS_OPTIONS = [1, 3, 6, 9, 12];
+const DEFAULT_MONTHLY_VND = 99_000;
 
 /** Push WS từ server khi có thông báo billing (NotificationType). */
 const BILLING_REFRESH_WS_TYPES = new Set([
@@ -113,7 +117,7 @@ function statusBadge(status, t) {
   }
 }
 
-function TransferBlock({ title, info, showCopyContent }) {
+function TransferBlock({ title, info, showCopyContent, billingMonths, monthlyAmountVnd }) {
   const { t, i18n } = useTranslation();
   const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
 
@@ -132,7 +136,8 @@ function TransferBlock({ title, info, showCopyContent }) {
       })
     : t("pages.billing.transfer.instructionsStatic", {
         amount: amountFormatted,
-        perMonth: t("pages.billing.transfer.perMonthShort"),
+        months: billingMonths ?? 1,
+        monthly: fmtVndLocal(monthlyAmountVnd ?? DEFAULT_MONTHLY_VND),
       });
 
   const copyContent = () => {
@@ -262,6 +267,19 @@ export default function BillingPage() {
   const [lastCreatedTxnRef, setLastCreatedTxnRef] = useState(null);
   const [reportingTransfer, setReportingTransfer] = useState(false);
   const [cancellingTransfer, setCancellingTransfer] = useState(false);
+  const [billingMonths, setBillingMonths] = useState(3);
+
+  const periodOptions = useMemo(() => {
+    const fromApi = data?.allowedBillingMonths;
+    if (Array.isArray(fromApi) && fromApi.length > 0) {
+      return fromApi.filter((m) => DEFAULT_BILLING_MONTHS_OPTIONS.includes(m));
+    }
+    return DEFAULT_BILLING_MONTHS_OPTIONS;
+  }, [data?.allowedBillingMonths]);
+
+  const monthlyAmountVnd = data?.monthlyAmountVnd ?? DEFAULT_MONTHLY_VND;
+  const totalPaymentVnd = monthlyAmountVnd * billingMonths;
+  const totalPaymentLabel = fmtVnd(totalPaymentVnd);
 
   const loadHistory = useCallback(async (opts) => {
     const silent = opts?.silent === true;
@@ -287,7 +305,7 @@ export default function BillingPage() {
     (async () => {
       setTransferPreviewLoading(true);
       try {
-        const res = await getSubscriptionTransferInfo();
+        const res = await getSubscriptionTransferInfo(billingMonths);
         const dto = res?.data?.data ?? res?.data ?? null;
         if (!cancelled) setTransferPreview(dto);
       } catch {
@@ -299,7 +317,19 @@ export default function BillingPage() {
     return () => {
       cancelled = true;
     };
-  }, [canLoadBilling]);
+  }, [canLoadBilling, billingMonths]);
+
+  useEffect(() => {
+    if (!periodOptions.includes(billingMonths)) {
+      setBillingMonths(periodOptions[0] ?? 3);
+    }
+  }, [periodOptions, billingMonths]);
+
+  const handleBillingMonthsChange = (months) => {
+    setBillingMonths(months);
+    setLastPaymentTransfer(null);
+    setLastCreatedTxnRef(null);
+  };
 
   useEffect(() => {
     if (!canLoadBilling) return;
@@ -458,6 +488,7 @@ export default function BillingPage() {
       setPaying(true);
       const res = await startSubscriptionPayment({
         gateway: "MANUAL",
+        billingMonths,
         returnUrl: window.location.origin + "/billing",
       });
       const payload = res?.data?.data ?? res?.data;
@@ -587,6 +618,64 @@ export default function BillingPage() {
         </div>
       )}
 
+      {canLoadBilling && !needsShopPick ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              {t("pages.billing.billingPeriod.title")}
+            </CardTitle>
+            <CardDescription>
+              {t("pages.billing.billingPeriod.subtitle")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              {periodOptions.map((months) => {
+                const selected = billingMonths === months;
+                const total = monthlyAmountVnd * months;
+                return (
+                  <button
+                    key={months}
+                    type="button"
+                    onClick={() => handleBillingMonthsChange(months)}
+                    disabled={Boolean(manualRefToReport) || paying}
+                    className={cn(
+                      "rounded-xl border p-3 text-left transition-all",
+                      selected
+                        ? "border-primary bg-primary/10 ring-2 ring-primary/30 shadow-sm"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/40",
+                      (manualRefToReport || paying) && "opacity-60 cursor-not-allowed",
+                    )}
+                  >
+                    <p className="text-sm font-semibold">
+                      {t("pages.billing.billingPeriod.monthLabel", { count: months })}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {fmtVnd(total)}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg border bg-muted/30 px-4 py-3">
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {t("pages.billing.billingPeriod.monthlyRate")}
+                </p>
+                <p className="text-lg font-bold tabular-nums text-primary">
+                  {totalPaymentLabel}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground max-w-xs text-right">
+                {t("pages.billing.billingPeriod.savingsHint", {
+                  months: billingMonths,
+                })}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {canLoadBilling && transferPreviewLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -598,6 +687,8 @@ export default function BillingPage() {
             title={transferTitle}
             info={displayTransfer}
             showCopyContent={!!lastPaymentTransfer?.transferContent}
+            billingMonths={billingMonths}
+            monthlyAmountVnd={monthlyAmountVnd}
           />
           {manualRefToReport && !pendingManualReportedAt && (
               <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-sky-950 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-100">
@@ -706,7 +797,7 @@ export default function BillingPage() {
             <InfoStat
               icon={<Receipt className="h-4 w-4" />}
               label={t("pages.billing.currentStatus.recurringFee")}
-              value={fmtVnd(data?.amountVnd ?? 99000)}
+              value={fmtVnd(monthlyAmountVnd)}
               sub={t("pages.billing.vndPerMonth")}
             />
             <InfoStat
@@ -744,8 +835,12 @@ export default function BillingPage() {
               <CreditCard className="h-4 w-4 mr-2" />
             )}
             {data?.status === "ACTIVE"
-              ? t("pages.billing.currentStatus.payActive")
-              : t("pages.billing.currentStatus.payDefault")}
+              ? t("pages.billing.currentStatus.payActive", {
+                  amount: totalPaymentLabel,
+                })
+              : t("pages.billing.currentStatus.payDefault", {
+                  amount: totalPaymentLabel,
+                })}
           </Button>
         </CardFooter>
       </Card>

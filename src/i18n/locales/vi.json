@@ -42,6 +42,23 @@
   "app": {
     "documentTitleSuffix": "Sổ thu chi"
   },
+  "seo": {
+    "login": {
+      "title": "Đăng nhập — Sổ thu chi",
+      "description": "Đăng nhập {{brand}} để quản lý bán hàng, POS, đơn hàng và báo cáo shop của bạn.",
+      "path": "/login"
+    },
+    "register": {
+      "title": "Đăng ký miễn phí — Sổ thu chi",
+      "description": "Tạo tài khoản {{brand}}, dùng thử 30 ngày — POS, storefront và QR bàn trong một hệ thống.",
+      "path": "/register"
+    },
+    "forgotPassword": {
+      "title": "Quên mật khẩu — Sổ thu chi",
+      "description": "Khôi phục mật khẩu tài khoản {{brand}} qua email đã đăng ký.",
+      "path": "/forgot-password"
+    }
+  },
   "language": {
     "label": "Ngôn ngữ",
     "vi": "Tiếng Việt",

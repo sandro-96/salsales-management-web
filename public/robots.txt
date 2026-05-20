@@ -1,0 +1,14 @@
+# Production: set VITE_SITE_URL at build so sitemap.xml is generated with your domain.
+User-agent: *
+Allow: /landing
+Allow: /login
+Allow: /register
+Allow: /forgot-password
+Disallow: /admin
+Disallow: /overview
+Disallow: /pos
+Disallow: /orders
+Disallow: /products
+Disallow: /billing
+Disallow: /accounts
+Disallow: /api

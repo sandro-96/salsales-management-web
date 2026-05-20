@@ -42,6 +42,23 @@
   "app": {
     "documentTitleSuffix": "Sổ thu chi"
   },
+  "seo": {
+    "login": {
+      "title": "Log in — Sổ thu chi",
+      "description": "Sign in to {{brand}} to manage sales, POS, orders and shop reports.",
+      "path": "/login"
+    },
+    "register": {
+      "title": "Sign up free — Sổ thu chi",
+      "description": "Create your {{brand}} account — 30-day trial with POS, storefront and table QR in one system.",
+      "path": "/register"
+    },
+    "forgotPassword": {
+      "title": "Forgot password — Sổ thu chi",
+      "description": "Reset your {{brand}} account password via your registered email.",
+      "path": "/forgot-password"
+    }
+  },
   "language": {
     "label": "Language",
     "vi": "Vietnamese",

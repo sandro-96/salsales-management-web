@@ -21,6 +21,9 @@ function renderRoute(route) {
       element={route.element}
       title={route.title}
       titleKey={route.titleKey}
+      seoKey={route.seoKey}
+      seoPath={route.seoPath}
+      noIndex={Boolean(route.protected || route.seoNoIndex)}
     />
   );
 
@@ -80,6 +83,8 @@ function renderRoute(route) {
             ...child,
             path: child.path,
             key: `${route.path}-${child.path || i}`,
+            protected: child.protected ?? route.protected,
+            guestRedirect: child.guestRedirect ?? route.guestRedirect,
           })
         )}
       </Route>

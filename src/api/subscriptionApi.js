@@ -13,12 +13,14 @@ export const getCurrentSubscription = (shopId) =>
   });
 
 /** Thông tin TK nhận / QR (chưa có mã giao dịch) — hiển thị trên trang billing. */
-export const getSubscriptionTransferInfo = () =>
-  axiosInstance.get(`${SUBSCRIPTION_API}/transfer-info`);
+export const getSubscriptionTransferInfo = (billingMonths = 1) =>
+  axiosInstance.get(`${SUBSCRIPTION_API}/transfer-info`, {
+    params: { billingMonths },
+  });
 
 /**
  * Khởi tạo thanh toán gia hạn. Gateway có thể null để dùng default từ server.
- * @param {{ gateway?: 'MANUAL'|'VNPAY'|'MOMO', returnUrl?: string }} payload
+ * @param {{ gateway?: 'MANUAL'|'VNPAY'|'MOMO', billingMonths?: number, returnUrl?: string }} payload
  */
 export const startSubscriptionPayment = (payload = {}) =>
   axiosInstance.post(`${SUBSCRIPTION_API}/pay`, payload);

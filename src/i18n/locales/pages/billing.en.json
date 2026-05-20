@@ -34,7 +34,7 @@
     "qrHint": "Scan QR to pay (amount/memo prefilled when supported)",
     "qrAlt": "Transfer QR code",
     "perMonthShort": "/month",
-    "instructionsStatic": "Amount: {{amount}}{{perMonth}}.\nAfter you click \"Pay\", the system will provide a transaction ID — please use the exact transfer memo.\nAn admin will confirm during business hours; you will be notified when renewal succeeds.",
+    "instructionsStatic": "Total due: {{amount}} ({{months}} months × {{monthly}}/month).\nAfter you click \"Pay\", the system will provide a transaction ID — please use the exact transfer memo.\nAn admin will confirm during business hours; your plan is extended for the full {{months}} months once confirmed.",
     "instructionsPayment": "1) Transfer exactly {{amount}} to the account above.\n2) Transfer memo: {{content}} (must match exactly).\n3) After transferring, wait for admin confirmation — you will be notified when payment is recorded."
   },
   "reportTransfer": {
@@ -48,7 +48,7 @@
   },
   "currentStatus": {
     "title": "Current status",
-    "description": "Each shop gets a free <b>30-day</b> trial. After the trial, the fee is <b>99,000 VND/month</b>. Pay by <b>bank transfer</b> — your plan is extended after admin confirms receipt.",
+    "description": "Each shop gets a free <b>30-day</b> trial. After the trial, <b>99,000 VND/month</b> — pay ahead for <b>3, 6, 9 or 12 months</b> in one bank transfer. Your plan is extended after admin confirms.",
     "trialRemaining": "Remaining (trial)",
     "activeRemaining": "Remaining (current period)",
     "daysRemainingLabel": "Days remaining",
@@ -56,8 +56,16 @@
     "lastPayment": "Last payment",
     "lockedWarning": "Write operations (create/edit/delete orders, products, customers…) are locked. Pay to restore access.",
     "paymentMethod": "Method:",
-    "payActive": "Create code & renew (bank transfer 99,000 VND)",
-    "payDefault": "Create payment code (bank transfer 99,000 VND)"
+    "payActive": "Create code & renew ({{amount}})",
+    "payDefault": "Create payment code ({{amount}})"
+  },
+  "billingPeriod": {
+    "title": "Choose billing period",
+    "subtitle": "Pay once for multiple months — no need to transfer every month.",
+    "monthLabel": "{{count}} months",
+    "monthlyRate": "99,000 VND / month",
+    "total": "Total due",
+    "savingsHint": "Renew for {{months}} months in one payment; admin confirms once."
   },
   "history": {
     "title": "Plan & payment history",

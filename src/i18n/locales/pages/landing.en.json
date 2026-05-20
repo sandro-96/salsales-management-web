@@ -1,5 +1,11 @@
 {
   "metaTitle": "Home",
+  "seo": {
+    "title": "Sổ thu chi — POS, storefront & table QR for Vietnamese shops",
+    "description": "30-day free trial. Counter POS, COD storefront, F&B table QR. 99,000 VND/month — pay 3, 6, 9 or 12 months ahead.",
+    "path": "/landing",
+    "offerDescription": "BASIC plan 99,000 VND/month, 30-day trial"
+  },
   "nav": {
     "features": "Features",
     "channels": "Sales channels",

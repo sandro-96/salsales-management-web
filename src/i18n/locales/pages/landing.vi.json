@@ -1,5 +1,11 @@
 {
   "metaTitle": "Trang chủ",
+  "seo": {
+    "title": "Sổ thu chi — Phần mềm quản lý bán hàng POS, storefront & QR bàn",
+    "description": "Dùng thử 30 ngày miễn phí. POS tại quầy, storefront COD, QR gọi món F&B. 99.000₫/tháng — thanh toán trước 3, 6, 9 hoặc 12 tháng.",
+    "path": "/landing",
+    "offerDescription": "Gói BASIC 99.000 VND/tháng, dùng thử 30 ngày"
+  },
   "nav": {
     "features": "Tính năng",
     "channels": "Kênh bán",
