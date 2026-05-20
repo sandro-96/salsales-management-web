@@ -109,7 +109,12 @@
     "inStoreBadgeTitle": "Đơn khách tự order qua QR tại bàn",
     "tableFallback": "Bàn #{{id}}",
     "posGuestPrefix": "POS: ",
-    "moreProducts": "+{{count}} sản phẩm khác"
+    "moreProducts": "+{{count}} sản phẩm khác",
+    "viewTable": "Dạng bảng",
+    "viewCards": "Dạng thẻ",
+    "cardNoItems": "Chưa có dòng sản phẩm",
+    "createOrder": "Tạo đơn hàng",
+    "createOrderShort": "Tạo đơn"
   },
   "detail": {
     "title": "Chi tiết đơn hàng",

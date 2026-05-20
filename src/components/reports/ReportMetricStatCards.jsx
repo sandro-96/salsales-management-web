@@ -58,7 +58,7 @@ function MetricCard({
   return (
     <Card
       className={cn(
-        "flex h-full min-h-0 flex-col gap-0 overflow-hidden border-l-[3px] py-0 transition-shadow hover:shadow-sm",
+        "flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0 transition-shadow hover:shadow-sm",
         meta.accentClass,
       )}
     >

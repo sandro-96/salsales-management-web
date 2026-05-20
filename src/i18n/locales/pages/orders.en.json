@@ -109,7 +109,12 @@
     "inStoreBadgeTitle": "Order placed by guest via table QR",
     "tableFallback": "Table #{{id}}",
     "posGuestPrefix": "POS: ",
-    "moreProducts": "+{{count}} more items"
+    "moreProducts": "+{{count}} more items",
+    "viewTable": "Table view",
+    "viewCards": "Card view",
+    "cardNoItems": "No line items",
+    "createOrder": "Create order",
+    "createOrderShort": "Create"
   },
   "detail": {
     "title": "Order details",

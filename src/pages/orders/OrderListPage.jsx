@@ -28,6 +28,8 @@ import {
   ImagePlus,
   ChevronDown,
   Globe,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { ListPageHeader } from "@/components/table/ListPageHeader.jsx";
 import { toast } from "sonner";
@@ -124,188 +126,32 @@ import {
   orderLineVariantLabel,
 } from "../../utils/orderItemDisplay.js";
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+import {
+  displayOrderCode,
+  shortId,
+  fmtVndInt,
+  orderHasPositiveTax,
+  orderHasGuestInfo,
+  orderHasCrmCustomerInfo,
+  ORDER_STATUS_META,
+  OrderStatusBadge,
+  PaymentCollectionBadge,
+  OrderTaxBadge,
+} from "./orderListUi.jsx";
+import { OrderListCard, OrderListCardSkeleton } from "./OrderListCard.jsx";
 
-const ORDER_STATUS_META = {
-  PENDING: {
-    icon: Clock,
-    cls: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40",
-  },
-  CONFIRMED: {
-    icon: CheckCircle2,
-    cls: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-500/40",
-  },
-  SHIPPING: {
-    icon: Truck,
-    cls: "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-500/15 dark:text-violet-200 dark:border-violet-500/40",
-  },
-  COMPLETED: {
-    icon: CheckCircle2,
-    cls: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40",
-  },
-  CANCELLED: {
-    icon: Ban,
-    cls: "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/15 dark:text-red-200 dark:border-red-500/40",
-  },
-};
+const ORDERS_LIST_VIEW_KEY = "orders-list-view";
+
+function readOrdersListView() {
+  try {
+    const v = localStorage.getItem(ORDERS_LIST_VIEW_KEY);
+    return v === "cards" ? "cards" : "table";
+  } catch {
+    return "table";
+  }
+}
 
 const PAYMENT_METHOD_VALUES = ["Cash", "Card", "Transfer"];
-
-/** Mã đơn hàng hiển thị (API: orderCode); đơn cũ có thể chỉ có id. */
-function displayOrderCode(order) {
-  const code = order?.orderCode?.trim();
-  if (code) return code;
-  const id = order?.id;
-  if (!id) return "—";
-  return id.length > 10
-    ? `DH-${id.slice(-8).toUpperCase()}`
-    : String(id).toUpperCase();
-}
-
-function orderHasGuestInfo(order) {
-  return !!(order?.guestName?.trim() || order?.guestPhone?.trim());
-}
-
-function orderHasCrmCustomerInfo(order) {
-  return !!(
-    order?.customerName?.trim() ||
-    order?.customerPhone?.trim() ||
-    order?.customerId
-  );
-}
-
-/** Có dòng thuế / tổng thuế > 0 trên snapshot đơn. */
-function orderHasPositiveTax(tax) {
-  if (!tax) return false;
-  const total = tax.taxTotal ?? 0;
-  if (total > 0.005) return true;
-  return (tax.taxes || []).some((l) => (l.amount ?? 0) > 0.005);
-}
-
-function fmtVndInt(v, locale = "vi-VN") {
-  if (v == null) return "—";
-  const n = Number(v);
-  if (!Number.isFinite(n)) return "—";
-  return Math.round(n).toLocaleString(locale) + " ₫";
-}
-
-function orderTaxSummaryTooltip(order, tr, locale = "vi-VN") {
-  const tax = order.taxSnapshot;
-  if (!tax) {
-    return tr("pages.orders.tax.noSnapshotLong");
-  }
-  const lines = [
-    tax.priceIncludesTax
-      ? tr("pages.orders.tax.policyIncludes")
-      : tr("pages.orders.tax.policyExcludes"),
-    tr("pages.orders.tax.subtotalBase", {
-      amount: fmtVndInt(tax.netAmount ?? 0, locale),
-    }),
-  ];
-  if (orderHasPositiveTax(tax)) {
-    lines.push(
-      tr("pages.orders.tax.taxTotal", {
-        amount: fmtVndInt(tax.taxTotal ?? 0, locale),
-      }),
-    );
-    (tax.taxes || []).forEach((x) => {
-      if ((x.amount ?? 0) > 0.005) {
-        lines.push(
-          tr("pages.orders.tax.taxLine", {
-            label: x.label,
-            amount: fmtVndInt(x.amount ?? 0, locale),
-          }),
-        );
-      }
-    });
-  } else {
-    lines.push(tr("pages.orders.tax.noTaxOnOrder"));
-  }
-  lines.push(
-    tr("pages.orders.tax.grandTotal", {
-      amount: fmtVndInt(tax.grandTotal ?? order.totalPrice ?? 0, locale),
-    }),
-  );
-  return lines.join("\n");
-}
-
-function shortId(id) {
-  if (!id) return "";
-  const s = String(id);
-  return s.length > 10 ? s.slice(-8).toUpperCase() : s.toUpperCase();
-}
-
-function OrderTaxBadge({ order }) {
-  const { t: tr, i18n } = useTranslation();
-  const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
-  const tax = order.taxSnapshot;
-  if (!tax) {
-    return (
-      <span
-        className="text-[11px] text-muted-foreground tabular-nums"
-        title={tr("pages.orders.tax.noSnapshotTitle")}
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        —
-      </span>
-    );
-  }
-  const has = orderHasPositiveTax(tax);
-  return (
-    <Badge
-      variant={has ? "default" : "secondary"}
-      className={
-        has
-          ? "text-[10px] gap-0.5 font-normal bg-sky-600 text-white hover:bg-sky-600/90 border-0 cursor-help"
-          : "text-[10px] font-normal cursor-help"
-      }
-      title={orderTaxSummaryTooltip(order, tr, numberLocale)}
-      onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-    >
-      <Percent className="h-3 w-3 opacity-90" />
-      {has ? tr("pages.orders.tax.hasTax") : tr("pages.orders.tax.noTax")}
-    </Badge>
-  );
-}
-
-function PaymentCollectionBadge({ paid, paymentStatus }) {
-  const { t: tr } = useTranslation();
-  if (paid) {
-    return (
-      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40">
-        <CreditCard className="h-3 w-3" /> {tr("pages.orders.payment.paid")}
-      </Badge>
-    );
-  }
-  if (paymentStatus === "PENDING_COLLECTION") {
-    return (
-      <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40">
-        <Truck className="h-3 w-3" /> {tr("pages.orders.payment.pendingCod")}
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="text-[11px] gap-1">
-      {tr("pages.orders.payment.unpaid")}
-    </Badge>
-  );
-}
-
-// ─── Status Badge ────────────────────────────────────────────────────────────
-
-const OrderStatusBadge = ({ status }) => {
-  const { t: tr } = useTranslation();
-  const cfg = ORDER_STATUS_META[status] || { icon: Clock, cls: "" };
-  const IconComp = cfg.icon;
-  const label = tr(`pages.orders.status.${status}`, { defaultValue: status });
-  return (
-    <Badge className={`gap-1 text-[11px] ${cfg.cls} hover:${cfg.cls}`}>
-      <IconComp className="h-3 w-3" /> {label}
-    </Badge>
-  );
-};
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
 
@@ -1065,6 +911,7 @@ const OrderListPage = () => {
 
   const shopHasTableManagement = selectedIndustry === SHOP_INDUSTRY.FNB;
   const { confirm } = useAlertDialog();
+  const canCreate = hasShopPermission(PERM.ORDER_CREATE);
   const canUpdate = hasShopPermission(PERM.ORDER_UPDATE);
   const canCancel = hasShopPermission(PERM.ORDER_CANCEL);
   const canPay = hasShopPermission(PERM.ORDER_PAYMENT_CONFIRM);
@@ -1076,6 +923,16 @@ const OrderListPage = () => {
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  const [listView, setListView] = useState(readOrdersListView);
+
+  const setListViewPersisted = useCallback((view) => {
+    setListView(view);
+    try {
+      localStorage.setItem(ORDERS_LIST_VIEW_KEY, view);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
@@ -1955,6 +1812,15 @@ const OrderListPage = () => {
     });
   }, [orders, sourceFilter]);
 
+  const openOrderDetail = useCallback((order) => {
+    setSelectedOrder(order);
+    setDetailOpen(true);
+  }, []);
+
+  const showBranchOnCards =
+    showOnlineBranchColumn ||
+    (branches.length > 1 && ordersBranchFilter === "ALL");
+
   const table = useReactTable({
     data: displayedOrders,
     columns,
@@ -1982,6 +1848,22 @@ const OrderListPage = () => {
           icon={ShoppingCart}
           title={t("pages.orders.list.title")}
           subtitle={t("pages.orders.list.subtitle")}
+          actions={
+            canCreate ? (
+              <Button
+                variant="success"
+                size="sm"
+                className="cursor-pointer gap-1.5"
+                onClick={() => setCreateOrderOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {t("pages.orders.list.createOrder")}
+                </span>
+                <span className="sm:hidden">{t("pages.orders.list.createOrderShort")}</span>
+              </Button>
+            ) : null
+          }
         />
 
         {/* ── Stat Cards ──────────────────────────────────────────── */}
@@ -2121,7 +2003,35 @@ const OrderListPage = () => {
                 </SelectContent>
               </Select>
             )}
-            <DataTableViewOptions table={table} />
+            <div className="flex rounded-lg border bg-muted/50 p-0.5">
+              <button
+                type="button"
+                title={t("pages.orders.list.viewTable")}
+                onClick={() => setListViewPersisted("table")}
+                className={cn(
+                  "inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+                  listView === "table"
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                title={t("pages.orders.list.viewCards")}
+                onClick={() => setListViewPersisted("cards")}
+                className={cn(
+                  "inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+                  listView === "cards"
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </div>
+            {listView === "table" ? <DataTableViewOptions table={table} /> : null}
           </div>
         </div>
 
@@ -2140,13 +2050,14 @@ const OrderListPage = () => {
           </div>
         )}
 
-        {/* ── Table ───────────────────────────────────────────────── */}
+        {/* ── Order list (table | cards) ─────────────────────────── */}
+        {listView === "table" ? (
         <div className="relative overflow-hidden rounded-md border">
-          {loading && orders.length > 0 && (
+          {loading && orders.length > 0 ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          )}
+          ) : null}
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((hg) => (
@@ -2177,10 +2088,7 @@ const OrderListPage = () => {
                   const rowEl = (
                     <TableRow
                       className="cursor-pointer"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setDetailOpen(true);
-                      }}
+                      onClick={() => openOrderDetail(order)}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
@@ -2231,8 +2139,75 @@ const OrderListPage = () => {
             </TableBody>
           </Table>
         </div>
+        ) : (
+        <div className="relative">
+          {loading && orders.length > 0 ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/40 min-h-[12rem]">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : null}
+          {loading && orders.length === 0 ? (
+            <div className="grid auto-rows-fr items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <OrderListCardSkeleton key={idx} />
+              ))}
+            </div>
+          ) : displayedOrders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-md border py-16 text-muted-foreground">
+              <ShoppingCart className="h-10 w-10 text-muted-foreground/40" />
+              <p>{t("pages.orders.list.empty")}</p>
+            </div>
+          ) : (
+            <div className="grid auto-rows-fr items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {displayedOrders.map((order) => {
+                const tableName = order.tableId
+                  ? tableNameById.get(order.tableId) ||
+                    t("pages.orders.list.tableFallback", {
+                      id: shortId(order.tableId),
+                    })
+                  : null;
+                const branchName = order.branchId
+                  ? branchNameById.get(order.branchId) || shortId(order.branchId)
+                  : null;
+                const card = (
+                  <OrderListCard
+                    order={order}
+                    numberLocale={numberLocale}
+                    tableName={tableName}
+                    branchName={branchName}
+                    showBranch={showBranchOnCards}
+                    showTable={shopHasTableManagement}
+                    onOpen={() => openOrderDetail(order)}
+                    actionsMenu={renderOrderActions(order, {
+                      Item: DropdownMenuItem,
+                      Label: DropdownMenuLabel,
+                      Separator: DropdownMenuSeparator,
+                      variant: "dropdown",
+                    })}
+                  />
+                );
+                return (
+                  <div key={order.id} className="h-full min-h-0">
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>{card}</ContextMenuTrigger>
+                    <ContextMenuContent className="min-w-[12rem] bg-background w-48">
+                      {renderOrderActions(order, {
+                        Item: ContextMenuItem,
+                        Label: ContextMenuLabel,
+                        Separator: ContextMenuSeparator,
+                        variant: "context",
+                      })}
+                    </ContextMenuContent>
+                  </ContextMenu>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        )}
 
-        <DataTablePagination table={table} />
+                <DataTablePagination table={table} />
       </div>
 
       {/* ── Detail Dialog ─────────────────────────────────────────── */}

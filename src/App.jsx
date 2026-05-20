@@ -62,7 +62,7 @@ function renderRoute(route) {
 
   if (route.protected) {
     element = (
-      <ProtectedRoute>
+      <ProtectedRoute guestRedirect={route.guestRedirect}>
         {route.roles ? (
           <RoleBasedRoute allowedRoles={route.roles}>{element}</RoleBasedRoute>
         ) : (

@@ -1,0 +1,330 @@
+{
+  "metaTitle": "Home",
+  "nav": {
+    "features": "Features",
+    "channels": "Sales channels",
+    "industries": "Industries",
+    "howItWorks": "How it works",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "login": "Log in",
+    "register": "Sign up free",
+    "skipToContent": "Skip to main content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "menuTitle": "Navigation",
+    "menuSubtitle": "Explore the platform & create an account"
+  },
+  "hero": {
+    "eyebrow": "Sales management platform for Vietnamese shops",
+    "badge": "New · POS + Storefront + Table QR in one account",
+    "title": "Clear books, smooth sales — from counter to online",
+    "subtitle": "{{brand}} helps you sell at the POS counter, run a public COD storefront, and let F&B guests order via table QR — all synced to one order list, inventory, and reporting hub.",
+    "ctaPrimary": "Start for free",
+    "ctaSecondary": "See demo",
+    "ctaLogin": "Log in",
+    "noCard": "No credit card required",
+    "highlights": {
+      "pos": "Counter POS",
+      "storefront": "Online storefront",
+      "qr": "Table QR ordering",
+      "reports": "Revenue reports"
+    },
+    "mockup": {
+      "title": "Dashboard",
+      "subtitle": "Today · All branches",
+      "badge": "Realtime",
+      "revenue": "Today's revenue",
+      "revenueValue": "$520",
+      "revenueDelta": "+18% vs yesterday",
+      "orders": "Orders",
+      "ordersValue": "147",
+      "ordersDelta": "+24 orders",
+      "newOrder": "New order · Table 5",
+      "newOrderItems": "3 items · $9.20",
+      "channelsTitle": "Revenue by channel",
+      "channelPos": "POS",
+      "channelOnline": "Online",
+      "channelQr": "Table QR",
+      "topProductsTitle": "Top products",
+      "topProducts": {
+        "1": "Iced milk coffee",
+        "2": "Peach lemongrass tea",
+        "3": "Pâté banh mi"
+      }
+    }
+  },
+  "stats": {
+    "channels": "3 channels",
+    "channelsDesc": "POS · Storefront · Table QR",
+    "modules": "10+ modules",
+    "modulesDesc": "Products, stock, CRM, promos…",
+    "industries": "5+ industries",
+    "industriesDesc": "F&B, retail, pharmacy…",
+    "realtime": "Realtime",
+    "realtimeDesc": "New order alerts"
+  },
+  "socialProof": {
+    "title": "Trusted by every kind of business",
+    "items": {
+      "cafe": "Cafés",
+      "restaurant": "Restaurants",
+      "bubbleTea": "Bubble tea",
+      "grocery": "Grocery",
+      "pharmacy": "Pharmacy",
+      "boutique": "Fashion"
+    }
+  },
+  "channels": {
+    "title": "Three channels — one system",
+    "subtitle": "Counter, shop website, and table QR orders share the same orders, stock, and reports.",
+    "pos": {
+      "title": "POS checkout",
+      "desc": "Fast counter flow: cart, promotions, variants/toppings, tables (F&B), cash/card/transfer payment, receipt print.",
+      "points": [
+        "F&B: table pick, order, pay at counter",
+        "Branch promos and tax policies",
+        "Hold orders, edit on POS, reprint receipts"
+      ]
+    },
+    "storefront": {
+      "title": "Online storefront",
+      "desc": "Public shop page by slug — guests browse and place COD orders without signing in.",
+      "points": [
+        "Dedicated URL: /s/{shop-slug}",
+        "Orders labeled Online in admin",
+        "Realtime notification on new orders"
+      ]
+    },
+    "table": {
+      "title": "Table QR ordering",
+      "desc": "Guests scan table QR to browse the menu and order — ideal for restaurants and cafés (F&B).",
+      "points": [
+        "QR per table",
+        "Orders tagged as in-store / table QR",
+        "Staff confirm and collect payment like POS"
+      ]
+    }
+  },
+  "features": {
+    "title": "Platform services",
+    "subtitle": "Full shop operations toolkit — no patchwork of separate apps.",
+    "pos": {
+      "title": "POS checkout",
+      "desc": "Counter POS, online storefront, table QR orders"
+    },
+    "orders": {
+      "title": "Order management",
+      "desc": "Filter by status, source, branch; table/card views; payment & receipt reprint"
+    },
+    "products": {
+      "title": "Products",
+      "desc": "Catalog, pricing, variants, toppings, barcodes, images, Excel import"
+    },
+    "inventory": {
+      "title": "Inventory",
+      "desc": "Stock in/out, adjustments, low-stock alerts, sync on sale/cancel"
+    },
+    "customers": {
+      "title": "Customers",
+      "desc": "Light CRM, purchase history, segments, export"
+    },
+    "reports": {
+      "title": "Revenue reports",
+      "desc": "Daily revenue, top products, branch & status filters, Excel export"
+    },
+    "branches": {
+      "title": "Multi-branch",
+      "desc": "Multiple locations, per-branch settings, staff permissions"
+    },
+    "promotions": {
+      "title": "Promotions",
+      "desc": "Product/category discounts for POS and online orders"
+    },
+    "tables": {
+      "title": "Table management",
+      "desc": "Floor plan, status, QR ordering — for F&B"
+    },
+    "staff": {
+      "title": "Staff & permissions",
+      "desc": "Invite staff, module-level roles (orders, stock, POS, reports…)"
+    },
+    "tax": {
+      "title": "Tax policies",
+      "desc": "Tax-inclusive/exclusive prices, per-order tax snapshot, per branch"
+    },
+    "billing": {
+      "title": "Subscription",
+      "desc": "Shop plans, renewal, expiry reminders"
+    }
+  },
+  "industries": {
+    "title": "Built for many industries",
+    "subtitle": "Flexible setup by business type — menus and dashboards adapt to your industry.",
+    "fnb": {
+      "label": "F&B",
+      "desc": "Tables, QR ordering, toppings, service flow"
+    },
+    "retail": {
+      "label": "Retail",
+      "desc": "Barcodes, size/color variants, storefront"
+    },
+    "healthcare": {
+      "label": "Pharmacy & health",
+      "desc": "SKU, inventory, sales reports"
+    },
+    "service": {
+      "label": "Services",
+      "desc": "Products/services, repeat customer CRM"
+    },
+    "education": {
+      "label": "Education",
+      "desc": "Materials, fees, reporting"
+    }
+  },
+  "workflow": {
+    "title": "How it works",
+    "subtitle": "From sign-up to selling in a few steps.",
+    "steps": {
+      "1": {
+        "title": "Create account & shop",
+        "desc": "Sign up free, create your shop, pick industry and first branch."
+      },
+      "2": {
+        "title": "Add products & stock",
+        "desc": "Set catalog, prices, inventory; enable storefront or table QR if needed."
+      },
+      "3": {
+        "title": "Sell & receive orders",
+        "desc": "Open POS; get online/table orders via realtime alerts."
+      },
+      "4": {
+        "title": "Track & report",
+        "desc": "Update order status, confirm payments, review revenue reports."
+      }
+    }
+  },
+  "fnb": {
+    "title": "Made for F&B",
+    "subtitle": "Restaurant — café — bubble tea workflow on one platform.",
+    "items": {
+      "tables": "Table map & service status",
+      "qr": "Guests scan QR to order, fewer mistakes",
+      "pos": "Staff collect payment, print bills, update status",
+      "kitchen": "Counter / online / table QR in one order list"
+    }
+  },
+  "reports": {
+    "title": "Reports & decisions",
+    "subtitle": "Centralized numbers — no manual ledger exports.",
+    "items": {
+      "daily": "Daily revenue with charts",
+      "top": "Top sellers in the period",
+      "filter": "Branch, order status, date range filters",
+      "export": "Excel export for detail"
+    }
+  },
+  "multiBranch": {
+    "title": "Many branches — one account",
+    "desc": "Manage multiple locations, switch branch context quickly, separate tax and staff per site. Consolidated or per-branch reporting."
+  },
+  "testimonials": {
+    "title": "What our customers say",
+    "subtitle": "Real shop owners using {{brand}} to run their stores every day.",
+    "items": {
+      "1": {
+        "quote": "I used to track sales in a notebook — end-of-month reconciliation was painful. Now POS and reports are on one screen, saving me 2-3 hours every day.",
+        "name": "Mai",
+        "role": "Café owner · Da Nang"
+      },
+      "2": {
+        "quote": "Guests scan QR to order themselves, the kitchen gets tickets faster. Fewer mistakes, weekend revenue is noticeably up.",
+        "name": "Hung",
+        "role": "Restaurant owner · Ho Chi Minh City"
+      },
+      "3": {
+        "quote": "I launched the storefront and got COD orders in the first week. Inventory and online orders live in one place — I never miss an order.",
+        "name": "Linh",
+        "role": "Fashion shop · Hanoi"
+      }
+    }
+  },
+  "pricing": {
+    "eyebrow": "One plan — all features",
+    "title": "Try free for 1 month, then just 99,000 ₫ / month",
+    "subtitle": "Get the full POS, storefront, table QR and reports. No credit card required at signup.",
+    "trial": {
+      "label": "Free trial",
+      "value": "30 days",
+      "desc": "Unlock all features. No charges during the trial period."
+    },
+    "paid": {
+      "label": "After trial",
+      "value": "99,000 ₫",
+      "period": "/ month",
+      "desc": "Monthly subscription. Cancel anytime, no long-term contracts."
+    },
+    "includesTitle": "Included in the plan",
+    "features": [
+      "Counter POS checkout with fast receipt printing",
+      "Online storefront (per-shop URL) + COD orders",
+      "Table QR ordering for F&B",
+      "Products, variants, toppings, barcodes, Excel import",
+      "Inventory in/out, low-stock alerts",
+      "Promotions, branch-level tax policy",
+      "Multi-branch, module-level staff permissions",
+      "Revenue reports, top sellers, Excel export",
+      "Realtime new-order notifications",
+      "Chat / email support"
+    ],
+    "cta": "Start your 30-day trial",
+    "ctaSecondary": "Already have an account? Log in",
+    "guarantees": {
+      "noCard": "No credit card required",
+      "cancel": "Cancel anytime",
+      "support": "Vietnamese-speaking support"
+    }
+  },
+  "faq": {
+    "title": "FAQ",
+    "items": {
+      "free": {
+        "q": "How long is the free trial?",
+        "a": "You get a full 30-day free trial with every feature unlocked — no credit card required at signup. After the trial, activation costs 99,000 ₫ / month to keep using the platform."
+      },
+      "storefront": {
+        "q": "How does the storefront work?",
+        "a": "Enable it in shop settings to get a public page by slug. Guests cart and place COD orders — they appear in Orders with the Online label."
+      },
+      "qr": {
+        "q": "Does table QR need an app?",
+        "a": "Guests scan with the phone camera and order in the browser — no app install. For F&B shops with table management enabled."
+      },
+      "posOffline": {
+        "q": "Does POS work offline?",
+        "a": "The cart stays on device; when offline you'll be notified and can retry when back online. Stable connection is recommended at peak hours."
+      },
+      "industries": {
+        "q": "Can retail use table QR?",
+        "a": "Table QR is for F&B. Retail shops use POS and online storefront fully."
+      },
+      "upgrade": {
+        "q": "Is cancellation easy? What happens after expiry?",
+        "a": "Cancel renewal anytime under Subscription — no long-term contracts. After expiry your data is kept; just reactivate to resume selling."
+      }
+    }
+  },
+  "cta": {
+    "title": "Ready to unify your sales?",
+    "subtitle": "Create a shop in minutes — POS, storefront, and reports included.",
+    "primary": "Sign up free",
+    "secondary": "Already have an account? Log in"
+  },
+  "footer": {
+    "tagline": "{{brand}} — sales & bookkeeping software for Vietnamese shops.",
+    "product": "Product",
+    "account": "Account",
+    "copyright": "© {{year}} {{brand}}. All rights reserved."
+  },
+  "backToTop": "Back to top"
+}

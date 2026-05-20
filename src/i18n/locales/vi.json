@@ -129,6 +129,7 @@
   },
   "routes": {
     "login": "Đăng nhập",
+    "landing": "Trang chủ",
     "register": "Đăng ký tài khoản",
     "registerBreadcrumb": "Đăng ký",
     "verifyEmail": "Xác thực email",
@@ -215,11 +216,12 @@
   "auth": {
     "layout": {
       "tagline": "Ghi chép thu chi rõ ràng, bán hàng mượt mà — dành cho cửa hàng Việt.",
+      "landingLink": "Xem trang giới thiệu đầy đủ",
       "servicesTitle": "Dịch vụ trong hệ thống",
       "services": {
         "pos": {
           "title": "POS bán hàng",
-          "desc": "Quầy, bàn, thanh toán"
+          "desc": "Quầy POS, storefront online, order QR tại bàn"
         },
         "orders": {
           "title": "Đơn hàng",

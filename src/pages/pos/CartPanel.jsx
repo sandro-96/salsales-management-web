@@ -31,8 +31,8 @@ import {
 } from "@/components/ui/select";
 
 import { PosTaxBreakdown } from "./PosTaxBreakdown";
+import { PosSection } from "./PosSection";
 import { posNumberLocale } from "../../utils/posHelpers";
-
 export function CartPanel({
   cart,
   totalItems,
@@ -89,7 +89,7 @@ export function CartPanel({
   );
 
   return (
-  <>
+  <div className="flex min-h-0 flex-1 flex-col">
     {!hideHeader && (
       <div className="p-3 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -114,8 +114,12 @@ export function CartPanel({
       </div>
     )}
 
-    <div className="p-3 border-b space-y-2">
-      {/* Customer: compact summary row; full form hidden unless expanded */}
+    <div className="flex flex-col gap-3 border-b p-3">
+      <PosSection
+        title={t("pages.pos.cart.sectionCustomer")}
+        description={t("pages.pos.cart.sectionCustomerDesc")}
+        contentClassName="space-y-2"
+      >
       {selectedCustomer ? (
         <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2.5 py-1.5">
           <UserRound className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -239,9 +243,14 @@ export function CartPanel({
           </div>
         </div>
       )}
+      </PosSection>
 
       {showTableSelect && (
-        <div className="space-y-2">
+        <PosSection
+          title={t("pages.pos.cart.sectionTable")}
+          description={t("pages.pos.cart.sectionTableDesc")}
+          contentClassName="space-y-2"
+        >
           <Select
             value={selectedTableId || "none"}
             onValueChange={setSelectedTableId}
@@ -410,11 +419,11 @@ export function CartPanel({
               </div>
             </div>
           )}
-        </div>
+        </PosSection>
       )}
     </div>
 
-    <ScrollArea className="flex-1">
+    <ScrollArea className="flex-1 min-h-0">
       {cart.length === 0 ? (
         <div className="flex items-center justify-center h-48 text-muted-foreground">
           <div className="text-center">
@@ -559,14 +568,20 @@ export function CartPanel({
       )}
     </ScrollArea>
 
-    <div className="p-3 border-t">
-      <Textarea
-        placeholder={t("pages.pos.cart.orderNotePlaceholder")}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        className="text-xs min-h-[56px] resize-none"
-        rows={2}
-      />
+    <div className="border-t p-3">
+      <PosSection
+        title={t("pages.pos.cart.sectionNote")}
+        description={t("pages.pos.cart.sectionNoteDesc")}
+        contentClassName="p-2"
+      >
+        <Textarea
+          placeholder={t("pages.pos.cart.orderNotePlaceholder")}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="min-h-[56px] resize-none text-xs"
+          rows={2}
+        />
+      </PosSection>
     </div>
 
     <div className="p-3 border-t space-y-2 bg-muted/20 sticky bottom-0 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.25)]">
@@ -646,6 +661,6 @@ export function CartPanel({
         </p>
       )}
     </div>
-  </>
+  </div>
 );
 }

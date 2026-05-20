@@ -129,6 +129,7 @@
   },
   "routes": {
     "login": "Sign in",
+    "landing": "Home",
     "register": "Create account",
     "registerBreadcrumb": "Sign up",
     "verifyEmail": "Verify email",
@@ -215,11 +216,12 @@
   "auth": {
     "layout": {
       "tagline": "Clear books, smooth checkout — built for your shop.",
+      "landingLink": "View full product overview",
       "servicesTitle": "Platform services",
       "services": {
         "pos": {
           "title": "POS checkout",
-          "desc": "Counter, tables & payment"
+          "desc": "Counter POS, online storefront, table QR ordering"
         },
         "orders": {
           "title": "Orders",

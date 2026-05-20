@@ -632,7 +632,7 @@ const ReportListPage = () => {
 
             {dailyData.length > 0 ? (
               <>
-                <Card className="overflow-hidden border-l-[3px] border-l-emerald-500/60">
+                <Card className="overflow-hidden">
                   <CardHeader className="bg-emerald-500/[0.05] pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <BarChart3 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -686,7 +686,7 @@ const ReportListPage = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="overflow-hidden border-l-[3px] border-l-sky-500/60">
+                <Card className="overflow-hidden">
                   <CardHeader className="bg-sky-500/[0.05] pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Receipt className="h-4 w-4 text-sky-600 dark:text-sky-400 shrink-0" />
@@ -771,7 +771,7 @@ const ReportListPage = () => {
             </div>
 
             {topProducts.length > 0 ? (
-              <Card className="overflow-hidden border-l-[3px] border-l-violet-500/60">
+              <Card className="overflow-hidden">
                 <CardHeader className="bg-violet-500/[0.05] pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Package className="h-4 w-4 text-violet-600 dark:text-violet-400 shrink-0" />

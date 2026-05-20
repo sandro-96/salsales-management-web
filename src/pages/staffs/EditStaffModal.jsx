@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Loader2, RotateCcw } from "lucide-react";
+import { Loader2, RotateCcw, Shield } from "lucide-react";
 
 import {
   Dialog,
@@ -31,6 +31,8 @@ import {
   buildShopRolesAssignable,
   getShopRoleLabel,
 } from "@/utils/shopLabels";
+import { FormSectionCard, FieldLabel } from "@/components/forms/FormSectionCard.jsx";
+import { cn } from "@/lib/utils";
 
 const buildPermissionGroups = (t) => [
   {
@@ -264,18 +266,20 @@ export default function EditStaffModal({
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[640px] sm:p-6"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(92dvh,820px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[680px]"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0 space-y-1.5 text-left">
+        <DialogHeader className="shrink-0 space-y-1.5 border-b border-border px-4 py-4 text-left sm:px-6">
           <DialogTitle>{t("pages.staffs.editModal.title")}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-muted-foreground">
             {t("pages.staffs.editModal.description", { name: staffName })}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
-          <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:px-6 [scrollbar-gutter:stable]">
+          <div className="flex flex-col gap-4">
+          <FormSectionCard title={t("pages.staffs.editModal.sectionStaff")}>
+          <div className="flex items-center gap-3">
             {staff.avatarUrl ? (
               <img
                 src={staff.avatarUrl}
@@ -302,41 +306,53 @@ export default function EditStaffModal({
             </Badge>
           </div>
 
-          <div className="space-y-2">
-            <Label>{t("pages.staffs.editModal.roleLabel")}</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                {assignableRoles.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {roleChanged && (
-              <p className="text-xs text-amber-600">
-                {t("pages.staffs.editModal.roleChangeWarning")}
-              </p>
-            )}
-          </div>
+          </FormSectionCard>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>{t("pages.staffs.editModal.permissionsLabel")}</Label>
+          <FormSectionCard
+            title={t("pages.staffs.editModal.sectionRole")}
+            description={t("pages.staffs.editModal.sectionRoleDesc")}
+          >
+            
+            <div className="space-y-2">
+              <FieldLabel icon={Shield}>
+                {t("pages.staffs.editModal.roleLabel")}
+              </FieldLabel>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {assignableRoles.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {roleChanged && (
+                <p className="rounded-md border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                  {t("pages.staffs.editModal.roleChangeWarning")}
+                </p>
+              )}
+            </div>
+          </FormSectionCard>
+
+          <FormSectionCard
+            title={t("pages.staffs.editModal.sectionPermissions")}
+            description={t("pages.staffs.editModal.sectionPermissionsDesc")}
+            action={
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs gap-1"
+                className="h-7 gap-1 text-xs"
                 onClick={resetToDefault}
+                disabled={roleChanged}
               >
                 <RotateCcw className="h-3 w-3" />
                 {t("pages.staffs.editModal.resetDefault")}
               </Button>
-            </div>
-
+            }
+          >
             {roleChanged && (
               <p className="text-xs text-muted-foreground italic">
                 {t("pages.staffs.editModal.permissionsResetHint")}
@@ -344,7 +360,10 @@ export default function EditStaffModal({
             )}
 
             <div
-              className={`space-y-3 ${roleChanged ? "opacity-50 pointer-events-none" : ""}`}
+              className={cn(
+                "space-y-3",
+                roleChanged && "pointer-events-none opacity-50",
+              )}
             >
               {permissionGroups.map((group) => {
                 const allPerms = group.permissions.map((p) => p.value);
@@ -357,7 +376,7 @@ export default function EditStaffModal({
                 return (
                   <div
                     key={group.key}
-                    className="rounded-lg border p-3 space-y-2"
+                    className="space-y-2 rounded-lg border p-3"
                   >
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -368,15 +387,15 @@ export default function EditStaffModal({
                       <span className="text-sm font-medium">
                         {group.label}
                       </span>
-                      <span className="text-xs text-muted-foreground ml-auto">
+                      <span className="ml-auto text-xs text-muted-foreground">
                         {checkedCount}/{allPerms.length}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 ml-6">
+                    <div className="ml-6 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                       {group.permissions.map((perm) => (
                         <label
                           key={perm.value}
-                          className="flex items-center gap-2 cursor-pointer text-sm py-0.5"
+                          className="flex cursor-pointer items-center gap-2 py-0.5 text-sm"
                         >
                           <Checkbox
                             checked={selectedPermissions.has(perm.value)}
@@ -392,10 +411,11 @@ export default function EditStaffModal({
                 );
               })}
             </div>
+          </FormSectionCard>
           </div>
         </div>
 
-        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background px-4 py-4 sm:gap-0 sm:px-6">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {t("pages.staffs.editModal.cancel")}
           </Button>

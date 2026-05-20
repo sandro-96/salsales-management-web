@@ -38,6 +38,8 @@ import posVi from "./locales/pages/pos.vi.json";
 import posEn from "./locales/pages/pos.en.json";
 import tablesVi from "./locales/pages/tables.vi.json";
 import tablesEn from "./locales/pages/tables.en.json";
+import landingVi from "./locales/pages/landing.vi.json";
+import landingEn from "./locales/pages/landing.en.json";
 
 export const SUPPORTED_LANGUAGES = [
   { code: "vi", labelKey: "language.vi" },
@@ -65,6 +67,7 @@ const pagesVi = {
   billing: billingVi,
   pos: posVi,
   tables: tablesVi,
+  landing: landingVi,
 };
 
 const pagesEn = {
@@ -85,6 +88,7 @@ const pagesEn = {
   billing: billingEn,
   pos: posEn,
   tables: tablesEn,
+  landing: landingEn,
 };
 
 i18n

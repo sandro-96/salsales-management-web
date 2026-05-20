@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, User, Phone, Mail, MapPin, Building2, FileText } from "lucide-react";
 
 import {
   Dialog,
@@ -16,6 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -26,6 +34,44 @@ import {
 import { createCustomer, updateCustomer } from "../../api/customerApi.js";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
+import { cn } from "@/lib/utils";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function FormSectionCard({ title, description, action, children, className }) {
+  return (
+    <Card className={cn("gap-0 py-0 shadow-none", className)}>
+      <CardHeader className="border-b border-border/60 px-4 py-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+          {description ? (
+            <CardDescription className="text-xs leading-relaxed">
+              {description}
+            </CardDescription>
+          ) : null}
+        </div>
+        {action ? <CardAction>{action}</CardAction> : null}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 px-4 py-4">{children}</CardContent>
+    </Card>
+  );
+}
+
+function FieldLabel({ icon: Icon, htmlFor, required, invalid, children }) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className={cn(
+        "flex items-center gap-1.5",
+        invalid && "text-destructive",
+      )}
+    >
+      {Icon ? <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : null}
+      {children}
+      {required ? <span className="text-red-500">*</span> : null}
+    </Label>
+  );
+}
 
 export default function CustomerFormModal({
   open,
@@ -49,6 +95,11 @@ export default function CustomerFormModal({
   const [branchId, setBranchId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+  const emailInvalid = useMemo(
+    () => Boolean(email.trim()) && !EMAIL_RE.test(email.trim()),
+    [email],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +126,7 @@ export default function CustomerFormModal({
       toast.error(t("pages.customers.formModal.nameRequired"));
       return false;
     }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (emailInvalid) {
       toast.error(t("pages.customers.formModal.emailInvalid"));
       return false;
     }
@@ -130,13 +181,15 @@ export default function CustomerFormModal({
     }
   };
 
+  const showBranchSection = (branches?.length ?? 0) > 0 || isEdit;
+
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[520px] sm:p-6"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(92dvh,760px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[600px]"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0 space-y-1.5 text-left">
+        <DialogHeader className="shrink-0 space-y-1.5 border-b border-border px-4 py-4 text-left sm:px-6">
           <DialogTitle>
             {readOnly
               ? t("pages.customers.formModal.viewTitle")
@@ -151,114 +204,155 @@ export default function CustomerFormModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
-          <div className="space-y-2">
-            <Label
-              htmlFor="cust-name"
-              className={
-                attemptedSubmit && !name.trim() ? "text-destructive" : undefined
-              }
+        <fieldset
+          disabled={readOnly}
+          className="m-0 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain border-0 px-4 py-4 sm:px-6 [scrollbar-gutter:stable] disabled:opacity-70"
+        >
+          <div className="flex min-w-0 flex-col gap-4">
+            <FormSectionCard
+              title={t("pages.customers.formModal.sectionBasic")}
+              description={t("pages.customers.formModal.sectionBasicDesc")}
             >
-              {t("pages.customers.formModal.nameLabel")} *
-            </Label>
-            <Input
-              id="cust-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("pages.customers.formModal.namePlaceholder")}
-              autoFocus
-              disabled={readOnly}
-              aria-invalid={attemptedSubmit && !name.trim()}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="cust-phone">
-                {t("pages.customers.formModal.phoneLabel")}
-              </Label>
-              <Input
-                id="cust-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder={t("pages.customers.formModal.phonePlaceholder")}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cust-email">
-                {t("pages.customers.formModal.emailLabel")}
-              </Label>
-              <Input
-                id="cust-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("pages.customers.formModal.emailPlaceholder")}
-                disabled={readOnly}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cust-address">
-              {t("pages.customers.formModal.addressLabel")}
-            </Label>
-            <Input
-              id="cust-address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder={t("pages.customers.formModal.addressPlaceholder")}
-              disabled={readOnly}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t("pages.customers.formModal.branchLabel")}</Label>
-            <Select
-              value={branchId || "__none__"}
-              onValueChange={(v) => setBranchId(v === "__none__" ? "" : v)}
-              disabled={isEdit || readOnly}
-            >
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={t("pages.customers.formModal.branchPlaceholder")}
+              <div className="space-y-2">
+                <FieldLabel
+                  icon={User}
+                  htmlFor="cust-name"
+                  required
+                  invalid={attemptedSubmit && !name.trim()}
+                >
+                  {t("pages.customers.formModal.nameLabel")}
+                </FieldLabel>
+                <Input
+                  id="cust-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("pages.customers.formModal.namePlaceholder")}
+                  autoFocus
+                  aria-invalid={attemptedSubmit && !name.trim()}
                 />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                <SelectItem value="__none__">
-                  {t("pages.customers.formModal.branchNone")}
-                </SelectItem>
-                {branches?.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isEdit && (
-              <p className="text-xs text-muted-foreground">
-                {t("pages.customers.formModal.branchLockedHint")}
-              </p>
+              </div>
+            </FormSectionCard>
+
+            <FormSectionCard
+              title={t("pages.customers.formModal.sectionContact")}
+              description={t("pages.customers.formModal.sectionContactDesc")}
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <FieldLabel icon={Phone} htmlFor="cust-phone">
+                    {t("pages.customers.formModal.phoneLabel")}
+                  </FieldLabel>
+                  <Input
+                    id="cust-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder={t("pages.customers.formModal.phonePlaceholder")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel
+                    icon={Mail}
+                    htmlFor="cust-email"
+                    invalid={attemptedSubmit && emailInvalid}
+                  >
+                    {t("pages.customers.formModal.emailLabel")}
+                  </FieldLabel>
+                  <Input
+                    id="cust-email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t("pages.customers.formModal.emailPlaceholder")}
+                    aria-invalid={attemptedSubmit && emailInvalid}
+                  />
+                  {attemptedSubmit && emailInvalid && (
+                    <p className="text-xs text-destructive">
+                      {t("pages.customers.formModal.emailInvalid")}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <FieldLabel icon={MapPin} htmlFor="cust-address">
+                  {t("pages.customers.formModal.addressLabel")}
+                </FieldLabel>
+                <Input
+                  id="cust-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder={t("pages.customers.formModal.addressPlaceholder")}
+                  autoComplete="street-address"
+                />
+              </div>
+            </FormSectionCard>
+
+            {showBranchSection && (
+              <FormSectionCard
+                title={t("pages.customers.formModal.sectionBranch")}
+                description={t("pages.customers.formModal.sectionBranchDesc")}
+              >
+                <div className="space-y-2">
+                  <FieldLabel icon={Building2}>
+                    {t("pages.customers.formModal.branchLabel")}
+                  </FieldLabel>
+                  <Select
+                    value={branchId || "__none__"}
+                    onValueChange={(v) => setBranchId(v === "__none__" ? "" : v)}
+                    disabled={isEdit}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={t(
+                          "pages.customers.formModal.branchPlaceholder",
+                        )}
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background">
+                      <SelectItem value="__none__">
+                        {t("pages.customers.formModal.branchNone")}
+                      </SelectItem>
+                      {branches?.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isEdit && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("pages.customers.formModal.branchLockedHint")}
+                    </p>
+                  )}
+                </div>
+              </FormSectionCard>
             )}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cust-note">
-              {t("pages.customers.formModal.noteLabel")}
-            </Label>
-            <Textarea
-              id="cust-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={t("pages.customers.formModal.notePlaceholder")}
-              rows={3}
-              disabled={readOnly}
-            />
+            <FormSectionCard
+              title={t("pages.customers.formModal.sectionNote")}
+              description={t("pages.customers.formModal.sectionNoteDesc")}
+            >
+              <div className="space-y-2">
+                <FieldLabel icon={FileText} htmlFor="cust-note">
+                  {t("pages.customers.formModal.noteLabel")}
+                </FieldLabel>
+                <Textarea
+                  id="cust-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={t("pages.customers.formModal.notePlaceholder")}
+                  rows={3}
+                  className="min-h-[5.5rem] resize-y"
+                />
+              </div>
+            </FormSectionCard>
           </div>
-        </div>
+        </fieldset>
 
-        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background px-4 py-4 sm:gap-0 sm:px-6">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {readOnly
               ? t("pages.customers.formModal.close")
@@ -271,7 +365,7 @@ export default function CustomerFormModal({
               variant="success"
             >
               {submitting && (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
               )}
               {isEdit
                 ? t("pages.customers.formModal.save")

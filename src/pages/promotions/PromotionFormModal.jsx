@@ -3,13 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { enUS, vi } from "date-fns/locale";
-import {
-  CalendarIcon,
-  Loader2,
-  Search,
-  ChevronsUpDown,
-  Check,
-} from "lucide-react";
+import { CalendarIcon, Loader2, Search, Package, Store } from "lucide-react";
 
 import {
   Dialog,
@@ -25,7 +19,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -53,6 +56,78 @@ const parseLocalDateTime = (str) => {
   const d = new Date(str);
   return isNaN(d.getTime()) ? null : d;
 };
+
+function FormSectionCard({ title, description, action, children, className }) {
+  return (
+    <Card className={cn("gap-0 py-0 shadow-none", className)}>
+      <CardHeader className="border-b border-border/60 px-4 py-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+          {description ? (
+            <CardDescription className="text-xs leading-relaxed">
+              {description}
+            </CardDescription>
+          ) : null}
+        </div>
+        {action ? <CardAction>{action}</CardAction> : null}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 px-4 py-4">{children}</CardContent>
+    </Card>
+  );
+}
+
+function DatePickerField({
+  label,
+  value,
+  open,
+  onOpenChange,
+  onSelect,
+  disabled,
+  invalid,
+  blockRef,
+  dateLocale,
+  pickDateLabel,
+  otherOpen,
+  setOtherOpen,
+}) {
+  return (
+    <div ref={blockRef} className="min-w-0 space-y-2">
+      <Label className={invalid ? "text-destructive" : undefined}>{label}</Label>
+      <Button
+        type="button"
+        variant="outline"
+        className={cn(
+          "w-full justify-start text-left font-normal",
+          !value && "text-muted-foreground",
+          invalid && "border-destructive",
+        )}
+        aria-expanded={open}
+        aria-invalid={invalid}
+        onClick={() => {
+          setOtherOpen(false);
+          onOpenChange((v) => !v);
+        }}
+      >
+        <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+        {value
+          ? format(value, "dd/MM/yyyy", { locale: dateLocale })
+          : pickDateLabel}
+      </Button>
+      {open && (
+        <div className="flex justify-center overflow-hidden rounded-md border bg-popover shadow-sm">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={onSelect}
+            disabled={disabled}
+            locale={dateLocale}
+            className="p-3"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PromotionFormModal({
   open,
@@ -268,10 +343,10 @@ export default function PromotionFormModal({
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[600px] sm:p-6"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(92dvh,820px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[720px]"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0 space-y-1.5 text-left">
+        <DialogHeader className="shrink-0 space-y-1.5 border-b border-border px-4 py-4 text-left sm:px-6">
           <DialogTitle>
             {readOnly
               ? t("pages.promotions.formModal.viewTitle")
@@ -286,12 +361,16 @@ export default function PromotionFormModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
+        
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:px-6 [scrollbar-gutter:stable]">
           <fieldset
             disabled={readOnly}
-            className="m-0 min-w-0 space-y-5 border-0 p-0 pb-1 disabled:opacity-70"
+            className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0 disabled:opacity-70"
           >
-          {/* Name */}
+          <FormSectionCard
+            title={t("pages.promotions.formModal.sectionBasic")}
+            description={t("pages.promotions.formModal.sectionBasicDesc")}
+          >
           <div className="space-y-2">
             <Label
               htmlFor="promo-name"
@@ -308,8 +387,12 @@ export default function PromotionFormModal({
               aria-invalid={attemptedSubmit && !name.trim()}
             />
           </div>
+          </FormSectionCard>
 
-          {/* Discount type + value */}
+          <FormSectionCard
+            title={t("pages.promotions.formModal.sectionDiscount")}
+            description={t("pages.promotions.formModal.sectionDiscountDesc")}
+          >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className={attemptedSubmit && !discountType ? "text-destructive" : undefined}>
@@ -359,7 +442,7 @@ export default function PromotionFormModal({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 sm:max-w-xs">
             <Label htmlFor="promo-priority">
               {t("pages.promotions.formModal.priorityLabel")}
             </Label>
@@ -375,198 +458,180 @@ export default function PromotionFormModal({
               {t("pages.promotions.formModal.priorityHint")}
             </p>
           </div>
+          </FormSectionCard>
 
-          {/* Date range */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div ref={startDateBlockRef} className="space-y-2 min-w-0 sm:col-span-2">
-              <Label className={attemptedSubmit && !startDate ? "text-destructive" : undefined}>
-                {t("pages.promotions.formModal.startDateLabel")} *
-              </Label>
-              <Button
-                type="button"
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !startDate && "text-muted-foreground",
-                  attemptedSubmit && !startDate && "border-destructive aria-invalid:border-destructive",
-                )}
-                aria-expanded={startDateOpen}
-                aria-invalid={attemptedSubmit && !startDate}
-                onClick={() => {
-                  setEndDateOpen(false);
-                  setStartDateOpen((v) => !v);
+          <FormSectionCard
+            title={t("pages.promotions.formModal.sectionSchedule")}
+            description={t("pages.promotions.formModal.sectionScheduleDesc")}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DatePickerField
+                label={`${t("pages.promotions.formModal.startDateLabel")} *`}
+                value={startDate}
+                open={startDateOpen}
+                onOpenChange={setStartDateOpen}
+                otherOpen={endDateOpen}
+                setOtherOpen={setEndDateOpen}
+                blockRef={startDateBlockRef}
+                dateLocale={dateLocale}
+                pickDateLabel={t("pages.promotions.formModal.pickDate")}
+                invalid={attemptedSubmit && !startDate}
+                onSelect={(d) => {
+                  if (d) {
+                    d.setHours(0, 0, 0, 0);
+                    setStartDate(d);
+                    setStartDateOpen(false);
+                  }
                 }}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                {startDate
-                  ? format(startDate, "dd/MM/yyyy", { locale: dateLocale })
-                  : t("pages.promotions.formModal.pickDate")}
-              </Button>
-              {startDateOpen && (
-                <div className="flex justify-center overflow-hidden rounded-md border bg-popover shadow-sm">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={(d) => {
-                      if (d) {
-                        d.setHours(0, 0, 0, 0);
-                        setStartDate(d);
-                        setStartDateOpen(false);
-                      }
-                    }}
-                    locale={dateLocale}
-                    className="p-3"
-                  />
-                </div>
-              )}
-            </div>
-            <div ref={endDateBlockRef} className="space-y-2 min-w-0 sm:col-span-2">
-              <Label className={attemptedSubmit && !endDate ? "text-destructive" : undefined}>
-                {t("pages.promotions.formModal.endDateLabel")} *
-              </Label>
-              <Button
-                type="button"
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !endDate && "text-muted-foreground",
-                  attemptedSubmit && !endDate && "border-destructive aria-invalid:border-destructive",
-                )}
-                aria-expanded={endDateOpen}
-                aria-invalid={attemptedSubmit && !endDate}
-                onClick={() => {
-                  setStartDateOpen(false);
-                  setEndDateOpen((v) => !v);
+              />
+              <DatePickerField
+                label={`${t("pages.promotions.formModal.endDateLabel")} *`}
+                value={endDate}
+                open={endDateOpen}
+                onOpenChange={setEndDateOpen}
+                otherOpen={startDateOpen}
+                setOtherOpen={setStartDateOpen}
+                blockRef={endDateBlockRef}
+                dateLocale={dateLocale}
+                pickDateLabel={t("pages.promotions.formModal.pickDate")}
+                invalid={attemptedSubmit && !endDate}
+                disabled={(d) => startDate && d < startDate}
+                onSelect={(d) => {
+                  if (d) {
+                    d.setHours(23, 59, 59, 0);
+                    setEndDate(d);
+                    setEndDateOpen(false);
+                  }
                 }}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                {endDate
-                  ? format(endDate, "dd/MM/yyyy", { locale: dateLocale })
-                  : t("pages.promotions.formModal.pickDate")}
-              </Button>
-              {endDateOpen && (
-                <div className="flex justify-center overflow-hidden rounded-md border bg-popover shadow-sm">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={(d) => {
-                      if (d) {
-                        d.setHours(23, 59, 59, 0);
-                        setEndDate(d);
-                        setEndDateOpen(false);
-                      }
-                    }}
-                    disabled={(d) => startDate && d < startDate}
-                    locale={dateLocale}
-                    className="p-3"
-                  />
-                </div>
-              )}
+              />
             </div>
-          </div>
+          </FormSectionCard>
 
-          {/* Branch scope */}
-          <div className="space-y-2">
-            <Label>{t("pages.promotions.formModal.scopeLabel")}</Label>
-            <Select
-              value={branchId || "__all__"}
-              onValueChange={(v) => setBranchId(v === "__all__" ? "" : v)}
-              disabled={isEdit}
-            >
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={t("pages.promotions.list.scopeAllShop")}
-                />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                <SelectItem value="__all__">
-                  {t("pages.promotions.formModal.scopeAllShop")}
-                </SelectItem>
-                {branches?.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
+          <FormSectionCard
+            title={t("pages.promotions.formModal.sectionScope")}
+            description={t("pages.promotions.formModal.sectionScopeDesc")}
+          >
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Store className="h-3.5 w-3.5 text-muted-foreground" />
+                {t("pages.promotions.formModal.scopeLabel")}
+              </Label>
+              <Select
+                value={branchId || "__all__"}
+                onValueChange={(v) => setBranchId(v === "__all__" ? "" : v)}
+                disabled={isEdit}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={t("pages.promotions.list.scopeAllShop")}
+                  />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  <SelectItem value="__all__">
+                    {t("pages.promotions.formModal.scopeAllShop")}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isEdit && (
-              <p className="text-xs text-muted-foreground">
-                {t("pages.promotions.formModal.scopeLockedHint")}
-              </p>
-            )}
-          </div>
-
-          {/* Active switch */}
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <Label className="text-sm font-medium">
-                {t("pages.promotions.formModal.activeLabel")}
-              </Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {t("pages.promotions.formModal.activeHint")}
-              </p>
+                  {branches?.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isEdit && (
+                <p className="text-xs text-muted-foreground">
+                  {t("pages.promotions.formModal.scopeLockedHint")}
+                </p>
+              )}
             </div>
-            <Switch checked={active} onCheckedChange={setActive} />
-          </div>
 
-          {/* Product scope */}
-          <div className="space-y-3">
-            <Label>{t("pages.promotions.formModal.productsLabel")}</Label>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="scope"
-                  checked={applyAll}
-                  onChange={() => {
-                    setApplyAll(true);
-                    setSelectedProductIds([]);
-                  }}
-                  className="accent-primary"
-                />
-                <span className="text-sm">
-                  {t("pages.promotions.formModal.applyAllProducts")}
-                </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="scope"
-                  checked={!applyAll}
-                  onChange={() => setApplyAll(false)}
-                  className="accent-primary"
-                />
-                <span className="text-sm">
-                  {t("pages.promotions.formModal.applySelected")}
-                </span>
-              </label>
+            <Separator />
+
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/20 px-3 py-3">
+              <div className="min-w-0">
+                <Label className="text-sm font-medium">
+                  {t("pages.promotions.formModal.activeLabel")}
+                </Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {t("pages.promotions.formModal.activeHint")}
+                </p>
+              </div>
+              <Switch checked={active} onCheckedChange={setActive} />
+            </div>
+          </FormSectionCard>
+
+          <FormSectionCard
+            title={t("pages.promotions.formModal.sectionProducts")}
+            description={t("pages.promotions.formModal.sectionProductsDesc")}
+            action={
+              !applyAll && selectedProductIds.length > 0 ? (
+                <Badge variant="secondary" className="tabular-nums">
+                  {selectedProductIds.length}
+                </Badge>
+              ) : null
+            }
+          >
+            <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/30 p-1">
+              <button
+                type="button"
+                className={cn(
+                  "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  applyAll
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => {
+                  setApplyAll(true);
+                  setSelectedProductIds([]);
+                }}
+              >
+                {t("pages.promotions.formModal.applyAllProducts")}
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  !applyAll
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => setApplyAll(false)}
+              >
+                {t("pages.promotions.formModal.applySelected")}
+              </button>
             </div>
 
             {!applyAll && (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="p-2 border-b">
+              <div className="overflow-hidden rounded-lg border">
+                <div className="border-b p-2">
                   <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       value={productKeyword}
                       onChange={(e) => setProductKeyword(e.target.value)}
                       placeholder={t("pages.promotions.formModal.searchProducts")}
-                      className="pl-8 h-8 text-sm"
+                      className="h-9 pl-8 text-sm"
                     />
                   </div>
                 </div>
                 {selectedProductIds.length > 0 && (
-                  <div className="px-3 py-1.5 border-b bg-muted/30">
+                  <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-2">
                     <span className="text-xs text-muted-foreground">
                       {t("pages.promotions.formModal.selectedCount", {
                         count: selectedProductIds.length,
                       })}
                     </span>
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline"
+                      onClick={() => setSelectedProductIds([])}
+                    >
+                      {t("pages.promotions.formModal.clearSelection")}
+                    </button>
                   </div>
                 )}
-                <div className="max-h-[min(11rem,28vh)] overflow-y-auto overscroll-contain">
+                <div className="max-h-[min(14rem,32vh)] overflow-y-auto overscroll-contain">
                   {productsLoading ? (
-                    <div className="flex items-center justify-center py-6">
+                    <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     </div>
                   ) : filteredProducts.length > 0 ? (
@@ -576,41 +641,51 @@ export default function PromotionFormModal({
                       return (
                         <label
                           key={id}
-                          className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer transition-colors"
+                          className="flex cursor-pointer items-center gap-3 border-b border-border/40 px-3 py-2.5 transition-colors last:border-0 hover:bg-muted/50"
                         >
                           <Checkbox
                             checked={checked}
                             onCheckedChange={() => toggleProduct(id)}
                           />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm truncate">{p.name}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{p.name}</p>
                             {p.sku && (
-                              <p className="text-xs text-muted-foreground font-mono">
+                              <p className="font-mono text-xs text-muted-foreground">
                                 {p.sku}
                               </p>
                             )}
                           </div>
                           {p.defaultPrice != null && (
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              {Number(p.defaultPrice).toLocaleString(numberLocale)}đ
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {Number(p.defaultPrice).toLocaleString(numberLocale)}Ä‘
                             </span>
                           )}
                         </label>
                       );
                     })
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-6">
-                      {t("pages.promotions.formModal.noProductsFound")}
-                    </p>
+                    <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+                      <Package className="h-8 w-8 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">
+                        {t("pages.promotions.formModal.noProductsFound")}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
             )}
-          </div>
+
+            {applyAll && (
+              <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                {t("pages.promotions.formModal.applyAllProductsHint")}
+              </p>
+            )}
+          </FormSectionCard>
+
           </fieldset>
         </div>
 
-        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background px-4 py-4 sm:gap-0 sm:px-6">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {readOnly
               ? t("pages.promotions.formModal.close")

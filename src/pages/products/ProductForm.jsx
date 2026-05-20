@@ -55,6 +55,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor.jsx";
 import { MarkdownContent } from "@/components/markdown/MarkdownContent.jsx";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -145,6 +153,90 @@ function ReadOnlyValue({ value, variant = "single", className }) {
         </button>
       )}
     </div>
+  );
+}
+
+const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp";
+
+function ImageFileUploadTrigger({
+  fileInputKey,
+  onChange,
+  multiple = true,
+  label,
+  hint,
+  variant = "zone",
+  className,
+}) {
+  const { t } = useTranslation();
+  const displayLabel = label ?? t("pages.products.form.addImage");
+
+  const input = (
+    <input
+      key={fileInputKey}
+      type="file"
+      multiple={multiple}
+      accept={IMAGE_ACCEPT}
+      className="sr-only"
+      onChange={onChange}
+    />
+  );
+
+  if (variant === "button") {
+    return (
+      <label
+        className={cn(
+          "inline-flex w-full cursor-pointer sm:w-auto",
+          className,
+        )}
+      >
+        {input}
+        <span className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground sm:w-auto">
+          <ImagePlus className="size-4 shrink-0 text-primary" />
+          {displayLabel}
+        </span>
+      </label>
+    );
+  }
+
+  return (
+    <label
+      className={cn(
+        "flex min-h-[9rem] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/35 bg-muted/20 px-4 py-6 text-center transition-colors hover:border-primary/45 hover:bg-primary/5 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 lg:min-h-[11rem]",
+        className,
+      )}
+    >
+      {input}
+      <span className="flex size-11 items-center justify-center rounded-full bg-primary/10">
+        <ImagePlus className="size-5 text-primary" />
+      </span>
+      <span className="text-sm font-medium text-foreground">{displayLabel}</span>
+      {hint ? (
+        <span className="max-w-[16rem] text-xs leading-snug text-muted-foreground">
+          {hint}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+function FormSectionCard({ title, description, action, children, className }) {
+  return (
+    <Card className={cn("gap-0 py-0 shadow-none", className)}>
+      <CardHeader className="border-b border-border/60 px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+          {description ? (
+            <CardDescription className="text-xs leading-relaxed">
+              {description}
+            </CardDescription>
+          ) : null}
+        </div>
+        {action ? <CardAction>{action}</CardAction> : null}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 px-4 py-4 sm:px-5 sm:py-4">
+        {children}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -437,20 +529,12 @@ function VariantCard({
             })}
           </span>
           {!isReadOnly && canAddMore && (
-            <label className="cursor-pointer">
-              <input
-                key={variantFileInputKey}
-                type="file"
-                multiple
-                accept="image/jpeg,image/jpg,image/png,image/webp"
-                className="hidden"
-                onChange={handleVariantImageChange}
-              />
-              <span className="inline-flex items-center gap-1 text-xs text-primary border border-primary rounded px-2 py-0.5 hover:bg-primary/10 transition-colors">
-                <ImagePlus className="w-3 h-3" />
-                {t("pages.products.form.addImage")}
-              </span>
-            </label>
+            <ImageFileUploadTrigger
+              variant="button"
+              fileInputKey={variantFileInputKey}
+              onChange={handleVariantImageChange}
+              className="w-auto shrink-0"
+            />
           )}
         </div>
         {(urlCount > 0 || pendingCount > 0) && (
@@ -1391,9 +1475,25 @@ export default function ProductForm({
 
   // ── Product info section (shared) ──────────────────────────────────────────
   const ProductInfoSection = () => (
-    <div className="flex min-w-0 flex-col gap-5">
-      {/* Tên */}
-      <FormField
+    <>
+      <FormSectionCard
+        title={t("pages.products.form.sectionBasic")}
+        description={
+          isCreate && !isReadOnly
+            ? t("pages.products.form.sectionBasicDesc")
+            : undefined
+        }
+      >
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
+          {CategoryField()}
+          {UnitField()}
+        </div>
+        {!isReadOnly && isCreate && !watchedCategory && (
+          <p className="rounded-md border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            {t("pages.products.form.sectionCategoryHint")}
+          </p>
+        )}
+        <FormField
         control={form.control}
         name="name"
         render={({ field, fieldState }) => (
@@ -1525,8 +1625,14 @@ export default function ProductForm({
           </FormItem>
         )}
       />
+      </FormSectionCard>
 
-      {/* SKU & Barcode */}
+      <FormSectionCard
+        title={t("pages.products.form.sectionCodes")}
+        description={
+          !isReadOnly ? t("pages.products.form.sectionCodesDesc") : undefined
+        }
+      >
       <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
         <FormField
           control={form.control}
@@ -1673,14 +1779,9 @@ export default function ProductForm({
           )}
         />
       </div>
+      </FormSectionCard>
 
-      {/* Danh mục & Đơn vị */}
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
-        {CategoryField()}
-        {UnitField()}
-      </div>
-
-      {/* Giá mặc định shop & Giá vốn */}
+      <FormSectionCard title={t("pages.products.form.sectionPricing")}>
       <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
         <FormField
           control={form.control}
@@ -1774,7 +1875,28 @@ export default function ProductForm({
         )}
       />
 
-      {/* Theo dõi tồn kho */}
+      {!isReadOnly && !isCreate && (
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("pages.products.form.priceReason")}</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder={t("pages.products.form.priceReasonPlaceholder")}
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      )}
+      </FormSectionCard>
+
+      <FormSectionCard title={t("pages.products.form.sectionSettings")}>
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
       <FormField
         control={form.control}
         name="trackInventory"
@@ -1832,27 +1954,9 @@ export default function ProductForm({
           </FormItem>
         )}
       />
-
-      {/* Lý do thay đổi giá — chỉ hiển thị khi chỉnh sửa */}
-      {!isReadOnly && !isCreate && (
-        <FormField
-          control={form.control}
-          name="reason"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("pages.products.form.priceReason")}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t("pages.products.form.priceReasonPlaceholder")}
-                  {...field}
-                  value={field.value ?? ""}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      )}
-    </div>
+      </div>
+      </FormSectionCard>
+    </>
   );
 
   // ── Price history section (view mode only) ─────────────────────────────────
@@ -1982,15 +2086,10 @@ export default function ProductForm({
       );
     }
     return (
-      <div className="flex flex-col gap-3">
-        <div>
-          <span className="text-sm font-semibold">
-            {t("pages.products.form.toppingsSection")}
-          </span>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {t("pages.products.form.toppingsIntro")}
-          </p>
-        </div>
+      <FormSectionCard
+        title={t("pages.products.form.toppingsSection")}
+        description={t("pages.products.form.toppingsIntro")}
+      >
         {!shopToppingCatalog.length ? (
           <div className="text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-md px-3 py-2 dark:text-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10">
             {t("pages.products.form.emptyToppingsCatalog")}
@@ -2027,48 +2126,54 @@ export default function ProductForm({
             })}
           </div>
         )}
-      </div>
+      </FormSectionCard>
     );
   };
 
+  const addVariantButton = !isReadOnly ? (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() =>
+        appendVariant({
+          variantId: undefined,
+          name: "",
+          sku: "",
+          price: form.getValues("defaultPrice") ?? 0,
+          costPrice: form.getValues("costPrice") ?? 0,
+          images: [],
+          attributes: [],
+        })
+      }
+      className="h-8 gap-1 text-xs"
+    >
+      <Plus className="w-3.5 h-3.5" />
+      {t("pages.products.form.addVariant")}
+    </Button>
+  ) : null;
+
   const VariantsSection = () => (
-    <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="min-w-0 text-sm font-semibold">
-          {t("pages.products.form.variantsSection")}{" "}
-          <span className="text-xs font-normal text-muted-foreground">
-            ({variantFields.length})
-          </span>
+    <FormSectionCard
+      title={t("pages.products.form.variantsSection")}
+      description={
+        !isReadOnly && variantFields.length === 0
+          ? t("pages.products.form.noVariantsHint")
+          : undefined
+      }
+      action={
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {variantFields.length}
         </span>
-        {!isReadOnly && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              appendVariant({
-                variantId: undefined,
-                name: "",
-                sku: "",
-                price: form.getValues("defaultPrice") ?? 0,
-                costPrice: form.getValues("costPrice") ?? 0,
-                images: [],
-                attributes: [],
-              })
-            }
-            className="flex h-9 w-full shrink-0 items-center justify-center gap-1 text-xs sm:h-8 sm:w-auto"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {t("pages.products.form.addVariant")}
-          </Button>
-        )}
-      </div>
+      }
+    >
+      {!isReadOnly ? (
+        <div className="flex justify-end">{addVariantButton}</div>
+      ) : null}
 
       {variantFields.length === 0 ? (
         <div className="flex h-16 items-center justify-center rounded-md border border-dashed px-3 text-center text-sm text-muted-foreground">
-          {isReadOnly
-            ? t("pages.products.form.noVariants")
-            : t("pages.products.form.noVariantsHint")}
+          {isReadOnly ? t("pages.products.form.noVariants") : null}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -2099,58 +2204,59 @@ export default function ProductForm({
           ))}
         </div>
       )}
-    </div>
+    </FormSectionCard>
   );
 
-  const ImageUploadSection = () => (
-    <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <span className="min-w-0 text-sm font-medium leading-snug">
-          {t("pages.products.form.imagesSection")}{" "}
-          <span className="block text-xs font-normal text-muted-foreground sm:inline">
-            {t("pages.products.form.maxImagesHintShort", { max: MAX_IMAGES })}
-          </span>
-        </span>
-        {!isReadOnly && keptImages.length + files.length < MAX_IMAGES && (
-          <label className="cursor-pointer shrink-0 self-start sm:self-auto">
-            <input
-              key={fileInputKey}
-              type="file"
-              multiple
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              className="hidden"
-              onChange={handleImageChange}
+  const ImageUploadSection = () => {
+    const canAddMore =
+      !isReadOnly && keptImages.length + files.length < MAX_IMAGES;
+    const imageHint = t("pages.products.form.maxImagesHintShort", {
+      max: MAX_IMAGES,
+    });
+
+    return (
+      <FormSectionCard
+        title={t("pages.products.form.imagesSection")}
+        description={imageHint}
+      >
+        {galleryImages.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            <ProductImageGallery
+              images={galleryImages}
+              activeIndex={galleryIndex}
+              onActiveIndexChange={setGalleryIndex}
+              alt={watch("name") || "product"}
+              mainClassName="aspect-[4/3] max-h-52 w-full lg:max-h-64"
+              onRemoveAt={!isReadOnly ? handleGalleryRemove : undefined}
             />
-            <span className="inline-flex items-center gap-1 text-xs text-primary border border-primary rounded px-2 py-1 hover:bg-primary/10 transition-colors">
-              <ImagePlus className="w-3.5 h-3.5" />
-              {t("pages.products.form.addImage")}
-            </span>
-          </label>
+            {canAddMore && (
+              <ImageFileUploadTrigger
+                variant="button"
+                fileInputKey={fileInputKey}
+                onChange={handleImageChange}
+              />
+            )}
+          </div>
+        ) : canAddMore ? (
+          <ImageFileUploadTrigger
+            fileInputKey={fileInputKey}
+            onChange={handleImageChange}
+            hint={imageHint}
+          />
+        ) : (
+          <div className="flex h-36 items-center justify-center rounded-md border border-dashed bg-muted/20 text-sm text-muted-foreground lg:h-44">
+            {t("pages.products.form.noProductImages")}
+          </div>
         )}
-      </div>
 
-      {galleryImages.length > 0 ? (
-        <ProductImageGallery
-          images={galleryImages}
-          activeIndex={galleryIndex}
-          onActiveIndexChange={setGalleryIndex}
-          alt={watch("name") || "product"}
-          mainClassName="aspect-[4/3] max-h-72 w-full sm:max-h-80"
-          onRemoveAt={!isReadOnly ? handleGalleryRemove : undefined}
-        />
-      ) : (
-        <div className="flex h-40 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-          {t("pages.products.form.noProductImages")}
-        </div>
-      )}
-
-      {!isReadOnly && files.length > 0 && (
-        <p className="text-xs text-blue-600">
-          {t("pages.products.form.newImagesPending", { count: files.length })}
-        </p>
-      )}
-    </div>
-  );
+        {!isReadOnly && files.length > 0 && (
+          <p className="text-xs text-blue-600">
+            {t("pages.products.form.newImagesPending", { count: files.length })}
+          </p>
+        )}
+      </FormSectionCard>
+    );
+  };
 
   // ── Action buttons ─────────────────────────────────────────────────────────
   const ActionButtons = () => (
@@ -2221,15 +2327,20 @@ export default function ProductForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleSubmit)}
-        className="flex min-h-full w-full flex-col gap-6"
+        className="flex min-h-full w-full flex-col gap-4 pb-2"
       >
-        {ProductInfoSection()}
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_272px]">
+          <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
+            {ProductInfoSection()}
+          </div>
+          <div className="order-1 lg:sticky lg:top-2 lg:order-2 lg:self-start">
+            {ImageUploadSection()}
+          </div>
+        </div>
 
         {VariantsSection()}
 
         {ToppingsSection()}
-
-        {ImageUploadSection()}
 
         {PriceHistorySection()}
 

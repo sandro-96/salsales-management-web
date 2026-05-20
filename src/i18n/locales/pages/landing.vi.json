@@ -1,0 +1,330 @@
+{
+  "metaTitle": "Trang chủ",
+  "nav": {
+    "features": "Tính năng",
+    "channels": "Kênh bán",
+    "industries": "Ngành hàng",
+    "howItWorks": "Cách hoạt động",
+    "pricing": "Gói giá",
+    "faq": "FAQ",
+    "login": "Đăng nhập",
+    "register": "Đăng ký miễn phí",
+    "skipToContent": "Chuyển tới nội dung chính",
+    "openMenu": "Mở menu",
+    "closeMenu": "Đóng menu",
+    "menuTitle": "Điều hướng",
+    "menuSubtitle": "Khám phá nền tảng & tạo tài khoản"
+  },
+  "hero": {
+    "eyebrow": "Nền tảng quản lý bán hàng cho shop Việt",
+    "badge": "Mới · POS + Storefront + QR bàn trong 1 tài khoản",
+    "title": "Ghi chép thu chi rõ ràng, bán hàng mượt mà — từ quầy đến online",
+    "subtitle": "{{brand}} giúp bạn bán tại quầy POS, mở storefront COD cho khách online, và cho phép khách F&B tự gọi món qua QR tại bàn — tất cả đồng bộ về một hệ thống đơn hàng, tồn kho và báo cáo.",
+    "ctaPrimary": "Bắt đầu miễn phí",
+    "ctaSecondary": "Xem demo",
+    "ctaLogin": "Đăng nhập",
+    "noCard": "Không cần thẻ tín dụng",
+    "highlights": {
+      "pos": "POS tại quầy",
+      "storefront": "Storefront online",
+      "qr": "QR gọi món tại bàn",
+      "reports": "Báo cáo doanh thu"
+    },
+    "mockup": {
+      "title": "Bảng điều khiển",
+      "subtitle": "Hôm nay · Tất cả chi nhánh",
+      "badge": "Realtime",
+      "revenue": "Doanh thu hôm nay",
+      "revenueValue": "12.480.000 ₫",
+      "revenueDelta": "+18% so với hôm qua",
+      "orders": "Đơn hàng",
+      "ordersValue": "147",
+      "ordersDelta": "+24 đơn",
+      "newOrder": "Đơn mới · Bàn 5",
+      "newOrderItems": "3 món · 215.000 ₫",
+      "channelsTitle": "Doanh thu theo kênh",
+      "channelPos": "POS",
+      "channelOnline": "Online",
+      "channelQr": "QR bàn",
+      "topProductsTitle": "Top sản phẩm",
+      "topProducts": {
+        "1": "Cà phê sữa đá",
+        "2": "Trà đào cam sả",
+        "3": "Bánh mì pate"
+      }
+    }
+  },
+  "stats": {
+    "channels": "3 kênh bán",
+    "channelsDesc": "POS · Storefront · QR bàn",
+    "modules": "10+ module",
+    "modulesDesc": "Sản phẩm, kho, CRM, KM…",
+    "industries": "5+ ngành",
+    "industriesDesc": "F&B, bán lẻ, dược…",
+    "realtime": "Realtime",
+    "realtimeDesc": "Thông báo đơn mới"
+  },
+  "socialProof": {
+    "title": "Tin dùng bởi các loại hình kinh doanh",
+    "items": {
+      "cafe": "Quán cà phê",
+      "restaurant": "Nhà hàng",
+      "bubbleTea": "Trà sữa",
+      "grocery": "Tạp hoá",
+      "pharmacy": "Nhà thuốc",
+      "boutique": "Thời trang"
+    }
+  },
+  "channels": {
+    "title": "Ba kênh bán — một hệ thống",
+    "subtitle": "Khách đặt từ quầy, website shop hoặc QR tại bàn đều về chung danh sách đơn, tồn kho và báo cáo.",
+    "pos": {
+      "title": "POS bán hàng",
+      "desc": "Quầy thu ngân nhanh: giỏ hàng, khuyến mãi, biến thể/topping, bàn (F&B), thanh toán tiền mặt/thẻ/chuyển khoản, in bill.",
+      "points": [
+        "Hỗ trợ F&B: chọn bàn, gọi món, thanh toán tại quầy",
+        "Áp khuyến mãi và chính sách thuế theo chi nhánh",
+        "Giữ đơn, chỉnh sửa đơn, in lại hóa đơn"
+      ]
+    },
+    "storefront": {
+      "title": "Storefront online",
+      "desc": "Trang bán hàng công khai theo slug shop — khách không cần đăng nhập, xem sản phẩm và đặt COD.",
+      "points": [
+        "URL riêng: /s/{slug-cua-hang}",
+        "Đơn vào hệ thống với nhãn Online",
+        "Thông báo realtime khi có đơn mới"
+      ]
+    },
+    "table": {
+      "title": "Order QR tại bàn",
+      "desc": "Khách quét QR trên bàn để xem menu và tự đặt món — phù hợp quán ăn, café (F&B).",
+      "points": [
+        "Gắn QR theo từng bàn",
+        "Đơn hiển thị nguồn QR bàn / tại chỗ",
+        "Staff xác nhận và thu tiền tại quầy như POS"
+      ]
+    }
+  },
+  "features": {
+    "title": "Dịch vụ trong hệ thống",
+    "subtitle": "Đầy đủ công cụ vận hành cửa hàng — không cần ghép nhiều phần mềm rời.",
+    "pos": {
+      "title": "POS bán hàng",
+      "desc": "Quầy POS, storefront online, order QR tại bàn"
+    },
+    "orders": {
+      "title": "Quản lý đơn hàng",
+      "desc": "Lọc theo trạng thái, nguồn, chi nhánh; xem dạng bảng/thẻ; thanh toán & in lại bill"
+    },
+    "products": {
+      "title": "Sản phẩm",
+      "desc": "Danh mục, giá, biến thể, topping, barcode, hình ảnh, nhập Excel"
+    },
+    "inventory": {
+      "title": "Tồn kho",
+      "desc": "Nhập xuất, điều chỉnh, cảnh báo tồn thấp, đồng bộ khi bán/hủy đơn"
+    },
+    "customers": {
+      "title": "Khách hàng",
+      "desc": "CRM cơ bản, lịch sử mua, phân khúc, xuất danh sách"
+    },
+    "reports": {
+      "title": "Báo cáo doanh thu",
+      "desc": "Doanh thu theo ngày, top sản phẩm, lọc chi nhánh & trạng thái, xuất Excel"
+    },
+    "branches": {
+      "title": "Đa chi nhánh",
+      "desc": "Nhiều điểm bán, cấu hình riêng từng chi nhánh, phân quyền nhân viên"
+    },
+    "promotions": {
+      "title": "Khuyến mãi",
+      "desc": "Giảm giá theo sản phẩm/danh mục, áp dụng POS và đơn online"
+    },
+    "tables": {
+      "title": "Quản lý bàn",
+      "desc": "Sơ đồ bàn, trạng thái, QR order — dành cho F&B"
+    },
+    "staff": {
+      "title": "Nhân viên & phân quyền",
+      "desc": "Mời staff, gán quyền theo module (đơn, kho, POS, báo cáo…)"
+    },
+    "tax": {
+      "title": "Chính sách thuế",
+      "desc": "Giá đã/chưa gồm thuế, snapshot thuế trên từng đơn, theo chi nhánh"
+    },
+    "billing": {
+      "title": "Gói dịch vụ",
+      "desc": "Quản lý gói shop, gia hạn, thông báo sắp hết hạn"
+    }
+  },
+  "industries": {
+    "title": "Phù hợp nhiều ngành",
+    "subtitle": "Cấu hình linh hoạt theo loại hình kinh doanh — menu và dashboard thay đổi theo ngành.",
+    "fnb": {
+      "label": "F&B",
+      "desc": "Bàn, QR gọi món, topping, bếp/bar"
+    },
+    "retail": {
+      "label": "Bán lẻ",
+      "desc": "Barcode, biến thể size/màu, storefront"
+    },
+    "healthcare": {
+      "label": "Dược & y tế",
+      "desc": "SKU, tồn kho, báo cáo bán"
+    },
+    "service": {
+      "label": "Dịch vụ",
+      "desc": "Sản phẩm/dịch vụ, CRM khách quen"
+    },
+    "education": {
+      "label": "Giáo dục",
+      "desc": "Bán tài liệu, thu phí, báo cáo"
+    }
+  },
+  "workflow": {
+    "title": "Cách hoạt động",
+    "subtitle": "Từ đăng ký đến bán hàng trong vài bước.",
+    "steps": {
+      "1": {
+        "title": "Tạo tài khoản & shop",
+        "desc": "Đăng ký miễn phí, tạo cửa hàng, chọn ngành hàng và chi nhánh đầu tiên."
+      },
+      "2": {
+        "title": "Thêm sản phẩm & kho",
+        "desc": "Nhập danh mục, giá, tồn kho; bật storefront hoặc QR bàn nếu cần."
+      },
+      "3": {
+        "title": "Bán & nhận đơn",
+        "desc": "Mở POS, nhận đơn online/tại bàn qua thông báo realtime."
+      },
+      "4": {
+        "title": "Theo dõi & báo cáo",
+        "desc": "Xử lý trạng thái đơn, xác nhận thanh toán, xem báo cáo doanh thu."
+      }
+    }
+  },
+  "fnb": {
+    "title": "Dành riêng cho F&B",
+    "subtitle": "Quy trình quán ăn — café — trà sữa trọn vẹn trên một nền tảng.",
+    "items": {
+      "tables": "Sơ đồ bàn & trạng thái phục vụ",
+      "qr": "Khách quét QR tự order, giảm sai sót gọi món",
+      "pos": "Staff thu tiền, in bill, đổi trạng thái đơn tại quầy",
+      "kitchen": "Đơn tách nguồn: quầy / online / QR bàn trong một màn hình"
+    }
+  },
+  "reports": {
+    "title": "Báo cáo & ra quyết định",
+    "subtitle": "Số liệu tập trung — không cần export thủ công từ sổ tay.",
+    "items": {
+      "daily": "Doanh thu theo ngày, biểu đồ trực quan",
+      "top": "Top sản phẩm bán chạy trong kỳ",
+      "filter": "Lọc chi nhánh, trạng thái đơn, khoảng thời gian",
+      "export": "Xuất Excel báo cáo chi tiết"
+    }
+  },
+  "multiBranch": {
+    "title": "Nhiều chi nhánh — một tài khoản",
+    "desc": "Quản lý nhiều điểm bán, chuyển ngữ cảnh chi nhánh nhanh, cấu hình thuế và nhân viên riêng từng nơi. Báo cáo gộp hoặc tách theo chi nhánh."
+  },
+  "testimonials": {
+    "title": "Khách hàng nói gì",
+    "subtitle": "Những chủ shop đang dùng {{brand}} mỗi ngày để vận hành cửa hàng.",
+    "items": {
+      "1": {
+        "quote": "Trước mình ghi sổ tay, cuối tháng đối soát rất mệt. Giờ POS và báo cáo gộp trên một màn hình, tiết kiệm 2-3 giờ mỗi ngày.",
+        "name": "Chị Mai",
+        "role": "Chủ quán cà phê · Đà Nẵng"
+      },
+      "2": {
+        "quote": "Khách quét QR tự gọi món, bếp lên đơn nhanh hơn hẳn. Nhân viên ít sai sót, doanh thu cuối tuần tăng rõ.",
+        "name": "Anh Hùng",
+        "role": "Chủ quán ăn · TP. Hồ Chí Minh"
+      },
+      "3": {
+        "quote": "Mở storefront xong là khách đặt COD ngay trong tuần đầu. Tồn kho và đơn online cùng một nơi nên không sót đơn nào.",
+        "name": "Chị Linh",
+        "role": "Shop thời trang · Hà Nội"
+      }
+    }
+  },
+  "pricing": {
+    "eyebrow": "Một gói — đầy đủ tính năng",
+    "title": "Dùng thử 1 tháng, kích hoạt chỉ 99.000 ₫/tháng",
+    "subtitle": "Trải nghiệm trọn bộ POS, storefront, QR bàn và báo cáo. Không yêu cầu thẻ tín dụng khi đăng ký.",
+    "trial": {
+      "label": "Dùng thử miễn phí",
+      "value": "30 ngày",
+      "desc": "Mở khoá toàn bộ tính năng. Không thu phí trong giai đoạn dùng thử."
+    },
+    "paid": {
+      "label": "Sau dùng thử",
+      "value": "99.000 ₫",
+      "period": "/ tháng",
+      "desc": "Phí duy trì hàng tháng. Huỷ bất cứ lúc nào, không ràng buộc hợp đồng."
+    },
+    "includesTitle": "Bao gồm trong gói",
+    "features": [
+      "POS bán hàng tại quầy, in bill nhanh",
+      "Storefront online (URL theo shop) + đặt COD",
+      "Order QR tại bàn cho F&B",
+      "Sản phẩm, biến thể, topping, barcode, nhập Excel",
+      "Tồn kho, nhập xuất, cảnh báo tồn thấp",
+      "Khuyến mãi, chính sách thuế theo chi nhánh",
+      "Đa chi nhánh, phân quyền nhân viên theo module",
+      "Báo cáo doanh thu, top sản phẩm, xuất Excel",
+      "Thông báo realtime khi có đơn mới",
+      "Hỗ trợ qua chat / email"
+    ],
+    "cta": "Bắt đầu 30 ngày dùng thử",
+    "ctaSecondary": "Đã có tài khoản? Đăng nhập",
+    "guarantees": {
+      "noCard": "Không cần thẻ tín dụng",
+      "cancel": "Huỷ bất cứ lúc nào",
+      "support": "Hỗ trợ tiếng Việt"
+    }
+  },
+  "faq": {
+    "title": "Câu hỏi thường gặp",
+    "items": {
+      "free": {
+        "q": "Dùng thử bao lâu, có mất phí không?",
+        "a": "Bạn được dùng thử miễn phí 30 ngày với đầy đủ tính năng — không cần thẻ tín dụng khi đăng ký. Sau 30 ngày, phí kích hoạt là 99.000 ₫/tháng để tiếp tục sử dụng."
+      },
+      "storefront": {
+        "q": "Storefront hoạt động thế nào?",
+        "a": "Khi bật trong cài đặt shop, hệ thống cấp trang công khai theo slug. Khách truy cập, thêm vào giỏ và đặt COD — đơn hiện trong Quản lý đơn hàng với nhãn Online."
+      },
+      "qr": {
+        "q": "QR tại bàn có cần app không?",
+        "a": "Khách chỉ cần camera điện thoại quét QR trên bàn, mở trang web order — không cài app. Tính năng dành cho shop ngành F&B đã bật quản lý bàn."
+      },
+      "posOffline": {
+        "q": "POS có dùng khi mất mạng không?",
+        "a": "Giỏ hàng được giữ trên thiết bị; khi mất kết nối hệ thống sẽ thông báo và bạn thử lại khi có mạng. Khuyến nghị kết nối ổn định khi cao điểm."
+      },
+      "industries": {
+        "q": "Shop bán lẻ có dùng QR bàn không?",
+        "a": "QR tại bàn là tính năng F&B. Shop bán lẻ vẫn dùng POS và storefront online đầy đủ."
+      },
+      "upgrade": {
+        "q": "Huỷ gói có dễ không, hết hạn thì sao?",
+        "a": "Bạn có thể huỷ gia hạn bất cứ lúc nào trong mục Gói dịch vụ — không ràng buộc hợp đồng. Khi gói hết hạn, dữ liệu vẫn được giữ; bạn chỉ cần kích hoạt lại để tiếp tục bán hàng."
+      }
+    }
+  },
+  "cta": {
+    "title": "Sẵn sàng gom bán hàng về một chỗ?",
+    "subtitle": "Tạo shop trong vài phút — POS, storefront và báo cáo đã sẵn sàng.",
+    "primary": "Đăng ký miễn phí",
+    "secondary": "Đã có tài khoản? Đăng nhập"
+  },
+  "footer": {
+    "tagline": "{{brand}} — phần mềm quản lý bán hàng & thu chi cho cửa hàng Việt.",
+    "product": "Sản phẩm",
+    "account": "Tài khoản",
+    "copyright": "© {{year}} {{brand}}. All rights reserved."
+  },
+  "backToTop": "Lên đầu trang"
+}

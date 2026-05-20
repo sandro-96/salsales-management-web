@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Shield } from "lucide-react";
 
 import {
   Dialog,
@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -25,6 +24,12 @@ import {
 import { addStaff } from "../../api/staffApi.js";
 import { SHOP_ROLE } from "../../constants/shopRoles.js";
 import { buildShopRolesAssignable } from "@/utils/shopLabels";
+import {
+  FormSectionCard,
+  FieldLabel,
+} from "@/components/forms/FormSectionCard.jsx";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
   const { t } = useTranslation();
@@ -34,9 +39,10 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
   const [role, setRole] = useState(defaultRole);
   const [submitting, setSubmitting] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
   const emailTrimmed = email.trim();
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const emailInvalid = attemptedSubmit && (!emailTrimmed || !emailRegex.test(emailTrimmed));
+  const emailInvalid =
+    attemptedSubmit && (!emailTrimmed || !EMAIL_RE.test(emailTrimmed));
   const roleInvalid = attemptedSubmit && !role;
 
   useEffect(() => {
@@ -52,7 +58,7 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
       toast.error(t("pages.staffs.addModal.emailRequired"));
       return false;
     }
-    if (!emailRegex.test(emailTrimmed)) {
+    if (!EMAIL_RE.test(emailTrimmed)) {
       toast.error(t("pages.staffs.addModal.emailInvalid"));
       return false;
     }
@@ -82,11 +88,7 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
       }
     } catch (err) {
       const msg = err.response?.data?.message;
-      if (msg) {
-        toast.error(msg);
-      } else {
-        toast.error(t("pages.staffs.addModal.genericError"));
-      }
+      toast.error(msg || t("pages.staffs.addModal.genericError"));
     } finally {
       setSubmitting(false);
     }
@@ -95,63 +97,90 @@ export default function AddStaffModal({ open, onClose, shopId, onSuccess }) {
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[440px] sm:p-6"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(92dvh,680px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[520px]"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0 space-y-1.5 text-left">
+        <DialogHeader className="shrink-0 space-y-1.5 border-b border-border px-4 py-4 text-left sm:px-6">
           <DialogTitle>{t("pages.staffs.addModal.title")}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-muted-foreground">
             {t("pages.staffs.addModal.description")}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
-          <div className="space-y-2">
-            <Label
-              htmlFor="staff-email"
-              className={emailInvalid ? "text-destructive" : undefined}
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:px-6 [scrollbar-gutter:stable]">
+          <div className="flex flex-col gap-4">
+            <FormSectionCard
+              title={t("pages.staffs.addModal.sectionInvite")}
+              description={t("pages.staffs.addModal.sectionInviteDesc")}
             >
-              {t("pages.staffs.addModal.emailLabel")}
-            </Label>
-            <Input
-              id="staff-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t("pages.staffs.addModal.emailPlaceholder")}
-              autoFocus
-              aria-invalid={emailInvalid}
-            />
-            <p className="text-xs text-muted-foreground">
-              {t("pages.staffs.addModal.emailHint")}
-            </p>
-          </div>
+              <div className="space-y-2">
+                <FieldLabel
+                  icon={Mail}
+                  htmlFor="staff-email"
+                  required
+                  invalid={emailInvalid}
+                >
+                  {t("pages.staffs.addModal.emailLabel")}
+                </FieldLabel>
+                <Input
+                  id="staff-email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("pages.staffs.addModal.emailPlaceholder")}
+                  autoFocus
+                  aria-invalid={emailInvalid}
+                />
+                {emailInvalid && !emailTrimmed && (
+                  <p className="text-xs text-destructive">
+                    {t("pages.staffs.addModal.emailRequired")}
+                  </p>
+                )}
+                {emailInvalid && emailTrimmed && (
+                  <p className="text-xs text-destructive">
+                    {t("pages.staffs.addModal.emailInvalid")}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {t("pages.staffs.addModal.emailHint")}
+                </p>
+              </div>
+            </FormSectionCard>
 
-          <div className="space-y-2">
-            <Label className={roleInvalid ? "text-destructive" : undefined}>
-              {t("pages.staffs.addModal.roleLabel")}
-            </Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger aria-invalid={roleInvalid}>
-                <SelectValue placeholder={t("pages.staffs.addModal.rolePlaceholder")} />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                {assignableRoles.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FormSectionCard
+              title={t("pages.staffs.addModal.sectionRole")}
+              description={t("pages.staffs.addModal.sectionRoleDesc")}
+            >
+              <div className="space-y-2">
+                <FieldLabel icon={Shield} invalid={roleInvalid}>
+                  {t("pages.staffs.addModal.roleLabel")}
+                </FieldLabel>
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger aria-invalid={roleInvalid}>
+                    <SelectValue
+                      placeholder={t("pages.staffs.addModal.rolePlaceholder")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    {assignableRoles.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </FormSectionCard>
           </div>
         </div>
 
-        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background px-4 py-4 sm:gap-0 sm:px-6">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {t("pages.staffs.addModal.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting} variant="success">
-            {submitting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+            {submitting && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
             {t("pages.staffs.addModal.submit")}
           </Button>
         </DialogFooter>

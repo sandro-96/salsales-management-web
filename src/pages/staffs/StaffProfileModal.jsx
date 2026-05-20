@@ -3,7 +3,19 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { enUS, vi } from "date-fns/locale";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import {
+  CalendarIcon,
+  Loader2,
+  User,
+  Phone,
+  Mail,
+  Building2,
+  Briefcase,
+  FileText,
+  Landmark,
+  Heart,
+  StickyNote,
+} from "lucide-react";
 
 import {
   Dialog,
@@ -27,6 +39,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import {
+  FormSectionCard,
+  FieldLabel,
+} from "@/components/forms/FormSectionCard.jsx";
 
 import {
   getStaffProfile,
@@ -230,10 +246,10 @@ export default function StaffProfileModal({
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose?.()}>
       <DialogContent
-        className="!flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,680px)] flex-col gap-4 overflow-hidden p-4 sm:max-w-[640px] sm:p-6"
+        className="!flex w-[calc(100%-1.5rem)] max-h-[min(92dvh,860px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[680px]"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0 space-y-1.5 text-left">
+        <DialogHeader className="shrink-0 space-y-1.5 border-b border-border px-4 py-4 text-left sm:px-6">
           <DialogTitle>
             {isNewExternal
               ? t("pages.staffs.profileModal.titleNewExternal")
@@ -251,9 +267,14 @@ export default function StaffProfileModal({
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 [scrollbar-gutter:stable]">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:px-6 [scrollbar-gutter:stable]">
+            <div className="flex flex-col gap-4">
             {!isNewExternal && staff && (
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+              <FormSectionCard
+                title={t("pages.staffs.profileModal.sectionAccount")}
+                description={t("pages.staffs.profileModal.sectionAccountDesc")}
+              >
+              <div className="flex items-center gap-3">
                 {staff.avatarUrl ? (
                   <img
                     src={staff.avatarUrl}
@@ -285,13 +306,14 @@ export default function StaffProfileModal({
                   </Badge>
                 )}
               </div>
+              </FormSectionCard>
             )}
 
             {isExternal && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  {t("pages.staffs.profileModal.sectionPersonal")}
-                </h4>
+              <FormSectionCard
+                title={t("pages.staffs.profileModal.sectionPersonal")}
+                description={t("pages.staffs.profileModal.sectionPersonalDesc")}
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5 col-span-2">
                     <Label htmlFor="sp-fullname">
@@ -329,14 +351,14 @@ export default function StaffProfileModal({
                     />
                   </div>
                 </div>
-              </div>
+              </FormSectionCard>
             )}
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {t("pages.staffs.profileModal.sectionWork")}
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormSectionCard
+              title={t("pages.staffs.profileModal.sectionWork")}
+              description={t("pages.staffs.profileModal.sectionWorkDesc")}
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5 col-span-2">
                   <Label>{t("pages.staffs.profileModal.branchLabel")}</Label>
                   <Select value={branchId} onValueChange={setBranchId}>
@@ -431,13 +453,13 @@ export default function StaffProfileModal({
                   )}
                 </div>
               </div>
-            </div>
+            </FormSectionCard>
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {t("pages.staffs.profileModal.sectionContractSalary")}
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormSectionCard
+              title={t("pages.staffs.profileModal.sectionContractSalary")}
+              description={t("pages.staffs.profileModal.sectionContractSalaryDesc")}
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>{t("pages.staffs.profileModal.contractTypeLabel")}</Label>
                   <Select value={contractType} onValueChange={setContractType}>
@@ -468,12 +490,12 @@ export default function StaffProfileModal({
                   />
                 </div>
               </div>
-            </div>
+            </FormSectionCard>
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {t("pages.staffs.profileModal.sectionDocuments")}
-              </h4>
+            <FormSectionCard
+              title={t("pages.staffs.profileModal.sectionDocuments")}
+              description={t("pages.staffs.profileModal.sectionDocumentsDesc")}
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="sp-id">
                   {t("pages.staffs.profileModal.idNumberLabel")}
@@ -485,12 +507,12 @@ export default function StaffProfileModal({
                   placeholder={t("pages.staffs.profileModal.idNumberPlaceholder")}
                 />
               </div>
-            </div>
+            </FormSectionCard>
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {t("pages.staffs.profileModal.sectionBank")}
-              </h4>
+            <FormSectionCard
+              title={t("pages.staffs.profileModal.sectionBank")}
+              description={t("pages.staffs.profileModal.sectionBankDesc")}
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="sp-bank">
@@ -530,12 +552,12 @@ export default function StaffProfileModal({
                   )}
                 />
               </div>
-            </div>
+            </FormSectionCard>
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {t("pages.staffs.profileModal.sectionEmergency")}
-              </h4>
+            <FormSectionCard
+              title={t("pages.staffs.profileModal.sectionEmergency")}
+              description={t("pages.staffs.profileModal.sectionEmergencyDesc")}
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="sp-ec-name">
@@ -564,23 +586,24 @@ export default function StaffProfileModal({
                   />
                 </div>
               </div>
-            </div>
+            </FormSectionCard>
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {t("pages.staffs.profileModal.sectionNote")}
-              </h4>
+            <FormSectionCard
+              title={t("pages.staffs.profileModal.sectionNote")}
+              description={t("pages.staffs.profileModal.sectionNoteDesc")}
+            >
               <Textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={t("pages.staffs.profileModal.notePlaceholder")}
                 rows={3}
               />
+            </FormSectionCard>
             </div>
           </div>
         )}
 
-        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background pt-4 sm:gap-0">
+        <DialogFooter className="relative z-10 shrink-0 gap-2 border-t bg-background px-4 py-4 sm:gap-0 sm:px-6">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {t("pages.staffs.profileModal.cancel")}
           </Button>

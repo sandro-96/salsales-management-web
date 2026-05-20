@@ -57,6 +57,7 @@ import { CartPanel } from "./CartPanel";
 import { PosTaxBreakdown } from "./PosTaxBreakdown";
 import { PosStatusBanner } from "./PosStatusBanner";
 import { PosProductCard } from "./PosProductCard";
+import { PosSection } from "./PosSection";
 import { ALL_CATEGORY } from "./posConstants";
 import { getPosPaymentMethods, posNumberLocale } from "../../utils/posHelpers";
 import { formatDiscount } from "./posPromotionUtils";
@@ -290,11 +291,12 @@ export function PosPageShell(props) {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs transition-colors ${
+              className={cn(
+                "whitespace-nowrap rounded-full px-3 py-1.5 text-xs transition-colors",
                 selectedCategory === cat
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "bg-muted hover:bg-muted/80 text-foreground"
-              }`}
+                  ? "bg-primary font-medium text-primary-foreground shadow-sm"
+                  : "bg-muted text-foreground hover:bg-muted/80",
+              )}
             >
               {renderCategoryLabel(cat)}
             </button>
@@ -315,11 +317,12 @@ export function PosPageShell(props) {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                className={cn(
+                  "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
                   selectedCategory === cat
-                    ? "bg-primary text-primary-foreground font-medium"
-                    : "hover:bg-muted text-foreground"
-                }`}
+                    ? "bg-primary font-medium text-primary-foreground"
+                    : "text-foreground hover:bg-muted",
+                )}
               >
                 {renderCategoryLabel(cat)}
               </button>
@@ -356,8 +359,9 @@ export function PosPageShell(props) {
 
       {/* Center: Product grid */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        <div className="sticky top-0 z-10 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <div className="relative flex-1 max-w-sm min-w-0">
+        <div className="sticky top-0 z-10 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-3">
+          <div className="relative min-w-0 flex-1 sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={searchInputRef}
@@ -368,8 +372,11 @@ export function PosPageShell(props) {
               className="pl-9 h-9"
             />
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div
+              className="flex items-center gap-1.5 rounded-lg border bg-muted/30 p-1"
+              title={t("pages.pos.cart.orderLookupGroupTitle")}
+            >
               <Input
                 placeholder={t("pages.pos.cart.orderCodePlaceholder")}
                 value={orderLookupInput}
@@ -380,13 +387,13 @@ export function PosPageShell(props) {
                     openOrderByCode(orderLookupInput);
                   }
                 }}
-                className="h-9 w-[9.5rem] text-xs"
+                className="h-8 w-[9.5rem] border-0 bg-transparent text-xs shadow-none focus-visible:ring-0"
               />
               <Button
                 type="button"
                 size="sm"
                 variant="secondary"
-                className="h-9 px-2.5 text-xs whitespace-nowrap"
+                className="h-8 shrink-0 px-2.5 text-xs whitespace-nowrap"
                 disabled={orderLookupSubmitting}
                 onClick={() => openOrderByCode(orderLookupInput)}
               >
@@ -420,6 +427,7 @@ export function PosPageShell(props) {
               })}
             </Badge>
           )}
+          </div>
         </div>
 
         {(selectedTableName || displayOrderCode || selectedCustomer) && (
@@ -514,7 +522,7 @@ export function PosPageShell(props) {
       {/* Desktop: Cart panel */}
       <aside
         className={cn(
-          "hidden lg:flex shrink-0 border-l bg-card flex-col transition-[width] duration-200 ease-out",
+          "hidden lg:flex min-h-0 shrink-0 border-l bg-card flex-col transition-[width] duration-200 ease-out",
           cartAsideWide
             ? "w-[min(32rem,44vw)] xl:w-[36rem]"
             : "w-80 xl:w-96",
@@ -574,8 +582,8 @@ export function PosPageShell(props) {
 
       {/* Hold/Save success dialog */}
       <Dialog open={holdSuccessOpen} onOpenChange={setHoldSuccessOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
+          <DialogHeader className="border-b px-4 py-4 sm:px-6">
             <DialogTitle className="flex items-center gap-2">
               <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                 <CheckCircle2 className="h-5 w-5" />
@@ -586,7 +594,7 @@ export function PosPageShell(props) {
               {holdSuccessMessage || t("pages.pos.cart.holdSuccessDefault")}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter className="gap-2 border-t px-4 py-4 sm:gap-2 sm:px-6">
             <Button
               type="button"
               variant="outline"
@@ -677,16 +685,20 @@ export function PosPageShell(props) {
 
       {/* Checkout dialog */}
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="!flex max-h-[min(92dvh,720px)] w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="shrink-0 space-y-1 border-b border-border px-4 py-4 text-left sm:px-6">
             <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
+              <Receipt className="h-5 w-5 shrink-0" />
               {t("pages.pos.cart.checkoutConfirmTitle")}
             </DialogTitle>
+            <DialogDescription>
+              {t("pages.pos.cart.checkoutConfirmDesc")}
+            </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
+          <ScrollArea className="min-h-0 flex-1 px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-4">
+            <PosSection title={t("pages.pos.cart.checkoutSectionItems")} contentClassName="p-0">
+            <div className="divide-y max-h-48 overflow-y-auto">
               {cart.map((item) => (
                 <div
                   key={item.lineKey}
@@ -721,7 +733,9 @@ export function PosPageShell(props) {
                 </div>
               ))}
             </div>
+            </PosSection>
 
+            <PosSection title={t("pages.pos.cart.checkoutSectionSummary")} contentClassName="space-y-2">
             {totalSavings > 0 && (
               <div className="flex justify-between items-center px-1 text-sm">
                 <span className="text-emerald-600 flex items-center gap-1">
@@ -845,8 +859,10 @@ export function PosPageShell(props) {
               </div>
             )}
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">
+            </PosSection>
+
+            <PosSection title={t("pages.pos.cart.checkoutSectionPayment")} description={t("pages.pos.cart.checkoutSectionPaymentDesc")} contentClassName="space-y-2">
+              <p className="sr-only">
                 {t("pages.pos.cart.checkoutPaymentMethods")}
               </p>
               {paymentMethod === "ShipCOD" && (
@@ -875,7 +891,6 @@ export function PosPageShell(props) {
                   );
                 })}
               </div>
-            </div>
 
             {paymentMethod === "Transfer" && (
               <div className="rounded-md border bg-muted/30 p-3 space-y-2">
@@ -921,8 +936,11 @@ export function PosPageShell(props) {
                 </div>
               </div>
             )}
+            </PosSection>
           </div>
+          </ScrollArea>
 
+          <div className="shrink-0 border-t px-4 py-3 sm:px-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <Button
               type="button"
@@ -937,7 +955,8 @@ export function PosPageShell(props) {
             </Button>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          </div>
+          <DialogFooter className="shrink-0 gap-2 border-t bg-background px-4 py-4 sm:gap-0 sm:px-6">
             <Button
               variant="outline"
               onClick={() => setCheckoutOpen(false)}

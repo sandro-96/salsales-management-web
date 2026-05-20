@@ -18,7 +18,7 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem("selectedShopId");
     localStorage.removeItem("selectedBranchId");
     setUser(null);
-    navigate("/login");
+    navigate("/landing");
   }, [navigate]);
 
   const fetchEnums = useCallback(async () => {
@@ -37,6 +37,8 @@ const AuthProvider = ({ children }) => {
       setIsUserContextReady(true);
       return;
     }
+
+    setIsUserContextReady(false);
 
     try {
       // decode token để check nhanh

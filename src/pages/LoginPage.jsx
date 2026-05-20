@@ -35,7 +35,7 @@ const LoginPage = () => {
         password: formValue.password,
       });
       if (res.data.success) {
-        handleAfterLogin(res.data.data);
+        await handleAfterLogin(res.data.data);
         toast.success(t("auth.login.success"));
       } else {
         toast.error(res.data.message || t("auth.login.failure"));
@@ -56,7 +56,7 @@ const LoginPage = () => {
       });
       if (res.data.success) {
         toast.success(t("auth.login.googleSuccess"));
-        handleAfterLogin(res.data.data);
+        await handleAfterLogin(res.data.data);
       } else {
         toast.error(res.data.message || t("auth.login.googleFailure"));
       }
@@ -69,14 +69,18 @@ const LoginPage = () => {
     }
   };
 
-  const handleAfterLogin = (data) => {
+  const handleAfterLogin = async (data) => {
     const accessToken = data.accessToken;
     const decoded = jwtDecode(accessToken);
     const role = decoded.role;
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", data.refreshToken);
 
-    loadUser();
+    await loadUser();
+
+    if (!localStorage.getItem("accessToken")) {
+      return;
+    }
 
     if (role.includes("ROLE_ADMIN")) {
       navigate("/admin", { replace: true });

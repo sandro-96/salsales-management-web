@@ -1,10 +1,11 @@
 // src/routes/ProtectedRoute.jsx
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
 import Loading from "../components/loading/Loading.jsx";
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, guestRedirect = "/login" }) => {
     const { user, isUserContextReady } = useAuth();
+    const { pathname } = useLocation();
 
     // Chờ context load xong
     if (!isUserContextReady) {
@@ -13,7 +14,11 @@ const ProtectedRoute = ({ children }) => {
 
     // Chưa đăng nhập
     if (!user) {
-        return <Navigate to="/login" replace />;
+        const redirectTo =
+            guestRedirect === "/landing" && pathname !== "/"
+                ? "/login"
+                : guestRedirect;
+        return <Navigate to={redirectTo} replace />;
     }
 
     return children;

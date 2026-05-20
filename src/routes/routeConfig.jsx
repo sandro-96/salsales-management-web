@@ -116,8 +116,15 @@ const StorefrontOrderSuccessPage = lazy(
 const TableOrderingPage = lazy(
   () => import("../pages/table/TableOrderingPage.jsx"),
 );
+const LandingPage = lazy(() => import("../pages/landing/LandingPage.jsx"));
 
 export const routeConfig = [
+  {
+    path: "/landing",
+    element: <LandingPage />,
+    titleKey: "routes.landing",
+    breadcrumbKey: "routes.landing",
+  },
   {
     path: "/login",
     element: <LoginPage />,
@@ -295,6 +302,7 @@ export const routeConfig = [
   {
     path: "/",
     protected: true,
+    guestRedirect: "/landing",
     roles: ["ROLE_USER"],
     element: <DynamicDashboardLayout />,
     children: [

@@ -1,14 +1,16 @@
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
-  BookOpen,
   Building2,
   ClipboardList,
   Package,
   Percent,
+  Receipt,
   ShoppingCart,
   Users,
   Warehouse,
+  ChevronRight,
 } from "lucide-react";
 import LanguageSwitcher from "@/components/common/LanguageSwitcher.jsx";
 import { FaSpinner } from "react-icons/fa";
@@ -77,7 +79,7 @@ function AuthHeroPanel({ appName, tagline }) {
 
           <div className="mt-8 flex gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-lg backdrop-blur-sm">
-              <BookOpen className="h-6 w-6 text-amber-200" strokeWidth={1.75} />
+              <Receipt className="h-6 w-6 text-amber-200" strokeWidth={2} />
             </div>
             <div className="min-w-0">
               <h1 className="coiny-regular text-4xl leading-tight text-white drop-shadow-sm lg:text-5xl">
@@ -99,24 +101,37 @@ function AuthHeroPanel({ appName, tagline }) {
               {t("auth.layout.servicesTitle")}
             </h2>
             <ul className="mt-3 grid grid-cols-2 gap-2.5">
-              {HERO_SERVICES.map(({ id, icon: Icon }) => (
-                <li
-                  key={id}
-                  className="rounded-xl border border-white/12 bg-white/8 p-3 backdrop-blur-sm transition-colors hover:bg-white/12"
-                >
-                  <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15">
-                    <Icon className="h-4 w-4" aria-hidden />
-                  </span>
-                  <p className="text-[13px] font-semibold leading-snug text-white">
-                    {t(`auth.layout.services.${id}.title`)}
-                  </p>
-                  <p className="mt-0.5 text-[11px] leading-snug text-blue-100/80">
-                    {t(`auth.layout.services.${id}.desc`)}
-                  </p>
-                </li>
-              ))}
+              {HERO_SERVICES.map((service) => {
+                const Icon = service.icon;
+                return (
+                  <li
+                    key={service.id}
+                    className="rounded-xl border border-white/12 bg-white/8 p-3 backdrop-blur-sm transition-colors hover:bg-white/12"
+                  >
+                    <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15">
+                      <Icon className="h-4 w-4" aria-hidden />
+                    </span>
+                    <p className="text-[13px] font-semibold leading-snug text-white">
+                      {t(`auth.layout.services.${service.id}.title`)}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-blue-100/80">
+                      {t(`auth.layout.services.${service.id}.desc`)}
+                    </p>
+                  </li>
+                );
+              })}
             </ul>
           </section>
+
+          <p className="mt-5 pb-2">
+            <Link
+              to="/landing"
+              className="inline-flex items-center gap-1 text-xs font-medium text-blue-100 underline-offset-4 hover:text-white hover:underline"
+            >
+              {t("auth.layout.landingLink")}
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </p>
 
           <section className="mt-6 pb-2" aria-labelledby="auth-hero-industries-title">
             <h2
@@ -169,6 +184,12 @@ export default function AuthPageLayout({
               {t("brand.heroEyebrow")}
             </p>
             <h1 className="coiny-regular mt-1 text-2xl text-white">{appName}</h1>
+            <Link
+              to="/landing"
+              className="mt-2 inline-block text-xs font-medium text-blue-100 underline-offset-2 hover:text-white hover:underline"
+            >
+              {t("auth.layout.landingLink")}
+            </Link>
           </div>
 
           <div

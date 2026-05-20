@@ -227,7 +227,7 @@ export default function ProductFormModal({
         className={cn(
           step === "scan"
             ? "flex max-h-[min(90dvh,720px)] flex-col gap-4 overflow-y-auto p-4 sm:max-w-[480px] sm:p-6"
-            : "flex h-[min(92dvh,900px)] max-h-[min(92dvh,900px)] w-[min(100%,calc(100vw-1rem))] max-w-[760px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[760px]",
+            : "flex h-[min(92dvh,900px)] max-h-[min(92dvh,900px)] w-[min(100%,calc(100vw-1rem))] max-w-[880px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[880px]",
         )}
         onInteractOutside={(e) => e.preventDefault()}
       >
