@@ -126,7 +126,34 @@ Backend chỉ cần `GOOGLE_CLIENT_ID` khớp với `VITE_APP_GOOGLE_CLIENT_ID`.
 
 ---
 
-## 6. Giới hạn staging (chấp nhận được)
+## 6. Xử lý lỗi thường gặp
+
+### `localhost:27017` / Mongo local
+
+- Railway thiếu `SPRING_PROFILES_ACTIVE=staging` hoặc `MONGODB_URI`.
+- Thêm biến → Redeploy.
+
+### `SSLException: Received fatal alert: internal_error` (Atlas)
+
+Làm lần lượt:
+
+1. **Atlas project `salesdb-test`** → cluster **Resume** (không để Paused).
+2. **Network Access** → `0.0.0.0/0` (Allow from anywhere) cho staging.
+3. **MONGODB_URI** — copy lại từ Atlas **Connect → Drivers → Java** (project **salesdb-test**, user đúng quyền DB).
+   - Dùng `mongodb+srv://...` (không `mongodb://` thủ công).
+   - Password có `@#%` → [URL-encode](https://www.urlencoder.org/) trước khi dán Railway.
+4. **Java 17 trên Railway** — log deploy ghi `java@21` thì thêm biến:
+   - `NIXPACKS_JDK_VERSION=17`
+   - Push file `.java-version` (nội dung `17`) rồi redeploy.
+5. Redeploy; log phải có `The following 1 profile is active: "staging"` và không timeout Mongo.
+
+### `./mvnw: Permission denied`
+
+- Push `railway.toml` có `chmod +x mvnw && ./mvnw ...` và `mvnw` mode executable trong Git.
+
+---
+
+## 7. Giới hạn staging (chấp nhận được)
 
 - Railway/Render free: sleep sau idle, cold start ~30s.
 - Atlas M0: 512MB, không backup tự động như cluster trả phí.
@@ -135,7 +162,7 @@ Backend chỉ cần `GOOGLE_CLIENT_ID` khớp với `VITE_APP_GOOGLE_CLIENT_ID`.
 
 ---
 
-## 7. Lên production (AWS) — sau
+## 8. Lên production (AWS) — sau
 
 - Domain + ACM + CloudFront / ALB
 - ECS/EC2 hoặc Elastic Beanstalk cho API
