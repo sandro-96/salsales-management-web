@@ -44,88 +44,78 @@ export function ShopCard({
       onClick={() => onSelect(shop)}
     >
       <CardContent className={isHero ? "p-6" : "p-5"}>
-        <div
-          className={cn(
-            "flex flex-col gap-4",
-            isHero && "sm:flex-row sm:items-start sm:gap-5",
-          )}
-        >
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <Avatar
-              className={cn(
-                "rounded-xl border shrink-0",
-                isHero ? "h-14 w-14" : "h-12 w-12",
-                isActive ? "border-border" : "border-muted",
-              )}
-            >
-              <AvatarImage
-                src={shop.logoUrl}
-                alt={shop.name}
-                className="object-cover"
-              />
-              <AvatarFallback className="rounded-xl bg-muted text-muted-foreground">
-                <Store className={isHero ? "h-7 w-7" : "h-6 w-6"} />
-              </AvatarFallback>
-            </Avatar>
+        <div className="flex items-start gap-3 min-w-0">
+          <Avatar
+            className={cn(
+              "rounded-xl border shrink-0",
+              isHero ? "h-14 w-14" : "h-12 w-12",
+              isActive ? "border-border" : "border-muted",
+            )}
+          >
+            <AvatarImage
+              src={shop.logoUrl}
+              alt={shop.name}
+              className="object-cover"
+            />
+            <AvatarFallback className="rounded-xl bg-muted text-muted-foreground">
+              <Store className={isHero ? "h-7 w-7" : "h-6 w-6"} />
+            </AvatarFallback>
+          </Avatar>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3
-                  className={cn(
-                    "font-semibold truncate",
-                    isHero ? "text-lg" : "text-sm",
-                  )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3
+                className={cn(
+                  "font-semibold truncate",
+                  isHero ? "text-lg" : "text-sm",
+                )}
+              >
+                {shop.name}
+              </h3>
+              {isHero && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] font-normal px-1.5 py-0"
                 >
-                  {shop.name}
-                </h3>
-                {isHero && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] font-normal px-1.5 py-0"
-                  >
-                    {t("pages.shops.list.featuredBadge")}
-                  </Badge>
-                )}
-                {isActive ? (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] gap-0.5 font-normal px-1.5 py-0"
-                  >
-                    <CheckCircle2 className="h-2.5 w-2.5 text-muted-foreground" />
-                    {t("pages.shops.list.active")}
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] gap-0.5 font-normal px-1.5 py-0 text-muted-foreground"
-                  >
-                    <XCircle className="h-2.5 w-2.5" />
-                    {t("pages.shops.list.inactive")}
-                  </Badge>
-                )}
-              </div>
-              {typeLabel && (
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {typeLabel}
-                  {bizLabel ? ` · ${bizLabel}` : ""}
-                </p>
+                  {t("pages.shops.list.featuredBadge")}
+                </Badge>
+              )}
+              {isActive ? (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] gap-0.5 font-normal px-1.5 py-0"
+                >
+                  <CheckCircle2 className="h-2.5 w-2.5 text-muted-foreground" />
+                  {t("pages.shops.list.active")}
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] gap-0.5 font-normal px-1.5 py-0 text-muted-foreground"
+                >
+                  <XCircle className="h-2.5 w-2.5" />
+                  {t("pages.shops.list.inactive")}
+                </Badge>
               )}
             </div>
+            {typeLabel && (
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {typeLabel}
+                {bizLabel ? ` · ${bizLabel}` : ""}
+              </p>
+            )}
           </div>
 
           <ChevronRight
-            className={cn(
-              "h-5 w-5 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground",
-              isHero ? "hidden sm:block sm:mt-2" : "absolute top-5 right-4 sm:static",
-            )}
+            className="h-5 w-5 shrink-0 mt-0.5 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
             aria-hidden
           />
         </div>
 
         <div
           className={cn(
-            "flex flex-col gap-1.5 mt-3",
-            isHero && "sm:mt-0 sm:flex-1 sm:pl-[4.25rem]",
+            "flex flex-col gap-1.5 mt-3 min-w-0",
+            isHero && "sm:pl-[4.25rem]",
           )}
         >
           {shop.address && (
