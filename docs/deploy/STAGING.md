@@ -34,7 +34,7 @@ Staging dùng Atlas project **`salesdb-test`** (không dùng `salesdb` prod hay 
 ### Repo & build
 
 - Root directory: `salsales-management-backend`
-- File cấu hình: `railway.toml` (build Maven, chạy JAR profile `staging`)
+- File cấu hình: `railway.toml` (build Maven, chạy JAR profile `staging`). Nếu build lỗi `mvnw: Permission denied` → push bản mới có `chmod +x mvnw` trong `railway.toml` hoặc redeploy sau khi commit `mvnw` mode executable.
 - Hoặc Render: Web Service, Java, build `./mvnw -DskipTests package`, start `java -jar target/sales-0.0.1-SNAPSHOT.jar --spring.profiles.active=staging`
 
 ### Biến môi trường
