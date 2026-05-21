@@ -330,6 +330,10 @@
     "tagline": "{{brand}} — phần mềm quản lý bán hàng & thu chi cho cửa hàng Việt.",
     "product": "Sản phẩm",
     "account": "Tài khoản",
+    "legal": "Pháp lý",
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách bảo mật",
+    "operator": "Vận hành: Chu Thanh Trí · vmanage.sass@gmail.com",
     "copyright": "© {{year}} {{brand}}. All rights reserved."
   },
   "backToTop": "Lên đầu trang"

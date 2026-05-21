@@ -526,7 +526,7 @@ export default function LandingPage() {
               {t("pages.landing.footer.tagline", { brand })}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-8 text-sm">
+          <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
             <div>
               <p className="mb-2 font-semibold">
                 {t("pages.landing.footer.product")}
@@ -571,11 +571,29 @@ export default function LandingPage() {
                 </li>
               </ul>
             </div>
+            <div>
+              <p className="mb-2 font-semibold">
+                {t("pages.landing.footer.legal")}
+              </p>
+              <ul className="space-y-1.5 text-muted-foreground">
+                <li>
+                  <Link to="/terms" className="hover:text-foreground">
+                    {t("pages.landing.footer.terms")}
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/privacy" className="hover:text-foreground">
+                    {t("pages.landing.footer.privacy")}
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
-        <p className="mx-auto mt-8 max-w-6xl px-4 text-center text-xs text-muted-foreground sm:px-6">
-          {t("pages.landing.footer.copyright", { year, brand })}
-        </p>
+        <div className="mx-auto mt-8 max-w-6xl space-y-2 px-4 text-center text-xs text-muted-foreground sm:px-6">
+          <p>{t("pages.landing.footer.operator")}</p>
+          <p>{t("pages.landing.footer.copyright", { year, brand })}</p>
+        </div>
       </footer>
 
       <ScrollToTopButton label={t("pages.landing.backToTop")} />

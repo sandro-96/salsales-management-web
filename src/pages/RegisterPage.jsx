@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { Link, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { WebSocketMessageTypes } from "../constants/websocket";
 import AuthPageLayout, {
@@ -21,6 +22,7 @@ const RegisterPage = () => {
     middleName: "",
     phone: "",
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState({
     email: "",
     password: "",
@@ -29,6 +31,7 @@ const RegisterPage = () => {
     lastName: "",
     middleName: "",
     phone: "",
+    acceptTerms: "",
   });
   const [success, setSuccess] = useState("");
   const { subscribe, connected } = useWebSocket();
@@ -50,8 +53,14 @@ const RegisterPage = () => {
       lastName: "",
       middleName: "",
       phone: "",
+      acceptTerms: "",
     };
     let isValid = true;
+
+    if (!acceptedTerms) {
+      tempErrors.acceptTerms = t("auth.register.acceptTermsRequired");
+      isValid = false;
+    }
 
     const phoneCompact = form.phone.trim().replace(/\s+/g, "");
     const vnPhoneRegex = /^0(3|5|7|8|9)\d{8}$/;
@@ -353,6 +362,47 @@ const RegisterPage = () => {
             disabled={loading}
             required
           />
+        </div>
+
+        <div className="space-y-2 pt-1">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="reg-terms"
+              checked={acceptedTerms}
+              disabled={loading}
+              onCheckedChange={(checked) => {
+                setAcceptedTerms(checked === true);
+                setErrors((prev) => ({ ...prev, acceptTerms: "" }));
+              }}
+              className="mt-0.5"
+            />
+            <label htmlFor="reg-terms" className="text-sm leading-relaxed cursor-pointer">
+              <Trans
+                i18nKey="auth.register.acceptTerms"
+                components={{
+                  terms: (
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    />
+                  ),
+                  privacy: (
+                    <Link
+                      to="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    />
+                  ),
+                }}
+              />
+            </label>
+          </div>
+          {errors.acceptTerms ? (
+            <p className="text-sm text-destructive">{errors.acceptTerms}</p>
+          ) : null}
         </div>
 
         <button

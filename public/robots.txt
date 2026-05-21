@@ -4,6 +4,8 @@ Allow: /landing
 Allow: /login
 Allow: /register
 Allow: /forgot-password
+Allow: /terms
+Allow: /privacy
 Disallow: /admin
 Disallow: /overview
 Disallow: /pos

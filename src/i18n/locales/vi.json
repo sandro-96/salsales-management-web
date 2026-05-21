@@ -57,6 +57,28 @@
       "title": "Quên mật khẩu — Sổ thu chi",
       "description": "Khôi phục mật khẩu tài khoản {{brand}} qua email đã đăng ký.",
       "path": "/forgot-password"
+    },
+    "terms": {
+      "title": "Điều khoản sử dụng — Sổ thu chi",
+      "description": "Điều khoản sử dụng dịch vụ Sổ thu chi do Chu Thanh Trí vận hành.",
+      "path": "/terms"
+    },
+    "privacy": {
+      "title": "Chính sách bảo mật — Sổ thu chi",
+      "description": "Chính sách bảo mật và xử lý dữ liệu cá nhân trên nền tảng Sổ thu chi.",
+      "path": "/privacy"
+    }
+  },
+  "legal": {
+    "back": "Về trang chủ",
+    "draftNotice": "Bản nháp — có thể được cập nhật trước khi dịch vụ chính thức công bố. Mọi thắc mắc: vmanage.sass@gmail.com",
+    "terms": {
+      "pageTitle": "Điều khoản sử dụng",
+      "updated": "Cập nhật: 20/05/2026 · Phiên bản nháp 1.0"
+    },
+    "privacy": {
+      "pageTitle": "Chính sách bảo mật",
+      "updated": "Cập nhật: 20/05/2026 · Phiên bản nháp 1.0"
     }
   },
   "language": {
@@ -149,6 +171,8 @@
     "landing": "Trang chủ",
     "register": "Đăng ký tài khoản",
     "registerBreadcrumb": "Đăng ký",
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách bảo mật",
     "verifyEmail": "Xác thực email",
     "forgotPassword": "Quên mật khẩu",
     "resetPassword": "Đặt lại mật khẩu",
@@ -315,6 +339,8 @@
       "password": "Mật khẩu",
       "confirmPassword": "Xác nhận mật khẩu",
       "submit": "Tạo tài khoản",
+      "acceptTerms": "Tôi đồng ý với <terms>Điều khoản sử dụng</terms> và <privacy>Chính sách bảo mật</privacy>.",
+      "acceptTermsRequired": "Bạn cần đồng ý Điều khoản và Chính sách bảo mật để đăng ký.",
       "alreadyHave": "Đã có tài khoản?",
       "signIn": "Đăng nhập",
       "successVerifyEmail": "Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản.",

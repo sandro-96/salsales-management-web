@@ -117,8 +117,23 @@ const TableOrderingPage = lazy(
   () => import("../pages/table/TableOrderingPage.jsx"),
 );
 const LandingPage = lazy(() => import("../pages/landing/LandingPage.jsx"));
+const LegalDocumentPage = lazy(() => import("../pages/legal/LegalDocumentPage.jsx"));
 
 export const routeConfig = [
+  {
+    path: "/terms",
+    element: <LegalDocumentPage kind="terms" />,
+    titleKey: "routes.terms",
+    seoKey: "seo.terms",
+    seoPath: "/terms",
+  },
+  {
+    path: "/privacy",
+    element: <LegalDocumentPage kind="privacy" />,
+    titleKey: "routes.privacy",
+    seoKey: "seo.privacy",
+    seoPath: "/privacy",
+  },
   {
     path: "/landing",
     element: <LandingPage />,

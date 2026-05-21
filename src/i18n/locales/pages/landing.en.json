@@ -330,6 +330,10 @@
     "tagline": "{{brand}} — sales & bookkeeping software for Vietnamese shops.",
     "product": "Product",
     "account": "Account",
+    "legal": "Legal",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "operator": "Operated by Chu Thanh Trí · vmanage.sass@gmail.com",
     "copyright": "© {{year}} {{brand}}. All rights reserved."
   },
   "backToTop": "Back to top"
