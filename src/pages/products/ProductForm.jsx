@@ -85,9 +85,7 @@ const isCustomCategory = (val) =>
   !!val && !PRODUCT_CATEGORIES.find((c) => c.value === val);
 
 const formatVND = (val, locale = "vi-VN") =>
-  val != null && val !== 0
-    ? Number(val).toLocaleString(locale) + " ₫"
-    : "-";
+  val != null && val !== 0 ? Number(val).toLocaleString(locale) + " ₫" : "-";
 
 const RECENT_PRODUCT_NAMES_KEY = "recentProductNames";
 const RECENT_PRODUCT_NAMES_MAX = 25;
@@ -184,10 +182,7 @@ function ImageFileUploadTrigger({
   if (variant === "button") {
     return (
       <label
-        className={cn(
-          "inline-flex w-full cursor-pointer sm:w-auto",
-          className,
-        )}
+        className={cn("inline-flex w-full cursor-pointer sm:w-auto", className)}
       >
         {input}
         <span className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground sm:w-auto">
@@ -209,7 +204,9 @@ function ImageFileUploadTrigger({
       <span className="flex size-11 items-center justify-center rounded-full bg-primary/10">
         <ImagePlus className="size-5 text-primary" />
       </span>
-      <span className="text-sm font-medium text-foreground">{displayLabel}</span>
+      <span className="text-sm font-medium text-foreground">
+        {displayLabel}
+      </span>
       {hint ? (
         <span className="max-w-[16rem] text-xs leading-snug text-muted-foreground">
           {hint}
@@ -249,7 +246,9 @@ const variantAttributeSchema = z.object({
 function buildVariantSchema(t) {
   return z.object({
     variantId: z.string().optional(),
-    name: z.string().min(1, t("pages.products.form.validation.variantNameRequired")),
+    name: z
+      .string()
+      .min(1, t("pages.products.form.validation.variantNameRequired")),
     sku: z.string().optional().nullable(),
     price: z.coerce.number().min(0).default(0),
     costPrice: z.coerce.number().min(0).default(0),
@@ -272,7 +271,9 @@ function buildFormSchema(t) {
     supplierId: z.string().optional().nullable(),
     defaultPrice: z.coerce
       .number({
-        invalid_type_error: t("pages.products.form.validation.defaultPriceRequired"),
+        invalid_type_error: t(
+          "pages.products.form.validation.defaultPriceRequired",
+        ),
       })
       .positive(t("pages.products.form.validation.defaultPricePositive")),
     costPrice: z.coerce.number().min(0).default(0),
@@ -426,7 +427,9 @@ function VariantCard({
               ) : (
                 <FormControl>
                   <Input
-                    placeholder={t("pages.products.form.variantNamePlaceholder")}
+                    placeholder={t(
+                      "pages.products.form.variantNamePlaceholder",
+                    )}
                     {...field}
                   />
                 </FormControl>
@@ -622,7 +625,9 @@ function VariantCard({
                   ) : (
                     <FormControl>
                       <Input
-                        placeholder={t("pages.products.form.attrNamePlaceholder")}
+                        placeholder={t(
+                          "pages.products.form.attrNamePlaceholder",
+                        )}
                         {...field}
                       />
                     </FormControl>
@@ -644,7 +649,9 @@ function VariantCard({
                   ) : (
                     <FormControl>
                       <Input
-                        placeholder={t("pages.products.form.attrValuePlaceholder")}
+                        placeholder={t(
+                          "pages.products.form.attrValuePlaceholder",
+                        )}
                         {...field}
                       />
                     </FormControl>
@@ -722,7 +729,8 @@ export default function ProductForm({
       }
     };
     document.addEventListener("pointerdown", onPointerDown, true);
-    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", onPointerDown, true);
   }, [nameHistoryOpen]);
 
   useEffect(() => {
@@ -978,9 +986,7 @@ export default function ProductForm({
         variants: normalizedVariants,
         assignedToppingIds: [...(cloneRest.assignedToppingIds ?? [])],
       });
-      setKeptImages(
-        Array.isArray(cloneImages) ? [...cloneImages] : [],
-      );
+      setKeptImages(Array.isArray(cloneImages) ? [...cloneImages] : []);
       setFiles([]);
       setPreviews([]);
       setVariantMedia({});
@@ -1163,7 +1169,9 @@ export default function ProductForm({
 
     const remaining = MAX_IMAGES - keptImages.length - files.length;
     if (remaining <= 0) {
-      toast.error(t("pages.products.form.maxProductImages", { max: MAX_IMAGES }));
+      toast.error(
+        t("pages.products.form.maxProductImages", { max: MAX_IMAGES }),
+      );
       return;
     }
     const toProcess = selected.slice(0, remaining);
@@ -1218,7 +1226,9 @@ export default function ProductForm({
     } else {
       removeImage(index - keptCount);
     }
-    setGalleryIndex((prev) => Math.max(0, prev > index ? prev - 1 : prev === index ? 0 : prev));
+    setGalleryIndex((prev) =>
+      Math.max(0, prev > index ? prev - 1 : prev === index ? 0 : prev),
+    );
   };
 
   const imageDirty =
@@ -1354,9 +1364,7 @@ export default function ProductForm({
             <span className="text-red-500">*</span>
           </FormLabel>
           {isReadOnly ? (
-            <ReadOnlyValue
-              value={translateProductUnit(t, field.value)}
-            />
+            <ReadOnlyValue value={translateProductUnit(t, field.value)} />
           ) : (
             <div className="flex flex-col gap-2">
               <Select
@@ -1418,9 +1426,7 @@ export default function ProductForm({
         <FormItem>
           <FormLabel>{t("pages.products.form.category")}</FormLabel>
           {isReadOnly ? (
-            <ReadOnlyValue
-              value={translateProductCategory(t, field.value)}
-            />
+            <ReadOnlyValue value={translateProductCategory(t, field.value)} />
           ) : (
             <div className="flex flex-col gap-2">
               <Select
@@ -1458,7 +1464,9 @@ export default function ProductForm({
               {categoryMode === "custom" && (
                 <FormControl>
                   <Input
-                    placeholder={t("pages.products.form.categoryCustomPlaceholder")}
+                    placeholder={t(
+                      "pages.products.form.categoryCustomPlaceholder",
+                    )}
                     value={field.value ?? ""}
                     onChange={(e) => field.onChange(e.target.value)}
                     autoFocus
@@ -1494,137 +1502,137 @@ export default function ProductForm({
           </p>
         )}
         <FormField
-        control={form.control}
-        name="name"
-        render={({ field, fieldState }) => (
-          <FormItem>
-            <div className="relative z-10" ref={nameHistoryWrapRef}>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                <FormLabel className="sm:mt-0.5">
-                  {t("pages.products.form.productName")}{" "}
-                  <span className="text-red-500">*</span>
-                </FormLabel>
-                {!isReadOnly && (
-                  <button
-                    type="button"
-                    aria-expanded={nameHistoryOpen}
-                    className="flex shrink-0 items-center gap-1 self-start text-xs text-muted-foreground transition-colors hover:text-primary sm:self-auto"
-                    onClick={() => {
-                      if (!nameHistoryOpen) {
-                        setRecentNamePickList(loadRecentProductNames());
-                      }
-                      setNameHistoryOpen((o) => !o);
-                    }}
-                  >
-                    <History className="h-3 w-3" />
-                    {t("pages.products.form.recentNamesBtn")}
-                  </button>
-                )}
-              </div>
-              {nameHistoryOpen && !isReadOnly && (
-                <div
-                  className="absolute right-0 top-full z-40 mt-1 w-[min(calc(100vw-2rem),20rem)] max-w-[min(100%,calc(100vw-2rem))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
-                  role="listbox"
-                >
-                  <p className="border-b px-2.5 py-1.5 text-[10px] text-muted-foreground">
-                    {t("pages.products.form.recentNamesTitle")}
-                  </p>
-                  <div className="max-h-52 touch-pan-y overflow-y-auto overscroll-y-contain">
-                    {recentNamePickList.length === 0 ? (
-                      <p className="px-3 py-3 text-xs text-muted-foreground">
-                        {t("pages.products.form.recentNamesEmpty")}
-                      </p>
-                    ) : (
-                      recentNamePickList.map((n, idx) => (
-                        <button
-                          key={`${idx}-${n.slice(0, 48)}`}
-                          type="button"
-                          className="flex w-full items-start gap-2 px-2.5 py-2 text-left text-sm hover:bg-muted"
-                          title={n}
-                          role="option"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            field.onChange(n);
-                            setNameHistoryOpen(false);
-                          }}
-                        >
-                          <span className="line-clamp-2 min-w-0 flex-1">
-                            {n}
-                          </span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            {isReadOnly ? (
-              <ReadOnlyValue value={field.value} />
-            ) : (
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    placeholder={t("pages.products.form.namePlaceholder")}
-                    autoComplete="off"
-                    aria-invalid={!!fieldState.error}
-                    {...field}
-                  />
-                  {isCreate && nameCatalogLoading && (
-                    <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          control={form.control}
+          name="name"
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <div className="relative z-10" ref={nameHistoryWrapRef}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                  <FormLabel className="sm:mt-0.5">
+                    {t("pages.products.form.productName")}{" "}
+                    <span className="text-red-500">*</span>
+                  </FormLabel>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      aria-expanded={nameHistoryOpen}
+                      className="flex shrink-0 items-center gap-1 self-start text-xs text-muted-foreground transition-colors hover:text-primary sm:self-auto"
+                      onClick={() => {
+                        if (!nameHistoryOpen) {
+                          setRecentNamePickList(loadRecentProductNames());
+                        }
+                        setNameHistoryOpen((o) => !o);
+                      }}
+                    >
+                      <History className="h-3 w-3" />
+                      {t("pages.products.form.recentNamesBtn")}
+                    </button>
                   )}
-                  {isCreate &&
-                    !nameCatalogLoading &&
-                    nameCatalogHits.length > 0 &&
-                    (field.value || "").trim().length >= 2 && (
-                      <div className="absolute z-30 mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
-                        <p className="px-2 py-1.5 text-[10px] text-muted-foreground border-b">
-                          {t("pages.products.form.catalogDropdownHint")}
+                </div>
+                {nameHistoryOpen && !isReadOnly && (
+                  <div
+                    className="absolute right-0 top-full z-40 mt-1 w-[min(calc(100vw-2rem),20rem)] max-w-[min(100%,calc(100vw-2rem))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                    role="listbox"
+                  >
+                    <p className="border-b px-2.5 py-1.5 text-[10px] text-muted-foreground">
+                      {t("pages.products.form.recentNamesTitle")}
+                    </p>
+                    <div className="max-h-52 touch-pan-y overflow-y-auto overscroll-y-contain">
+                      {recentNamePickList.length === 0 ? (
+                        <p className="px-3 py-3 text-xs text-muted-foreground">
+                          {t("pages.products.form.recentNamesEmpty")}
                         </p>
-                        {nameCatalogHits.map((p) => (
+                      ) : (
+                        recentNamePickList.map((n, idx) => (
                           <button
-                            key={p.id || p.barcode}
+                            key={`${idx}-${n.slice(0, 48)}`}
                             type="button"
-                            className="w-full text-left px-2.5 py-2 text-xs hover:bg-muted flex gap-2 items-start"
+                            className="flex w-full items-start gap-2 px-2.5 py-2 text-left text-sm hover:bg-muted"
+                            title={n}
+                            role="option"
                             onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => applySystemCatalogEntry(p)}
+                            onClick={() => {
+                              field.onChange(n);
+                              setNameHistoryOpen(false);
+                            }}
                           >
-                            <span className="h-9 w-9 rounded border bg-muted shrink-0 overflow-hidden">
-                              {p.images?.[0] ? (
-                                <img
-                                  src={p.images[0]}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <span className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
-                                  —
-                                </span>
-                              )}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="font-medium line-clamp-2 block">
-                                {p.name}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground font-mono">
-                                {p.barcode || "—"}
-                              </span>
+                            <span className="line-clamp-2 min-w-0 flex-1">
+                              {n}
                             </span>
                           </button>
-                        ))}
-                      </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {isReadOnly ? (
+                <ReadOnlyValue value={field.value} />
+              ) : (
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      placeholder={t("pages.products.form.namePlaceholder")}
+                      autoComplete="off"
+                      aria-invalid={!!fieldState.error}
+                      {...field}
+                    />
+                    {isCreate && nameCatalogLoading && (
+                      <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
                     )}
-                </div>
-              </FormControl>
-            )}
-            {isCreate && !isReadOnly && (
-              <p className="text-[11px] text-muted-foreground">
-                {t("pages.products.form.catalogSearchHint")}
-              </p>
-            )}
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+                    {isCreate &&
+                      !nameCatalogLoading &&
+                      nameCatalogHits.length > 0 &&
+                      (field.value || "").trim().length >= 2 && (
+                        <div className="absolute z-30 mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
+                          <p className="px-2 py-1.5 text-[10px] text-muted-foreground border-b">
+                            {t("pages.products.form.catalogDropdownHint")}
+                          </p>
+                          {nameCatalogHits.map((p) => (
+                            <button
+                              key={p.id || p.barcode}
+                              type="button"
+                              className="w-full text-left px-2.5 py-2 text-xs hover:bg-muted flex gap-2 items-start"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => applySystemCatalogEntry(p)}
+                            >
+                              <span className="h-9 w-9 rounded border bg-muted shrink-0 overflow-hidden">
+                                {p.images?.[0] ? (
+                                  <img
+                                    src={p.images[0]}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                                    —
+                                  </span>
+                                )}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="font-medium line-clamp-2 block">
+                                  {p.name}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  {p.barcode || "—"}
+                                </span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                  </div>
+                </FormControl>
+              )}
+              {isCreate && !isReadOnly && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t("pages.products.form.catalogSearchHint")}
+                </p>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </FormSectionCard>
 
       <FormSectionCard
@@ -1633,328 +1641,333 @@ export default function ProductForm({
           !isReadOnly ? t("pages.products.form.sectionCodesDesc") : undefined
         }
       >
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
-        <FormField
-          control={form.control}
-          name="sku"
-          render={({ field }) => (
-            <FormItem className="min-w-0">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                <FormLabel>
-                  {t("pages.products.form.sku")} <span className="text-red-500">*</span>
-                </FormLabel>
-                {!isReadOnly && (
-                  <button
-                    type="button"
-                    onClick={handleSuggestSku}
-                    disabled={suggestingSkU || !watchedCategory}
-                    title={
-                      !watchedCategory
-                        ? t("pages.products.form.selectCategoryForSku")
-                        : ""
-                    }
-                    className="flex shrink-0 items-center gap-1 self-start text-xs text-muted-foreground transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 sm:self-auto"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    {suggestingSkU
-                      ? t("pages.products.form.fetching")
-                      : !watchedCategory
-                        ? t("pages.products.form.selectCategoryFirst")
-                        : t("pages.products.form.suggest")}
-                  </button>
-                )}
-              </div>
-              {isReadOnly ? (
-                <ReadOnlyValue value={field.value} />
-              ) : (
-                <FormControl>
-                  <Input
-                    placeholder={t("pages.products.form.skuPlaceholder")}
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(e.target.value.toUpperCase())
-                    }
-                  />
-                </FormControl>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="barcode"
-          render={({ field }) => (
-            <FormItem className="min-w-0">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                <FormLabel>{t("pages.products.form.barcode")}</FormLabel>
-                {!isReadOnly && (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:shrink-0 sm:justify-end">
-                    {/* Scan button only in edit mode — create uses scan-first flow in modal */}
-                    {!isCreate && (
-                      <button
-                        type="button"
-                        onClick={() => setScannerOpen(true)}
-                        disabled={lookingUp}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {lookingUp ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <ScanLine className="w-3 h-3" />
-                        )}
-                        {lookingUp
-                          ? t("pages.products.form.scanning")
-                          : t("pages.products.form.scan")}
-                      </button>
-                    )}
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
+          <FormField
+            control={form.control}
+            name="sku"
+            render={({ field }) => (
+              <FormItem className="min-w-0">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                  <FormLabel>
+                    {t("pages.products.form.sku")}{" "}
+                    <span className="text-red-500">*</span>
+                  </FormLabel>
+                  {!isReadOnly && (
                     <button
                       type="button"
-                      onClick={handleSuggestBarcode}
-                      disabled={suggestingBarcode || !watchedCategory}
+                      onClick={handleSuggestSku}
+                      disabled={suggestingSkU || !watchedCategory}
                       title={
                         !watchedCategory
-                          ? t("pages.products.form.selectCategoryForBarcode")
+                          ? t("pages.products.form.selectCategoryForSku")
                           : ""
                       }
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="flex shrink-0 items-center gap-1 self-start text-xs text-muted-foreground transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 sm:self-auto"
                     >
                       <Sparkles className="w-3 h-3" />
-                      {suggestingBarcode
+                      {suggestingSkU
                         ? t("pages.products.form.fetching")
                         : !watchedCategory
                           ? t("pages.products.form.selectCategoryFirst")
-                          : t("pages.products.form.suggestEan13")}
+                          : t("pages.products.form.suggest")}
                     </button>
-                  </div>
+                  )}
+                </div>
+                {isReadOnly ? (
+                  <ReadOnlyValue value={field.value} />
+                ) : (
+                  <FormControl>
+                    <Input
+                      placeholder={t("pages.products.form.skuPlaceholder")}
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(e.target.value.toUpperCase())
+                      }
+                    />
+                  </FormControl>
                 )}
-              </div>
-              {isReadOnly ? (
-                <ReadOnlyValue value={field.value} />
-              ) : (
-                <FormControl>
-                  <Input
-                    placeholder={t("pages.products.form.barcodePlaceholder")}
-                    {...field}
-                    value={field.value ?? ""}
-                    onBlur={(e) => {
-                      field.onBlur();
-                      const v = (e.target.value || "").trim();
-                      if (!v) return;
-                      const digits = normalizeBarcodeDigits(v);
-                      if (!digits) return;
-                      if (
-                        [8, 12, 13, 14].includes(digits.length) &&
-                        !isValidStandardGs1Barcode(digits)
-                      ) {
-                        toast.error(
-                          t("pages.products.form.barcodeInvalidChecksum"),
-                        );
-                        return;
-                      }
-                      if (
-                        digits.length === 12 &&
-                        isValidStandardGs1Barcode(digits)
-                      ) {
-                        try {
-                          const canon = resolveBarcodeForSave(digits);
-                          if (canon && canon !== (field.value ?? "")) {
-                            form.setValue("barcode", canon, {
-                              shouldDirty: true,
-                            });
-                            toast.info(
-                              t("pages.products.form.barcodeNormalized"),
-                            );
-                          }
-                        } catch {
-                          /* đã báo lỗi ở trên */
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="barcode"
+            render={({ field }) => (
+              <FormItem className="min-w-0">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                  <FormLabel>{t("pages.products.form.barcode")}</FormLabel>
+                  {!isReadOnly && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:shrink-0 sm:justify-end">
+                      {/* Scan button only in edit mode — create uses scan-first flow in modal */}
+                      {!isCreate && (
+                        <button
+                          type="button"
+                          onClick={() => setScannerOpen(true)}
+                          disabled={lookingUp}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {lookingUp ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <ScanLine className="w-3 h-3" />
+                          )}
+                          {lookingUp
+                            ? t("pages.products.form.scanning")
+                            : t("pages.products.form.scan")}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleSuggestBarcode}
+                        disabled={suggestingBarcode || !watchedCategory}
+                        title={
+                          !watchedCategory
+                            ? t("pages.products.form.selectCategoryForBarcode")
+                            : ""
                         }
-                      }
-                    }}
-                  />
-                </FormControl>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {suggestingBarcode
+                          ? t("pages.products.form.fetching")
+                          : !watchedCategory
+                            ? t("pages.products.form.selectCategoryFirst")
+                            : t("pages.products.form.suggestEan13")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {isReadOnly ? (
+                  <ReadOnlyValue value={field.value} />
+                ) : (
+                  <FormControl>
+                    <Input
+                      placeholder={t("pages.products.form.barcodePlaceholder")}
+                      {...field}
+                      value={field.value ?? ""}
+                      onBlur={(e) => {
+                        field.onBlur();
+                        const v = (e.target.value || "").trim();
+                        if (!v) return;
+                        const digits = normalizeBarcodeDigits(v);
+                        if (!digits) return;
+                        if (
+                          [8, 12, 13, 14].includes(digits.length) &&
+                          !isValidStandardGs1Barcode(digits)
+                        ) {
+                          toast.error(
+                            t("pages.products.form.barcodeInvalidChecksum"),
+                          );
+                          return;
+                        }
+                        if (
+                          digits.length === 12 &&
+                          isValidStandardGs1Barcode(digits)
+                        ) {
+                          try {
+                            const canon = resolveBarcodeForSave(digits);
+                            if (canon && canon !== (field.value ?? "")) {
+                              form.setValue("barcode", canon, {
+                                shouldDirty: true,
+                              });
+                              toast.info(
+                                t("pages.products.form.barcodeNormalized"),
+                              );
+                            }
+                          } catch {
+                            /* đã báo lỗi ở trên */
+                          }
+                        }
+                      }}
+                    />
+                  </FormControl>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       </FormSectionCard>
 
       <FormSectionCard title={t("pages.products.form.sectionPricing")}>
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
-        <FormField
-          control={form.control}
-          name="defaultPrice"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                {t("pages.products.form.defaultSalePrice")}{" "}
-                <span className="text-red-500">*</span>
-              </FormLabel>
-              {isReadOnly ? (
-                <ReadOnlyValue value={formatVND(field.value, numberLocale)} />
-              ) : (
-                <FormControl>
-                  <NumericInput
-                    placeholder="0"
-                    value={String(field.value ?? "")}
-                    onChange={(val) =>
-                      field.onChange(val === "" ? 0 : Number(val))
-                    }
-                    suffix=" ₫"
-                  />
-                </FormControl>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="costPrice"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("pages.products.form.defaultCostPrice")}</FormLabel>
-              {isReadOnly ? (
-                <ReadOnlyValue value={formatVND(field.value, numberLocale)} />
-              ) : (
-                <FormControl>
-                  <NumericInput
-                    placeholder="0"
-                    value={String(field.value ?? "")}
-                    onChange={(val) =>
-                      field.onChange(val === "" ? 0 : Number(val))
-                    }
-                    suffix=" ₫"
-                  />
-                </FormControl>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      {/* Mô tả */}
-      <FormField
-        control={form.control}
-        name="description"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{t("pages.products.form.description")}</FormLabel>
-            {isReadOnly ? (
-              <div
-                className={cn(
-                  "rounded-md border border-input bg-muted/50 px-3 py-2 text-sm",
-                  !field.value?.trim() && "text-muted-foreground",
-                )}
-              >
-                {field.value?.trim() ? (
-                  <MarkdownContent
-                    content={field.value}
-                    className="max-h-64 overflow-auto"
-                  />
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
+          <FormField
+            control={form.control}
+            name="defaultPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  {t("pages.products.form.defaultSalePrice")}{" "}
+                  <span className="text-red-500">*</span>
+                </FormLabel>
+                {isReadOnly ? (
+                  <ReadOnlyValue value={formatVND(field.value, numberLocale)} />
                 ) : (
-                  "-"
+                  <FormControl>
+                    <NumericInput
+                      formatted={false}
+                      placeholder="0"
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      suffix=" ₫"
+                    />
+                  </FormControl>
                 )}
-              </div>
-            ) : (
-              <FormControl>
-                <MarkdownEditor
-                  shopId={selectedShopId}
-                  placeholder={t("pages.products.form.descriptionPlaceholder")}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                />
-              </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+          />
+          <FormField
+            control={form.control}
+            name="costPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  {t("pages.products.form.defaultCostPrice")}
+                </FormLabel>
+                {isReadOnly ? (
+                  <ReadOnlyValue value={formatVND(field.value, numberLocale)} />
+                ) : (
+                  <FormControl>
+                    <NumericInput
+                      formatted={false}
+                      placeholder="0"
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      suffix=" ₫"
+                    />
+                  </FormControl>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-      {!isReadOnly && !isCreate && (
+        {/* Mô tả */}
         <FormField
           control={form.control}
-          name="reason"
+          name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("pages.products.form.priceReason")}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t("pages.products.form.priceReasonPlaceholder")}
-                  {...field}
-                  value={field.value ?? ""}
-                />
-              </FormControl>
+              <FormLabel>{t("pages.products.form.description")}</FormLabel>
+              {isReadOnly ? (
+                <div
+                  className={cn(
+                    "rounded-md border border-input bg-muted/50 px-3 py-2 text-sm",
+                    !field.value?.trim() && "text-muted-foreground",
+                  )}
+                >
+                  {field.value?.trim() ? (
+                    <MarkdownContent
+                      content={field.value}
+                      className="max-h-64 overflow-auto"
+                    />
+                  ) : (
+                    "-"
+                  )}
+                </div>
+              ) : (
+                <FormControl>
+                  <MarkdownEditor
+                    shopId={selectedShopId}
+                    placeholder={t(
+                      "pages.products.form.descriptionPlaceholder",
+                    )}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                  />
+                </FormControl>
+              )}
+              <FormMessage />
             </FormItem>
           )}
         />
-      )}
+
+        {!isReadOnly && !isCreate && (
+          <FormField
+            control={form.control}
+            name="reason"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("pages.products.form.priceReason")}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={t(
+                      "pages.products.form.priceReasonPlaceholder",
+                    )}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        )}
       </FormSectionCard>
 
       <FormSectionCard title={t("pages.products.form.sectionSettings")}>
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
-      <FormField
-        control={form.control}
-        name="trackInventory"
-        render={({ field }) => (
-          <FormItem className="flex flex-col gap-1">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:items-center">
-              <FormLabel className="mt-0.5 leading-snug sm:mt-0">
-                {t("pages.products.form.trackInventory")}
-              </FormLabel>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={isReadOnly || watchedSellByWeight}
-                />
-              </FormControl>
-            </div>
-            {!isReadOnly && (
-              <p className="text-xs text-muted-foreground pl-0 max-w-xl">
-                {t("pages.products.form.trackInventoryHint")}
-              </p>
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
+          <FormField
+            control={form.control}
+            name="trackInventory"
+            render={({ field }) => (
+              <FormItem className="flex flex-col gap-1">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:items-center">
+                  <FormLabel className="mt-0.5 leading-snug sm:mt-0">
+                    {t("pages.products.form.trackInventory")}
+                  </FormLabel>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isReadOnly || watchedSellByWeight}
+                    />
+                  </FormControl>
+                </div>
+                {!isReadOnly && (
+                  <p className="text-xs text-muted-foreground pl-0 max-w-xl">
+                    {t("pages.products.form.trackInventoryHint")}
+                  </p>
+                )}
+                {!isReadOnly && watchedSellByWeight && (
+                  <p className="text-xs text-muted-foreground pl-0 max-w-xl">
+                    {t("pages.products.form.sellByWeightDisabledHint")}
+                  </p>
+                )}
+              </FormItem>
             )}
-            {!isReadOnly && watchedSellByWeight && (
-              <p className="text-xs text-muted-foreground pl-0 max-w-xl">
-                {t("pages.products.form.sellByWeightDisabledHint")}
-              </p>
-            )}
-          </FormItem>
-        )}
-      />
+          />
 
-      {/* Bán theo cân / trọng lượng */}
-      <FormField
-        control={form.control}
-        name="sellByWeight"
-        render={({ field }) => (
-          <FormItem className="flex flex-col gap-1">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:items-center">
-              <FormLabel className="mt-0.5 leading-snug sm:mt-0">
-                {t("pages.products.form.sellByWeight")}
-              </FormLabel>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={isReadOnly}
-                />
-              </FormControl>
-            </div>
-            {!isReadOnly && (
-              <p className="text-xs text-muted-foreground pl-0 max-w-xl">
-                {t("pages.products.form.sellByWeightHint")}
-              </p>
+          {/* Bán theo cân / trọng lượng */}
+          <FormField
+            control={form.control}
+            name="sellByWeight"
+            render={({ field }) => (
+              <FormItem className="flex flex-col gap-1">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:items-center">
+                  <FormLabel className="mt-0.5 leading-snug sm:mt-0">
+                    {t("pages.products.form.sellByWeight")}
+                  </FormLabel>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isReadOnly}
+                    />
+                  </FormControl>
+                </div>
+                {!isReadOnly && (
+                  <p className="text-xs text-muted-foreground pl-0 max-w-xl">
+                    {t("pages.products.form.sellByWeightHint")}
+                  </p>
+                )}
+              </FormItem>
             )}
-          </FormItem>
-        )}
-      />
-      </div>
+          />
+        </div>
       </FormSectionCard>
     </>
   );
@@ -2020,12 +2033,14 @@ export default function ProductForm({
                   </td>
                   <td className="px-3 py-2 text-right">
                     {h.oldCostPrice != null
-                      ? Number(h.oldCostPrice).toLocaleString(numberLocale) + " ₫"
+                      ? Number(h.oldCostPrice).toLocaleString(numberLocale) +
+                        " ₫"
                       : "-"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {h.newCostPrice != null
-                      ? Number(h.newCostPrice).toLocaleString(numberLocale) + " ₫"
+                      ? Number(h.newCostPrice).toLocaleString(numberLocale) +
+                        " ₫"
                       : "-"}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground italic">
