@@ -11,6 +11,7 @@ import {
 import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn, isActiveNavPath } from "@/lib/utils";
+import { preloadRoute } from "@/utils/routePreload.js";
 
 function NavBadge({ count, variant = "default" }) {
   if (!count || count <= 0) return null;
@@ -45,6 +46,8 @@ function NavMenuLink({ item, active }) {
         <NavLink
           to={item.to}
           aria-current={active ? "page" : undefined}
+          onMouseEnter={() => preloadRoute(item.to)}
+          onFocus={() => preloadRoute(item.to)}
           onClick={() => {
             if (isMobile) setOpenMobile(false);
           }}

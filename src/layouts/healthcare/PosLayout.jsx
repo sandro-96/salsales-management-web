@@ -1,5 +1,5 @@
 // src/layouts/healthcare/PosLayout.jsx
-import { Outlet } from "react-router-dom";
+import RouteOutletSuspense from "@/components/routing/RouteOutletSuspense.jsx";
 
 const HealthcarePosLayout = ({ title }) => {
     return (
@@ -9,7 +9,7 @@ const HealthcarePosLayout = ({ title }) => {
             </header>
 
             <main className="p-4">
-                <Outlet />
+                <RouteOutletSuspense />
             </main>
         </div>
     );

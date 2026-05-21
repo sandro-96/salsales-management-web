@@ -63,7 +63,7 @@ function renderRoute(route) {
     element = <GuestOnlyRoute>{element}</GuestOnlyRoute>;
   }
 
-  if (route.protected) {
+  if (route.protected && !route.authGuardHandledByParent) {
     element = (
       <ProtectedRoute guestRedirect={route.guestRedirect}>
         {route.roles ? (
@@ -76,6 +76,7 @@ function renderRoute(route) {
   }
 
   if (route.children) {
+    const parentHadAuthGuard = Boolean(route.protected || route.guestOnly);
     return (
       <Route key={route.path} path={route.path} element={element}>
         {route.children.map((child, i) =>
@@ -85,6 +86,7 @@ function renderRoute(route) {
             key: `${route.path}-${child.path || i}`,
             protected: child.protected ?? route.protected,
             guestRedirect: child.guestRedirect ?? route.guestRedirect,
+            authGuardHandledByParent: parentHadAuthGuard,
           })
         )}
       </Route>
@@ -100,7 +102,7 @@ function App() {
   const state = location.state;
   return (
     <ErrorBoundaryWithNavigate>
-      <Suspense fallback={<Loading text={t("common.loadingPage")} fullScreen />}>
+      <Suspense fallback={<Loading text={t("common.loadingPage")} />}>
         <Toaster />
         <NetworkStatusBanner />
         <Routes location={state?.background || location}>

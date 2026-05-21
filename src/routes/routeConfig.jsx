@@ -48,9 +48,7 @@ const AdminSecurityPage = lazy(
 );
 const ShopPage = lazy(() => import("../pages/shops/ShopPage"));
 const CreateShopPage = lazy(() => import("../pages/shops/CreateShopPage"));
-const DynamicDashboardLayout = lazy(
-  () => import("../layouts/DynamicDashboardLayout"),
-);
+import DynamicDashboardLayout from "../layouts/DynamicDashboardLayout.jsx";
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const UnauthorizedPage = lazy(() => import("../pages/UnauthorizedPage"));
 const ShopSettingsPage = lazy(() => import("../pages/shops/ShopSettingsPage"));

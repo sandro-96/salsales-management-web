@@ -1,5 +1,5 @@
 // src/layouts/education/PosLayout.jsx
-import { Outlet } from "react-router-dom";
+import RouteOutletSuspense from "@/components/routing/RouteOutletSuspense.jsx";
 
 const EducationPosLayout = ({ title }) => {
     return (
@@ -9,7 +9,7 @@ const EducationPosLayout = ({ title }) => {
             </header>
 
             <main className="p-4">
-                <Outlet />
+                <RouteOutletSuspense />
             </main>
         </div>
     );

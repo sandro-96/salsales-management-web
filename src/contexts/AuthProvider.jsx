@@ -1,5 +1,5 @@
 // src/contexts/AuthProvider.jsx
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import axiosInstance from "../api/axiosInstance";
@@ -11,6 +11,7 @@ const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
   const [enums, setEnums] = useState(null);
   const [isUserContextReady, setIsUserContextReady] = useState(false);
+  const hasHydratedUserRef = useRef(false);
 
   const logout = useCallback(() => {
     localStorage.removeItem("accessToken");
@@ -18,6 +19,7 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem("selectedShopId");
     localStorage.removeItem("selectedBranchId");
     setUser(null);
+    hasHydratedUserRef.current = false;
     navigate("/landing");
   }, [navigate]);
 
@@ -30,15 +32,23 @@ const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const loadUser = useCallback(async () => {
+  /**
+   * @param {{ silent?: boolean }} options
+   * silent=true: không chặn UI (refresh token / cập nhật profile).
+   */
+  const loadUser = useCallback(async (options = {}) => {
+    const silent = options.silent === true;
     const token = localStorage.getItem("accessToken");
     if (!token) {
       setUser(null);
+      hasHydratedUserRef.current = false;
       setIsUserContextReady(true);
       return;
     }
 
-    setIsUserContextReady(false);
+    if (!silent && !hasHydratedUserRef.current) {
+      setIsUserContextReady(false);
+    }
 
     try {
       // decode token để check nhanh
@@ -58,6 +68,7 @@ const AuthProvider = ({ children }) => {
         phone: profile.phone,
         avatarUrl: profile.avatarUrl,
       });
+      hasHydratedUserRef.current = true;
     } catch (err) {
       console.error("Không load được user:", err);
       logout();
@@ -75,15 +86,17 @@ const AuthProvider = ({ children }) => {
         refreshToken,
       });
       localStorage.setItem("accessToken", res.data.data.accessToken);
-      await loadUser();
+      await loadUser({ silent: true });
     } catch {
       logout();
     }
   }, [loadUser, logout]);
 
   useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+    loadUser({ silent: false });
+    // Chỉ hydrate user một lần khi app mount — không gắn loadUser vào deps (tránh /user/me mỗi lần đổi route).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AuthContext.Provider

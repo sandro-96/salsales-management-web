@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import RouteOutletSuspense from "@/components/routing/RouteOutletSuspense.jsx";
 import {
   LayoutDashboard,
   LifeBuoy,
@@ -302,7 +303,7 @@ const AdminLayout = () => {
             </div>
           </header>
           <main className="flex-1 min-h-0 overflow-y-auto">
-            <Outlet />
+            <RouteOutletSuspense />
           </main>
         </div>
       </div>

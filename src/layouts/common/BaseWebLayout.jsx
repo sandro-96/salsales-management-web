@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import RouteOutletSuspense from "@/components/routing/RouteOutletSuspense.jsx";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import {
@@ -21,7 +21,7 @@ const BaseWebLayout = ({ title, navItems }) => {
         <div className="flex flex-1 flex-col min-w-0">
           <div className="@container/main flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex h-full min-w-0 max-w-full flex-col gap-4 md:gap-6">
-              <Outlet />
+              <RouteOutletSuspense />
             </div>
           </div>
         </div>

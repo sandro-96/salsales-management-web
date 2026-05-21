@@ -7,9 +7,10 @@ const ProtectedRoute = ({ children, guestRedirect = "/login" }) => {
     const { user, isUserContextReady } = useAuth();
     const { pathname } = useLocation();
 
-    // Chờ context load xong
+    // Chờ auth lần đầu; đã có user thì giữ shell (tránh nháy full màn hình khi refresh profile).
     if (!isUserContextReady) {
-        return <Loading fullScreen />
+        if (user) return children;
+        return <Loading fullScreen />;
     }
 
     // Chưa đăng nhập

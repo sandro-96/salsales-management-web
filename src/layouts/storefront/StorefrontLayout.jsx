@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Outlet, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import RouteOutletSuspense from "@/components/routing/RouteOutletSuspense.jsx";
 import { getStorefrontShop } from "@/api/storefrontApi.js";
 import StorefrontCartProvider from "@/contexts/StorefrontCartProvider.jsx";
 import StorefrontHeader from "./StorefrontHeader.jsx";
@@ -69,7 +70,7 @@ export default function StorefrontLayout() {
         <div className="min-h-screen flex flex-col bg-muted/30">
           <StorefrontHeader />
           <main className="flex-1">
-            <Outlet />
+            <RouteOutletSuspense />
           </main>
           <StorefrontFooter />
         </div>

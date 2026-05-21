@@ -1,4 +1,5 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import RouteOutletSuspense from "@/components/routing/RouteOutletSuspense.jsx";
 import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop";
 import { useAuth } from "../../hooks/useAuth";
@@ -133,7 +134,7 @@ const PosChromeLayout = ({ title }) => {
       </header>
 
       <main className="flex-1 overflow-hidden min-h-0">
-        <Outlet />
+        <RouteOutletSuspense />
       </main>
     </div>
   );

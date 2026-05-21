@@ -1,5 +1,5 @@
 // src/layouts/ecommerce/PosLayout.jsx
-import { Outlet } from "react-router-dom";
+import RouteOutletSuspense from "@/components/routing/RouteOutletSuspense.jsx";
 
 const EcommercePosLayout = ({ title }) => {
     return (
@@ -9,7 +9,7 @@ const EcommercePosLayout = ({ title }) => {
             </header>
 
             <main className="p-4">
-                <Outlet />
+                <RouteOutletSuspense />
             </main>
         </div>
     );

@@ -1,7 +1,7 @@
-import { Outlet } from "react-router-dom";
+import RouteOutletSuspense from "@/components/routing/RouteOutletSuspense.jsx";
 
 const ShopLayout = () => {
-  return <Outlet />;
+  return <RouteOutletSuspense />;
 };
 
 export default ShopLayout;
