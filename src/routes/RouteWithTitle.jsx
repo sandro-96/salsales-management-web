@@ -40,7 +40,11 @@ const RouteWithTitle = ({
 
     const ogDefault = import.meta.env.VITE_OG_IMAGE_PATH?.trim();
     if (!ogImage && ogDefault) {
-      ogImage = absoluteUrl(ogDefault) || ogDefault;
+      ogImage =
+        absoluteUrl(ogDefault) ||
+        (typeof window !== "undefined" && ogDefault.startsWith("/")
+          ? `${window.location.origin}${ogDefault}`
+          : ogDefault);
     }
 
     const canonical = absoluteUrl(canonicalPath);
