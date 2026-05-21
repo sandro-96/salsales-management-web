@@ -12,14 +12,67 @@ const PUBLIC_PATHS = [
   "/privacy",
 ];
 
+function siteBase() {
+  return (process.env.VITE_SITE_URL || "").trim().replace(/\/+$/, "");
+}
+
+function ogImageUrl(base) {
+  const ogPath = (process.env.VITE_OG_IMAGE_PATH || "/og-landing.png").trim();
+  return `${base}${ogPath.startsWith("/") ? ogPath : `/${ogPath}`}`;
+}
+
+/** Escape for double-quoted HTML attribute values */
+function attrEscape(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;");
+}
+
 /**
- * Writes dist/sitemap.xml when VITE_SITE_URL is set at build time.
+ * Injects static Open Graph tags into index.html at build time.
+ * Zalo / Facebook / Messenger crawlers do not run React — they need og:image in HTML.
+ */
+function buildOgMetaBlock(base, html) {
+  const titleMatch = html.match(/<title>([^<]*)<\/title>/i);
+  const descMatch = html.match(
+    /<meta\s+name="description"\s+content="([^"]*)"/i,
+  );
+  const title = attrEscape(
+    titleMatch?.[1]?.replace(/&amp;/g, "&") ||
+      "Sổ thu chi — Quản lý bán hàng POS & storefront",
+  );
+  const description = attrEscape(
+    descMatch?.[1] ||
+      "Sổ thu chi — phần mềm quản lý bán hàng: POS, storefront, QR bàn. Dùng thử 30 ngày, 99.000₫/tháng.",
+  );
+  const image = ogImageUrl(base);
+  return `
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="${base}/" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:image" content="${image}" />
+    <meta property="og:image:secure_url" content="${image}" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${description}" />
+    <meta name="twitter:image" content="${image}" />`;
+}
+
+/**
+ * Writes dist/sitemap.xml and injects OG meta when VITE_SITE_URL is set at build time.
  */
 export function seoSitemapPlugin() {
   return {
     name: "seo-sitemap",
+    transformIndexHtml(html) {
+      const base = siteBase();
+      if (!base || html.includes('property="og:image"')) return html;
+      return html.replace("</head>", `${buildOgMetaBlock(base, html)}\n  </head>`);
+    },
     closeBundle() {
-      const base = (process.env.VITE_SITE_URL || "").trim().replace(/\/+$/, "");
+      const base = siteBase();
       if (!base) return;
 
       const urls = PUBLIC_PATHS.map(

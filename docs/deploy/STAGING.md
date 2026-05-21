@@ -89,7 +89,7 @@ Sao chép `.env.staging.example` → Vercel (Production; nên bật cả **Previ
 | `VITE_WS_URL` | `https://xxx.up.railway.app/ws` |
 | `VITE_APP_GOOGLE_CLIENT_ID` | cùng client Google |
 | `VITE_GOOGLE_OAUTH_REDIRECT_URI` | `https://your-app.vercel.app/login` |
-| `VITE_SITE_URL` | `https://your-app.vercel.app` |
+| `VITE_SITE_URL` | `https://your-app.vercel.app` — **bắt buộc** để build nhúng `og:image` (Zalo/FB đọc HTML, không chạy React) |
 | `VITE_OG_IMAGE_PATH` | `/og-landing.png` |
 
 Deploy xong → cập nhật lại `FRONTEND_URL` / `FRONTEND_CORS_ORIGINS` trên Railway nếu URL Vercel khác dự kiến.
@@ -129,7 +129,9 @@ Backend chỉ cần `GOOGLE_CLIENT_ID` khớp với `VITE_APP_GOOGLE_CLIENT_ID`.
 - [ ] `/billing` — chuyển khoản MANUAL (không cần VNPay sandbox trên staging)
 - [ ] Upload ảnh sản phẩm (nếu cấu hình S3 staging)
 - [ ] `/terms`, `/privacy` mở được
-- [ ] Landing + OG: share link có `VITE_SITE_URL`
+- [ ] Landing + OG: share link Zalo/FB thấy ảnh (`VITE_SITE_URL` + `VITE_OG_IMAGE_PATH` khi **build** Vercel, file `public/og-landing.png`)
+- [ ] Mở `https://your-app.vercel.app/og-landing.png` trên trình duyệt → thấy ảnh
+- [ ] View Source trang chủ → có `<meta property="og:image" content="https://.../og-landing.png">`
 
 ---
 
