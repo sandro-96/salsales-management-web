@@ -112,6 +112,13 @@ Trong OAuth client (Web):
 
 Backend chỉ cần `GOOGLE_CLIENT_ID` khớp với `VITE_APP_GOOGLE_CLIENT_ID`.
 
+**Lỗi `redirect_uri_mismatch`:** `VITE_GOOGLE_OAUTH_REDIRECT_URI` phải là **Vercel** (`https://salsales-management-web.vercel.app/login`), **không** dùng URL Railway. Trong [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth client **Web**:
+
+- **Authorized JavaScript origins:** `https://salsales-management-web.vercel.app`
+- **Authorized redirect URIs:** `https://salsales-management-web.vercel.app/login` (không `/` cuối)
+
+Đổi biến Vercel → **Redeploy**. Kiểm tra: mở `/login` → F12 → Network → request `accounts.google.com` → param `redirect_uri` phải trùng Console.
+
 ---
 
 ## 5. Checklist sau deploy
@@ -150,6 +157,16 @@ Làm lần lượt:
 ### `./mvnw: Permission denied`
 
 - Push `railway.toml` có `chmod +x mvnw && ./mvnw ...` và `mvnw` mode executable trong Git.
+
+### `Service ran out of memory` / Deployment crashed
+
+Spring Boot trên Railway free dễ vượt RAM khi start.
+
+1. **Variables** thêm (hoặc push `railway.toml` mới):
+   - `NIXPACKS_JDK_VERSION=17`
+   - `JAVA_TOOL_OPTIONS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0`
+2. **Settings → Scale**: giữ **1 replica**; nếu vẫn OOM → tăng RAM (plan trả phí) hoặc thử `JAVA_TOOL_OPTIONS=-Xmx384m -Xms128m`.
+3. Sửa **Mongo SSL** + deploy **Active** trước khi Generate Domain (app crash thì không có URL ổn định).
 
 ---
 
