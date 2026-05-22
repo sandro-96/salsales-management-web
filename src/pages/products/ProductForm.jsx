@@ -21,7 +21,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import imageCompression from "browser-image-compression";
 import { useShop } from "@/hooks/useShop.js";
 import { useShopPermissions } from "@/hooks/useShopPermissions.js";
 import { PERM } from "@/constants/shopPermissions.js";
@@ -35,6 +34,10 @@ import { getShopToppings } from "../../api/shopApi.js";
 import BarcodeScanner from "@/components/products/BarcodeScanner.jsx";
 import { ProductImageGallery } from "@/components/products/ProductImageGallery.jsx";
 import { lookupBarcode } from "@/utils/barcodeUtils.js";
+import {
+  PRODUCT_IMAGE_ACCEPT,
+  prepareProductImageFiles,
+} from "@/utils/productImageFiles.js";
 import {
   isValidStandardGs1Barcode,
   normalizeBarcodeDigits,
@@ -154,8 +157,6 @@ function ReadOnlyValue({ value, variant = "single", className }) {
   );
 }
 
-const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp";
-
 function ImageFileUploadTrigger({
   fileInputKey,
   onChange,
@@ -173,7 +174,7 @@ function ImageFileUploadTrigger({
       key={fileInputKey}
       type="file"
       multiple={multiple}
-      accept={IMAGE_ACCEPT}
+      accept={PRODUCT_IMAGE_ACCEPT}
       className="sr-only"
       onChange={onChange}
     />
@@ -296,7 +297,6 @@ function VariantCard({
   variantMedia,
   setVariantMedia,
   maxVariantImages,
-  allowedImageTypes,
 }) {
   const { t, i18n } = useTranslation();
   const numberLocale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
@@ -338,6 +338,7 @@ function VariantCard({
 
   const handleVariantImageChange = async (e) => {
     const selected = Array.from(e.target.files || []);
+    e.target.value = "";
     if (!selected.length) return;
     const urlsNow = getValues(`variants.${nestIndex}.images`) ?? [];
     const pend = variantMedia[fieldId] ?? { files: [], previews: [] };
@@ -354,30 +355,11 @@ function VariantCard({
         t("pages.products.form.variantImagesRemaining", { count: remaining }),
       );
     }
-    const invalid = toProcess.filter(
-      (f) => !allowedImageTypes.includes(f.type),
-    );
-    if (invalid.length) {
+    const { ok: processed, rejected } = await prepareProductImageFiles(toProcess);
+    if (rejected.length) {
       toast.error(t("pages.products.form.imageTypeError"));
-      return;
     }
-    const processed = await Promise.all(
-      toProcess.map(async (f) => {
-        if (f.size > 2 * 1024 * 1024) {
-          try {
-            const compressed = await imageCompression(f, {
-              maxSizeMB: 1.5,
-              maxWidthOrHeight: 1920,
-              useWebWorker: true,
-            });
-            return new File([compressed], f.name, { type: compressed.type });
-          } catch {
-            return f;
-          }
-        }
-        return f;
-      }),
-    );
+    if (!processed.length) return;
     setVariantMedia((prev) => {
       const cur = prev[fieldId] ?? { files: [], previews: [] };
       return {
@@ -1101,8 +1083,6 @@ export default function ProductForm({
   // ── Image upload state ───────────────────────────────────────────────────
   const MAX_IMAGES = 10;
   const MAX_VARIANT_IMAGES = 5;
-  const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-
   // Existing image URLs to keep (user can remove individual ones)
   const [keptImages, setKeptImages] = useState(
     product?.images ?? (isCreate && prefill?.images ? prefill.images : []),
@@ -1165,6 +1145,7 @@ export default function ProductForm({
 
   const handleImageChange = async (e) => {
     const selected = Array.from(e.target.files || []);
+    e.target.value = "";
     if (!selected.length) return;
 
     const remaining = MAX_IMAGES - keptImages.length - files.length;
@@ -1181,29 +1162,11 @@ export default function ProductForm({
       );
     }
 
-    const invalid = toProcess.filter((f) => !ALLOWED_TYPES.includes(f.type));
-    if (invalid.length) {
+    const { ok: processed, rejected } = await prepareProductImageFiles(toProcess);
+    if (rejected.length) {
       toast.error(t("pages.products.form.imageTypeError"));
-      return;
     }
-
-    const processed = await Promise.all(
-      toProcess.map(async (f) => {
-        if (f.size > 2 * 1024 * 1024) {
-          try {
-            const compressed = await imageCompression(f, {
-              maxSizeMB: 1.5,
-              maxWidthOrHeight: 1920,
-              useWebWorker: true,
-            });
-            return new File([compressed], f.name, { type: compressed.type });
-          } catch {
-            return f;
-          }
-        }
-        return f;
-      }),
-    );
+    if (!processed.length) return;
 
     setFiles((prev) => [...prev, ...processed]);
     setPreviews((prev) => [
@@ -2214,7 +2177,6 @@ export default function ProductForm({
               variantMedia={variantMedia}
               setVariantMedia={setVariantMedia}
               maxVariantImages={MAX_VARIANT_IMAGES}
-              allowedImageTypes={ALLOWED_TYPES}
             />
           ))}
         </div>

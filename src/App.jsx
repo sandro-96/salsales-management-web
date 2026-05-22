@@ -14,6 +14,7 @@ import ErrorBoundaryWithNavigate from "./components/ErrorBoundary";
 import BranchFormModal from "./pages/branchs/BranchFormModal.jsx";
 import { Toaster } from "@/components/ui/sonner";
 import NetworkStatusBanner from "@/components/common/NetworkStatusBanner.jsx";
+import { useGlobalJsonLd } from "@/hooks/useGlobalJsonLd.js";
 
 function renderRoute(route) {
   let element = (
@@ -100,6 +101,7 @@ function App() {
   const location = useLocation();
   const { t } = useTranslation();
   const state = location.state;
+  useGlobalJsonLd();
   return (
     <ErrorBoundaryWithNavigate>
       <Suspense fallback={<Loading text={t("common.loadingPage")} />}>

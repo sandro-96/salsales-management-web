@@ -11,7 +11,7 @@ import HeaderUserMenu from "@/components/common/HeaderUserMenu.jsx";
 import LanguageSwitcher from "@/components/common/LanguageSwitcher.jsx";
 
 export function SiteHeader() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
@@ -35,10 +35,10 @@ export function SiteHeader() {
             size="icon"
             aria-label={t("theme.toggle")}
             onClick={() =>
-              setTheme(theme === "dark" ? "light" : "dark")
+              setTheme(resolvedTheme === "dark" ? "light" : "dark")
             }
           >
-            {mounted && theme === "dark" ? (
+            {mounted && resolvedTheme === "dark" ? (
               <Sun className="h-4 w-4" />
             ) : (
               <Moon className="h-4 w-4" />

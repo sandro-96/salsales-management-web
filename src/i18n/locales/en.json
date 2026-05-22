@@ -44,28 +44,28 @@
   },
   "seo": {
     "login": {
-      "title": "Log in — Sổ thu chi",
-      "description": "Sign in to {{brand}} to manage sales, POS, orders and shop reports.",
+      "title": "Log in to your POS dashboard | Sổ thu chi",
+      "description": "Sign in to {{brand}} to open the browser POS, track orders, inventory and revenue reports — multi-device, real-time sync across your team.",
       "path": "/login"
     },
     "register": {
-      "title": "Sign up free — Sổ thu chi",
-      "description": "Create your {{brand}} account — 30-day trial with POS, storefront and table QR in one system.",
+      "title": "Free 30-day trial — Cloud POS by Sổ thu chi",
+      "description": "Create a free {{brand}} account and try the full cloud POS, online storefront and table-QR ordering for 30 days. No POS hardware, no credit card required.",
       "path": "/register"
     },
     "forgotPassword": {
-      "title": "Forgot password — Sổ thu chi",
-      "description": "Reset your {{brand}} account password via your registered email.",
+      "title": "Reset password | Sổ thu chi",
+      "description": "Recover your {{brand}} account password via your registered email — fast, secure, just a few clicks.",
       "path": "/forgot-password"
     },
     "terms": {
-      "title": "Terms of Service — Sổ thu chi",
-      "description": "Terms of Service for Sổ thu chi operated by Chu Thanh Trí.",
+      "title": "Terms of Service | Sổ thu chi",
+      "description": "Terms of Service for the {{brand}} sales management platform — user rights, billing terms and acceptable use policy.",
       "path": "/terms"
     },
     "privacy": {
-      "title": "Privacy Policy — Sổ thu chi",
-      "description": "Privacy Policy and personal data processing on Sổ thu chi.",
+      "title": "Privacy Policy & Data Handling | Sổ thu chi",
+      "description": "{{brand}} is committed to protecting shop and customer data. Read how we collect, store and process personal information.",
       "path": "/privacy"
     }
   },
@@ -89,20 +89,22 @@
   },
   "network": {
     "offline": "No internet connection — some actions are temporarily disabled.",
-    "apiUnreachable": "Cannot reach the server — will retry when the network is back.",
+    "apiUnreachable": "API server is not responding — retrying automatically. Your internet connection is fine.",
+    "apiUnreachableShort": "Server not responding",
     "slow": "Slow connection — actions may take longer.",
     "realtimePaused": "Live updates paused — refreshing periodically.",
     "retry": "Retry",
     "errors": {
       "offline": "No internet connection.",
       "timeout": "The server took too long to respond. Please try again.",
-      "network": "Cannot reach the server. Check your connection and try again.",
-      "server": "Server error. Please try again later.",
+      "network": "Cannot reach the API server. The service may be down or under maintenance — try again later.",
+      "server": "The API server is not responding or encountered an error. Please try again later.",
       "client": "Invalid request.",
       "unknown": "Something went wrong. Please try again."
     },
     "pos": {
-      "offlineAction": "You are offline — cannot sync orders to the server. Keep the cart on this device and try again when online."
+      "offlineAction": "No internet — cannot sync orders to the server. Keep the cart on this device and try again when you are online.",
+      "serverDownAction": "API server is temporarily unavailable — cannot sync orders. Keep the cart and try again when the server is back."
     }
   },
   "theme": {

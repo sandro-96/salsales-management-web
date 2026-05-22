@@ -74,12 +74,16 @@ export function usePosPage() {
     toast.error(t("pages.pos.toast.shopLocked"));
   }, [t]);
 
-  const { apiReachable } = useNetwork();
+  const { apiReachable, browserOnline } = useNetwork();
   const { connected: wsConnected } = useWebSocket();
 
   const toastNetworkBlocked = useCallback(() => {
-    toast.error(t("network.pos.offlineAction"));
-  }, [t]);
+    toast.error(
+      browserOnline
+        ? t("network.pos.serverDownAction")
+        : t("network.pos.offlineAction"),
+    );
+  }, [t, browserOnline]);
 
   const toastPosOrderError = useCallback(
     (err, fallback) => {
@@ -1897,7 +1901,9 @@ export function usePosPage() {
     checkoutDisabled:
       shopPosWriteBlocked || !apiReachable || cart.length === 0,
     checkoutDisabledHint: !apiReachable
-      ? t("network.pos.offlineAction")
+      ? browserOnline
+        ? t("network.pos.serverDownAction")
+        : t("network.pos.offlineAction")
       : shopPosWriteBlocked
         ? t("pages.pos.toast.shopLocked")
         : null,
@@ -2095,6 +2101,7 @@ export function usePosPage() {
     updateWeight,
     variantPickerProduct,
     apiReachable,
+    browserOnline,
   };
 
 }

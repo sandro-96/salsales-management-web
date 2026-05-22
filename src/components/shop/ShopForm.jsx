@@ -5,7 +5,11 @@ import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import imageCompression from "browser-image-compression";
+import {
+  prepareProductImageFile,
+  PRODUCT_IMAGE_ACCEPT,
+  isProductImageFile,
+} from "@/utils/productImageFiles.js";
 import { toast } from "sonner";
 import { ImagePlus, Copy } from "lucide-react";
 import {
@@ -130,44 +134,32 @@ export default function ShopForm({
   // --- handle file ---
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files?.[0];
+    e.target.value = "";
     if (!selectedFile) return;
 
-    const ALLOWED_TYPES = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-    ];
-    const MAX_FILE_SIZE_MB = 5;
-
-    if (!ALLOWED_TYPES.includes(selectedFile.type)) {
+    if (!isProductImageFile(selectedFile)) {
       toast.error(t("pages.shops.form.imageTypeError"));
       return;
     }
 
-    let processedFile = selectedFile;
-    if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      const toastId = toast.loading(t("pages.shops.form.compressing"));
-      try {
-        processedFile = await imageCompression(selectedFile, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1024,
-          useWebWorker: true,
-        });
+    const toastId =
+      selectedFile.size > 5 * 1024 * 1024
+        ? toast.loading(t("pages.shops.form.compressing"))
+        : null;
+
+    try {
+      const processedFile = await prepareProductImageFile(selectedFile);
+      setFile(processedFile);
+      setImagePreview(URL.createObjectURL(processedFile));
+      form.setValue("logo", processedFile, { shouldDirty: true });
+      if (toastId) {
         toast.success(t("pages.shops.form.compressSuccess"), { id: toastId });
-      } catch {
-        toast.error(t("pages.shops.form.compressFail"), { id: toastId });
       }
+      toast.success(t("pages.shops.form.imageReady"));
+    } catch {
+      if (toastId) toast.error(t("pages.shops.form.compressFail"), { id: toastId });
+      else toast.error(t("pages.shops.form.compressFail"));
     }
-
-    // 👉 Cập nhật cả React state và form
-    setFile(processedFile);
-    setImagePreview(URL.createObjectURL(processedFile));
-
-    // Cập nhật vào react-hook-form
-    form.setValue("logo", processedFile, { shouldDirty: true });
-
-    toast.success(t("pages.shops.form.imageReady"));
   };
 
   // --- Submit handler ---
@@ -288,7 +280,7 @@ export default function ShopForm({
                               <input
                                 key={fileInputKey}
                                 type="file"
-                                accept=".jpg,.jpeg,.png,.webp"
+                                accept={PRODUCT_IMAGE_ACCEPT}
                                 onChange={handleFileChange}
                                 className="absolute inset-0 cursor-pointer opacity-0"
                               />

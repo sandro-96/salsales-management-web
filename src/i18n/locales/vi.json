@@ -44,28 +44,28 @@
   },
   "seo": {
     "login": {
-      "title": "Đăng nhập — Sổ thu chi",
-      "description": "Đăng nhập {{brand}} để quản lý bán hàng, POS, đơn hàng và báo cáo shop của bạn.",
+      "title": "Đăng nhập POS bán hàng | Sổ thu chi",
+      "description": "Đăng nhập {{brand}} để mở POS web, theo dõi đơn hàng, tồn kho và báo cáo doanh thu shop của bạn — đăng nhập đa thiết bị, đồng bộ realtime.",
       "path": "/login"
     },
     "register": {
-      "title": "Đăng ký miễn phí — Sổ thu chi",
-      "description": "Tạo tài khoản {{brand}}, dùng thử 30 ngày — POS, storefront và QR bàn trong một hệ thống.",
+      "title": "Đăng ký miễn phí 30 ngày — Phần mềm POS Sổ thu chi",
+      "description": "Tạo tài khoản {{brand}} miễn phí, dùng thử 30 ngày trọn bộ POS, storefront online và QR gọi món tại bàn. Không cần máy POS, không cần thẻ tín dụng.",
       "path": "/register"
     },
     "forgotPassword": {
-      "title": "Quên mật khẩu — Sổ thu chi",
-      "description": "Khôi phục mật khẩu tài khoản {{brand}} qua email đã đăng ký.",
+      "title": "Quên mật khẩu | Sổ thu chi",
+      "description": "Khôi phục mật khẩu tài khoản {{brand}} qua email đã đăng ký trong vài bước đơn giản, bảo mật.",
       "path": "/forgot-password"
     },
     "terms": {
-      "title": "Điều khoản sử dụng — Sổ thu chi",
-      "description": "Điều khoản sử dụng dịch vụ Sổ thu chi do Chu Thanh Trí vận hành.",
+      "title": "Điều khoản sử dụng dịch vụ | Sổ thu chi",
+      "description": "Điều khoản sử dụng phần mềm bán hàng {{brand}} — quyền và nghĩa vụ của người dùng, chính sách thanh toán và sử dụng dịch vụ.",
       "path": "/terms"
     },
     "privacy": {
-      "title": "Chính sách bảo mật — Sổ thu chi",
-      "description": "Chính sách bảo mật và xử lý dữ liệu cá nhân trên nền tảng Sổ thu chi.",
+      "title": "Chính sách bảo mật & xử lý dữ liệu | Sổ thu chi",
+      "description": "{{brand}} cam kết bảo mật dữ liệu khách hàng và shop. Đọc chi tiết chính sách thu thập, lưu trữ và xử lý dữ liệu cá nhân.",
       "path": "/privacy"
     }
   },
@@ -89,20 +89,22 @@
   },
   "network": {
     "offline": "Không có kết nối internet — một số thao tác tạm khóa.",
-    "apiUnreachable": "Không kết nối được máy chủ — đang thử lại khi có mạng.",
+    "apiUnreachable": "Máy chủ API không phản hồi — đang thử lại tự động. Kết nối internet của bạn vẫn bình thường.",
+    "apiUnreachableShort": "Máy chủ không phản hồi",
     "slow": "Mạng chậm — thao tác có thể mất thêm thời gian.",
     "realtimePaused": "Cập nhật tức thì tạm ngắt — đang làm mới định kỳ.",
     "retry": "Thử lại",
     "errors": {
       "offline": "Không có kết nối internet.",
       "timeout": "Máy chủ phản hồi quá chậm. Vui lòng thử lại.",
-      "network": "Không kết nối được máy chủ. Kiểm tra mạng và thử lại.",
-      "server": "Máy chủ đang gặp sự cố. Thử lại sau.",
+      "network": "Không kết nối được máy chủ API. Dịch vụ có thể đang tắt hoặc bảo trì — thử lại sau.",
+      "server": "Máy chủ API không phản hồi hoặc đang gặp sự cố. Thử lại sau.",
       "client": "Yêu cầu không hợp lệ.",
       "unknown": "Đã xảy ra lỗi. Vui lòng thử lại."
     },
     "pos": {
-      "offlineAction": "Mất kết nối — không thể gửi đơn lên server. Giữ giỏ hàng trên máy này và thử lại khi có mạng."
+      "offlineAction": "Không có internet — không thể gửi đơn lên server. Giữ giỏ hàng trên máy này và thử lại khi có mạng.",
+      "serverDownAction": "Máy chủ API tạm không phản hồi — không thể gửi đơn. Giữ giỏ hàng và thử lại khi server hoạt động trở lại."
     }
   },
   "theme": {

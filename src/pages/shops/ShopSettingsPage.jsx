@@ -9,7 +9,10 @@ import { deleteShop } from "../../api/shopApi.js";
 import { toast } from "sonner";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { useNavigate, Link } from "react-router-dom";
-import imageCompression from "browser-image-compression";
+import {
+  isProductImageFile,
+  prepareProductImageFile,
+} from "@/utils/productImageFiles.js";
 import {
   Store,
   Pencil,
@@ -191,28 +194,27 @@ const ShopSettingsPage = () => {
 
   const handleLogoChange = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const ALLOWED = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!ALLOWED.includes(file.type)) {
+    if (!isProductImageFile(file)) {
       toast.error(t("pages.shops.settings.imageTypeError"));
       return;
     }
-    let processed = file;
-    if (file.size > 5 * 1024 * 1024) {
-      const tid = toast.loading(t("pages.shops.settings.compressing"));
-      try {
-        processed = await imageCompression(file, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1024,
-          useWebWorker: true,
-        });
+    const tid =
+      file.size > 5 * 1024 * 1024
+        ? toast.loading(t("pages.shops.settings.compressing"))
+        : null;
+    try {
+      const processed = await prepareProductImageFile(file);
+      setLogoFile(processed);
+      setLogoPreview(URL.createObjectURL(processed));
+      if (tid) {
         toast.success(t("pages.shops.settings.compressSuccess"), { id: tid });
-      } catch {
-        toast.error(t("pages.shops.settings.compressFail"), { id: tid });
       }
+    } catch {
+      if (tid) toast.error(t("pages.shops.settings.compressFail"), { id: tid });
+      else toast.error(t("pages.shops.settings.compressFail"));
     }
-    setLogoFile(processed);
-    setLogoPreview(URL.createObjectURL(processed));
   };
 
   const handleSubmit = async () => {

@@ -292,6 +292,7 @@ const AccountPage = () => {
                             setError: setFileError,
                             setFile: setAvatarFile,
                             setPreview: setPreviewAvatar,
+                            onReject: (msg) => toast.error(msg),
                           })
                         }
                       />

@@ -1,10 +1,10 @@
 {
   "metaTitle": "Trang chủ",
   "seo": {
-    "title": "Sổ thu chi — Phần mềm quản lý bán hàng POS, storefront & QR bàn",
-    "description": "Dùng thử 30 ngày miễn phí. POS tại quầy, storefront COD, QR gọi món F&B. 99.000₫/tháng — thanh toán trước 3, 6, 9 hoặc 12 tháng.",
+    "title": "Phần mềm bán hàng POS web · Storefront · QR bàn | Sổ thu chi",
+    "description": "Phần mềm quản lý bán hàng online cho cửa hàng Việt: POS chạy trên điện thoại/tablet/laptop, storefront online và QR gọi món tại bàn. Dùng thử miễn phí 30 ngày, chỉ từ 99.000 ₫/tháng.",
     "path": "/landing",
-    "offerDescription": "Gói BASIC 99.000 VND/tháng, dùng thử 30 ngày"
+    "offerDescription": "Gói BASIC 99.000 VND/tháng, dùng thử miễn phí 30 ngày — đầy đủ POS, storefront, QR bàn, báo cáo doanh thu"
   },
   "nav": {
     "features": "Tính năng",
@@ -22,19 +22,19 @@
     "menuSubtitle": "Khám phá nền tảng & tạo tài khoản"
   },
   "hero": {
-    "eyebrow": "Nền tảng quản lý bán hàng cho shop Việt",
-    "badge": "Mới · POS + Storefront + QR bàn trong 1 tài khoản",
-    "title": "Ghi chép thu chi rõ ràng, bán hàng mượt mà — từ quầy đến online",
-    "subtitle": "{{brand}} giúp bạn bán tại quầy POS, mở storefront COD cho khách online, và cho phép khách F&B tự gọi món qua QR tại bàn — tất cả đồng bộ về một hệ thống đơn hàng, tồn kho và báo cáo.",
+    "eyebrow": "Phần mềm POS chạy thẳng trên trình duyệt — không cần máy bán hàng",
+    "badge": "Mới · Bán bằng điện thoại, tablet, laptop · 0 ₫ tiền máy POS",
+    "title": "Bán hàng trên mọi thiết bị — không cần đầu tư máy POS cồng kềnh",
+    "subtitle": "{{brand}} là phần mềm bán hàng chạy thẳng trên trình duyệt. Mở Chrome trên điện thoại, máy tính bảng hoặc laptop là bán được — không lắp đặt máy POS, không cài driver, không phụ thuộc thiết bị riêng. Đơn POS, storefront online và QR gọi món tại bàn đồng bộ realtime trên cùng một tài khoản.",
     "ctaPrimary": "Bắt đầu miễn phí",
     "ctaSecondary": "Xem demo",
     "ctaLogin": "Đăng nhập",
-    "noCard": "Không cần thẻ tín dụng",
+    "noCard": "Không cần thẻ tín dụng · Không cần máy POS",
     "highlights": {
-      "pos": "POS tại quầy",
+      "pos": "POS trên trình duyệt",
       "storefront": "Storefront online",
       "qr": "QR gọi món tại bàn",
-      "reports": "Báo cáo doanh thu"
+      "reports": "Báo cáo realtime"
     },
     "mockup": {
       "title": "Bảng điều khiển",
@@ -61,14 +61,14 @@
     }
   },
   "stats": {
+    "devices": "Mọi thiết bị",
+    "devicesDesc": "Điện thoại · Tablet · Laptop",
     "channels": "3 kênh bán",
     "channelsDesc": "POS · Storefront · QR bàn",
     "modules": "10+ module",
     "modulesDesc": "Sản phẩm, kho, CRM, KM…",
-    "industries": "5+ ngành",
-    "industriesDesc": "F&B, bán lẻ, dược…",
     "realtime": "Realtime",
-    "realtimeDesc": "Thông báo đơn mới"
+    "realtimeDesc": "Đồng bộ tức thì"
   },
   "socialProof": {
     "title": "Tin dùng bởi các loại hình kinh doanh",
@@ -81,9 +81,58 @@
       "boutique": "Thời trang"
     }
   },
+  "noHardware": {
+    "title": "Tại sao không cần máy POS?",
+    "subtitle": "{{brand}} chạy thẳng trên trình duyệt. Tiết kiệm hàng chục triệu tiền thiết bị, mở Chrome là bán — đồng bộ giữa chủ shop, thu ngân và phục vụ.",
+    "benefits": {
+      "zeroHw": {
+        "title": "0 ₫ tiền máy bán hàng",
+        "desc": "Dùng thiết bị có sẵn — không cần mua máy POS, két tiền hay máy quét chuyên dụng (10–30 triệu)."
+      },
+      "anyDevice": {
+        "title": "Mọi hệ điều hành",
+        "desc": "Điện thoại Android/iOS, máy tính bảng, laptop hay máy bàn Windows/macOS — đều bán hàng được như nhau."
+      },
+      "instantStart": {
+        "title": "Mở web là bán",
+        "desc": "Đăng nhập trên Chrome, Safari, Edge là dùng. Không cài app, không cấu hình driver, không phụ thuộc thiết bị riêng."
+      },
+      "printer": {
+        "title": "In bill linh hoạt",
+        "desc": "Dùng máy in nhiệt Bluetooth/Wi-Fi phổ thông để in bill, hoặc tạm thời in qua trình duyệt khi chưa có máy in."
+      }
+    },
+    "savings": {
+      "eyebrow": "Tiết kiệm chi phí khởi điểm",
+      "value": "10–30 triệu ₫",
+      "desc": "So với mua máy POS, két tiền và phần mềm cài đặt riêng. {{brand}} chỉ cần thiết bị bạn đang có + 99.000 ₫/tháng — không hợp đồng dài hạn."
+    },
+    "devices": {
+      "title": "Bán trên thiết bị bạn đang có",
+      "subtitle": "Một tài khoản — đăng nhập đa thiết bị, mỗi nhân viên một vai trò, đồng bộ realtime giữa chủ shop và team.",
+      "items": {
+        "phone": {
+          "title": "Điện thoại",
+          "desc": "Quét barcode, chốt đơn và thu tiền nhanh — phù hợp giao hàng tận nơi, hội chợ hoặc bán lưu động."
+        },
+        "tablet": {
+          "title": "Máy tính bảng",
+          "desc": "Đặt cố định ở quầy như máy POS truyền thống, giao diện rộng dễ thao tác cho thu ngân."
+        },
+        "laptop": {
+          "title": "Laptop / máy bàn",
+          "desc": "Vai trò admin: theo dõi báo cáo, quản lý kho, sản phẩm, nhân viên và cấu hình shop."
+        },
+        "team": {
+          "title": "Cả team cùng dùng",
+          "desc": "Chủ shop, thu ngân, phục vụ — mỗi người một thiết bị, phân quyền theo vai trò, đồng bộ tức thì."
+        }
+      }
+    }
+  },
   "channels": {
     "title": "Ba kênh bán — một hệ thống",
-    "subtitle": "Khách đặt từ quầy, website shop hoặc QR tại bàn đều về chung danh sách đơn, tồn kho và báo cáo.",
+    "subtitle": "Khách đặt từ quầy bán (POS trên thiết bị bạn đang có), website shop hoặc QR tại bàn — đều về chung danh sách đơn, tồn kho và báo cáo.",
     "pos": {
       "title": "POS bán hàng",
       "desc": "Quầy thu ngân nhanh: giỏ hàng, khuyến mãi, biến thể/topping, bàn (F&B), thanh toán tiền mặt/thẻ/chuyển khoản, in bill.",
@@ -108,7 +157,7 @@
       "points": [
         "Gắn QR theo từng bàn",
         "Đơn hiển thị nguồn QR bàn / tại chỗ",
-        "Staff xác nhận và thu tiền tại quầy như POS"
+        "Staff xác nhận và thu tiền bằng POS trên cùng một thiết bị"
       ]
     }
   },
@@ -117,7 +166,7 @@
     "subtitle": "Đầy đủ công cụ vận hành cửa hàng — không cần ghép nhiều phần mềm rời.",
     "pos": {
       "title": "POS bán hàng",
-      "desc": "Quầy POS, storefront online, order QR tại bàn"
+      "desc": "POS web, storefront online, order QR tại bàn"
     },
     "orders": {
       "title": "Quản lý đơn hàng",
@@ -201,8 +250,8 @@
         "desc": "Nhập danh mục, giá, tồn kho; bật storefront hoặc QR bàn nếu cần."
       },
       "3": {
-        "title": "Bán & nhận đơn",
-        "desc": "Mở POS, nhận đơn online/tại bàn qua thông báo realtime."
+        "title": "Mở web là bán",
+        "desc": "Trên điện thoại, tablet hay laptop, đăng nhập POS và bán hàng ngay. Đơn online + QR bàn về cùng một màn hình realtime."
       },
       "4": {
         "title": "Theo dõi & báo cáo",
@@ -272,7 +321,7 @@
     },
     "includesTitle": "Bao gồm trong gói",
     "features": [
-      "POS bán hàng tại quầy, in bill nhanh",
+      "POS đa thiết bị (điện thoại / tablet / laptop), in bill nhanh",
       "Storefront online (URL theo shop) + đặt COD",
       "Order QR tại bàn cho F&B",
       "Sản phẩm, biến thể, topping, barcode, nhập Excel",
@@ -294,6 +343,14 @@
   "faq": {
     "title": "Câu hỏi thường gặp",
     "items": {
+      "hardware": {
+        "q": "Tôi có cần mua máy POS không?",
+        "a": "Không. {{brand}} chạy thẳng trên trình duyệt — bạn dùng điện thoại, máy tính bảng, laptop hoặc máy bàn có sẵn để bán hàng. Không phải đầu tư máy POS chuyên dụng (10–30 triệu) hay cài driver phức tạp. Khi shop lớn dần, bạn có thể bổ sung tablet quầy, máy in nhiệt và máy quét bất cứ lúc nào."
+      },
+      "printer": {
+        "q": "Có in được hóa đơn không, có cần máy in chuyên dụng?",
+        "a": "Có. Bạn dùng máy in nhiệt Bluetooth/Wi-Fi phổ thông (loại 58mm hoặc 80mm) để in bill, hoặc tạm thời in qua chức năng in của trình duyệt khi chưa có máy in. Không bắt buộc máy in chuyên dụng đi kèm máy POS."
+      },
       "free": {
         "q": "Dùng thử bao lâu, có mất phí không?",
         "a": "Bạn được dùng thử miễn phí 30 ngày với đầy đủ tính năng — không cần thẻ tín dụng khi đăng ký. Sau 30 ngày, phí kích hoạt là 99.000 ₫/tháng để tiếp tục sử dụng."
@@ -321,13 +378,13 @@
     }
   },
   "cta": {
-    "title": "Sẵn sàng gom bán hàng về một chỗ?",
-    "subtitle": "Tạo shop trong vài phút — POS, storefront và báo cáo đã sẵn sàng.",
+    "title": "Mở web là bán — ngay hôm nay",
+    "subtitle": "Đăng ký trong vài phút và bán hàng trên thiết bị bạn đang có. Không cần máy POS, không cài đặt, không hợp đồng dài hạn.",
     "primary": "Đăng ký miễn phí",
     "secondary": "Đã có tài khoản? Đăng nhập"
   },
   "footer": {
-    "tagline": "{{brand}} — phần mềm quản lý bán hàng & thu chi cho cửa hàng Việt.",
+    "tagline": "{{brand}} — phần mềm bán hàng chạy trên trình duyệt cho cửa hàng Việt. Bán bằng thiết bị có sẵn, không cần máy POS.",
     "product": "Sản phẩm",
     "account": "Tài khoản",
     "legal": "Pháp lý",

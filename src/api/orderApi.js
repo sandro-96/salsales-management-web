@@ -46,6 +46,9 @@ export const countOnlinePendingOrders = (shopId, params = {}) =>
 export const countPosPendingOrders = (shopId, params = {}) =>
   countPendingOrdersBySource(shopId, "POS", params);
 
+export const countInStorePendingOrders = (shopId, params = {}) =>
+  countPendingOrdersBySource(shopId, "IN_STORE", params);
+
 /**
  * 📊 Xem trước thuế (theo chính sách thuế hiện tại)
  * GET /api/orders/preview-tax?shopId=&branchId=&totalPrice=

@@ -1,10 +1,10 @@
 {
   "metaTitle": "Home",
   "seo": {
-    "title": "Sổ thu chi — POS, storefront & table QR for Vietnamese shops",
-    "description": "30-day free trial. Counter POS, COD storefront, F&B table QR. 99,000 VND/month — pay 3, 6, 9 or 12 months ahead.",
+    "title": "Cloud POS for shops, restaurants & cafés | Sổ thu chi",
+    "description": "Cloud POS that runs in any browser — phone, tablet or laptop. Online storefront and table-QR ordering included. Free 30-day trial, then 99,000 VND/month, no hardware required.",
     "path": "/landing",
-    "offerDescription": "BASIC plan 99,000 VND/month, 30-day trial"
+    "offerDescription": "BASIC plan 99,000 VND/month, 30-day free trial — full POS, storefront, table QR and revenue reports"
   },
   "nav": {
     "features": "Features",
@@ -22,19 +22,19 @@
     "menuSubtitle": "Explore the platform & create an account"
   },
   "hero": {
-    "eyebrow": "Sales management platform for Vietnamese shops",
-    "badge": "New · POS + Storefront + Table QR in one account",
-    "title": "Clear books, smooth sales — from counter to online",
-    "subtitle": "{{brand}} helps you sell at the POS counter, run a public COD storefront, and let F&B guests order via table QR — all synced to one order list, inventory, and reporting hub.",
+    "eyebrow": "Browser-based POS — no checkout hardware required",
+    "badge": "New · Sell from phone, tablet, laptop · 0 ₫ POS hardware",
+    "title": "Sell from any device — no bulky POS hardware to buy",
+    "subtitle": "{{brand}} runs straight in the browser. Open Chrome on a phone, tablet or laptop and you're selling — no POS terminal, no driver setup, no device lock-in. POS orders, online storefront and table QR ordering stay synced in realtime under one account.",
     "ctaPrimary": "Start for free",
     "ctaSecondary": "See demo",
     "ctaLogin": "Log in",
-    "noCard": "No credit card required",
+    "noCard": "No credit card · No POS hardware needed",
     "highlights": {
-      "pos": "Counter POS",
+      "pos": "Browser POS",
       "storefront": "Online storefront",
       "qr": "Table QR ordering",
-      "reports": "Revenue reports"
+      "reports": "Realtime reports"
     },
     "mockup": {
       "title": "Dashboard",
@@ -61,14 +61,14 @@
     }
   },
   "stats": {
+    "devices": "Any device",
+    "devicesDesc": "Phone · Tablet · Laptop",
     "channels": "3 channels",
     "channelsDesc": "POS · Storefront · Table QR",
     "modules": "10+ modules",
     "modulesDesc": "Products, stock, CRM, promos…",
-    "industries": "5+ industries",
-    "industriesDesc": "F&B, retail, pharmacy…",
     "realtime": "Realtime",
-    "realtimeDesc": "New order alerts"
+    "realtimeDesc": "Instant sync across devices"
   },
   "socialProof": {
     "title": "Trusted by every kind of business",
@@ -81,9 +81,58 @@
       "boutique": "Fashion"
     }
   },
+  "noHardware": {
+    "title": "Why you don't need a POS terminal",
+    "subtitle": "{{brand}} runs straight in the browser. Skip the hardware bill, open Chrome and start selling — synced in realtime between owner, cashier and floor staff.",
+    "benefits": {
+      "zeroHw": {
+        "title": "0 ₫ in POS hardware",
+        "desc": "Use the devices you already own — no dedicated POS terminal, cash drawer or scanner needed (saves 10–30M ₫ upfront)."
+      },
+      "anyDevice": {
+        "title": "Every operating system",
+        "desc": "Android/iOS phones, tablets, laptops or Windows/macOS desktops — they all sell with the same UI."
+      },
+      "instantStart": {
+        "title": "Open the web and sell",
+        "desc": "Sign in on Chrome, Safari or Edge and you're done. No app install, no driver setup, no hardware lock-in."
+      },
+      "printer": {
+        "title": "Flexible receipt printing",
+        "desc": "Print bills with any common Bluetooth/Wi-Fi thermal printer, or use the browser's print dialog while you wait for one."
+      }
+    },
+    "savings": {
+      "eyebrow": "Lower upfront cost",
+      "value": "10–30M ₫ saved",
+      "desc": "Versus buying a POS terminal, cash drawer and on-prem software. {{brand}} only needs the device you already have, plus 99,000 ₫/month — cancel anytime."
+    },
+    "devices": {
+      "title": "Sell on the device you already own",
+      "subtitle": "One account — sign in across devices, role-based access for each staff, realtime sync between owner and team.",
+      "items": {
+        "phone": {
+          "title": "Phone",
+          "desc": "Scan barcodes, close orders and collect payments fast — perfect for delivery, pop-ups or roaming sales."
+        },
+        "tablet": {
+          "title": "Tablet",
+          "desc": "Mount it at the counter like a traditional POS — roomy UI built for cashiers."
+        },
+        "laptop": {
+          "title": "Laptop / desktop",
+          "desc": "Owner role: dive into reports, inventory, products, staff and shop settings."
+        },
+        "team": {
+          "title": "Whole team",
+          "desc": "Owner, cashier, server — one device each, role-based permissions, synced instantly."
+        }
+      }
+    }
+  },
   "channels": {
     "title": "Three channels — one system",
-    "subtitle": "Counter, shop website, and table QR orders share the same orders, stock, and reports.",
+    "subtitle": "Front-of-house orders (POS on the device you already own), shop website, and table QR orders share the same orders, stock, and reports.",
     "pos": {
       "title": "POS checkout",
       "desc": "Fast counter flow: cart, promotions, variants/toppings, tables (F&B), cash/card/transfer payment, receipt print.",
@@ -108,7 +157,7 @@
       "points": [
         "QR per table",
         "Orders tagged as in-store / table QR",
-        "Staff confirm and collect payment like POS"
+        "Staff confirm and collect payment via POS on the same device"
       ]
     }
   },
@@ -117,7 +166,7 @@
     "subtitle": "Full shop operations toolkit — no patchwork of separate apps.",
     "pos": {
       "title": "POS checkout",
-      "desc": "Counter POS, online storefront, table QR orders"
+      "desc": "Browser POS, online storefront, table QR orders"
     },
     "orders": {
       "title": "Order management",
@@ -201,8 +250,8 @@
         "desc": "Set catalog, prices, inventory; enable storefront or table QR if needed."
       },
       "3": {
-        "title": "Sell & receive orders",
-        "desc": "Open POS; get online/table orders via realtime alerts."
+        "title": "Open the web and sell",
+        "desc": "On a phone, tablet or laptop, sign into POS and start selling. Online + table QR orders land on the same realtime screen."
       },
       "4": {
         "title": "Track & report",
@@ -272,7 +321,7 @@
     },
     "includesTitle": "Included in the plan",
     "features": [
-      "Counter POS checkout with fast receipt printing",
+      "Multi-device POS (phone / tablet / laptop) with fast receipt printing",
       "Online storefront (per-shop URL) + COD orders",
       "Table QR ordering for F&B",
       "Products, variants, toppings, barcodes, Excel import",
@@ -294,6 +343,14 @@
   "faq": {
     "title": "FAQ",
     "items": {
+      "hardware": {
+        "q": "Do I have to buy a POS terminal?",
+        "a": "No. {{brand}} runs straight in the browser, so you sell from the phone, tablet, laptop or desktop you already own. There's no need for a dedicated POS box (10–30M ₫) or any driver setup. As your shop grows, you can add a counter tablet, a thermal printer or a barcode scanner whenever you want."
+      },
+      "printer": {
+        "q": "Can I print receipts? Do I need a special printer?",
+        "a": "Yes. Use any common Bluetooth/Wi-Fi thermal printer (58mm or 80mm) for receipts, or print via the browser's built-in print dialog while you don't have one yet. A POS-bundled printer is not required."
+      },
       "free": {
         "q": "How long is the free trial?",
         "a": "You get a full 30-day free trial with every feature unlocked — no credit card required at signup. After the trial, activation costs 99,000 ₫ / month to keep using the platform."
@@ -321,13 +378,13 @@
     }
   },
   "cta": {
-    "title": "Ready to unify your sales?",
-    "subtitle": "Create a shop in minutes — POS, storefront, and reports included.",
+    "title": "Open the web and sell — today",
+    "subtitle": "Sign up in minutes and sell from the device you already own. No POS hardware, no installs, no long-term contract.",
     "primary": "Sign up free",
     "secondary": "Already have an account? Log in"
   },
   "footer": {
-    "tagline": "{{brand}} — sales & bookkeeping software for Vietnamese shops.",
+    "tagline": "{{brand}} — browser-based sales software for Vietnamese shops. Sell from devices you already own, no POS hardware needed.",
     "product": "Product",
     "account": "Account",
     "legal": "Legal",

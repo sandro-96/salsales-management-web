@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  lazy,
+  Suspense,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useShop } from "../../hooks/useShop.js";
 import { toast } from "sonner";
@@ -82,9 +90,13 @@ import {
   toggleProductActive,
   updateProductTrackInventory,
 } from "../../api/productApi.js";
-import ProductFormModal from "./ProductFormModal.jsx";
-import ProductImportExportDialog from "./ProductImportExportDialog.jsx";
-import ShopToppingsModal from "./ShopToppingsModal.jsx";
+/* Lazy-load các modal nặng (ProductForm 87KB + zxing scanner + exceljs ~300KB).
+ * Chúng chỉ render khi user mở dialog → không kéo vào main chunk của ProductPage. */
+const ProductFormModal = lazy(() => import("./ProductFormModal.jsx"));
+const ProductImportExportDialog = lazy(
+  () => import("./ProductImportExportDialog.jsx"),
+);
+const ShopToppingsModal = lazy(() => import("./ShopToppingsModal.jsx"));
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
 import {
@@ -854,39 +866,48 @@ const ProductPage = () => {
         <DataTablePagination table={table} />
       </div>
 
-      <ProductFormModal
-        open={modalOpen}
-        onClose={handleModalClose}
-        product={editingProduct}
-        shopId={shopId}
-        onSuccess={() => {
-          fetchProducts();
-          fetchStats();
-        }}
-        startStep={editingProduct ? undefined : createStep}
-        prefillDefaults={modalPrefillDefaults ?? undefined}
-      />
+      {/* Modal nặng chỉ mount khi user mở — kết hợp lazy import giúp bundle ban đầu nhẹ hơn. */}
+      <Suspense fallback={null}>
+        {modalOpen ? (
+          <ProductFormModal
+            open={modalOpen}
+            onClose={handleModalClose}
+            product={editingProduct}
+            shopId={shopId}
+            onSuccess={() => {
+              fetchProducts();
+              fetchStats();
+            }}
+            startStep={editingProduct ? undefined : createStep}
+            prefillDefaults={modalPrefillDefaults ?? undefined}
+          />
+        ) : null}
 
-      <ProductImportExportDialog
-        open={importExportOpen}
-        onClose={() => setImportExportOpen(false)}
-        shopId={shopId}
-        branches={branches}
-        onImportSuccess={() => {
-          fetchProducts();
-          fetchStats();
-        }}
-      />
+        {importExportOpen ? (
+          <ProductImportExportDialog
+            open={importExportOpen}
+            onClose={() => setImportExportOpen(false)}
+            shopId={shopId}
+            branches={branches}
+            onImportSuccess={() => {
+              fetchProducts();
+              fetchStats();
+            }}
+          />
+        ) : null}
 
-      <ShopToppingsModal
-        open={toppingsSettingsOpen}
-        onClose={() => setToppingsSettingsOpen(false)}
-        shopId={shopId}
-        onSaved={() => {
-          fetchProducts();
-          fetchShops(shopId);
-        }}
-      />
+        {toppingsSettingsOpen ? (
+          <ShopToppingsModal
+            open={toppingsSettingsOpen}
+            onClose={() => setToppingsSettingsOpen(false)}
+            shopId={shopId}
+            onSaved={() => {
+              fetchProducts();
+              fetchShops(shopId);
+            }}
+          />
+        ) : null}
+      </Suspense>
     </div>
   );
 };

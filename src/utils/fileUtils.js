@@ -1,45 +1,45 @@
-import imageCompression from "browser-image-compression";
+import {
+  isProductImageFile,
+  prepareProductImageFile,
+  PRODUCT_IMAGE_ACCEPT,
+} from "./productImageFiles.js";
 
+export { PRODUCT_IMAGE_ACCEPT };
+
+/**
+ * Chọn một ảnh (avatar, logo…) — tương thích mobile (HEIC, type rỗng).
+ */
 export const handleFileChange = async ({
   event,
   setError,
   setFile,
   setPreview,
-  allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"],
-  maxFileSizeMB = 5,
-  compressionOptions = {
-    maxSizeMB: 1,
-    maxWidthOrHeight: 1024,
-    useWebWorker: true,
-  },
+  onReject,
 }) => {
-    const selectedFile = event.target.files[0];
-    if (!selectedFile) return;
+  const selectedFile = event.target.files?.[0];
+  event.target.value = "";
+  if (!selectedFile) return;
 
-    if (!allowedTypes.includes(selectedFile.type)) {
-        setError(`Chỉ hỗ trợ định dạng: ${allowedTypes.join(", ")}.`);
-        setFile(null);
-        setPreview(null);
-        return;
-    }
+  if (!isProductImageFile(selectedFile)) {
+    const msg = "Chỉ hỗ trợ file ảnh (JPEG, PNG, WebP, HEIC…).";
+    setError?.(msg);
+    onReject?.(msg);
+    setFile?.(null);
+    setPreview?.(null);
+    return;
+  }
 
-    if (selectedFile.size > maxFileSizeMB * 1024 * 1024) {
-        setError(`Ảnh vượt quá ${maxFileSizeMB}MB. Đang tiến hành nén ảnh...`);
-        try {
-            const compressedFile = await imageCompression(selectedFile, compressionOptions);
-            setFile(compressedFile);
-            setPreview(URL.createObjectURL(compressedFile));
-            setError("");
-        } catch (err) {
-            console.error("Error compressing image:", err);
-            setError("Nén ảnh thất bại. Vui lòng chọn ảnh nhỏ hơn.");
-            setFile(null);
-            setPreview(null);
-        }
-        return;
-    }
-
-    setFile(selectedFile);
-    setPreview(URL.createObjectURL(selectedFile));
-    setError("");
+  try {
+    const processed = await prepareProductImageFile(selectedFile);
+    setFile?.(processed);
+    setPreview?.(URL.createObjectURL(processed));
+    setError?.("");
+  } catch (err) {
+    console.warn("handleFileChange failed", err);
+    const msg = "Không xử lý được ảnh. Vui lòng chọn ảnh khác.";
+    setError?.(msg);
+    onReject?.(msg);
+    setFile?.(null);
+    setPreview?.(null);
+  }
 };

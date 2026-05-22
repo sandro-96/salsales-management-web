@@ -12,11 +12,11 @@ const Toaster = ({
   },
   ...props
 }) => {
-  const { theme = "system" } = useTheme();
+  const { resolvedTheme } = useTheme();
 
   return (
     <Sonner
-      theme={theme}
+      theme={resolvedTheme === "dark" ? "dark" : "light"}
       richColors
       closeButton={closeButton}
       position={position}

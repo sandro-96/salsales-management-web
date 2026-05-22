@@ -12,16 +12,20 @@ export function classifyNetworkError(error) {
   if (code === "ECONNABORTED" || error?.message?.includes?.("timeout")) {
     return "timeout";
   }
+  const status = error?.response?.status;
+  if (status >= 500) return "server";
   if (
     code === "ERR_NETWORK" ||
     code === "ENOTFOUND" ||
     code === "ECONNREFUSED" ||
     !error?.response
   ) {
-    return "network";
+    // Trình duyệt online nhưng API không trả lời → server down, không phải mất WiFi/4G
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      return "server";
+    }
+    return "offline";
   }
-  const status = error?.response?.status;
-  if (status >= 500) return "server";
   if (status >= 400) return "client";
   return "unknown";
 }

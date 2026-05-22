@@ -2,20 +2,88 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Coiny&family=Oi&display=swap"
-      rel="stylesheet"
-    />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <title>Phần mềm bán hàng POS web · Storefront · QR bàn | Sổ thu chi</title>
     <meta
       name="description"
-      content="Sổ thu chi — phần mềm quản lý bán hàng: POS, storefront, QR bàn. Dùng thử 30 ngày, 99.000₫/tháng."
+      content="Phần mềm quản lý bán hàng online cho cửa hàng Việt: POS chạy trên điện thoại/tablet/laptop, storefront online và QR gọi món tại bàn. Dùng thử miễn phí 30 ngày, từ 99.000 ₫/tháng."
     />
-    <meta name="robots" content="index, follow" />
-    <title>Sổ thu chi — Quản lý bán hàng POS &amp; storefront</title>
+    <meta
+      name="keywords"
+      content="phần mềm bán hàng, phần mềm POS, phần mềm quản lý bán hàng, POS online, POS web, storefront, QR gọi món, phần mềm quản lý quán cà phê, phần mềm quản lý nhà hàng, phần mềm quản lý cửa hàng, phần mềm bán hàng F&B, Sổ thu chi"
+    />
+    <meta name="author" content="Chu Thanh Trí" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- Theme color (light + dark) -->
+    <meta name="theme-color" content="#159a6e" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="application-name" content="Sổ thu chi" />
+    <meta name="apple-mobile-web-app-title" content="Sổ thu chi" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="msapplication-TileColor" content="#159a6e" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+
+    <!-- Icons & Manifest -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Open Graph (defaults — đảm bảo FB/Zalo/Slack luôn có preview kể cả khi chưa cấu hình VITE_SITE_URL).
+         seoSitemapPlugin sẽ override og:image, twitter:image, og:url và thêm canonical absolute khi build. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Sổ thu chi" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:title" content="Phần mềm bán hàng POS web · Storefront · QR bàn | Sổ thu chi" />
+    <meta
+      property="og:description"
+      content="POS chạy trên điện thoại, tablet, laptop — không cần máy POS. Storefront online + QR gọi món tại bàn. Dùng thử miễn phí 30 ngày, 99.000 ₫/tháng."
+    />
+    <meta property="og:image" content="og-landing.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sổ thu chi — POS web, storefront, QR bàn" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Phần mềm bán hàng POS web · Storefront · QR bàn | Sổ thu chi" />
+    <meta
+      name="twitter:description"
+      content="Phần mềm quản lý bán hàng cho cửa hàng Việt: POS web, storefront online, QR gọi món. Dùng thử 30 ngày, từ 99.000 ₫/tháng."
+    />
+    <meta name="twitter:image" content="og-landing.png" />
+    <meta name="twitter:image:alt" content="Sổ thu chi — POS web, storefront, QR bàn" />
+
+    <!-- Fonts: preconnect + non-blocking CSS load (cải thiện LCP) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Coiny&family=Oi&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Coiny&family=Oi&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Coiny&family=Oi&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

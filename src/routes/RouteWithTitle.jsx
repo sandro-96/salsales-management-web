@@ -3,7 +3,18 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { applySeoHead } from "@/lib/seoHead";
-import { absoluteUrl } from "@/lib/siteUrl";
+import { absoluteUrl, getSiteUrl } from "@/lib/siteUrl";
+import { setBrowserTabBaseTitle } from "@/utils/browserTabTitle.js";
+import { SUPPORTED_LANGUAGES } from "@/i18n";
+
+const LOCALE_MAP = {
+  vi: "vi_VN",
+  en: "en_US",
+};
+
+function toOgLocale(code) {
+  return LOCALE_MAP[code] || code;
+}
 
 const RouteWithTitle = ({
   element,
@@ -49,13 +60,37 @@ const RouteWithTitle = ({
 
     const canonical = absoluteUrl(canonicalPath);
 
+    // Hreflang alternates — chỉ sinh khi có VITE_SITE_URL (cần absolute URL)
+    let alternates;
+    if (getSiteUrl() && canonicalPath) {
+      const list = SUPPORTED_LANGUAGES.map(({ code }) => ({
+        hrefLang: code,
+        href: `${absoluteUrl(canonicalPath)}${
+          canonicalPath.includes("?") ? "&" : "?"
+        }lng=${code}`,
+      }));
+      // x-default trỏ về URL không tham số (mặc định vi)
+      list.push({ hrefLang: "x-default", href: absoluteUrl(canonicalPath) });
+      alternates = list;
+    }
+
     applySeoHead({
       title: pageTitle,
       description,
       canonical: canonical || undefined,
       ogImage: ogImage || undefined,
+      ogType: "website",
+      siteName: brand,
+      locale: toOgLocale(i18n.language),
+      localeAlternates: SUPPORTED_LANGUAGES.map((l) => toOgLocale(l.code)),
+      alternates,
       noIndex,
     });
+    setBrowserTabBaseTitle(pageTitle);
+
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = i18n.language || "vi";
+    }
   }, [
     title,
     titleKey,

@@ -1,0 +1,28 @@
+{
+  "name": "Sổ thu chi — POS web, storefront & QR bàn",
+  "short_name": "Sổ thu chi",
+  "description": "Phần mềm bán hàng chạy trên trình duyệt: POS đa thiết bị, storefront online, QR gọi món tại bàn. Không cần máy POS.",
+  "lang": "vi",
+  "dir": "ltr",
+  "start_url": "/landing",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#159a6e",
+  "categories": ["business", "productivity", "shopping", "finance"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

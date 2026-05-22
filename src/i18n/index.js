@@ -105,7 +105,10 @@ i18n
       escapeValue: false,
     },
     detection: {
-      order: ["localStorage", "navigator"],
+      // querystring trước localStorage để URL ?lng=vi|en (dùng cho hreflang) thực sự
+      // switch ngôn ngữ; sau đó persist vào localStorage cho lần sau.
+      order: ["querystring", "localStorage", "navigator"],
+      lookupQuerystring: "lng",
       lookupLocalStorage: LANGUAGE_STORAGE_KEY,
       caches: ["localStorage"],
     },

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { getStorefrontProductDetail } from "@/api/storefrontApi.js";
 import { useStorefrontShop } from "@/layouts/storefront/useStorefrontShop.js";
 import { useStorefrontCart } from "@/hooks/useStorefrontCart.js";
+import { useStorefrontProductSeo } from "@/hooks/useStorefrontProductSeo.js";
 import { ProductImageGallery } from "@/components/products/ProductImageGallery.jsx";
 import { StorefrontProductDescription } from "./StorefrontProductDescription.jsx";
 import {
@@ -72,6 +73,8 @@ export default function StorefrontProductDetailPage() {
   const displayImage =
     galleryImages[galleryIndex] ??
     pickVariantImage(selectedVariant, product);
+
+  useStorefrontProductSeo({ shop, slug, product });
 
   const handleAddToCart = (goToCart = false) => {
     if (!product) return;

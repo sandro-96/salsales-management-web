@@ -1,8 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { Lock, WifiOff } from "lucide-react";
+import { CloudOff, Lock, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function PosStatusBanner({ apiReachable, shopPosWriteBlocked }) {
+export function PosStatusBanner({
+  apiReachable,
+  browserOnline = true,
+  shopPosWriteBlocked,
+}) {
   const { t } = useTranslation();
 
   if (shopPosWriteBlocked) {
@@ -22,17 +26,27 @@ export function PosStatusBanner({ apiReachable, shopPosWriteBlocked }) {
   }
 
   if (!apiReachable) {
+    const serverDown = browserOnline;
     return (
       <div
         role="status"
         className={cn(
           "flex items-center gap-2 px-3 py-2 text-xs font-medium border-b",
-          "bg-red-50 text-red-900 border-red-200",
-          "dark:bg-red-500/15 dark:text-red-100 dark:border-red-500/30",
+          serverDown
+            ? "bg-orange-50 text-orange-950 border-orange-200 dark:bg-orange-500/15 dark:text-orange-100 dark:border-orange-500/30"
+            : "bg-red-50 text-red-900 border-red-200 dark:bg-red-500/15 dark:text-red-100 dark:border-red-500/30",
         )}
       >
-        <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span>{t("network.pos.offlineAction")}</span>
+        {serverDown ? (
+          <CloudOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        ) : (
+          <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        )}
+        <span>
+          {serverDown
+            ? t("network.pos.serverDownAction")
+            : t("network.pos.offlineAction")}
+        </span>
       </div>
     );
   }

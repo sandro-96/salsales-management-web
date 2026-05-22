@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LayoutDashboard, LogOut, Store, WifiOff } from "lucide-react";
+import { CloudOff, LayoutDashboard, LogOut, Store, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Shell POS dùng chung (cùng header / main với FNB POS). */
@@ -22,7 +22,7 @@ const PosChromeLayout = ({ title }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { apiReachable } = useNetwork();
+  const { apiReachable, browserOnline } = useNetwork();
   const { selectedShop, branches, selectedBranchId, setSelectedBranchId } =
     useShop();
 
@@ -89,12 +89,22 @@ const PosChromeLayout = ({ title }) => {
             <Badge
               variant="outline"
               className={cn(
-                "gap-1 text-[10px] h-7 border-red-300 text-red-700",
-                "dark:border-red-500/50 dark:text-red-300",
+                "gap-1 text-[10px] h-7",
+                browserOnline
+                  ? "border-orange-300 text-orange-800 dark:border-orange-500/50 dark:text-orange-200"
+                  : "border-red-300 text-red-700 dark:border-red-500/50 dark:text-red-300",
               )}
             >
-              <WifiOff className="h-3 w-3" />
-              <span className="hidden sm:inline">{t("network.offline")}</span>
+              {browserOnline ? (
+                <CloudOff className="h-3 w-3" />
+              ) : (
+                <WifiOff className="h-3 w-3" />
+              )}
+              <span className="hidden sm:inline">
+                {browserOnline
+                  ? t("network.apiUnreachableShort")
+                  : t("network.offline")}
+              </span>
             </Badge>
           )}
 

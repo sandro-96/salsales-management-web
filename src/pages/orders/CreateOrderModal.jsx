@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Tag,
   Percent,
+  ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -303,10 +304,82 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
     }
   };
 
+  const closeVariantPicker = () => setVariantPickerProduct(null);
+
+  const handleMainOpenChange = (nextOpen) => {
+    if (!nextOpen) {
+      setVariantPickerProduct(null);
+      onClose();
+    }
+  };
+
   return (
-    <>
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={handleMainOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        {variantPickerProduct ? (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 -ml-1"
+                  onClick={closeVariantPicker}
+                  aria-label={t("pages.orders.create.backToProducts")}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <DialogTitle className="text-left">
+                  {t("pages.orders.create.variantTitle")}
+                </DialogTitle>
+              </div>
+              <DialogDescription className="line-clamp-2 text-left pl-10 sm:pl-10">
+                {variantPickerProduct.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 min-h-0 space-y-2 overflow-y-auto -mx-1 px-1">
+              {variantPickerProduct.branchVariants?.map((bv) => {
+                const label = variantCatalogName(
+                  variantPickerProduct,
+                  bv.variantId,
+                );
+                const stockLabel =
+                  variantPickerProduct.trackInventory === false
+                    ? ""
+                    : t("pages.orders.create.stock", {
+                        qty: (bv.quantity ?? 0).toLocaleString(numberLocale),
+                      });
+                const price =
+                  bv.price > 0 ? bv.price : variantPickerProduct.price ?? 0;
+                return (
+                  <button
+                    key={bv.variantId}
+                    type="button"
+                    className="w-full flex items-center justify-between gap-2 rounded-md border px-3 py-3 text-left text-sm hover:bg-muted active:bg-muted transition-colors touch-manipulation"
+                    onClick={() => {
+                      addToCart(variantPickerProduct, bv.variantId);
+                      closeVariantPicker();
+                    }}
+                  >
+                    <span className="font-medium truncate min-w-0">{label}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums shrink-0">
+                      {stockLabel}
+                      {stockLabel ? " · " : ""}
+                      {price.toLocaleString(numberLocale)} ₫
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <DialogFooter className="border-t pt-4">
+              <Button type="button" variant="outline" onClick={closeVariantPicker}>
+                {t("pages.orders.create.cancel")}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
@@ -630,61 +703,10 @@ const CreateOrderModal = ({ open, onClose, onCreated }) => {
             </Button>
           </div>
         </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
-
-    <Dialog
-      open={!!variantPickerProduct}
-      onOpenChange={(v) => {
-        if (!v) setVariantPickerProduct(null);
-      }}
-    >
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t("pages.orders.create.variantTitle")}</DialogTitle>
-          <DialogDescription className="line-clamp-2">
-            {variantPickerProduct?.name}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2 max-h-72 overflow-y-auto">
-          {variantPickerProduct?.branchVariants?.map((bv) => {
-            const label = variantCatalogName(variantPickerProduct, bv.variantId);
-            const stockLabel =
-              variantPickerProduct.trackInventory === false
-                ? ""
-                : t("pages.orders.create.stock", {
-                    qty: (bv.quantity ?? 0).toLocaleString(numberLocale),
-                  });
-            const price =
-              bv.price > 0 ? bv.price : variantPickerProduct.price ?? 0;
-            return (
-              <button
-                key={bv.variantId}
-                type="button"
-                className="w-full flex items-center justify-between gap-2 rounded-md border px-3 py-2.5 text-left text-sm hover:bg-muted transition-colors"
-                onClick={() => {
-                  addToCart(variantPickerProduct, bv.variantId);
-                  setVariantPickerProduct(null);
-                }}
-              >
-                <span className="font-medium truncate min-w-0">{label}</span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums shrink-0">
-                  {stockLabel}
-                  {stockLabel ? " · " : ""}
-                  {price.toLocaleString(numberLocale)}₫
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setVariantPickerProduct(null)}>
-            {t("pages.orders.create.cancel")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    </>
   );
 };
 

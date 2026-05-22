@@ -1,16 +1,21 @@
 /**
- * Build public/og-landing.png — polished layout (left copy + framed screenshot).
- * For best marketing look, may hand-tune from scripts/og-source/og-landing-polished.png
+ * Build OG cards (1200x630):
+ *   public/og-landing.png   — PNG palette-indexed, tối ưu cho FB/Zalo/Slack
+ *   public/og-landing.webp  — WebP cho client hiện đại (~60% nhỏ hơn)
  *
- * Run: npm run build:og
+ * Nguồn: scripts/og-source/dashboard-overview.png (override bằng OG_SCREENSHOT_OVERVIEW).
+ * Chạy: npm run build:og
  */
 import sharp from "sharp";
 import path from "node:path";
+import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const out = path.join(root, "public", "og-landing.png");
+const publicDir = path.join(root, "public");
+const outPng = path.join(publicDir, "og-landing.png");
+const outWebp = path.join(publicDir, "og-landing.webp");
 
 const screenshotOverview =
   process.env.OG_SCREENSHOT_OVERVIEW ||
@@ -88,7 +93,7 @@ const shadow = await sharp({
 
 const leftPanel = await sharp(Buffer.from(leftSvg)).png().toBuffer();
 
-await sharp({
+const composedRaw = await sharp({
   create: {
     width: W,
     height: H,
@@ -102,6 +107,37 @@ await sharp({
     { input: framed, left: FRAME_LEFT, top: FRAME_TOP },
   ])
   .png()
-  .toFile(out);
+  .toBuffer();
 
-console.log("Wrote", out);
+/* Optimized PNG output:
+ *   - palette: chuyển sang PNG-8 indexed (256 màu) — giảm ~70% so với truecolor RGBA.
+ *   - compressionLevel 9 + adaptiveFiltering: zlib chạy hết sức.
+ *   - quality 85: zlib quantize, vẫn rất sắc cho UI screenshot.
+ * Với ảnh OG flat (gradient + chữ + screenshot), khác biệt thị giác gần như không thấy.
+ */
+await sharp(composedRaw)
+  .png({
+    palette: true,
+    quality: 85,
+    compressionLevel: 9,
+    adaptiveFiltering: true,
+    effort: 10,
+  })
+  .toFile(outPng);
+
+await sharp(composedRaw)
+  .webp({
+    quality: 82,
+    effort: 6,
+    smartSubsample: true,
+  })
+  .toFile(outWebp);
+
+const [pngStat, webpStat] = await Promise.all([
+  fs.stat(outPng),
+  fs.stat(outWebp),
+]);
+
+const fmt = (n) => `${(n / 1024).toFixed(1)} KB`;
+console.log(`Wrote ${outPng} (${fmt(pngStat.size)})`);
+console.log(`Wrote ${outWebp} (${fmt(webpStat.size)})`);

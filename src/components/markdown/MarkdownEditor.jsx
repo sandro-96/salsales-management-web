@@ -1,6 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import imageCompression from "browser-image-compression";
+import {
+  PRODUCT_IMAGE_ACCEPT,
+  prepareProductImageFiles,
+} from "@/utils/productImageFiles.js";
 import {
   Bold,
   Code,
@@ -115,29 +118,15 @@ export function MarkdownEditor({
 
   const handleImageUpload = async (fileList) => {
     if (!shopId || !fileList?.length) return;
-    const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
-    if (!files.length) {
+    const selected = Array.from(fileList);
+    const { ok: processed, rejected } = await prepareProductImageFiles(selected);
+    if (rejected.length) {
       toast.error(t("pages.products.form.markdown.imageTypeError"));
-      return;
     }
+    if (!processed.length) return;
 
     setUploadingImage(true);
     try {
-      const processed = await Promise.all(
-        files.map(async (f) => {
-          try {
-            const compressed = await imageCompression(f, {
-              maxSizeMB: 1.5,
-              maxWidthOrHeight: 1920,
-              useWebWorker: true,
-            });
-            return new File([compressed], f.name, { type: compressed.type });
-          } catch {
-            return f;
-          }
-        }),
-      );
-
       const res = await uploadStagedVariantImages(shopId, processed);
       const urls = res.data?.data ?? [];
       if (!urls.length) {
@@ -310,10 +299,13 @@ export function MarkdownEditor({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  accept={PRODUCT_IMAGE_ACCEPT}
                   multiple
                   className="hidden"
-                  onChange={(e) => handleImageUpload(e.target.files)}
+                  onChange={(e) => {
+                    handleImageUpload(e.target.files);
+                    e.target.value = "";
+                  }}
                 />
               </>
             )}

@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "build:og": "node scripts/build-og-landing.mjs"
+    "build:og": "node scripts/build-og-landing.mjs",
+    "build:icons": "node scripts/build-apple-touch-icon.mjs",
+    "prebuild": "npm run build:icons"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

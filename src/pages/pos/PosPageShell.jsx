@@ -20,7 +20,13 @@ import {
   ImagePlus,
 } from "lucide-react";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  isProductImageFile,
+  prepareProductImageFile,
+  PRODUCT_IMAGE_ACCEPT,
+} from "@/utils/productImageFiles.js";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
@@ -123,6 +129,25 @@ export function PosPageShell(props) {
   const transferProofInputRef = useRef(null);
   const searchInputRef = useRef(null);
 
+  const handleTransferProofPick = async (e) => {
+    const raw = e.target.files?.[0];
+    e.target.value = "";
+    if (!raw) {
+      setTransferPaymentProofFile(null);
+      return;
+    }
+    if (!isProductImageFile(raw)) {
+      toast.error(t("pages.products.form.imageTypeError"));
+      return;
+    }
+    try {
+      setTransferPaymentProofFile(await prepareProductImageFile(raw));
+    } catch {
+      toast.error(t("pages.products.form.imageTypeError"));
+      setTransferPaymentProofFile(null);
+    }
+  };
+
   const {
     activePromotions,
     cancelToppingPicker,
@@ -156,6 +181,7 @@ export function PosPageShell(props) {
     openPosCheckout,
     shopPosWriteBlocked,
     apiReachable,
+    browserOnline,
     products,
     openOrderByCode,
     orderLookupInput,
@@ -281,6 +307,7 @@ export function PosPageShell(props) {
     <div className="flex flex-col h-full min-h-0">
       <PosStatusBanner
         apiReachable={apiReachable}
+        browserOnline={browserOnline}
         shopPosWriteBlocked={shopPosWriteBlocked}
       />
       <div className="flex flex-col lg:flex-row flex-1 min-h-0">
@@ -901,12 +928,9 @@ export function PosPageShell(props) {
                   <input
                     ref={transferProofInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept={PRODUCT_IMAGE_ACCEPT}
                     className="hidden"
-                    onChange={(e) => {
-                      setTransferPaymentProofFile(e.target.files?.[0] ?? null);
-                      e.target.value = "";
-                    }}
+                    onChange={handleTransferProofPick}
                   />
                   <Button
                     type="button"

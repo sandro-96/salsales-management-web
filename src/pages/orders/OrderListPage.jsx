@@ -67,6 +67,11 @@ import {
   updateOrderStatus,
   patchOrderFulfillment,
 } from "../../api/orderApi.js";
+import {
+  isProductImageFile,
+  prepareProductImageFile,
+  PRODUCT_IMAGE_ACCEPT,
+} from "@/utils/productImageFiles.js";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -275,11 +280,16 @@ const OrderDetailDialog = ({
   };
 
   const handlePaymentProofSelected = async (e) => {
-    const file = e.target.files?.[0];
+    const raw = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !order?.id || !shopId) return;
+    if (!raw || !order?.id || !shopId) return;
+    if (!isProductImageFile(raw)) {
+      toast.error(t("pages.products.form.imageTypeError"));
+      return;
+    }
     setProofUploading(true);
     try {
+      const file = await prepareProductImageFile(raw);
       const fd = new FormData();
       fd.append("file", file);
       const res = await uploadOrderPaymentProof(order.id, shopId, fd);
@@ -842,7 +852,7 @@ const OrderDetailDialog = ({
                     <input
                       ref={proofFileRef}
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept={PRODUCT_IMAGE_ACCEPT}
                       className="hidden"
                       onChange={handlePaymentProofSelected}
                     />
@@ -944,6 +954,24 @@ const OrderListPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState(null);
+  const handlePaymentProofDialogFile = async (e) => {
+    const raw = e.target.files?.[0];
+    e.target.value = "";
+    if (!raw) {
+      setPaymentProofFile(null);
+      return;
+    }
+    if (!isProductImageFile(raw)) {
+      toast.error(t("pages.products.form.imageTypeError"));
+      return;
+    }
+    try {
+      setPaymentProofFile(await prepareProductImageFile(raw));
+    } catch {
+      toast.error(t("pages.products.form.imageTypeError"));
+      setPaymentProofFile(null);
+    }
+  };
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [payingOrderId, setPayingOrderId] = useState(null);
   const [payingOrderSnapshot, setPayingOrderSnapshot] = useState(null);
@@ -2272,10 +2300,8 @@ const OrderListPage = () => {
                 </Label>
                 <Input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) =>
-                    setPaymentProofFile(e.target.files?.[0] ?? null)
-                  }
+                  accept={PRODUCT_IMAGE_ACCEPT}
+                  onChange={handlePaymentProofDialogFile}
                   className="text-xs cursor-pointer"
                 />
                 {paymentProofFile && (

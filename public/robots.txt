@@ -1,16 +1,58 @@
-# Production: set VITE_SITE_URL at build so sitemap.xml is generated with your domain.
+# Production: set VITE_SITE_URL at build so seoSitemapPlugin appends Sitemap: <site>/sitemap.xml
 User-agent: *
+Allow: /
 Allow: /landing
 Allow: /login
 Allow: /register
 Allow: /forgot-password
 Allow: /terms
 Allow: /privacy
+Allow: /s/
+
+# Private app surfaces — never index
 Disallow: /admin
 Disallow: /overview
 Disallow: /pos
 Disallow: /orders
 Disallow: /products
-Disallow: /billing
+Disallow: /inventory
+Disallow: /reports
+Disallow: /staffs
+Disallow: /customers
+Disallow: /branches
+Disallow: /shops
+Disallow: /promotions
+Disallow: /tables
+Disallow: /tax-policies
 Disallow: /accounts
+Disallow: /billing
+Disallow: /notifications
+Disallow: /history
+Disallow: /main
+Disallow: /support
+Disallow: /contact
+Disallow: /verify
+Disallow: /reset-password
+Disallow: /unauthorized
+Disallow: /error
 Disallow: /api
+Disallow: /t/
+
+# Allow hreflang query parameter (used in sitemap.xml alternates)
+Allow: /*?lng=
+
+# Disallow other query-string variations to avoid duplicate content
+Disallow: /*?*
+
+# Allow Google's AdsBot if you ever run paid traffic to landing
+User-agent: AdsBot-Google
+Allow: /landing
+Allow: /
+
+# Block aggressive AI scrapers that don't honor licensing (optional — keep/remove as you wish)
+User-agent: GPTBot
+Disallow: /
+User-agent: ClaudeBot
+Disallow: /
+User-agent: CCBot
+Disallow: /

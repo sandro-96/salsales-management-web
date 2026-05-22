@@ -10,6 +10,7 @@ import {
   getStorefrontProducts,
 } from "@/api/storefrontApi.js";
 import { useStorefrontShop } from "@/layouts/storefront/useStorefrontShop.js";
+import { useStorefrontHomeSeo } from "@/hooks/useStorefrontHomeSeo.js";
 import { formatCurrency, pickProductImage } from "./storefrontUtils.js";
 
 const PAGE_SIZE = 24;
@@ -82,6 +83,8 @@ export default function StorefrontHomePage() {
     () => shop.address || t("pages.storefront.home.subtitleDefault"),
     [shop, t],
   );
+
+  useStorefrontHomeSeo({ shop, slug, products });
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">

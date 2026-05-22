@@ -11,7 +11,7 @@ import {
   Percent,
   PlayCircle,
   ShoppingCart,
-  Store,
+  Smartphone,
   Users,
   Warehouse,
   UtensilsCrossed,
@@ -30,6 +30,7 @@ import ChannelsSection from "./sections/ChannelsSection.jsx";
 import HeroMockup from "./sections/HeroMockup.jsx";
 import LandingNav from "./sections/LandingNav.jsx";
 import MotionSection, { MotionItem } from "./sections/MotionSection.jsx";
+import NoHardwareSection from "./sections/NoHardwareSection.jsx";
 import PricingSection from "./sections/PricingSection.jsx";
 import ScrollToTopButton from "./sections/ScrollToTopButton.jsx";
 import SocialProofStrip from "./sections/SocialProofStrip.jsx";
@@ -52,7 +53,16 @@ const FEATURE_IDS = [
 ];
 const INDUSTRY_IDS = ["fnb", "retail", "healthcare", "service", "education"];
 const WORKFLOW_STEP_IDS = ["1", "2", "3", "4"];
-const FAQ_IDS = ["free", "storefront", "qr", "posOffline", "industries", "upgrade"];
+const FAQ_IDS = [
+  "hardware",
+  "printer",
+  "free",
+  "storefront",
+  "qr",
+  "posOffline",
+  "industries",
+  "upgrade",
+];
 
 const FEATURE_ICONS = {
   pos: ShoppingCart,
@@ -100,6 +110,11 @@ export default function LandingPage() {
 
   const stats = [
     {
+      value: t("pages.landing.stats.devices"),
+      desc: t("pages.landing.stats.devicesDesc"),
+      icon: Smartphone,
+    },
+    {
       value: t("pages.landing.stats.channels"),
       desc: t("pages.landing.stats.channelsDesc"),
       icon: Layers,
@@ -108,11 +123,6 @@ export default function LandingPage() {
       value: t("pages.landing.stats.modules"),
       desc: t("pages.landing.stats.modulesDesc"),
       icon: Package,
-    },
-    {
-      value: t("pages.landing.stats.industries"),
-      desc: t("pages.landing.stats.industriesDesc"),
-      icon: Store,
     },
     {
       value: t("pages.landing.stats.realtime"),
@@ -254,6 +264,9 @@ export default function LandingPage() {
             })}
           </div>
         </section>
+
+        {/* No hardware — flagship differentiator */}
+        <NoHardwareSection brand={brand} />
 
         {/* Sales channels */}
         <ChannelsSection />

@@ -205,6 +205,7 @@
     "cancel": "Hủy",
     "submit": "Tạo đơn hàng",
     "variantTitle": "Chọn biến thể",
+    "backToProducts": "Quay lại danh sách sản phẩm",
     "stock": "Tồn: {{qty}}",
     "fetchBranchError": "Không thể tải dữ liệu chi nhánh",
     "invalidVariant": "Chọn biến thể hợp lệ.",

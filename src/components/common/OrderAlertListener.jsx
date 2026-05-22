@@ -10,6 +10,7 @@ import { PERM } from "@/constants/shopPermissions.js";
 import { WebSocketMessageTypes } from "@/constants/websocket.js";
 import { unlockOrderAlertAudio } from "@/utils/orderAlertSound.js";
 import { buildOrdersListUrl } from "@/utils/orderNavigation.js";
+import { useBrowserTabOrderAlert } from "@/hooks/useBrowserTabOrderAlert.js";
 
 /**
  * Phát âm thanh + toast khi có đơn online hoặc đơn tại bàn (WS shop channel).
@@ -17,10 +18,16 @@ import { buildOrdersListUrl } from "@/utils/orderNavigation.js";
 export default function OrderAlertListener() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { selectedShopId, shops } = useShop();
+  const { selectedShopId, shops, selectedBranchId } = useShop();
   const { hasShopPermission } = useShopPermissions();
   const canHear = hasShopPermission(PERM.ORDER_VIEW);
   const { enabled, playOnline, playInStore } = useOrderAlertSound();
+
+  useBrowserTabOrderAlert({
+    shopId: selectedShopId,
+    branchId: selectedBranchId,
+    enabled: canHear && !!selectedShopId && shops.length > 0,
+  });
 
   useEffect(() => {
     const unlock = () => unlockOrderAlertAudio();

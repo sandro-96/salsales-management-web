@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Menu, Receipt } from "lucide-react";
+import { ChevronRight, Menu } from "lucide-react";
 
+import { BrandLogoMark } from "@/components/brand/BrandLogoMark.jsx";
 import LanguageSwitcher from "@/components/common/LanguageSwitcher.jsx";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,9 +31,7 @@ export default function LandingNav({ brand, t }) {
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
         <Link to="/landing" className="flex min-w-0 items-center gap-2.5">
-          <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-emerald-500 text-primary-foreground shadow-lg shadow-primary/30">
-            <Receipt className="h-5 w-5" strokeWidth={2} />
-          </span>
+          <BrandLogoMark />
           <span className="coiny-regular truncate text-lg text-blue-800 dark:text-blue-300 sm:text-xl">
             {brand}
           </span>
@@ -85,9 +84,7 @@ export default function LandingNav({ brand, t }) {
             <SheetContent side="right" className="w-[88%] sm:w-80">
               <SheetHeader className="border-b border-border/60">
                 <SheetTitle className="flex items-center gap-2">
-                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-primary to-emerald-500 text-primary-foreground">
-                    <Receipt className="h-4 w-4" strokeWidth={2} />
-                  </span>
+                  <BrandLogoMark className="h-8 w-8" iconClassName="h-4 w-4" />
                   <span className="coiny-regular text-blue-800 dark:text-blue-300">
                     {brand}
                   </span>
