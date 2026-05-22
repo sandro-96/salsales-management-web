@@ -45,73 +45,51 @@ export default defineConfig(({ mode }) => {
     },
   },
   build: {
-    // Vendor có hash riêng → các page chia nhau cùng chunk, cache tốt hơn
-    // sau mỗi deploy (app code đổi nhưng vendor không đổi).
+    /**
+     * QUAN TRỌNG: chỉ tách những vendor "standalone" — KHÔNG import React.
+     *
+     * Lý do: React 19 dùng top-level `module.exports.Activity = …` (export
+     * mới, trước đây tên Offscreen). Nếu manualChunks tách React khỏi các
+     * thư viện dùng React, Rollup sinh re-export proxy có thứ tự khởi tạo
+     * sai → lỗi "Cannot set properties of undefined (setting 'Activity')".
+     *
+     * Để Vite tự gom React + react-dom + radix + framer-motion + … vào
+     * chunk chính (index) hoặc chunk theo route lazy. Chỉ chunk riêng:
+     *   - exceljs (lazy qua ProductImportExportDialog)
+     *   - @zxing/{library,browser} (lazy qua ProductFormModal scanner)
+     *   - sockjs-client + @stomp/stompjs (chỉ WebSocketProvider dùng)
+     *
+     * Các package có "react" trong tên (qrcode.react, react-day-picker…)
+     * KHÔNG được tách — chúng phải ở cùng chunk với React runtime.
+     */
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
 
-          // React + thư viện gọi createContext/hooks — PHẢI cùng chunk để tránh
-          // "Cannot read properties of undefined (reading 'createContext')".
-          if (
-            id.includes("/react/") ||
-            id.includes("/react-dom/") ||
-            id.includes("scheduler") ||
-            id.includes("framer-motion") ||
-            id.includes("motion-utils") ||
-            id.includes("react-router") ||
-            id.includes("@remix-run/router") ||
-            id.includes("@radix-ui") ||
-            id.includes("vaul") ||
-            id.includes("react-i18next") ||
-            id.includes("next-themes") ||
-            id.includes("sonner") ||
-            id.includes("@tanstack/react-table") ||
-            id.includes("@dnd-kit") ||
-            id.includes("react-hook-form") ||
-            id.includes("@hookform") ||
-            id.includes("react-markdown") ||
-            id.includes("remark-") ||
-            id.includes("micromark") ||
-            id.includes("mdast-") ||
-            id.includes("hast-") ||
-            id.includes("react-day-picker") ||
-            id.includes("recharts") ||
-            id.includes("/d3-")
-          ) {
-            return "vendor-react";
-          }
+          if (id.includes("/exceljs/")) return "vendor-excel";
 
-          // Excel — lazy qua ProductImportExportDialog (~280KB).
-          if (id.includes("exceljs")) return "vendor-excel";
-
-          // Barcode — lazy qua ProductFormModal (~400KB).
           if (
-            id.includes("@zxing/browser") ||
-            id.includes("@zxing/library") ||
-            id.includes("qrcode.react") ||
-            id.includes("qrcode")
+            id.includes("/@zxing/library/") ||
+            id.includes("/@zxing/browser/")
           ) {
             return "vendor-barcode";
           }
 
-          if (id.includes("date-fns")) return "vendor-date";
-
-          if (id.includes("/zod/")) return "vendor-zod";
-
           if (
-            id.includes("@stomp/stompjs") ||
-            id.includes("sockjs-client")
+            id.includes("/@stomp/stompjs/") ||
+            id.includes("/sockjs-client/")
           ) {
             return "vendor-ws";
           }
 
-          return "vendor-misc";
+          // Mọi thứ khác (gồm React, react-dom, radix, framer-motion,
+          // recharts, lucide, axios, …) → để Vite tự chunk theo dependency
+          // graph, tránh init order bug.
+          return undefined;
         },
       },
     },
-    // Cảnh báo chỉ những chunk THẬT sự lớn (>800KB minified)
     chunkSizeWarningLimit: 800,
   },
   };
