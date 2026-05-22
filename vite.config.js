@@ -52,11 +52,41 @@ export default defineConfig(({ mode }) => {
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
 
-          // Excel — chỉ ProductImportExportDialog dùng. Tách rời để
-          // không bị main bundle kéo theo ~280KB.
+          // React + thư viện gọi createContext/hooks — PHẢI cùng chunk để tránh
+          // "Cannot read properties of undefined (reading 'createContext')".
+          if (
+            id.includes("/react/") ||
+            id.includes("/react-dom/") ||
+            id.includes("scheduler") ||
+            id.includes("framer-motion") ||
+            id.includes("motion-utils") ||
+            id.includes("react-router") ||
+            id.includes("@remix-run/router") ||
+            id.includes("@radix-ui") ||
+            id.includes("vaul") ||
+            id.includes("react-i18next") ||
+            id.includes("next-themes") ||
+            id.includes("sonner") ||
+            id.includes("@tanstack/react-table") ||
+            id.includes("@dnd-kit") ||
+            id.includes("react-hook-form") ||
+            id.includes("@hookform") ||
+            id.includes("react-markdown") ||
+            id.includes("remark-") ||
+            id.includes("micromark") ||
+            id.includes("mdast-") ||
+            id.includes("hast-") ||
+            id.includes("react-day-picker") ||
+            id.includes("recharts") ||
+            id.includes("/d3-")
+          ) {
+            return "vendor-react";
+          }
+
+          // Excel — lazy qua ProductImportExportDialog (~280KB).
           if (id.includes("exceljs")) return "vendor-excel";
 
-          // Barcode scanner — chỉ ProductForm/BarcodeScanner dùng.
+          // Barcode — lazy qua ProductFormModal (~400KB).
           if (
             id.includes("@zxing/browser") ||
             id.includes("@zxing/library") ||
@@ -66,71 +96,15 @@ export default defineConfig(({ mode }) => {
             return "vendor-barcode";
           }
 
-          // Charts — chỉ Overview/Reports dùng.
-          if (id.includes("recharts") || id.includes("d3-")) {
-            return "vendor-charts";
-          }
+          if (id.includes("date-fns")) return "vendor-date";
 
-          // Markdown — ProductForm description.
-          if (
-            id.includes("react-markdown") ||
-            id.includes("remark-") ||
-            id.includes("micromark") ||
-            id.includes("mdast-") ||
-            id.includes("hast-")
-          ) {
-            return "vendor-markdown";
-          }
-
-          // Form stack — dùng rộng rãi nhưng vẫn nên tách để cache.
-          if (
-            id.includes("react-hook-form") ||
-            id.includes("@hookform") ||
-            id.includes("/zod/")
-          ) {
-            return "vendor-forms";
-          }
-
-          if (id.includes("date-fns") || id.includes("react-day-picker")) {
-            return "vendor-date";
-          }
-
-          if (id.includes("framer-motion") || id.includes("motion-utils")) {
-            return "vendor-motion";
-          }
-
-          if (id.includes("@tanstack/react-table")) {
-            return "vendor-table";
-          }
-
-          if (id.includes("@dnd-kit")) {
-            return "vendor-dnd";
-          }
-
-          if (id.includes("@radix-ui") || id.includes("vaul")) {
-            return "vendor-radix";
-          }
+          if (id.includes("/zod/")) return "vendor-zod";
 
           if (
             id.includes("@stomp/stompjs") ||
             id.includes("sockjs-client")
           ) {
             return "vendor-ws";
-          }
-
-          if (
-            id.includes("react-router") ||
-            id.includes("@remix-run/router")
-          ) {
-            return "vendor-router";
-          }
-
-          if (
-            id.includes("/react/") ||
-            id.includes("/react-dom/") ||
-            id.includes("scheduler")
-          ) {
-            return "vendor-react";
           }
 
           return "vendor-misc";
