@@ -4,6 +4,7 @@ import { ChevronRight, Menu } from "lucide-react";
 
 import { BrandLogoMark } from "@/components/brand/BrandLogoMark.jsx";
 import LanguageSwitcher from "@/components/common/LanguageSwitcher.jsx";
+import ThemeToggle from "@/components/common/ThemeToggle.jsx";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -53,6 +54,7 @@ export default function LandingNav({ brand, t }) {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <ThemeToggle />
           <LanguageSwitcher />
           <Button
             variant="ghost"
