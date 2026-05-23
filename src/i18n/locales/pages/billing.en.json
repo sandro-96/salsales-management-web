@@ -1,7 +1,11 @@
 {
   "title": "Subscription & Billing",
   "gateway": {
-    "manual": "Bank transfer — admin confirmation"
+    "manual": "Bank transfer — admin confirmation",
+    "vnpay": "VNPay (card / wallet)",
+    "momo": "MoMo",
+    "selectPlaceholder": "Select payment method",
+    "autoHint": "You will be redirected to the payment gateway. Your plan renews automatically after a successful payment."
   },
   "status": {
     "TRIAL": "Trial",

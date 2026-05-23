@@ -22,6 +22,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MomoMark, VnPayMark } from "@/components/payment/PaymentGatewayMarks";
+import {
   Table,
   TableBody,
   TableCell,
@@ -49,6 +57,23 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_BILLING_MONTHS_OPTIONS = [1, 3, 6, 9, 12];
 const DEFAULT_MONTHLY_VND = 99_000;
+
+const ALL_BILLING_GATEWAYS = ["MANUAL", "VNPAY", "MOMO"];
+
+/** Cổng hiển thị trên /billing — override bằng VITE_BILLING_GATEWAYS (VD: MANUAL,VNPAY). */
+function parseEnabledBillingGateways() {
+  const raw = import.meta.env.VITE_BILLING_GATEWAYS;
+  if (!raw || !String(raw).trim()) {
+    return ALL_BILLING_GATEWAYS;
+  }
+  const picked = String(raw)
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((g) => ALL_BILLING_GATEWAYS.includes(g));
+  return picked.length > 0 ? picked : ALL_BILLING_GATEWAYS;
+}
+
+const ENABLED_BILLING_GATEWAYS = parseEnabledBillingGateways();
 
 /** Push WS từ server khi có thông báo billing (NotificationType). */
 const BILLING_REFRESH_WS_TYPES = new Set([
@@ -236,9 +261,20 @@ export default function BillingPage() {
     [dateLocale],
   );
 
-  const gatewayOptions = useMemo(
-    () => [{ value: "MANUAL", label: t("pages.billing.gateway.manual") }],
-    [t],
+  const gatewayOptions = useMemo(() => {
+    const labels = {
+      MANUAL: t("pages.billing.gateway.manual"),
+      VNPAY: t("pages.billing.gateway.vnpay"),
+      MOMO: t("pages.billing.gateway.momo"),
+    };
+    return ENABLED_BILLING_GATEWAYS.map((value) => ({
+      value,
+      label: labels[value] ?? value,
+    }));
+  }, [t]);
+
+  const [selectedGateway, setSelectedGateway] = useState(
+    () => ENABLED_BILLING_GATEWAYS[0] ?? "MANUAL",
   );
 
   const { confirm } = useAlertDialog();
@@ -268,6 +304,29 @@ export default function BillingPage() {
   const [reportingTransfer, setReportingTransfer] = useState(false);
   const [cancellingTransfer, setCancellingTransfer] = useState(false);
   const [billingMonths, setBillingMonths] = useState(3);
+
+  useEffect(() => {
+    if (
+      data?.gateway &&
+      ENABLED_BILLING_GATEWAYS.includes(data.gateway)
+    ) {
+      setSelectedGateway(data.gateway);
+    }
+  }, [data?.gateway]);
+
+  useEffect(() => {
+    if (!gatewayOptions.some((o) => o.value === selectedGateway)) {
+      setSelectedGateway(gatewayOptions[0]?.value ?? "MANUAL");
+    }
+  }, [gatewayOptions, selectedGateway]);
+
+  const handleGatewayChange = (value) => {
+    setSelectedGateway(value);
+    if (value !== "MANUAL") {
+      setLastPaymentTransfer(null);
+      setLastCreatedTxnRef(null);
+    }
+  };
 
   const periodOptions = useMemo(() => {
     const fromApi = data?.allowedBillingMonths;
@@ -487,7 +546,7 @@ export default function BillingPage() {
     try {
       setPaying(true);
       const res = await startSubscriptionPayment({
-        gateway: "MANUAL",
+        gateway: selectedGateway,
         billingMonths,
         returnUrl: window.location.origin + "/billing",
       });
@@ -526,6 +585,11 @@ export default function BillingPage() {
   };
 
   const displayTransfer = lastPaymentTransfer || transferPreview;
+  const showBankTransferBlock =
+    Boolean(displayTransfer?.accountNumber) &&
+    (selectedGateway === "MANUAL" ||
+      lastPaymentTransfer ||
+      manualRefToReport);
 
   const transferTitle = lastPaymentTransfer?.transferContent
     ? t("pages.billing.transfer.thisPayment")
@@ -681,7 +745,7 @@ export default function BillingPage() {
           <Loader2 className="h-4 w-4 animate-spin" />
           {t("pages.billing.loadingTransfer")}
         </div>
-      ) : canLoadBilling && displayTransfer?.accountNumber ? (
+      ) : canLoadBilling && showBankTransferBlock ? (
         <div className="space-y-3">
           <TransferBlock
             title={transferTitle}
@@ -817,17 +881,48 @@ export default function BillingPage() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex-wrap gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {t("pages.billing.currentStatus.paymentMethod")}{" "}
-            <span className="font-medium text-foreground">
-              {gatewayOptions[0].label}
+        <CardFooter className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="flex flex-col gap-2 min-w-[220px]">
+            <span className="text-sm text-muted-foreground">
+              {t("pages.billing.currentStatus.paymentMethod")}
             </span>
+            <Select
+              value={selectedGateway}
+              onValueChange={handleGatewayChange}
+              disabled={paying || Boolean(manualRefToReport)}
+            >
+              <SelectTrigger className="w-full sm:w-[280px]">
+                <SelectValue
+                  placeholder={t("pages.billing.gateway.selectPlaceholder")}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {gatewayOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <span className="flex items-center gap-2">
+                      {opt.value === "VNPAY" ? (
+                        <VnPayMark className="h-5" />
+                      ) : opt.value === "MOMO" ? (
+                        <MomoMark className="h-8 w-8" />
+                      ) : (
+                        <Landmark className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span>{opt.label}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedGateway !== "MANUAL" ? (
+              <p className="text-xs text-muted-foreground max-w-sm">
+                {t("pages.billing.gateway.autoHint")}
+              </p>
+            ) : null}
           </div>
           <Button
-            disabled={paying}
+            disabled={paying || Boolean(manualRefToReport)}
             onClick={onPay}
-            className="min-w-[200px] bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-400"
+            className="min-w-[200px] bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-400 sm:ml-auto"
           >
             {paying ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />

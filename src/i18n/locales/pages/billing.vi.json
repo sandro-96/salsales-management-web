@@ -1,7 +1,11 @@
 {
   "title": "Gói dịch vụ & Thanh toán",
   "gateway": {
-    "manual": "Chuyển khoản — admin xác nhận"
+    "manual": "Chuyển khoản — admin xác nhận",
+    "vnpay": "VNPay (thẻ / ví)",
+    "momo": "MoMo",
+    "selectPlaceholder": "Chọn phương thức",
+    "autoHint": "Bạn sẽ được chuyển sang cổng thanh toán. Gói gia hạn tự động sau khi thanh toán thành công."
   },
   "status": {
     "TRIAL": "Đang dùng thử",
