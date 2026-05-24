@@ -34,7 +34,8 @@ Staging dùng Atlas project **`salesdb-test`** (không dùng `salesdb` prod hay 
 ### Repo & build
 
 - Root directory: `salsales-management-backend`
-- File cấu hình: `railway.toml` (build Maven, chạy JAR profile `staging`). Nếu build lỗi `mvnw: Permission denied` → push bản mới có `chmod +x mvnw` trong `railway.toml` hoặc redeploy sau khi commit `mvnw` mode executable.
+- File cấu hình: `railway.toml` + **`Dockerfile`** (multi-stage Maven → JAR, **không** nhúng secret vào image lúc build).
+- Nếu log build có cảnh báo `SecretsUsedInArgOrEnv` (Nixpacks tự tạo `ARG`/`ENV` cho `MAIL_PASSWORD`, `VNPAY_HASH_SECRET`, …): đảm bảo Railway dùng `builder = "DOCKERFILE"` trong `railway.toml`, redeploy. Biến nhạy cảm chỉ đặt trong **Railway → Variables** (runtime), không cần lúc build.
 - Hoặc Render: Web Service, Java, build `./mvnw -DskipTests package`, start `java -jar target/sales-0.0.1-SNAPSHOT.jar --spring.profiles.active=staging`
 
 ### Biến môi trường
