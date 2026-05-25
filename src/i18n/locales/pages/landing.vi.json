@@ -27,7 +27,7 @@
     "title": "Bán hàng trên mọi thiết bị — không cần đầu tư máy POS cồng kềnh",
     "subtitle": "{{brand}} là phần mềm bán hàng chạy thẳng trên trình duyệt. Mở Chrome trên điện thoại, máy tính bảng hoặc laptop là bán được — không lắp đặt máy POS, không cài driver, không phụ thuộc thiết bị riêng. Đơn POS, storefront online và QR gọi món tại bàn đồng bộ realtime trên cùng một tài khoản.",
     "ctaPrimary": "Bắt đầu miễn phí",
-    "ctaSecondary": "Xem demo",
+    "ctaSecondary": "Xem tính năng",
     "ctaLogin": "Đăng nhập",
     "noCard": "Không cần thẻ tín dụng · Không cần máy POS",
     "highlights": {
@@ -390,7 +390,7 @@
     "legal": "Pháp lý",
     "terms": "Điều khoản sử dụng",
     "privacy": "Chính sách bảo mật",
-    "operator": "Vận hành: Chu Thanh Trí · vmanage.sass@gmail.com",
+    "operator": "Liên hệ: vmanage.sass@gmail.com",
     "copyright": "© {{year}} {{brand}}. All rights reserved."
   },
   "backToTop": "Lên đầu trang"

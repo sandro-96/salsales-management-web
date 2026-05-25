@@ -9,7 +9,6 @@ import {
   CreditCard,
   Package,
   Percent,
-  PlayCircle,
   ShoppingCart,
   Smartphone,
   Users,
@@ -214,7 +213,7 @@ export default function LandingPage() {
                     asChild
                   >
                     <a href="#channels">
-                      <PlayCircle className="h-4 w-4" />
+                      <Layers className="h-4 w-4" />
                       {t("pages.landing.hero.ctaSecondary")}
                     </a>
                   </Button>

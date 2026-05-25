@@ -78,7 +78,7 @@ function brandCardSvg() {
     <text x="28" y="358" font-family="system-ui,Segoe UI,sans-serif" font-size="20" fill="#d1e9d8">F&amp;B — scan QR, order không cần app</text>
   </g>
 
-  <text x="1128" y="598" text-anchor="end" font-family="system-ui,Segoe UI,sans-serif" font-size="18" fill="#b8dcc4">salsales.vn</text>
+  <text x="1128" y="598" text-anchor="end" font-family="system-ui,Segoe UI,sans-serif" font-size="18" fill="#b8dcc4">sotuci.vn</text>
 </svg>`;
 }
 

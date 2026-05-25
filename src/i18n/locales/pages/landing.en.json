@@ -27,7 +27,7 @@
     "title": "Sell from any device — no bulky POS hardware to buy",
     "subtitle": "{{brand}} runs straight in the browser. Open Chrome on a phone, tablet or laptop and you're selling — no POS terminal, no driver setup, no device lock-in. POS orders, online storefront and table QR ordering stay synced in realtime under one account.",
     "ctaPrimary": "Start for free",
-    "ctaSecondary": "See demo",
+    "ctaSecondary": "Explore features",
     "ctaLogin": "Log in",
     "noCard": "No credit card · No POS hardware needed",
     "highlights": {
@@ -390,7 +390,7 @@
     "legal": "Legal",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
-    "operator": "Operated by Chu Thanh Trí · vmanage.sass@gmail.com",
+    "operator": "Contact: vmanage.sass@gmail.com",
     "copyright": "© {{year}} {{brand}}. All rights reserved."
   },
   "backToTop": "Back to top"
