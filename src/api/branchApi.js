@@ -7,9 +7,14 @@ function buildBranchFormData(data) {
   formData.append(
     "branch",
     new Blob([JSON.stringify(branch)], { type: "application/json" }),
+    "branch.json",
   );
   if (paymentQrFile) {
-    formData.append("paymentQrFile", paymentQrFile);
+    formData.append(
+      "paymentQrFile",
+      paymentQrFile,
+      paymentQrFile.name || "payment-qr.jpg",
+    );
   }
   return formData;
 }
@@ -23,10 +28,15 @@ export const getBranchBySlug = (slug, shopId) => {
 };
 
 export const createBranch = (shopId, data) =>
-  axiosInstance.post(`${BRANCH_API}?shopId=${shopId}`, buildBranchFormData(data));
+  axiosInstance.post(`${BRANCH_API}?shopId=${shopId}`, buildBranchFormData(data), {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 
 export const updateBranch = (shopId, branchId, data) =>
   axiosInstance.put(
     `${BRANCH_API}/${branchId}?shopId=${shopId}`,
     buildBranchFormData(data),
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
   );
