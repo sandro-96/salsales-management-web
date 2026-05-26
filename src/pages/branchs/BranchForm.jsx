@@ -197,10 +197,22 @@ export default function BranchForm({
     formState: { isDirty },
   } = form;
   const paymentQrInputRef = useRef(null);
+  const paymentQrObjectUrlRef = useRef(null);
   const [paymentQrFile, setPaymentQrFile] = useState(null);
   const [paymentQrPreview, setPaymentQrPreview] = useState(
     branch?.paymentQrImageUrl ?? "",
   );
+
+  const revokePaymentQrObjectUrl = () => {
+    if (!paymentQrObjectUrlRef.current) return;
+    URL.revokeObjectURL(paymentQrObjectUrlRef.current);
+    paymentQrObjectUrlRef.current = null;
+  };
+
+  const restoreBranchPaymentQrPreview = () => {
+    revokePaymentQrObjectUrl();
+    setPaymentQrPreview(branch?.paymentQrImageUrl ?? "");
+  };
 
   useEffect(() => {
     if (!branch) return;
@@ -236,8 +248,15 @@ export default function BranchForm({
 
   useEffect(() => {
     setPaymentQrFile(null);
-    setPaymentQrPreview(branch?.paymentQrImageUrl ?? "");
+    restoreBranchPaymentQrPreview();
   }, [branch?.paymentQrImageUrl]);
+
+  useEffect(
+    () => () => {
+      revokePaymentQrObjectUrl();
+    },
+    [],
+  );
 
   const country =
     COUNTRIES.find((c) => c.code === form.watch("countryCode")) || COUNTRIES[0];
@@ -330,22 +349,46 @@ export default function BranchForm({
     e.target.value = "";
     if (!raw) return;
     if (!isProductImageFile(raw)) {
+      setPaymentQrFile(null);
+      restoreBranchPaymentQrPreview();
       toast.error(t("pages.branches.form.paymentQrTypeError"));
       return;
     }
 
+    const compressToastId =
+      raw.size > 5 * 1024 * 1024
+        ? toast.loading(t("pages.branches.form.paymentQrCompressing"))
+        : null;
+
     try {
       const processed = await prepareProductImageFile(raw);
+      const previewUrl = URL.createObjectURL(processed);
+      revokePaymentQrObjectUrl();
+      paymentQrObjectUrlRef.current = previewUrl;
       setPaymentQrFile(processed);
-      setPaymentQrPreview(URL.createObjectURL(processed));
-    } catch {
-      toast.error(t("pages.branches.form.paymentQrTypeError"));
+      setPaymentQrPreview(previewUrl);
+      if (compressToastId) {
+        toast.success(t("pages.branches.form.paymentQrCompressSuccess"), {
+          id: compressToastId,
+        });
+      }
+    } catch (error) {
+      console.warn("handlePaymentQrChange failed", error);
+      setPaymentQrFile(null);
+      restoreBranchPaymentQrPreview();
+      if (compressToastId) {
+        toast.error(t("pages.branches.form.paymentQrCompressFail"), {
+          id: compressToastId,
+        });
+      } else {
+        toast.error(t("pages.branches.form.paymentQrProcessError"));
+      }
     }
   };
 
   const clearPaymentQrSelection = () => {
     setPaymentQrFile(null);
-    setPaymentQrPreview(branch?.paymentQrImageUrl ?? "");
+    restoreBranchPaymentQrPreview();
   };
 
   return (

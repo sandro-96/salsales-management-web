@@ -156,7 +156,11 @@
     "paymentQrOpen": "Mở ảnh",
     "paymentQrEmpty": "Chưa có ảnh QR chuyển khoản cho chi nhánh này.",
     "paymentQrPreviewAlt": "Mã QR chuyển khoản của chi nhánh",
-    "paymentQrTypeError": "Vui lòng chọn ảnh QR hợp lệ (jpg, png hoặc webp).",
+    "paymentQrTypeError": "Vui lòng chọn ảnh QR hợp lệ (JPEG, PNG, WebP hoặc HEIC).",
+    "paymentQrProcessError": "Không xử lý được ảnh QR. Vui lòng chọn ảnh khác.",
+    "paymentQrCompressing": "Đang xử lý ảnh QR...",
+    "paymentQrCompressSuccess": "Ảnh QR đã sẵn sàng.",
+    "paymentQrCompressFail": "Không xử lý được ảnh QR.",
     "invoiceLocale": "Ngôn ngữ in hóa đơn",
     "invoiceLocaleHint": "Ngôn ngữ nội dung trên bill in từ POS và in lại đơn — không ảnh hưởng giao diện quản lý.",
     "invoiceLocaleOption": {

@@ -156,7 +156,11 @@
     "paymentQrOpen": "Open image",
     "paymentQrEmpty": "No transfer QR image has been uploaded for this branch yet.",
     "paymentQrPreviewAlt": "Branch transfer QR image",
-    "paymentQrTypeError": "Please choose a valid QR image (jpg, png, or webp).",
+    "paymentQrTypeError": "Please choose a valid QR image (JPEG, PNG, WebP, or HEIC).",
+    "paymentQrProcessError": "Could not process the QR image. Please choose a different file.",
+    "paymentQrCompressing": "Processing QR image...",
+    "paymentQrCompressSuccess": "QR image is ready.",
+    "paymentQrCompressFail": "Could not process the QR image.",
     "invoiceLocale": "Receipt / invoice language",
     "invoiceLocaleHint": "Language for POS receipts and order reprints — does not change the admin UI.",
     "invoiceLocaleOption": {
