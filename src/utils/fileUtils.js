@@ -1,4 +1,5 @@
 import {
+  createImagePreviewUrl,
   isProductImageFile,
   prepareProductImageFile,
   PRODUCT_IMAGE_ACCEPT,
@@ -31,8 +32,9 @@ export const handleFileChange = async ({
 
   try {
     const processed = await prepareProductImageFile(selectedFile);
+    const previewUrl = await createImagePreviewUrl(processed);
     setFile?.(processed);
-    setPreview?.(URL.createObjectURL(processed));
+    setPreview?.(previewUrl);
     setError?.("");
   } catch (err) {
     console.warn("handleFileChange failed", err);

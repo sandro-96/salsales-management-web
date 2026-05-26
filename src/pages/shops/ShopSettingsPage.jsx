@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useAlertDialog } from "../../hooks/useAlertDialog.js";
 import { useNavigate, Link } from "react-router-dom";
 import {
+  createImagePreviewUrl,
   isProductImageFile,
   prepareProductImageFile,
 } from "@/utils/productImageFiles.js";
@@ -206,8 +207,9 @@ const ShopSettingsPage = () => {
         : null;
     try {
       const processed = await prepareProductImageFile(file);
+      const previewUrl = await createImagePreviewUrl(processed);
       setLogoFile(processed);
-      setLogoPreview(URL.createObjectURL(processed));
+      setLogoPreview(previewUrl);
       if (tid) {
         toast.success(t("pages.shops.settings.compressSuccess"), { id: tid });
       }

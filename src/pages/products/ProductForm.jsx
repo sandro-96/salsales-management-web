@@ -36,6 +36,7 @@ import { ProductImageGallery } from "@/components/products/ProductImageGallery.j
 import { lookupBarcode } from "@/utils/barcodeUtils.js";
 import {
   PRODUCT_IMAGE_ACCEPT,
+  createImagePreviewUrls,
   prepareProductImageFiles,
 } from "@/utils/productImageFiles.js";
 import {
@@ -360,16 +361,14 @@ function VariantCard({
       toast.error(t("pages.products.form.imageTypeError"));
     }
     if (!processed.length) return;
+    const newPreviewUrls = await createImagePreviewUrls(processed);
     setVariantMedia((prev) => {
       const cur = prev[fieldId] ?? { files: [], previews: [] };
       return {
         ...prev,
         [fieldId]: {
           files: [...cur.files, ...processed],
-          previews: [
-            ...cur.previews,
-            ...processed.map((f) => URL.createObjectURL(f)),
-          ],
+          previews: [...cur.previews, ...newPreviewUrls],
         },
       };
     });
@@ -1168,11 +1167,9 @@ export default function ProductForm({
     }
     if (!processed.length) return;
 
+    const newPreviewUrls = await createImagePreviewUrls(processed);
     setFiles((prev) => [...prev, ...processed]);
-    setPreviews((prev) => [
-      ...prev,
-      ...processed.map((f) => URL.createObjectURL(f)),
-    ]);
+    setPreviews((prev) => [...prev, ...newPreviewUrls]);
     setFileInputKey(Date.now());
   };
 

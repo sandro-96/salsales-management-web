@@ -45,6 +45,7 @@ import {
   resolvePhones,
 } from "@/utils/phoneContactUtils.js"; // giả sử bạn có utils cn cho className
 import {
+  createImagePreviewUrl,
   isProductImageFile,
   prepareProductImageFile,
   PRODUCT_IMAGE_ACCEPT,
@@ -362,9 +363,12 @@ export default function BranchForm({
 
     try {
       const processed = await prepareProductImageFile(raw);
-      const previewUrl = URL.createObjectURL(processed);
+      const previewUrl = await createImagePreviewUrl(processed);
       revokePaymentQrObjectUrl();
-      paymentQrObjectUrlRef.current = previewUrl;
+      // Data URL không cần revoke; chỉ track ref khi fallback dùng blob URL.
+      paymentQrObjectUrlRef.current = previewUrl?.startsWith("blob:")
+        ? previewUrl
+        : null;
       setPaymentQrFile(processed);
       setPaymentQrPreview(previewUrl);
       if (compressToastId) {

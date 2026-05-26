@@ -126,3 +126,72 @@ export async function prepareProductImageFiles(files) {
   }
   return { ok, rejected };
 }
+
+/**
+ * Tạo URL preview ổn định cho ảnh.
+ *
+ * Trên mobile WebKit (iOS Safari, WebView Android), blob URL sinh từ
+ * `URL.createObjectURL` lên các Blob xuất từ canvas (qua
+ * `browser-image-compression` / `heic-to`) đôi khi không render được trong
+ * `<img>` (gallery hiện icon ảnh hỏng) dù file vẫn upload hợp lệ. Để preview
+ * luôn hiển thị, ta đọc thẳng nội dung file thành data URL bằng `FileReader`
+ * — cách này tự chứa dữ liệu nên không phụ thuộc vòng đời Blob.
+ *
+ * Có fallback về `URL.createObjectURL` nếu `FileReader` không khả dụng.
+ *
+ * @param {Blob | File} file
+ * @returns {Promise<string>}
+ */
+export function createImagePreviewUrl(file) {
+  if (!file) return Promise.resolve("");
+  if (typeof FileReader === "undefined") {
+    try {
+      return Promise.resolve(URL.createObjectURL(file));
+    } catch {
+      return Promise.resolve("");
+    }
+  }
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string" && result.length > 0) {
+        resolve(result);
+        return;
+      }
+      try {
+        resolve(URL.createObjectURL(file));
+      } catch {
+        resolve("");
+      }
+    };
+    reader.onerror = () => {
+      console.warn("createImagePreviewUrl: FileReader failed", reader.error);
+      try {
+        resolve(URL.createObjectURL(file));
+      } catch {
+        resolve("");
+      }
+    };
+    try {
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn("createImagePreviewUrl: readAsDataURL threw", err);
+      try {
+        resolve(URL.createObjectURL(file));
+      } catch {
+        resolve("");
+      }
+    }
+  });
+}
+
+/**
+ * Tạo nhiều preview URL song song. Giữ thứ tự đầu vào.
+ * @param {Array<Blob | File>} files
+ * @returns {Promise<string[]>}
+ */
+export function createImagePreviewUrls(files) {
+  if (!Array.isArray(files) || files.length === 0) return Promise.resolve([]);
+  return Promise.all(files.map((f) => createImagePreviewUrl(f)));
+}

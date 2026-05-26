@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  createImagePreviewUrl,
   prepareProductImageFile,
   PRODUCT_IMAGE_ACCEPT,
   isProductImageFile,
@@ -149,8 +150,9 @@ export default function ShopForm({
 
     try {
       const processedFile = await prepareProductImageFile(selectedFile);
+      const previewUrl = await createImagePreviewUrl(processedFile);
       setFile(processedFile);
-      setImagePreview(URL.createObjectURL(processedFile));
+      setImagePreview(previewUrl);
       form.setValue("logo", processedFile, { shouldDirty: true });
       if (toastId) {
         toast.success(t("pages.shops.form.compressSuccess"), { id: toastId });
