@@ -15,7 +15,8 @@ export function PhoneNumbersField({
   inputClassName,
 }) {
   const { t } = useTranslation();
-  const rows = Array.isArray(value) && value.length > 0 ? value : [""];
+  const rows =
+    Array.isArray(value) && value.length > 0 ? value.map((row) => row ?? "") : [""];
 
   const updateRow = (index, next) => {
     const copy = [...rows];
@@ -62,7 +63,7 @@ export function PhoneNumbersField({
               </span>
             ) : null}
             <Input
-              value={row}
+              value={row ?? ""}
               onChange={(e) => updateRow(index, e.target.value)}
               placeholder={t("common.phoneNumbers.placeholder")}
               className={cn(

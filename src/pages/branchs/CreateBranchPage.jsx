@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import axiosInstance from "../../api/axiosInstance";
 import { useShop } from "../../hooks/useShop";
 import { toast } from "sonner";
 import BranchForm from "./BranchForm";
+import { createBranch } from "@/api/branchApi";
 
 export default function CreateBranchPage() {
   const { t } = useTranslation();
@@ -22,10 +22,7 @@ export default function CreateBranchPage() {
 
     try {
       setIsLoading(true);
-      const res = await axiosInstance.post(
-        `branches?shopId=${selectedShop.id}`,
-        data,
-      );
+      const res = await createBranch(selectedShop.id, data);
 
       if (res.data.success) {
         toast.success(t("pages.branches.create.success"));

@@ -58,6 +58,14 @@ import { useNetwork } from "../../hooks/useNetwork.js";
 import { useWebSocket } from "../../hooks/useWebSocket.js";
 import { useRealtimePollFallback } from "../../hooks/useRealtimePollFallback.js";
 import { resolveApiError } from "../../utils/apiMessage.js";
+import {
+  buildPosCustomerDisplayHref,
+  buildPosCustomerDisplaySnapshot,
+  getOrCreatePosCustomerDisplayId,
+  publishPosCustomerDisplaySnapshot,
+} from "./posDisplayBridge.js";
+
+const DEFAULT_POS_CUSTOMER_DISPLAY_THEME = "light";
 
 function isShopInactiveApiError(err) {
   const c = err?.response?.data?.code;
@@ -104,6 +112,8 @@ export function usePosPage() {
   } = useShop();
   const { hasShopPermission } = useShopPermissions();
   const canPay = hasShopPermission(PERM.ORDER_PAYMENT_CONFIRM);
+  const [customerDisplayId] = useState(() => getOrCreatePosCustomerDisplayId());
+  const customerDisplayWindowRef = React.useRef(null);
 
   const shopPosWriteBlocked = useMemo(
     () => selectedShop?.active === false,
@@ -1382,6 +1392,49 @@ export function usePosPage() {
     [subtotal, pointsToRedeem],
   );
 
+  const customerDisplaySnapshot = useMemo(
+    () =>
+      buildPosCustomerDisplaySnapshot({
+        selectedShop,
+        branches,
+        effectiveBranchId,
+        tables,
+        selectedTableId,
+        displayOrderCode,
+        selectedCustomer,
+        guestName,
+        guestPhone,
+        note,
+        cart,
+        subtotal,
+        totalSavings,
+        pointsToRedeem,
+        totalAfterPoints,
+      }),
+    [
+      selectedShop,
+      branches,
+      effectiveBranchId,
+      tables,
+      selectedTableId,
+      displayOrderCode,
+      selectedCustomer,
+      guestName,
+      guestPhone,
+      note,
+      cart,
+      subtotal,
+      totalSavings,
+      pointsToRedeem,
+      totalAfterPoints,
+    ],
+  );
+
+  useEffect(() => {
+    if (!customerDisplayId) return;
+    publishPosCustomerDisplaySnapshot(customerDisplayId, customerDisplaySnapshot);
+  }, [customerDisplayId, customerDisplaySnapshot]);
+
   const [taxPreview, setTaxPreview] = useState(null);
   const [taxPreviewLoading, setTaxPreviewLoading] = useState(false);
 
@@ -1438,6 +1491,44 @@ export function usePosPage() {
     setPreviewPrintedAt(new Date().toISOString());
     setInvoicePreviewOpen(true);
   }, []);
+
+  const openCustomerDisplay = useCallback(() => {
+    if (!customerDisplayId) {
+      toast.error(t("pages.pos.toast.customerDisplayUnavailable"));
+      return;
+    }
+
+    publishPosCustomerDisplaySnapshot(customerDisplayId, customerDisplaySnapshot);
+
+    const href = buildPosCustomerDisplayHref(
+      customerDisplayId,
+      DEFAULT_POS_CUSTOMER_DISPLAY_THEME,
+    );
+    const existingWindow = customerDisplayWindowRef.current;
+    if (existingWindow && !existingWindow.closed) {
+      try {
+        existingWindow.location.href = href;
+        existingWindow.focus();
+        return;
+      } catch {
+        customerDisplayWindowRef.current = null;
+      }
+    }
+
+    const nextWindow = window.open(
+      href,
+      `pos-customer-display-${customerDisplayId}`,
+      "popup=yes,width=1280,height=720,resizable=yes,scrollbars=yes",
+    );
+
+    if (!nextWindow) {
+      toast.error(t("pages.pos.toast.customerDisplayPopupBlocked"));
+      return;
+    }
+
+    customerDisplayWindowRef.current = nextWindow;
+    nextWindow.focus();
+  }, [customerDisplayId, customerDisplaySnapshot, t]);
 
   const draftInvoiceMeta = useMemo(() => {
     const br = branches.find((b) => b.id === effectiveBranchId);
@@ -1966,6 +2057,8 @@ export function usePosPage() {
     customerResults,
     customerSearchTimer,
     customerSearching,
+    customerDisplayId,
+    customerDisplaySnapshot,
     draftInvoiceMeta,
     draftOrderForPreview,
     effectiveBranchId,
@@ -2005,6 +2098,7 @@ export function usePosPage() {
     navigate,
     nextTabIdRef,
     note,
+    openCustomerDisplay,
     openCheckoutInvoicePreview,
     openPosCheckout,
     openOrderByCode,

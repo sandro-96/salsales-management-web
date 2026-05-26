@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -43,6 +44,11 @@ import {
   normalizePhoneInputs,
   resolvePhones,
 } from "@/utils/phoneContactUtils.js"; // giả sử bạn có utils cn cho className
+import {
+  isProductImageFile,
+  prepareProductImageFile,
+  PRODUCT_IMAGE_ACCEPT,
+} from "@/utils/productImageFiles.js";
 import { useShopPermissions } from "@/hooks/useShopPermissions.js";
 import { PERM } from "@/constants/shopPermissions.js";
 import BranchTimePopover from "@/components/branch/BranchTimePopover.jsx";
@@ -190,6 +196,11 @@ export default function BranchForm({
     reset,
     formState: { isDirty },
   } = form;
+  const paymentQrInputRef = useRef(null);
+  const [paymentQrFile, setPaymentQrFile] = useState(null);
+  const [paymentQrPreview, setPaymentQrPreview] = useState(
+    branch?.paymentQrImageUrl ?? "",
+  );
 
   useEffect(() => {
     if (!branch) return;
@@ -223,9 +234,15 @@ export default function BranchForm({
     });
   }, [branch, reset, shop?.countryCode]);
 
+  useEffect(() => {
+    setPaymentQrFile(null);
+    setPaymentQrPreview(branch?.paymentQrImageUrl ?? "");
+  }, [branch?.paymentQrImageUrl]);
+
   const country =
     COUNTRIES.find((c) => c.code === form.watch("countryCode")) || COUNTRIES[0];
   const isReadOnly = mode === "view";
+  const submitDirty = isDirty || Boolean(paymentQrFile);
 
   const ReadOnlyValue = ({
     value,
@@ -303,8 +320,32 @@ export default function BranchForm({
       paymentAccountNumber: paymentAccountNumber || null,
       paymentAccountHolder: paymentAccountHolder || null,
       paymentTransferNote: paymentTransferNote || null,
+      paymentQrFile,
     };
     onSubmit(submitData);
+  };
+
+  const handlePaymentQrChange = async (e) => {
+    const raw = e.target.files?.[0];
+    e.target.value = "";
+    if (!raw) return;
+    if (!isProductImageFile(raw)) {
+      toast.error(t("pages.branches.form.paymentQrTypeError"));
+      return;
+    }
+
+    try {
+      const processed = await prepareProductImageFile(raw);
+      setPaymentQrFile(processed);
+      setPaymentQrPreview(URL.createObjectURL(processed));
+    } catch {
+      toast.error(t("pages.branches.form.paymentQrTypeError"));
+    }
+  };
+
+  const clearPaymentQrSelection = () => {
+    setPaymentQrFile(null);
+    setPaymentQrPreview(branch?.paymentQrImageUrl ?? "");
   };
 
   return (
@@ -333,7 +374,9 @@ export default function BranchForm({
                       <Input
                         placeholder={t("pages.branches.form.namePlaceholder")}
                         className="h-10 px-3.5 py-2"
+                        autoComplete="organization"
                         {...field}
+                        value={field.value ?? ""}
                       />
                     </FormControl>
                   )}
@@ -409,7 +452,9 @@ export default function BranchForm({
                         rows={3}
                         placeholder={t("pages.branches.form.addressPlaceholder")}
                         className="min-h-[88px] px-3.5 py-2.5 text-sm md:text-sm"
+                        autoComplete="street-address"
                         {...field}
+                        value={field.value ?? ""}
                       />
                     </FormControl>
                   )}
@@ -433,6 +478,7 @@ export default function BranchForm({
                       <Input
                         placeholder={t("pages.branches.form.taxPlaceholder")}
                         maxLength={32}
+                        autoComplete="off"
                         {...field}
                         value={field.value ?? ""}
                       />
@@ -597,7 +643,9 @@ export default function BranchForm({
                         placeholder={t(
                           "pages.branches.form.managerNamePlaceholder",
                         )}
+                        autoComplete="name"
                         {...field}
+                        value={field.value ?? ""}
                       />
                     )}
                     <FormMessage />
@@ -617,7 +665,9 @@ export default function BranchForm({
                         placeholder={t(
                           "pages.branches.form.managerPhonePlaceholder",
                         )}
+                        autoComplete="tel"
                         {...field}
+                        value={field.value ?? ""}
                       />
                     )}
                     <FormMessage />
@@ -682,6 +732,7 @@ export default function BranchForm({
                             placeholder={t("pages.branches.form.wifiSsidPlaceholder")}
                             maxLength={64}
                             className="h-10 px-3.5"
+                            autoComplete="off"
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -754,6 +805,7 @@ export default function BranchForm({
                             )}
                             maxLength={120}
                             className="h-10 px-3.5"
+                            autoComplete="off"
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -783,6 +835,7 @@ export default function BranchForm({
                             )}
                             maxLength={32}
                             className="h-10 px-3.5 font-mono"
+                            autoComplete="off"
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -812,6 +865,7 @@ export default function BranchForm({
                             )}
                             maxLength={120}
                             className="h-10 px-3.5"
+                            autoComplete="off"
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -841,6 +895,7 @@ export default function BranchForm({
                             )}
                             maxLength={200}
                             className="h-10 px-3.5"
+                            autoComplete="off"
                             {...field}
                             value={field.value ?? ""}
                           />
@@ -850,6 +905,83 @@ export default function BranchForm({
                     </FormItem>
                   )}
                 />
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>{t("pages.branches.form.paymentQrImage")}</Label>
+                  <input
+                    ref={paymentQrInputRef}
+                    type="file"
+                    accept={PRODUCT_IMAGE_ACCEPT}
+                    className="hidden"
+                    onChange={handlePaymentQrChange}
+                  />
+                  <div className="rounded-md border border-dashed border-muted-foreground/30 bg-background/70 p-3">
+                    {paymentQrPreview ? (
+                      <div className="space-y-3">
+                        <img
+                          src={paymentQrPreview}
+                          alt={t("pages.branches.form.paymentQrPreviewAlt")}
+                          className="mx-auto max-h-56 rounded-md object-contain"
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          {!isReadOnly ? (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => paymentQrInputRef.current?.click()}
+                              >
+                                {t("pages.branches.form.paymentQrReplace")}
+                              </Button>
+                              {paymentQrFile ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={clearPaymentQrSelection}
+                                >
+                                  {t("pages.branches.form.paymentQrRemoveSelection")}
+                                </Button>
+                              ) : null}
+                            </>
+                          ) : null}
+                          <Button type="button" variant="ghost" size="sm" asChild>
+                            <a
+                              href={paymentQrPreview}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {t("pages.branches.form.paymentQrOpen")}
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {t("pages.branches.form.paymentQrEmpty")}
+                      </p>
+                    )}
+                  </div>
+                  {!isReadOnly ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => paymentQrInputRef.current?.click()}
+                        >
+                          {paymentQrPreview
+                            ? t("pages.branches.form.paymentQrReplace")
+                            : t("pages.branches.form.paymentQrUpload")}
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {t("pages.branches.form.paymentQrHint")}
+                      </p>
+                    </>
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -948,7 +1080,7 @@ export default function BranchForm({
               <Button
                 variant={mode === "edit" ? "warning" : "success"}
                 type="submit"
-                disabled={isLoading || !isDirty}
+                disabled={isLoading || !submitDirty}
               >
                 {isLoading
                   ? t("pages.branches.form.processing")

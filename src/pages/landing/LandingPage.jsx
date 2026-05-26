@@ -35,6 +35,7 @@ import ScrollToTopButton from "./sections/ScrollToTopButton.jsx";
 import SocialProofStrip from "./sections/SocialProofStrip.jsx";
 import TestimonialsSection from "./sections/TestimonialsSection.jsx";
 import { useLandingPageJsonLd } from "@/hooks/useLandingPageJsonLd.js";
+import { shouldShowPublicLegalDocs } from "@/utils/legalConfig.js";
 
 const FEATURE_IDS = [
   "pos",
@@ -97,6 +98,7 @@ function SectionHeading({ id, title, subtitle, className }) {
 export default function LandingPage() {
   const { t } = useTranslation();
   useLandingPageJsonLd();
+  const showPublicLegalDocs = shouldShowPublicLegalDocs();
   const brand = t("brand.appName");
   const year = new Date().getFullYear();
 
@@ -583,23 +585,25 @@ export default function LandingPage() {
                 </li>
               </ul>
             </div>
-            <div>
-              <p className="mb-2 font-semibold">
-                {t("pages.landing.footer.legal")}
-              </p>
-              <ul className="space-y-1.5 text-muted-foreground">
-                <li>
-                  <Link to="/terms" className="hover:text-foreground">
-                    {t("pages.landing.footer.terms")}
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/privacy" className="hover:text-foreground">
-                    {t("pages.landing.footer.privacy")}
-                  </Link>
-                </li>
-              </ul>
-            </div>
+            {showPublicLegalDocs ? (
+              <div>
+                <p className="mb-2 font-semibold">
+                  {t("pages.landing.footer.legal")}
+                </p>
+                <ul className="space-y-1.5 text-muted-foreground">
+                  <li>
+                    <Link to="/terms" className="hover:text-foreground">
+                      {t("pages.landing.footer.terms")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/privacy" className="hover:text-foreground">
+                      {t("pages.landing.footer.privacy")}
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="mx-auto mt-8 max-w-6xl space-y-2 px-4 text-center text-xs text-muted-foreground sm:px-6">

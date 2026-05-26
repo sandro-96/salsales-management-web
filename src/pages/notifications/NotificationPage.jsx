@@ -44,6 +44,10 @@ import {
   getNotificationTitle,
 } from "../../utils/notificationI18n.js";
 import { getNotificationDestination } from "../../utils/notificationNavigation.js";
+import {
+  NOTIFICATION_UNREAD_REFRESH_EVENT,
+  requestNotificationUnreadRefresh,
+} from "../../utils/notificationEvents.js";
 import { parseSpringPage } from "@/utils/springPage.js";
 
 const NOTIFICATION_TYPE_ICON = {
@@ -205,6 +209,22 @@ const NotificationPage = () => {
   }, [fetchNotifications]);
 
   useEffect(() => {
+    const handleUnreadRefresh = async () => {
+      await Promise.all([fetchStats(), fetchNotifications()]);
+    };
+
+    window.addEventListener(
+      NOTIFICATION_UNREAD_REFRESH_EVENT,
+      handleUnreadRefresh,
+    );
+    return () =>
+      window.removeEventListener(
+        NOTIFICATION_UNREAD_REFRESH_EVENT,
+        handleUnreadRefresh,
+      );
+  }, [fetchNotifications, fetchStats]);
+
+  useEffect(() => {
     if (!user?.id || !connected) return;
 
     const unsub = subscribe(`/topic/notifications/${user.id}`, (message) => {
@@ -262,6 +282,7 @@ const NotificationPage = () => {
           unread: Math.max(0, s.unread - 1),
           read: s.read + 1,
         }));
+        requestNotificationUnreadRefresh();
       } catch (err) {
         console.error("Mark read error:", err);
       }
@@ -282,6 +303,7 @@ const NotificationPage = () => {
         unread: Math.max(0, s.unread - 1),
         read: s.read + 1,
       }));
+      requestNotificationUnreadRefresh();
     } catch (err) {
       console.error("Mark read error:", err);
     }
@@ -296,6 +318,7 @@ const NotificationPage = () => {
         unread: 0,
         read: s.total,
       }));
+      requestNotificationUnreadRefresh();
       toast.success(t("pages.notifications.markAllSuccess"));
     } catch (err) {
       console.error("Mark all read error:", err);
@@ -321,6 +344,9 @@ const NotificationPage = () => {
         unread: notification.read ? s.unread : Math.max(0, s.unread - 1),
         read: notification.read ? Math.max(0, s.read - 1) : s.read,
       }));
+      if (!notification.read) {
+        requestNotificationUnreadRefresh();
+      }
       toast.success(t("pages.notifications.deleteSuccess"));
     } catch (err) {
       console.error("Delete notification error:", err);

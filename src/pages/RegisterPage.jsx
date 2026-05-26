@@ -9,10 +9,13 @@ import AuthPageLayout, {
   authInputClass,
   authPrimaryButtonClass,
 } from "../components/auth/AuthPageLayout.jsx";
+import GoogleSignInButton from "../components/common/GoogleSignInButton.jsx";
+import { shouldShowPublicLegalDocs } from "../utils/legalConfig.js";
 import { cn } from "@/lib/utils";
 
 const RegisterPage = () => {
   const { t } = useTranslation();
+  const showPublicLegalDocs = shouldShowPublicLegalDocs();
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -57,7 +60,7 @@ const RegisterPage = () => {
     };
     let isValid = true;
 
-    if (!acceptedTerms) {
+    if (showPublicLegalDocs && !acceptedTerms) {
       tempErrors.acceptTerms = t("auth.register.acceptTermsRequired");
       isValid = false;
     }
@@ -364,46 +367,51 @@ const RegisterPage = () => {
           />
         </div>
 
-        <div className="space-y-2 pt-1">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="reg-terms"
-              checked={acceptedTerms}
-              disabled={loading}
-              onCheckedChange={(checked) => {
-                setAcceptedTerms(checked === true);
-                setErrors((prev) => ({ ...prev, acceptTerms: "" }));
-              }}
-              className="mt-0.5"
-            />
-            <label htmlFor="reg-terms" className="text-sm leading-relaxed cursor-pointer">
-              <Trans
-                i18nKey="auth.register.acceptTerms"
-                components={{
-                  terms: (
-                    <Link
-                      to="/terms"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-primary underline-offset-2 hover:underline"
-                    />
-                  ),
-                  privacy: (
-                    <Link
-                      to="/privacy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-primary underline-offset-2 hover:underline"
-                    />
-                  ),
+        {showPublicLegalDocs ? (
+          <div className="space-y-2 pt-1">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="reg-terms"
+                checked={acceptedTerms}
+                disabled={loading}
+                onCheckedChange={(checked) => {
+                  setAcceptedTerms(checked === true);
+                  setErrors((prev) => ({ ...prev, acceptTerms: "" }));
                 }}
+                className="mt-0.5"
               />
-            </label>
+              <label
+                htmlFor="reg-terms"
+                className="cursor-pointer text-sm leading-relaxed"
+              >
+                <Trans
+                  i18nKey="auth.register.acceptTerms"
+                  components={{
+                    terms: (
+                      <Link
+                        to="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      />
+                    ),
+                    privacy: (
+                      <Link
+                        to="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      />
+                    ),
+                  }}
+                />
+              </label>
+            </div>
+            {errors.acceptTerms ? (
+              <p className="text-sm text-destructive">{errors.acceptTerms}</p>
+            ) : null}
           </div>
-          {errors.acceptTerms ? (
-            <p className="text-sm text-destructive">{errors.acceptTerms}</p>
-          ) : null}
-        </div>
+        ) : null}
 
         <button
           type="submit"
@@ -412,6 +420,16 @@ const RegisterPage = () => {
         >
           {t("auth.register.submit")}
         </button>
+
+        <div className="relative flex items-center gap-3 py-1">
+          <div className="h-px flex-1 bg-border" />
+          <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t("auth.login.orContinue")}
+          </span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <GoogleSignInButton className="w-full" />
       </form>
     </AuthPageLayout>
   );

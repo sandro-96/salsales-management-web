@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { lazy, memo, Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -32,17 +32,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import BranchForm from "./BranchForm";
 import BranchProductPanel from "./BranchProductPanel";
 import { useShop } from "../../hooks/useShop";
 import { useShopPermissions } from "../../hooks/useShopPermissions.js";
 import { PERM } from "../../constants/shopPermissions.js";
 import { useAlertDialog } from "../../hooks/useAlertDialog";
-import { getBranchBySlug } from "@/api/branchApi";
+import { getBranchBySlug, updateBranch } from "@/api/branchApi";
 import { getBranchProducts } from "@/api/productApi";
 import axiosInstance from "../../api/axiosInstance";
 import { resolvePhones } from "@/utils/phoneContactUtils.js";
 import { PhoneNumbersDisplay } from "@/components/common/PhoneNumbersDisplay.jsx";
+
+const BranchForm = lazy(() => import("./BranchForm"));
+const MemoBranchProductPanel = memo(BranchProductPanel);
 
 const BranchSettingsPage = () => {
   const { t } = useTranslation();
@@ -58,9 +60,13 @@ const BranchSettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [editFormReady, setEditFormReady] = useState(false);
   const [activeService, setActiveService] = useState("products");
   const [productCount, setProductCount] = useState(null);
   const prevShopIdRef = useRef(null);
+  const openEditSheet = useCallback(() => {
+    window.requestAnimationFrame(() => setEditSheetOpen(true));
+  }, []);
 
   /* ── Navigate away when shop changes ───────────────────────────────────── */
   useEffect(() => {
@@ -100,6 +106,28 @@ const BranchSettingsPage = () => {
     fetchBranch();
   }, [fetchBranch]);
 
+  useEffect(() => {
+    if (!editSheetOpen) {
+      setEditFormReady(false);
+      return;
+    }
+
+    let firstFrameId = 0;
+    let secondFrameId = 0;
+
+    // Let the sheet paint first, then mount the large form on the next frame.
+    firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(() => {
+        setEditFormReady(true);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+      window.cancelAnimationFrame(secondFrameId);
+    };
+  }, [editSheetOpen]);
+
   /* ── Fetch product count for stats card ─────────────────────────────────── */
   useEffect(() => {
     if (!branch || !selectedShop) return;
@@ -120,10 +148,7 @@ const BranchSettingsPage = () => {
     if (!branch) return;
     try {
       setIsSubmitting(true);
-      const res = await axiosInstance.put(
-        `branches/${branch.id}?shopId=${selectedShop.id}`,
-        data,
-      );
+      const res = await updateBranch(selectedShop.id, branch.id, data);
       if (res.data.success) {
         toast.success(t("pages.branches.settings.updateSuccess"));
         await fetchBranches?.();
@@ -410,7 +435,7 @@ const BranchSettingsPage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setEditSheetOpen(true)}
+              onClick={openEditSheet}
             >
               <Settings className="h-3.5 w-3.5" />
               <span className="ml-1.5">
@@ -512,7 +537,7 @@ const BranchSettingsPage = () => {
               — {branch.name}
             </span>
           </h3>
-          <BranchProductPanel
+          <MemoBranchProductPanel
             shopId={selectedShop.id}
             branchId={branch.id}
             onCountChange={setProductCount}
@@ -530,15 +555,29 @@ const BranchSettingsPage = () => {
             </SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-6 py-6 pb-8">
-            <BranchForm
-              mode="edit"
-              branch={branch}
-              onSubmit={onSubmit}
-              isLoading={isSubmitting}
-              onModeChange={(newMode) => {
-                if (newMode === "view") setEditSheetOpen(false);
-              }}
-            />
+            {editFormReady ? (
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center py-16 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                }
+              >
+                <BranchForm
+                  mode="edit"
+                  branch={branch}
+                  onSubmit={onSubmit}
+                  isLoading={isSubmitting}
+                  onModeChange={(newMode) => {
+                    if (newMode === "view") setEditSheetOpen(false);
+                  }}
+                />
+              </Suspense>
+            ) : (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>

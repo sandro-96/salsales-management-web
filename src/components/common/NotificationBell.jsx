@@ -30,6 +30,10 @@ import {
   getNotificationMessage,
   getNotificationTitle,
 } from "../../utils/notificationI18n.js";
+import {
+  NOTIFICATION_UNREAD_REFRESH_EVENT,
+  requestNotificationUnreadRefresh,
+} from "../../utils/notificationEvents.js";
 
 const NOTIFICATION_TYPE_ICON = {
   ORDER_CREATED: "🛒",
@@ -99,6 +103,22 @@ export default function NotificationBell() {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
+
+  useEffect(() => {
+    const handleUnreadRefresh = () => {
+      fetchUnreadCount();
+    };
+
+    window.addEventListener(
+      NOTIFICATION_UNREAD_REFRESH_EVENT,
+      handleUnreadRefresh,
+    );
+    return () =>
+      window.removeEventListener(
+        NOTIFICATION_UNREAD_REFRESH_EVENT,
+        handleUnreadRefresh,
+      );
   }, [fetchUnreadCount]);
 
   useEffect(() => {
@@ -182,6 +202,7 @@ export default function NotificationBell() {
       await markAllAsRead();
       setUnreadCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      requestNotificationUnreadRefresh();
     } catch (err) {
       console.error("Mark all read error:", err);
     }
@@ -208,6 +229,7 @@ export default function NotificationBell() {
             n.id === notification.id ? { ...n, read: true } : n,
           ),
         );
+        requestNotificationUnreadRefresh();
       } catch (err) {
         console.error("Mark read error:", err);
       }

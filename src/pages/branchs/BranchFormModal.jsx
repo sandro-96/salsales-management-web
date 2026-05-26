@@ -8,21 +8,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import BranchForm from "./BranchForm.jsx";
-import axiosInstance from "../../api/axiosInstance.js";
 import { useShop } from "../../hooks/useShop.js";
+import { createBranch } from "@/api/branchApi";
 
 export default function BranchFormModal() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { selectedShop } = useShop();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (formData) => {
+  const handleSubmit = async (data) => {
     if (!selectedShop?.id) return;
     try {
       setLoading(true);
-      await axiosInstance.post("/branches", formData, {
-        params: { shopId: selectedShop.id },
-      });
+      await createBranch(selectedShop.id, data);
       navigate("/branches", { replace: true });
     } catch (err) {
       console.error(err);

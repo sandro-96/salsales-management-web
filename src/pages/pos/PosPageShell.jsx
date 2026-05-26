@@ -15,6 +15,7 @@ import {
   Loader2,
   CheckCircle2,
   Eye,
+  Monitor,
   Printer,
   ChevronsLeftRight,
   ImagePlus,
@@ -178,6 +179,7 @@ export function PosPageShell(props) {
     moveTableOpen,
     moveToTableId,
     openCheckoutInvoicePreview,
+    openCustomerDisplay,
     openPosCheckout,
     shopPosWriteBlocked,
     apiReachable,
@@ -431,6 +433,16 @@ export function PosPageShell(props) {
                 )}
               </Button>
             </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 px-3 text-xs"
+              onClick={openCustomerDisplay}
+            >
+              <Monitor className="mr-1.5 h-3.5 w-3.5" />
+              {t("pages.pos.customerDisplay.openButton")}
+            </Button>
             {displayOrderCode && (
               <Badge
                 variant="outline"

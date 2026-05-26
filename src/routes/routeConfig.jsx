@@ -2,6 +2,7 @@
 import { lazy } from "react";
 import { PERM } from "../constants/shopPermissions.js";
 import { ADMIN_PERM } from "../constants/adminPermissions.js";
+import { shouldShowPublicLegalDocs } from "../utils/legalConfig.js";
 const BranchPage = lazy(() => import("../pages/branchs/BranchPage.jsx"));
 const BranchSettingsPage = lazy(
   () => import("../pages/branchs/BranchSettingsPage.jsx"),
@@ -87,6 +88,9 @@ const NotificationPage = lazy(
   () => import("../pages/notifications/NotificationPage"),
 );
 const PosPage = lazy(() => import("../pages/pos/PosPage"));
+const PosCustomerDisplayPage = lazy(
+  () => import("../pages/pos/PosCustomerDisplayPage.jsx"),
+);
 const BillingPage = lazy(() => import("../pages/billing/BillingPage"));
 const ShopLayout = lazy(() => import("../layouts/common/ShopLayout.jsx"));
 const BranchLayout = lazy(() => import("../layouts/common/BranchLayout.jsx"));
@@ -116,21 +120,35 @@ const TableOrderingPage = lazy(
 );
 const LandingPage = lazy(() => import("../pages/landing/LandingPage.jsx"));
 const LegalDocumentPage = lazy(() => import("../pages/legal/LegalDocumentPage.jsx"));
+const publicLegalRoutes = shouldShowPublicLegalDocs()
+  ? [
+      {
+        path: "/terms",
+        element: <LegalDocumentPage kind="terms" />,
+        titleKey: "routes.terms",
+        seoKey: "seo.terms",
+        seoPath: "/terms",
+      },
+      {
+        path: "/privacy",
+        element: <LegalDocumentPage kind="privacy" />,
+        titleKey: "routes.privacy",
+        seoKey: "seo.privacy",
+        seoPath: "/privacy",
+      },
+    ]
+  : [];
 
 export const routeConfig = [
+  ...publicLegalRoutes,
   {
-    path: "/terms",
-    element: <LegalDocumentPage kind="terms" />,
-    titleKey: "routes.terms",
-    seoKey: "seo.terms",
-    seoPath: "/terms",
-  },
-  {
-    path: "/privacy",
-    element: <LegalDocumentPage kind="privacy" />,
-    titleKey: "routes.privacy",
-    seoKey: "seo.privacy",
-    seoPath: "/privacy",
+    path: "/pos/display",
+    element: <PosCustomerDisplayPage />,
+    protected: true,
+    roles: ["ROLE_USER"],
+    guestRedirect: "/landing",
+    titleKey: "routes.posCustomerDisplay",
+    seoNoIndex: true,
   },
   {
     path: "/landing",
