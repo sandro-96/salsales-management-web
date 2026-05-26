@@ -12,9 +12,10 @@ export function buildUpdateProfileFormData(payload, avatarFile) {
   formData.append(
     "user",
     new Blob([JSON.stringify(payload)], { type: "application/json" }),
+    "user.json",
   );
   if (avatarFile) {
-    formData.append("file", avatarFile);
+    formData.append("file", avatarFile, avatarFile.name || "avatar.jpg");
   }
   return formData;
 }

@@ -1841,7 +1841,11 @@ export function usePosPage() {
           ) {
             try {
               const fd = new FormData();
-              fd.append("file", transferPaymentProofFile);
+              fd.append(
+                "file",
+                transferPaymentProofFile,
+                transferPaymentProofFile.name || "transfer-proof.jpg",
+              );
               const up = await uploadOrderPaymentProof(
                 finalOrder.id,
                 selectedShopId,

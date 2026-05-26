@@ -252,8 +252,11 @@ const ShopSettingsPage = () => {
       formData.append(
         "shop",
         new Blob([JSON.stringify(data)], { type: "application/json" }),
+        "shop.json",
       );
-      if (logoFile) formData.append("file", logoFile);
+      if (logoFile) {
+        formData.append("file", logoFile, logoFile.name || "shop-logo.jpg");
+      }
 
       const res = await axiosInstance.put(
         `/shop/${selectedShop.id}`,
@@ -360,6 +363,7 @@ const ShopSettingsPage = () => {
       formData.append(
         "shop",
         new Blob([JSON.stringify(data)], { type: "application/json" }),
+        "shop.json",
       );
       const res = await axiosInstance.put(
         `/shop/${selectedShop.id}`,
@@ -418,6 +422,7 @@ const ShopSettingsPage = () => {
       formData.append(
         "shop",
         new Blob([JSON.stringify(data)], { type: "application/json" }),
+        "shop.json",
       );
       const res = await axiosInstance.put(
         `/shop/${selectedShop.id}`,

@@ -78,8 +78,11 @@ export const createProduct = (shopId, data, files = []) => {
   formData.append(
     "product",
     new Blob([JSON.stringify(data)], { type: "application/json" }),
+    "product.json",
   );
-  files.forEach((file) => formData.append("files", file));
+  files.forEach((file, index) =>
+    formData.append("files", file, file?.name || `product-image-${index + 1}.jpg`),
+  );
 
   return axiosInstance.post(`/shops/${shopId}/products`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -92,7 +95,9 @@ export const createProduct = (shopId, data, files = []) => {
  */
 export const uploadStagedVariantImages = (shopId, files = []) => {
   const formData = new FormData();
-  files.forEach((file) => formData.append("files", file));
+  files.forEach((file, index) =>
+    formData.append("files", file, file?.name || `variant-image-${index + 1}.jpg`),
+  );
   return axiosInstance.post(
     `/shops/${shopId}/products/variant-images/staged`,
     formData,
@@ -121,8 +126,11 @@ export const updateProduct = (shopId, id, data, files = []) => {
   formData.append(
     "product",
     new Blob([JSON.stringify(data)], { type: "application/json" }),
+    "product.json",
   );
-  files.forEach((file) => formData.append("files", file));
+  files.forEach((file, index) =>
+    formData.append("files", file, file?.name || `product-image-${index + 1}.jpg`),
+  );
 
   return axiosInstance.put(`/shops/${shopId}/products/${id}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },

@@ -291,7 +291,7 @@ const OrderDetailDialog = ({
     try {
       const file = await prepareProductImageFile(raw);
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", file, file.name || "payment-proof.jpg");
       const res = await uploadOrderPaymentProof(order.id, shopId, fd);
       const updated = res.data?.data;
       toast.success(t("pages.orders.detail.proofUploadSuccess"));
@@ -1429,7 +1429,11 @@ const OrderListPage = () => {
       ) {
         try {
           const fd = new FormData();
-          fd.append("file", paymentProofFile);
+          fd.append(
+            "file",
+            paymentProofFile,
+            paymentProofFile.name || "payment-proof.jpg",
+          );
           await uploadOrderPaymentProof(payingOrderId, selectedShopId, fd);
         } catch (upErr) {
           console.error(upErr);

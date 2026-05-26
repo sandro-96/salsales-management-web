@@ -23,8 +23,9 @@ export default function CreateShopPage() {
       formData.append(
         "shop",
         new Blob([JSON.stringify(data)], { type: "application/json" }),
+        "shop.json",
       );
-      if (file) formData.append("file", file);
+      if (file) formData.append("file", file, file.name || "shop-logo.jpg");
 
       setIsLoading(true);
       const res = await axiosInstance.post("/shop", formData, {

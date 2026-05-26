@@ -102,6 +102,7 @@ export const confirmPayment = (orderId, shopId, paymentId, paymentMethod) =>
 export const uploadOrderPaymentProof = (orderId, shopId, formData) =>
   axiosInstance.post(`/orders/${orderId}/payment-proof`, formData, {
     params: { shopId },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 
 /**
