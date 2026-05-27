@@ -55,7 +55,7 @@ export default function HeroMockup() {
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
             </div>
             <div className="hidden items-center gap-1.5 rounded-md border border-border/60 bg-background/70 px-2.5 py-1 text-[10px] text-muted-foreground sm:flex">
-              app.{(import.meta.env?.VITE_BRAND_DOMAIN ?? "sothuchi")}.vn/dashboard
+              app.{(import.meta.env?.VITE_BRAND_DOMAIN ?? "sotuci")}.vn/dashboard
             </div>
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
               <span className="relative flex h-1.5 w-1.5">

@@ -1,4 +1,4 @@
-/** Canonical site origin — set VITE_SITE_URL when deploying (e.g. https://sothuchi.vn). */
+/** Canonical site origin — set VITE_SITE_URL when deploying (e.g. https://sotuci.vn). */
 export function getSiteUrl() {
   const raw = import.meta.env.VITE_SITE_URL?.trim();
   if (!raw) return "";
