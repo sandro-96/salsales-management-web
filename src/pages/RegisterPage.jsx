@@ -12,6 +12,7 @@ import AuthPageLayout, {
 import GoogleSignInButton from "../components/common/GoogleSignInButton.jsx";
 import { shouldShowPublicLegalDocs } from "../utils/legalConfig.js";
 import { cn } from "@/lib/utils";
+import { metaTrack } from "@/utils/metaPixel";
 
 const RegisterPage = () => {
   const { t } = useTranslation();
@@ -145,6 +146,9 @@ const RegisterPage = () => {
       });
       if (response.data.success) {
         setSuccess(t("auth.register.successVerifyEmail"));
+        metaTrack("CompleteRegistration", {
+          content_name: "register_success",
+        });
       }
     } catch (err) {
       const errorData = err.response?.data;

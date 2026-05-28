@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "build:og": "node scripts/build-og-landing.mjs",
     "build:icons": "node scripts/build-apple-touch-icon.mjs",
-    "prebuild": "npm run build:icons"
+    "build:favicon": "node scripts/build-favicon-ico.mjs",
+    "prebuild": "npm run build:icons && npm run build:favicon"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -86,6 +87,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
     "sharp": "^0.34.5",
+    "sharp-ico": "^0.1.5",
     "tailwindcss": "^4.1.12",
     "vite": "^7.0.4"
   }

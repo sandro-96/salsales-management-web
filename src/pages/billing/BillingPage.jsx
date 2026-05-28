@@ -54,6 +54,7 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { getShopRoleLabel } from "@/utils/shopLabels";
 import { cn } from "@/lib/utils";
+import { metaTrack } from "@/utils/metaPixel";
 
 const DEFAULT_BILLING_MONTHS_OPTIONS = [1, 3, 6, 9, 12];
 const DEFAULT_MONTHLY_VND = 99_000;
@@ -405,6 +406,12 @@ export default function BillingPage() {
       if (!BILLING_REFRESH_WS_TYPES.has(msgType)) return;
       const sid = message.data.shopId;
       if (selectedShopId && sid && sid !== selectedShopId) return;
+      if (msgType === "BILLING_PAYMENT_SUCCESS") {
+        metaTrack("Subscribe", {
+          content_name: "billing_ws_payment_success",
+          currency: "VND",
+        });
+      }
       refresh(true);
       loadHistory({ silent: true });
     });
@@ -444,6 +451,10 @@ export default function BillingPage() {
       toast.success(
         t("pages.billing.toast.paymentSuccess", { gateway: callback.gateway }),
       );
+      metaTrack("Subscribe", {
+        content_name: "billing_payment_success",
+        currency: "VND",
+      });
     } else {
       toast.error(
         t("pages.billing.toast.paymentFail", {
@@ -545,6 +556,11 @@ export default function BillingPage() {
   const onPay = async () => {
     try {
       setPaying(true);
+      metaTrack("InitiateCheckout", {
+        content_name: "billing_pay_click",
+        value: totalPaymentVnd,
+        currency: "VND",
+      });
       const res = await startSubscriptionPayment({
         gateway: selectedGateway,
         billingMonths,

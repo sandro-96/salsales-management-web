@@ -36,6 +36,7 @@ import SocialProofStrip from "./sections/SocialProofStrip.jsx";
 import TestimonialsSection from "./sections/TestimonialsSection.jsx";
 import { useLandingPageJsonLd } from "@/hooks/useLandingPageJsonLd.js";
 import { shouldShowPublicLegalDocs } from "@/utils/legalConfig.js";
+import { metaTrack } from "@/utils/metaPixel";
 
 const FEATURE_IDS = [
   "pos",
@@ -203,7 +204,14 @@ export default function LandingPage() {
                     className="w-full gap-2 shadow-lg shadow-primary/25 transition-transform hover:-translate-y-0.5 sm:w-auto"
                     asChild
                   >
-                    <Link to="/register">
+                    <Link
+                      to="/register"
+                      onClick={() =>
+                        metaTrack("Lead", {
+                          content_name: "landing_hero_register",
+                        })
+                      }
+                    >
                       {t("pages.landing.hero.ctaPrimary")}
                       <ChevronRight className="h-4 w-4" />
                     </Link>
@@ -520,7 +528,16 @@ export default function LandingPage() {
                 className="shadow-lg shadow-primary/25 transition-transform hover:-translate-y-0.5"
                 asChild
               >
-                <Link to="/register">{t("pages.landing.cta.primary")}</Link>
+                <Link
+                  to="/register"
+                  onClick={() =>
+                    metaTrack("Lead", {
+                      content_name: "landing_final_cta_register",
+                    })
+                  }
+                >
+                  {t("pages.landing.cta.primary")}
+                </Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <Link to="/login">{t("pages.landing.cta.secondary")}</Link>

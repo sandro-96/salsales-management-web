@@ -15,6 +15,7 @@ import BranchFormModal from "./pages/branchs/BranchFormModal.jsx";
 import { Toaster } from "@/components/ui/sonner";
 import NetworkStatusBanner from "@/components/common/NetworkStatusBanner.jsx";
 import { useGlobalJsonLd } from "@/hooks/useGlobalJsonLd.js";
+import { useMetaPixelPageView } from "@/hooks/useMetaPixelPageView.js";
 
 function renderRoute(route) {
   let element = (
@@ -102,6 +103,7 @@ function App() {
   const { t } = useTranslation();
   const state = location.state;
   useGlobalJsonLd();
+  useMetaPixelPageView();
   return (
     <ErrorBoundaryWithNavigate>
       <Suspense fallback={<Loading text={t("common.loadingPage")} />}>

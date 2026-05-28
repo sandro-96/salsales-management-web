@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import MotionSection, { MotionItem } from "./MotionSection.jsx";
+import { metaTrack } from "@/utils/metaPixel";
 
 const GUARANTEE_ICONS = {
   noCard: ShieldCheck,
@@ -122,7 +123,14 @@ export default function PricingSection() {
                   className="w-full gap-2 shadow-lg shadow-primary/25 transition-transform hover:-translate-y-0.5"
                   asChild
                 >
-                  <Link to="/register">
+                  <Link
+                    to="/register"
+                    onClick={() =>
+                      metaTrack("Lead", {
+                        content_name: "landing_pricing_register",
+                      })
+                    }
+                  >
                     {t("pages.landing.pricing.cta")}
                   </Link>
                 </Button>

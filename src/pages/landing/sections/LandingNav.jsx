@@ -6,6 +6,7 @@ import { BrandLogoMark } from "@/components/brand/BrandLogoMark.jsx";
 import LanguageSwitcher from "@/components/common/LanguageSwitcher.jsx";
 import ThemeToggle from "@/components/common/ThemeToggle.jsx";
 import { Button } from "@/components/ui/button";
+import { metaTrack } from "@/utils/metaPixel";
 import {
   Sheet,
   SheetClose,
@@ -65,7 +66,14 @@ export default function LandingNav({ brand, t }) {
             <Link to="/login">{t("pages.landing.nav.login")}</Link>
           </Button>
           <Button size="sm" className="hidden gap-1 sm:inline-flex" asChild>
-            <Link to="/register">
+            <Link
+              to="/register"
+              onClick={() =>
+                metaTrack("Lead", {
+                  content_name: "landing_nav_register",
+                })
+              }
+            >
               {t("pages.landing.nav.register")}
               <ChevronRight className="h-4 w-4" />
             </Link>
@@ -114,7 +122,14 @@ export default function LandingNav({ brand, t }) {
               <div className="space-y-2 border-t border-border/60 p-4">
                 <SheetClose asChild>
                   <Button className="w-full gap-1" asChild>
-                    <Link to="/register">
+                    <Link
+                      to="/register"
+                      onClick={() =>
+                        metaTrack("Lead", {
+                          content_name: "landing_mobile_nav_register",
+                        })
+                      }
+                    >
                       {t("pages.landing.nav.register")}
                       <ChevronRight className="h-4 w-4" />
                     </Link>
