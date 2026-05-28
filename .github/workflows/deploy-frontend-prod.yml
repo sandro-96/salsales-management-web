@@ -1,0 +1,88 @@
+# Deploy production frontend → S3 + CloudFront (sotuci.vn)
+# Setup: docs/deploy/GITHUB-CICD-SETUP.md
+
+name: Deploy frontend (prod)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'scripts/**'
+      - '.github/workflows/deploy-frontend-prod.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend-prod
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-southeast-1
+  S3_BUCKET: salsales-web-prod
+  VITE_API_BASE_URL: https://api.sotuci.vn/api
+  VITE_WS_URL: https://api.sotuci.vn/ws
+  VITE_SITE_URL: https://sotuci.vn
+  VITE_BRAND_DOMAIN: sotuci
+  VITE_OG_IMAGE_PATH: /og-landing.png
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_APP_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID_PROD }}
+          VITE_PUBLIC_LEGAL_DOCS: 'false'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync dist/ "s3://${S3_BUCKET}/" \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html" \
+            --exclude "sitemap.xml" \
+            --exclude "robots.txt"
+          aws s3 cp dist/index.html "s3://${S3_BUCKET}/index.html" \
+            --cache-control "public,max-age=60,must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+          if [ -f dist/sitemap.xml ]; then
+            aws s3 cp dist/sitemap.xml "s3://${S3_BUCKET}/sitemap.xml" \
+              --cache-control "public,max-age=3600" \
+              --content-type "application/xml; charset=utf-8"
+          fi
+          if [ -f dist/robots.txt ]; then
+            aws s3 cp dist/robots.txt "s3://${S3_BUCKET}/robots.txt" \
+              --cache-control "public,max-age=3600" \
+              --content-type "text/plain; charset=utf-8"
+          fi
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CF_DISTRIBUTION_ID }}" \
+            --paths "/*"
