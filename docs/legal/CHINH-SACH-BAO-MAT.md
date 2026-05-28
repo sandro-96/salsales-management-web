@@ -1,11 +1,9 @@
 # Chính sách bảo mật & xử lý dữ liệu cá nhân — Sổ thu chi
 
-**Phiên bản:** 1.0 (nháp)  
+**Phiên bản:** 1.0  
 **Cập nhật:** 20/05/2026  
 **Chủ vận hành / Bên kiểm soát (đối với tài khoản nền tảng):** Chu Thanh Trí (cá nhân)  
 **Liên hệ:** [vmanage.sass@gmail.com](mailto:vmanage.sass@gmail.com) · +84 0348895626
-
-> **Lưu ý:** Bản nháp; nên rà soát với Nghị định 13/2023/NĐ-CP trước khi công bố chính thức.
 
 ---
 

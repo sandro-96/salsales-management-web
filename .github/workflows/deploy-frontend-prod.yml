@@ -51,7 +51,8 @@ jobs:
         run: npm run build
         env:
           VITE_APP_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID_PROD }}
-          VITE_PUBLIC_LEGAL_DOCS: 'false'
+          # default bật để public Terms/Privacy trên prod
+          VITE_PUBLIC_LEGAL_DOCS: 'true'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

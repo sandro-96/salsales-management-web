@@ -1,11 +1,9 @@
 # Điều khoản sử dụng — Sổ thu chi
 
-**Phiên bản:** 1.0 (nháp)  
+**Phiên bản:** 1.0  
 **Cập nhật:** 20/05/2026  
 **Chủ vận hành:** Chu Thanh Trí (cá nhân)  
 **Liên hệ:** [vmanage.sass@gmail.com](mailto:vmanage.sass@gmail.com) · +84 0348895626
-
-> **Lưu ý:** Đây là bản nháp phục vụ beta / go-live. Nên có luật sư rà soát trước khi quảng bá rộng rãi.
 
 ---
 
