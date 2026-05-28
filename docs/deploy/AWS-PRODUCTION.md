@@ -7,26 +7,61 @@
 
 ---
 
+## Trạng thái production hiện tại (as-built)
+
+Tài liệu này ban đầu là “plan”. Dưới đây là **cấu hình thực tế đang chạy** (đã go-live) để bạn tra cứu nhanh.
+
+- **Domain**
+  - Web: `https://sotuci.vn` + `https://www.sotuci.vn`
+  - API: `https://api.sotuci.vn`
+- **DNS**: Cloudflare (không dùng Route 53)
+- **Region AWS**: `ap-southeast-1` (Singapore)
+- **EC2**
+  - Instance: `i-08167ad5505b5b164`
+  - EIP: `13.215.133.238`
+  - OS: Amazon Linux 2023 (ARM64 / aarch64)
+  - App chạy dạng **JAR + systemd** (`salsales.service`)
+- **Reverse proxy / TLS API**: **Caddy (host)** → reverse proxy `127.0.0.1:8080` (đã bỏ CloudFront cho API)
+- **Frontend**
+  - S3 bucket: `salsales-web-prod`
+  - CloudFront web distribution id: `E3EYK7MGS7LL1U`
+- **Secrets**: SSM Parameter Store prefix `/salsales/prod/`
+- **CI/CD (GitHub Actions)**
+  - Web: `.github/workflows/deploy-frontend-prod.yml`
+  - Backend: `.github/workflows/deploy-backend-prod.yml`
+  - AWS OIDC role: `github-actions-deploy`
+- **Backup MongoDB**
+  - S3 bucket backup: `salsales-backup-prod` (lifecycle expire 30d cho prefix `mongo/`)
+  - EC2 timer/service: `salsales-mongo-backup.timer` / `salsales-mongo-backup.service`
+- **Monitoring**
+  - UptimeRobot: `https://api.sotuci.vn/actuator/health`
+  - CloudWatch alarm: EC2 status check + CPU (SNS email)
+- **Security**
+  - Security Group: chỉ mở **80/443**; **đã đóng 8080 public** và **đã đóng SSH 22** (dùng SSM Session Manager)
+  - Atlas: đã bỏ `0.0.0.0/0`, whitelist IP cần thiết
+
+> Gợi ý: mọi thông tin “để tra cứu nhanh” được tổng hợp thêm ở `docs/deploy/PROD-RUNBOOK.md`.
+
 ## 0. Tổng quan kiến trúc
 
 ```
                        ┌────────────────────┐
-                       │     Route 53       │  sotuci.vn / api.sotuci.vn
+                       │  Cloudflare DNS    │  sotuci.vn / api.sotuci.vn
                        └──────┬─────────────┘
                               │
               ┌───────────────┴───────────────────┐
               ▼                                   ▼
    ┌─────────────────────┐            ┌──────────────────────┐
-   │  CloudFront (web)   │            │  CloudFront (api)    │ ← optional
-   │  + ACM cert         │            │  + ACM cert (us-east-1
-   │                     │            │   nếu dùng CF)       │
+   │  CloudFront (web)   │            │  EC2 + Caddy (api)   │
+   │  + ACM cert         │            │  + Let's Encrypt     │
+   │                     │            │                      │
    └──────────┬──────────┘            └──────────┬───────────┘
               │                                  │
               ▼                                  ▼
    ┌─────────────────────┐            ┌──────────────────────┐
    │  S3 (web/dist)      │            │  EC2 t4g.small (ARM) │
-   │  static SPA         │            │  Docker:             │
-   │  versioned, private │            │   - Spring Boot      │
+   │  static SPA         │            │  systemd:            │
+   │  versioned, private │            │   - Spring Boot (JAR)│
    └─────────────────────┘            │   - Redis            │
                                       │   - Caddy (TLS+proxy)│
                                       │  EIP gắn cố định     │
