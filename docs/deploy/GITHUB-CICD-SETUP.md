@@ -152,6 +152,19 @@ Settings → Secrets and variables → **Actions**:
 sudo journalctl -u salsales -n 80 --no-pager
 ```
 
+### `env.sh: Permission denied` (systemd restart loop)
+
+`load-env.sh` chạy bằng **root** ghi `/opt/salsales/env.sh` mode `600` root:root, trong khi service chạy **User=ec2-user** và `source env.sh` → không đọc được.
+
+```bash
+sudo bash /opt/salsales/load-env.sh
+sudo chown ec2-user:ec2-user /opt/salsales/env.sh
+sudo chmod 600 /opt/salsales/env.sh
+sudo systemctl restart salsales
+```
+
+Nên sửa `load-env.sh` trên EC2: sau khi ghi `env.sh` luôn `chown ec2-user:ec2-user`.
+
 ---
 
 ## 5. UptimeRobot
