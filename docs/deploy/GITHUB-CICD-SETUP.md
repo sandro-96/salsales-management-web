@@ -132,6 +132,7 @@ Settings → Secrets and variables → **Actions**:
 | `AWS_ROLE_ARN` | web + backend | ARN role ở trên |
 | `CF_DISTRIBUTION_ID` | web only | CloudFront web (`salsales-web-prod`), vd. `E1234...` |
 | `GOOGLE_CLIENT_ID_PROD` | web only | OAuth client prod cho `VITE_APP_GOOGLE_CLIENT_ID` |
+| `META_PIXEL_ID_PROD` | web only | Meta Pixel ID (Facebook Ads) → `VITE_META_PIXEL_ID` khi build |
 | `EC2_INSTANCE_ID` | backend (tuỳ chọn) | Mặc định workflow: `i-08167ad5505b5b164` |
 
 ---

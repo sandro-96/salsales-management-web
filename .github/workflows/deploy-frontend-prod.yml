@@ -51,6 +51,8 @@ jobs:
         run: npm run build
         env:
           VITE_APP_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID_PROD }}
+          # Meta Pixel — lấy ID từ Events Manager, secret: META_PIXEL_ID_PROD
+          VITE_META_PIXEL_ID: ${{ secrets.META_PIXEL_ID_PROD }}
           # default bật để public Terms/Privacy trên prod
           VITE_PUBLIC_LEGAL_DOCS: 'true'
 
