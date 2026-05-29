@@ -49,15 +49,12 @@ export function StorefrontProductDescription({ content }) {
             collapsed && "max-h-[200px] overflow-hidden",
           )}
         >
-          <MarkdownContent
-            content={content}
-            className="text-muted-foreground"
-          />
+          <MarkdownContent content={content} />
         </div>
 
         {collapsed && (
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background/90 to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background from-40% to-transparent"
             aria-hidden
           />
         )}
