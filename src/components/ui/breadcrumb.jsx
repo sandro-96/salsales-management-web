@@ -50,7 +50,7 @@ const BreadcrumbPage = React.forwardRef(({ className, ...props }, ref) => (
     aria-disabled="true"
     aria-current="page"
     className={cn(
-      "block max-w-full truncate font-normal text-foreground",
+      "inline-block max-w-full truncate font-normal text-foreground",
       className
     )}
     {...props} />

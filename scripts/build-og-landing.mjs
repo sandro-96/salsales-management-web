@@ -54,26 +54,29 @@ function brandCardSvg() {
   <!-- main copy — large for small Zalo thumbnails -->
   <text x="72" y="228" font-family="system-ui,Segoe UI,sans-serif" font-size="72" font-weight="800" fill="#ffffff">Sổ thu chi</text>
   <text x="72" y="292" font-family="system-ui,Segoe UI,sans-serif" font-size="34" font-weight="600" fill="#e8f5ec">POS · Storefront · QR bàn</text>
-  <text x="72" y="348" font-family="system-ui,Segoe UI,sans-serif" font-size="26" fill="#d1e9d8">Phần mềm bán hàng trên web — điện thoại, tablet, laptop</text>
+  <text x="72" y="340" font-family="system-ui,Segoe UI,sans-serif" font-size="24" fill="#d1e9d8">
+    <tspan x="72" dy="0">Phần mềm bán hàng trên web</tspan>
+    <tspan x="72" dy="32">Điện thoại · tablet · laptop</tspan>
+  </text>
 
   <!-- feature pills -->
   <g filter="url(#shadow)">
-    <rect x="72" y="400" width="320" height="56" rx="28" fill="#ffffff" fill-opacity="0.95"/>
-    <text x="232" y="436" text-anchor="middle" font-family="system-ui,Segoe UI,sans-serif" font-size="22" font-weight="700" fill="#1f6b3a">Dùng thử 30 ngày miễn phí</text>
+    <rect x="72" y="418" width="320" height="56" rx="28" fill="#ffffff" fill-opacity="0.95"/>
+    <text x="232" y="454" text-anchor="middle" font-family="system-ui,Segoe UI,sans-serif" font-size="22" font-weight="700" fill="#1f6b3a">Dùng thử 30 ngày miễn phí</text>
   </g>
-  <text x="72" y="510" font-family="system-ui,Segoe UI,sans-serif" font-size="24" font-weight="600" fill="#ffffff">99.000đ / tháng sau trial</text>
+  <text x="72" y="528" font-family="system-ui,Segoe UI,sans-serif" font-size="24" font-weight="600" fill="#ffffff">99.000đ / tháng sau trial</text>
 
   <!-- right: 3 simple feature blocks (no tiny screenshot) -->
-  <g transform="translate(640, 96)">
-    <rect x="0" y="0" width="488" height="118" rx="20" fill="#ffffff" fill-opacity="0.12"/>
+  <g transform="translate(668, 96)">
+    <rect x="0" y="0" width="460" height="118" rx="20" fill="#ffffff" fill-opacity="0.12"/>
     <text x="28" y="48" font-family="system-ui,Segoe UI,sans-serif" font-size="28" font-weight="700" fill="#ffffff">POS đa thiết bị</text>
     <text x="28" y="82" font-family="system-ui,Segoe UI,sans-serif" font-size="20" fill="#d1e9d8">Quầy bán · đơn hàng · kho · báo cáo</text>
 
-    <rect x="0" y="138" width="488" height="118" rx="20" fill="#ffffff" fill-opacity="0.12"/>
+    <rect x="0" y="138" width="460" height="118" rx="20" fill="#ffffff" fill-opacity="0.12"/>
     <text x="28" y="186" font-family="system-ui,Segoe UI,sans-serif" font-size="28" font-weight="700" fill="#ffffff">Storefront online</text>
     <text x="28" y="220" font-family="system-ui,Segoe UI,sans-serif" font-size="20" fill="#d1e9d8">Khách đặt món qua link / QR cửa hàng</text>
 
-    <rect x="0" y="276" width="488" height="118" rx="20" fill="#ffffff" fill-opacity="0.12"/>
+    <rect x="0" y="276" width="460" height="118" rx="20" fill="#ffffff" fill-opacity="0.12"/>
     <text x="28" y="324" font-family="system-ui,Segoe UI,sans-serif" font-size="28" font-weight="700" fill="#ffffff">QR gọi món tại bàn</text>
     <text x="28" y="358" font-family="system-ui,Segoe UI,sans-serif" font-size="20" fill="#d1e9d8">F&amp;B — scan QR, order không cần app</text>
   </g>

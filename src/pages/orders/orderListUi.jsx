@@ -12,70 +12,72 @@ import { useTranslation } from "react-i18next";
 export const ORDER_STATUS_META = {
   PENDING: {
     icon: Clock,
-    cls: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40",
+    cls: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/45 dark:text-amber-50 dark:border-amber-400/60",
     card: {
-      header:
-        "border-b-amber-200/70 bg-amber-50/90 dark:border-amber-500/30 dark:bg-amber-500/10",
-      footer:
-        "border-t-amber-200/70 bg-amber-50/80 dark:border-amber-500/30 dark:bg-amber-500/10",
-      inner:
-        "border-amber-200/60 bg-amber-50/50 dark:border-amber-500/25 dark:bg-amber-500/5",
+      shell:
+        "drop-shadow-sm dark:drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]",
+      header: "bg-amber-100 dark:bg-amber-500/40",
+      body: "bg-amber-100 dark:bg-amber-500/16",
+      footer: "bg-amber-100 dark:bg-amber-500/34",
+      inner: "bg-amber-50/90 dark:bg-amber-400/22",
     },
   },
   CONFIRMED: {
     icon: CheckCircle2,
-    cls: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-500/40",
+    cls: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/45 dark:text-blue-50 dark:border-blue-400/60",
     card: {
-      header:
-        "border-b-blue-200/70 bg-blue-50/90 dark:border-blue-500/30 dark:bg-blue-500/10",
-      footer:
-        "border-t-blue-200/70 bg-blue-50/80 dark:border-blue-500/30 dark:bg-blue-500/10",
-      inner:
-        "border-blue-200/60 bg-blue-50/50 dark:border-blue-500/25 dark:bg-blue-500/5",
+      shell:
+        "drop-shadow-sm dark:drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]",
+      header: "bg-blue-100 dark:bg-blue-500/40",
+      body: "bg-blue-100 dark:bg-blue-500/16",
+      footer: "bg-blue-100 dark:bg-blue-500/34",
+      inner: "bg-blue-50/90 dark:bg-blue-400/22",
     },
   },
   SHIPPING: {
     icon: Truck,
-    cls: "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-500/15 dark:text-violet-200 dark:border-violet-500/40",
+    cls: "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-500/45 dark:text-violet-50 dark:border-violet-400/60",
     card: {
-      header:
-        "border-b-violet-200/70 bg-violet-50/90 dark:border-violet-500/30 dark:bg-violet-500/10",
-      footer:
-        "border-t-violet-200/70 bg-violet-50/80 dark:border-violet-500/30 dark:bg-violet-500/10",
-      inner:
-        "border-violet-200/60 bg-violet-50/50 dark:border-violet-500/25 dark:bg-violet-500/5",
+      shell:
+        "drop-shadow-sm dark:drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]",
+      header: "bg-violet-100 dark:bg-violet-500/40",
+      body: "bg-violet-100 dark:bg-violet-500/16",
+      footer: "bg-violet-100 dark:bg-violet-500/34",
+      inner: "bg-violet-50/90 dark:bg-violet-400/22",
     },
   },
   COMPLETED: {
     icon: CheckCircle2,
-    cls: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40",
+    cls: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/45 dark:text-emerald-50 dark:border-emerald-400/60",
     card: {
-      header:
-        "border-b-emerald-200/70 bg-emerald-50/90 dark:border-emerald-500/30 dark:bg-emerald-500/10",
-      footer:
-        "border-t-emerald-200/70 bg-emerald-50/80 dark:border-emerald-500/30 dark:bg-emerald-500/10",
-      inner:
-        "border-emerald-200/60 bg-emerald-50/50 dark:border-emerald-500/25 dark:bg-emerald-500/5",
+      shell:
+        "drop-shadow-sm dark:drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]",
+      header: "bg-emerald-100 dark:bg-emerald-500/40",
+      body: "bg-emerald-100 dark:bg-emerald-500/16",
+      footer: "bg-emerald-100 dark:bg-emerald-500/34",
+      inner: "bg-emerald-50/90 dark:bg-emerald-400/22",
     },
   },
   CANCELLED: {
     icon: Ban,
-    cls: "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/15 dark:text-red-200 dark:border-red-500/40",
+    cls: "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/45 dark:text-red-50 dark:border-red-400/60",
     card: {
-      header:
-        "border-b-red-200/60 bg-red-50/70 dark:border-red-500/25 dark:bg-red-500/10",
-      footer:
-        "border-t-red-200/60 bg-red-50/60 dark:border-red-500/25 dark:bg-red-500/10",
-      inner:
-        "border-red-200/50 bg-red-50/40 dark:border-red-500/20 dark:bg-red-500/5",
+      shell:
+        "drop-shadow-sm dark:drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]",
+      header: "bg-red-100/90 dark:bg-red-500/36",
+      body: "bg-red-100/80 dark:bg-red-500/14",
+      footer: "bg-red-100/80 dark:bg-red-500/30",
+      inner: "bg-red-50/80 dark:bg-red-400/20",
     },
   },
 };
 
 const DEFAULT_ORDER_CARD_ACCENT = {
-  header: "border-b-border/60 bg-muted/30",
-  footer: "border-t-border/60 bg-muted/20",
-  inner: "border-border/80 bg-muted/20",
+  shell: "drop-shadow-sm dark:drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]",
+  header: "bg-muted/50 dark:bg-muted/55",
+  body: "bg-muted/40 dark:bg-muted/30",
+  footer: "bg-muted/40 dark:bg-muted/50",
+  inner: "bg-muted/30 dark:bg-muted/40",
 };
 
 /** Status tint for list cards: header/footer/product strip only (not full card fill). */
@@ -127,14 +129,14 @@ export function PaymentCollectionBadge({ paid, paymentStatus }) {
   const { t } = useTranslation();
   if (paid) {
     return (
-      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/40">
+      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px] gap-1 dark:bg-emerald-500/45 dark:text-emerald-50 dark:border-emerald-400/60">
         <CreditCard className="h-3 w-3" /> {t("pages.orders.payment.paid")}
       </Badge>
     );
   }
   if (paymentStatus === "PENDING_COLLECTION") {
     return (
-      <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40">
+      <Badge className="gap-1 text-[11px] bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/45 dark:text-amber-50 dark:border-amber-400/60">
         <Truck className="h-3 w-3" /> {t("pages.orders.payment.pendingCod")}
       </Badge>
     );
@@ -244,7 +246,10 @@ export function orderCustomerLabel(order, t) {
     .join(" · ");
   if (!crm && !guest) return null;
   if (crm && guest) {
-    return { primary: crm, secondary: `${t("pages.orders.list.posGuestPrefix")}${guest}` };
+    return {
+      primary: crm,
+      secondary: `${t("pages.orders.list.posGuestPrefix")}${guest}`,
+    };
   }
   if (crm) return { primary: crm, secondary: null };
   return { primary: guest, secondary: null };

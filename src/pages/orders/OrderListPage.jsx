@@ -144,6 +144,11 @@ import {
   OrderTaxBadge,
 } from "./orderListUi.jsx";
 import { OrderListCard, OrderListCardSkeleton } from "./OrderListCard.jsx";
+import {
+  readPinnedOrderIds,
+  sortOrdersWithPinnedFirst,
+  togglePinnedOrderId,
+} from "./orderListPins.js";
 
 const ORDERS_LIST_VIEW_KEY = "orders-list-view";
 
@@ -319,10 +324,103 @@ const OrderDetailDialog = ({
     (s, i) => s + (i.priceAfterDiscount ?? i.price ?? 0) * itemLineQty(i),
     0,
   );
+  const renderOrderLineItem = (item, idx) => {
+    const basePrice = item.price ?? 0;
+    const unitAfter = item.priceAfterDiscount ?? item.price ?? 0;
+    const showOrig = Math.abs(basePrice - unitAfter) > 0.009;
+    const isWeight = !!item.sellByWeight;
+    const lineMultiplier = isWeight
+      ? Number(item.weight ?? 0)
+      : (item.quantity ?? 0);
+    const lineTotal = unitAfter * lineMultiplier;
+    const qtyDisplay = isWeight
+      ? `${Number(item.weight ?? 0).toLocaleString(numberLocale, {
+          maximumFractionDigits: 3,
+        })} ${item.weightUnit || ""}`.trim()
+      : item.quantity;
+    const promoBits = [item.promotionName, item.promotionDiscountLabel].filter(
+      Boolean,
+    );
+    const variantLabel = orderLineVariantLabel(item);
+    const attrLabel = orderLineAttributesLabel(item);
+    const tops = orderLineToppings(item);
+    const showAttr =
+      attrLabel && attrLabel !== (item.variantName || "").trim();
+
+    const productExtras = (
+      <>
+        {variantLabel && (
+          <p className="text-xs text-muted-foreground mt-0.5">{variantLabel}</p>
+        )}
+        {showAttr && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {t("pages.orders.detail.attributes")} {attrLabel}
+          </p>
+        )}
+        {tops.length > 0 && (
+          <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+            {tops.map((top, ti) => (
+              <p key={top?.toppingId ?? ti}>
+                + {top?.name || top?.toppingId}
+                {Number(top?.extraPrice) > 0
+                  ? ` (${Number(top.extraPrice).toLocaleString(numberLocale)} ₫)`
+                  : ""}
+              </p>
+            ))}
+          </div>
+        )}
+        {promoBits.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1 items-center">
+            <Badge variant="secondary" className="text-xs font-normal whitespace-normal">
+              {t("pages.orders.detail.promo")} {promoBits.join(" · ")}
+            </Badge>
+          </div>
+        )}
+        {!item.promotionName &&
+          !item.promotionDiscountLabel &&
+          item.appliedPromotionId &&
+          promoBits.length === 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {t("pages.orders.detail.promoMissing")}{" "}
+              <span className="font-mono">
+                {item.appliedPromotionId.length > 10
+                  ? item.appliedPromotionId.slice(-8)
+                  : item.appliedPromotionId}
+              </span>
+            </p>
+          )}
+      </>
+    );
+
+    const unitPriceBlock = (
+      <>
+        {showOrig && (
+          <span className="line-through text-muted-foreground text-xs block">
+            {basePrice.toLocaleString(numberLocale)} ₫
+            {isWeight && item.weightUnit ? `/${item.weightUnit}` : ""}
+          </span>
+        )}
+        <span>
+          {unitAfter.toLocaleString(numberLocale)} ₫
+          {isWeight && item.weightUnit ? `/${item.weightUnit}` : ""}
+        </span>
+      </>
+    );
+
+    return {
+      key: idx,
+      productExtras,
+      productName: item.productName,
+      qtyDisplay,
+      unitPriceBlock,
+      lineTotal: lineTotal.toLocaleString(numberLocale),
+    };
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex w-[calc(100vw-1.5rem)] max-w-lg max-h-[min(85dvh,100%)] flex-col gap-4 overflow-hidden p-4 sm:w-full sm:p-6">
+        <DialogHeader className="shrink-0 pr-8">
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
             {t("pages.orders.detail.title")}
@@ -335,7 +433,7 @@ const OrderDetailDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain">
           <div className="flex flex-wrap gap-2">
             <OrderStatusBadge status={order.status} />
             <PaymentCollectionBadge
@@ -585,120 +683,81 @@ const OrderDetailDialog = ({
             </details>
           )}
 
-          <div className="rounded-md border">
+          {/* Mobile: stacked line items (avoids wide table overflow) */}
+          <div className="rounded-md border divide-y sm:hidden">
+            {order.items?.map((item, idx) => {
+              const line = renderOrderLineItem(item, idx);
+              return (
+                <div key={line.key} className="space-y-2 p-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium leading-snug break-words">
+                      {line.productName}
+                    </p>
+                    {line.productExtras}
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <span className="text-muted-foreground">
+                      {t("pages.orders.detail.qty")}
+                    </span>
+                    <span className="text-right tabular-nums">{line.qtyDisplay}</span>
+                    <span className="text-muted-foreground">
+                      {t("pages.orders.detail.unitPrice")}
+                    </span>
+                    <span className="text-right tabular-nums text-sm">
+                      {line.unitPriceBlock}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 border-t pt-2">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t("pages.orders.detail.lineTotal")}
+                    </span>
+                    <span className="font-semibold tabular-nums">
+                      {line.lineTotal} ₫
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* sm+: table */}
+          <div className="hidden rounded-md border sm:block min-w-0 max-w-full overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("pages.orders.detail.product")}</TableHead>
-                  <TableHead className="text-right">
+                  <TableHead className="whitespace-normal">
+                    {t("pages.orders.detail.product")}
+                  </TableHead>
+                  <TableHead className="text-right w-14">
                     {t("pages.orders.detail.qty")}
                   </TableHead>
-                  <TableHead className="text-right">
+                  <TableHead className="text-right w-28">
                     {t("pages.orders.detail.unitPrice")}
                   </TableHead>
-                  <TableHead className="text-right">
+                  <TableHead className="text-right w-28">
                     {t("pages.orders.detail.lineTotal")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {order.items?.map((item, idx) => {
-                  const basePrice = item.price ?? 0;
-                  const unitAfter = item.priceAfterDiscount ?? item.price ?? 0;
-                  const showOrig = Math.abs(basePrice - unitAfter) > 0.009;
-                  const isWeight = !!item.sellByWeight;
-                  const lineMultiplier = isWeight
-                    ? Number(item.weight ?? 0)
-                    : (item.quantity ?? 0);
-                  const lineTotal = unitAfter * lineMultiplier;
-                  const qtyDisplay = isWeight
-                    ? `${Number(item.weight ?? 0).toLocaleString(numberLocale, {
-                        maximumFractionDigits: 3,
-                      })} ${item.weightUnit || ""}`.trim()
-                    : item.quantity;
-                  const promoBits = [
-                    item.promotionName,
-                    item.promotionDiscountLabel,
-                  ].filter(Boolean);
-                  const variantLabel = orderLineVariantLabel(item);
-                  const attrLabel = orderLineAttributesLabel(item);
-                  const tops = orderLineToppings(item);
-                  const showAttr =
-                    attrLabel && attrLabel !== (item.variantName || "").trim();
+                  const line = renderOrderLineItem(item, idx);
                   return (
-                    <TableRow key={idx} className="align-top">
-                      <TableCell className="text-sm max-w-[220px]">
-                        <p className="font-medium leading-snug">
-                          {item.productName}
+                    <TableRow key={line.key} className="align-top">
+                      <TableCell className="text-sm whitespace-normal min-w-0 max-w-[200px] sm:max-w-[240px]">
+                        <p className="font-medium leading-snug break-words">
+                          {line.productName}
                         </p>
-                        {variantLabel && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {variantLabel}
-                          </p>
-                        )}
-                        {showAttr && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {t("pages.orders.detail.attributes")} {attrLabel}
-                          </p>
-                        )}
-                        {tops.length > 0 && (
-                          <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                            {tops.map((t, ti) => (
-                              <p key={t?.toppingId ?? ti}>
-                                + {t?.name || t?.toppingId}
-                                {Number(t?.extraPrice) > 0
-                                  ? ` (${Number(t.extraPrice).toLocaleString(numberLocale)} ₫)`
-                                  : ""}
-                              </p>
-                            ))}
-                          </div>
-                        )}
-                        {promoBits.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap gap-1 items-center">
-                            <Badge
-                              variant="secondary"
-                              className="text-xs font-normal"
-                            >
-                              {t("pages.orders.detail.promo")}{" "}
-                              {promoBits.join(" · ")}
-                            </Badge>
-                          </div>
-                        )}
-                        {!item.promotionName &&
-                          !item.promotionDiscountLabel &&
-                          item.appliedPromotionId &&
-                          promoBits.length === 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {t("pages.orders.detail.promoMissing")}{" "}
-                              <span className="font-mono">
-                                {item.appliedPromotionId.length > 10
-                                  ? item.appliedPromotionId.slice(-8)
-                                  : item.appliedPromotionId}
-                              </span>
-                            </p>
-                          )}
+                        {line.productExtras}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums align-top">
-                        {qtyDisplay}
+                      <TableCell className="text-right tabular-nums align-top whitespace-nowrap">
+                        {line.qtyDisplay}
                       </TableCell>
-                      <TableCell className="text-right text-sm tabular-nums align-top">
-                        {showOrig && (
-                          <span className="line-through text-muted-foreground text-xs block">
-                            {basePrice.toLocaleString(numberLocale)} ₫
-                            {isWeight && item.weightUnit
-                              ? `/${item.weightUnit}`
-                              : ""}
-                          </span>
-                        )}
-                        <span>
-                          {unitAfter.toLocaleString(numberLocale)} ₫
-                          {isWeight && item.weightUnit
-                            ? `/${item.weightUnit}`
-                            : ""}
-                        </span>
+                      <TableCell className="text-right text-sm tabular-nums align-top whitespace-nowrap">
+                        {line.unitPriceBlock}
                       </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums align-top">
-                        {lineTotal.toLocaleString(numberLocale)} ₫
+                      <TableCell className="text-right font-medium tabular-nums align-top whitespace-nowrap">
+                        {line.lineTotal} ₫
                       </TableCell>
                     </TableRow>
                   );
@@ -880,7 +939,7 @@ const OrderDetailDialog = ({
         </div>
 
         {canEdit && order.status !== "CANCELLED" && (
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="shrink-0 gap-2 border-t pt-4 sm:gap-0 sm:border-t-0 sm:pt-0">
             <Button type="button" variant="outline" onClick={onClose}>
               {t("pages.orders.detail.close")}
             </Button>
@@ -934,6 +993,7 @@ const OrderListPage = () => {
   const [rowSelection, setRowSelection] = useState({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [listView, setListView] = useState(readOrdersListView);
+  const [pinnedOrderIds, setPinnedOrderIds] = useState(() => new Set());
 
   const setListViewPersisted = useCallback((view) => {
     setListView(view);
@@ -943,6 +1003,24 @@ const OrderListPage = () => {
       /* ignore */
     }
   }, []);
+
+  useEffect(() => {
+    if (!selectedShopId) {
+      setPinnedOrderIds(new Set());
+      return;
+    }
+    setPinnedOrderIds(readPinnedOrderIds(selectedShopId));
+  }, [selectedShopId]);
+
+  const toggleOrderPin = useCallback(
+    (orderId) => {
+      if (!selectedShopId || !orderId) return;
+      setPinnedOrderIds((prev) =>
+        togglePinnedOrderId(selectedShopId, orderId, prev),
+      );
+    },
+    [selectedShopId],
+  );
 
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
@@ -1844,6 +1922,11 @@ const OrderListPage = () => {
     });
   }, [orders, sourceFilter]);
 
+  const cardGridOrders = useMemo(
+    () => sortOrdersWithPinnedFirst(displayedOrders, pinnedOrderIds),
+    [displayedOrders, pinnedOrderIds],
+  );
+
   const openOrderDetail = useCallback((order) => {
     setSelectedOrder(order);
     setDetailOpen(true);
@@ -2179,19 +2262,19 @@ const OrderListPage = () => {
             </div>
           ) : null}
           {loading && orders.length === 0 ? (
-            <div className="grid auto-rows-fr items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {Array.from({ length: 6 }).map((_, idx) => (
                 <OrderListCardSkeleton key={idx} />
               ))}
             </div>
-          ) : displayedOrders.length === 0 ? (
+          ) : cardGridOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 rounded-md border py-16 text-muted-foreground">
               <ShoppingCart className="h-10 w-10 text-muted-foreground/40" />
               <p>{t("pages.orders.list.empty")}</p>
             </div>
           ) : (
-            <div className="grid auto-rows-fr items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {displayedOrders.map((order) => {
+            <div className="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {cardGridOrders.map((order) => {
                 const tableName = order.tableId
                   ? tableNameById.get(order.tableId) ||
                     t("pages.orders.list.tableFallback", {
@@ -2210,6 +2293,8 @@ const OrderListPage = () => {
                     showBranch={showBranchOnCards}
                     showTable={shopHasTableManagement}
                     onOpen={() => openOrderDetail(order)}
+                    pinned={pinnedOrderIds.has(order.id)}
+                    onTogglePin={() => toggleOrderPin(order.id)}
                     actionsMenu={renderOrderActions(order, {
                       Item: DropdownMenuItem,
                       Label: DropdownMenuLabel,
@@ -2219,7 +2304,7 @@ const OrderListPage = () => {
                   />
                 );
                 return (
-                  <div key={order.id} className="h-full min-h-0">
+                  <div key={order.id} className="min-w-0">
                   <ContextMenu>
                     <ContextMenuTrigger asChild>{card}</ContextMenuTrigger>
                     <ContextMenuContent className="min-w-[12rem] bg-background w-48">

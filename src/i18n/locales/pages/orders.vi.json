@@ -113,6 +113,8 @@
     "viewTable": "Dạng bảng",
     "viewCards": "Dạng thẻ",
     "cardNoItems": "Chưa có dòng sản phẩm",
+    "pinOrder": "Ghim đơn",
+    "unpinOrder": "Bỏ ghim",
     "createOrder": "Tạo đơn hàng",
     "createOrderShort": "Tạo đơn"
   },

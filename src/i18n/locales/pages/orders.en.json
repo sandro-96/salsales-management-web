@@ -113,6 +113,8 @@
     "viewTable": "Table view",
     "viewCards": "Card view",
     "cardNoItems": "No line items",
+    "pinOrder": "Pin order",
+    "unpinOrder": "Unpin",
     "createOrder": "Create order",
     "createOrderShort": "Create"
   },

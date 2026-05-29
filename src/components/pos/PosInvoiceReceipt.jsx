@@ -253,7 +253,7 @@ export function PosInvoiceReceipt({
             <div style={{ ...rowStyle, marginBottom: 0 }}>
               <span style={labelMuted}>
                 {fmtMoney(unit)}
-                {isWeight && weightUnit ? `/${weightUnit}` : ""} ├ù {qtyLabel}
+                {isWeight && weightUnit ? `/${weightUnit}` : ""} × {qtyLabel}
               </span>
               <span style={{ fontWeight: 600 }}>{fmtMoney(line)} ₫</span>
             </div>
