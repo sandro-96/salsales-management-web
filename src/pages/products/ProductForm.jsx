@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useForm,
   useFieldArray,
@@ -37,6 +37,7 @@ import { lookupBarcode } from "@/utils/barcodeUtils.js";
 import {
   PRODUCT_IMAGE_ACCEPT,
   createImagePreviewUrls,
+  createVariantThumbnailPreviewUrls,
   prepareProductImageFiles,
 } from "@/utils/productImageFiles.js";
 import {
@@ -90,6 +91,53 @@ const isCustomCategory = (val) =>
 
 const formatVND = (val, locale = "vi-VN") =>
   val != null && val !== 0 ? Number(val).toLocaleString(locale) + " ₫" : "-";
+
+function revokeBlobPreviewUrls(urls) {
+  (urls ?? []).forEach((url) => {
+    if (typeof url === "string" && url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  });
+}
+
+function revokeVariantMediaPreviews(variantMediaMap) {
+  Object.values(variantMediaMap ?? {}).forEach((entry) => {
+    revokeBlobPreviewUrls(entry?.previews);
+  });
+}
+
+function productToFormValues(product) {
+  if (!product) return null;
+  return {
+    name: product.name ?? "",
+    sku: product.sku ?? "",
+    unit: product.unit ?? "",
+    category: product.category ?? "",
+    barcode: product.barcode ?? "",
+    description: product.description ?? "",
+    supplierId: product.supplierId ?? "",
+    defaultPrice: product.defaultPrice ?? 0,
+    costPrice: product.costPrice ?? 0,
+    active: product.active ?? true,
+    trackInventory: product.trackInventory ?? false,
+    sellByWeight: product.sellByWeight ?? false,
+    variants: (product.variants ?? []).map((v) => ({
+      variantId: v.variantId ?? undefined,
+      name: v.name ?? "",
+      sku: v.sku ?? "",
+      price: v.price ?? 0,
+      costPrice: v.costPrice ?? 0,
+      images: Array.isArray(v.images) ? [...v.images] : [],
+      attributes: v.attributes
+        ? Object.entries(v.attributes).map(([key, value]) => ({
+            key,
+            value,
+          }))
+        : [],
+    })),
+    assignedToppingIds: [...(product.assignedToppingIds ?? [])],
+  };
+}
 
 const RECENT_PRODUCT_NAMES_KEY = "recentProductNames";
 const RECENT_PRODUCT_NAMES_MAX = 25;
@@ -168,53 +216,71 @@ function ImageFileUploadTrigger({
   className,
 }) {
   const { t } = useTranslation();
+  const inputRef = useRef(null);
   const displayLabel = label ?? t("pages.products.form.addImage");
 
-  const input = (
+  const openFilePicker = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const input = inputRef.current;
+    if (!input) return;
+    input.value = "";
+    input.click();
+  };
+
+  const fileInput = (
     <input
       key={fileInputKey}
+      ref={inputRef}
       type="file"
       multiple={multiple}
       accept={PRODUCT_IMAGE_ACCEPT}
-      className="sr-only"
+      className="hidden"
+      tabIndex={-1}
+      aria-hidden
       onChange={onChange}
+      onClick={(e) => e.stopPropagation()}
     />
   );
 
   if (variant === "button") {
     return (
-      <label
-        className={cn("inline-flex w-full cursor-pointer sm:w-auto", className)}
-      >
-        {input}
-        <span className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground sm:w-auto">
+      <div className={cn("inline-flex w-full sm:w-auto", className)}>
+        {fileInput}
+        <Button
+          type="button"
+          variant="outline"
+          className="h-9 w-full gap-2 sm:w-auto"
+          onClick={openFilePicker}
+        >
           <ImagePlus className="size-4 shrink-0 text-primary" />
           {displayLabel}
-        </span>
-      </label>
+        </Button>
+      </div>
     );
   }
 
   return (
-    <label
-      className={cn(
-        "flex min-h-[9rem] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/35 bg-muted/20 px-4 py-6 text-center transition-colors hover:border-primary/45 hover:bg-primary/5 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 lg:min-h-[11rem]",
-        className,
-      )}
-    >
-      {input}
-      <span className="flex size-11 items-center justify-center rounded-full bg-primary/10">
-        <ImagePlus className="size-5 text-primary" />
-      </span>
-      <span className="text-sm font-medium text-foreground">
-        {displayLabel}
-      </span>
-      {hint ? (
-        <span className="max-w-[16rem] text-xs leading-snug text-muted-foreground">
-          {hint}
+    <div className={cn("w-full", className)}>
+      {fileInput}
+      <button
+        type="button"
+        onClick={openFilePicker}
+        className="flex min-h-[9rem] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/35 bg-muted/20 px-4 py-6 text-center transition-colors hover:border-primary/45 hover:bg-primary/5 focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 lg:min-h-[11rem]"
+      >
+        <span className="flex size-11 items-center justify-center rounded-full bg-primary/10">
+          <ImagePlus className="size-5 text-primary" />
         </span>
-      ) : null}
-    </label>
+        <span className="text-sm font-medium text-foreground">
+          {displayLabel}
+        </span>
+        {hint ? (
+          <span className="max-w-[16rem] text-xs leading-snug text-muted-foreground">
+            {hint}
+          </span>
+        ) : null}
+      </button>
+    </div>
   );
 }
 
@@ -341,38 +407,44 @@ function VariantCard({
     const selected = Array.from(e.target.files || []);
     e.target.value = "";
     if (!selected.length) return;
-    const urlsNow = getValues(`variants.${nestIndex}.images`) ?? [];
-    const pend = variantMedia[fieldId] ?? { files: [], previews: [] };
-    const remaining = maxVariantImages - urlsNow.length - pend.files.length;
-    if (remaining <= 0) {
-      toast.error(
-        t("pages.products.form.maxVariantImages", { max: maxVariantImages }),
-      );
-      return;
-    }
-    const toProcess = selected.slice(0, remaining);
-    if (selected.length > remaining) {
-      toast.warning(
-        t("pages.products.form.variantImagesRemaining", { count: remaining }),
-      );
-    }
-    const { ok: processed, rejected } = await prepareProductImageFiles(toProcess);
-    if (rejected.length) {
+    try {
+      const urlsNow = getValues(`variants.${nestIndex}.images`) ?? [];
+      const pend = variantMedia[fieldId] ?? { files: [], previews: [] };
+      const remaining = maxVariantImages - urlsNow.length - pend.files.length;
+      if (remaining <= 0) {
+        toast.error(
+          t("pages.products.form.maxVariantImages", { max: maxVariantImages }),
+        );
+        return;
+      }
+      const toProcess = selected.slice(0, remaining);
+      if (selected.length > remaining) {
+        toast.warning(
+          t("pages.products.form.variantImagesRemaining", { count: remaining }),
+        );
+      }
+      const { ok: processed, rejected } =
+        await prepareProductImageFiles(toProcess);
+      if (rejected.length) {
+        toast.error(t("pages.products.form.imageTypeError"));
+      }
+      if (!processed.length) return;
+      const newPreviewUrls = createVariantThumbnailPreviewUrls(processed);
+      setVariantMedia((prev) => {
+        const cur = prev[fieldId] ?? { files: [], previews: [] };
+        return {
+          ...prev,
+          [fieldId]: {
+            files: [...cur.files, ...processed],
+            previews: [...cur.previews, ...newPreviewUrls],
+          },
+        };
+      });
+      setVariantFileInputKey((k) => k + 1);
+    } catch (err) {
+      console.error("handleVariantImageChange", err);
       toast.error(t("pages.products.form.imageTypeError"));
     }
-    if (!processed.length) return;
-    const newPreviewUrls = await createImagePreviewUrls(processed);
-    setVariantMedia((prev) => {
-      const cur = prev[fieldId] ?? { files: [], previews: [] };
-      return {
-        ...prev,
-        [fieldId]: {
-          files: [...cur.files, ...processed],
-          previews: [...cur.previews, ...newPreviewUrls],
-        },
-      };
-    });
-    setVariantFileInputKey((k) => k + 1);
   };
 
   return (
@@ -1092,6 +1164,24 @@ export default function ProductForm({
   const [galleryIndex, setGalleryIndex] = useState(0);
   /** fieldId (useFieldArray) → ảnh mới chưa upload staging */
   const [variantMedia, setVariantMedia] = useState({});
+  const variantMediaRef = useRef(variantMedia);
+  const previewsRef = useRef(previews);
+
+  useEffect(() => {
+    variantMediaRef.current = variantMedia;
+  }, [variantMedia]);
+
+  useEffect(() => {
+    previewsRef.current = previews;
+  }, [previews]);
+
+  useEffect(
+    () => () => {
+      revokeVariantMediaPreviews(variantMediaRef.current);
+      revokeBlobPreviewUrls(previewsRef.current);
+    },
+    [],
+  );
 
   const galleryImages = useMemo(
     () => [...keptImages, ...previews],
@@ -1104,14 +1194,20 @@ export default function ProductForm({
 
   // Reset images when product changes
   useEffect(() => {
+    setVariantMedia((prev) => {
+      revokeVariantMediaPreviews(prev);
+      return {};
+    });
+    setPreviews((prev) => {
+      revokeBlobPreviewUrls(prev);
+      return [];
+    });
     setKeptImages(
       product?.images ?? (isCreate && prefill?.images ? prefill.images : []),
     );
     setFiles([]);
-    setPreviews([]);
     setFileInputKey(Date.now());
-    setVariantMedia({});
-  }, [product, prefill, isCreate]);
+  }, [product?.id, prefill, isCreate]);
 
   /** Áp dụng một bản ghi catalog hệ thống (admin) vào form tạo mới. */
   const applySystemCatalogEntry = (entry) => {
@@ -1228,40 +1324,56 @@ export default function ProductForm({
 
   useEffect(() => {
     if (product) {
-      reset({
-        name: product.name ?? "",
-        sku: product.sku ?? "",
-        unit: product.unit ?? "",
-        category: product.category ?? "",
-        barcode: product.barcode ?? "",
-        description: product.description ?? "",
-        supplierId: product.supplierId ?? "",
-        defaultPrice: product.defaultPrice ?? 0,
-        costPrice: product.costPrice ?? 0,
-        active: product.active ?? true,
-        trackInventory: product.trackInventory ?? false,
-        sellByWeight: product.sellByWeight ?? false,
-        variants: (product.variants ?? []).map((v) => ({
-          variantId: v.variantId ?? undefined,
-          name: v.name ?? "",
-          sku: v.sku ?? "",
-          price: v.price ?? 0,
-          costPrice: v.costPrice ?? 0,
-          images: Array.isArray(v.images) ? [...v.images] : [],
-          attributes: v.attributes
-            ? Object.entries(v.attributes).map(([key, value]) => ({
-                key,
-                value,
-              }))
-            : [],
-        })),
-        assignedToppingIds: [...(product.assignedToppingIds ?? [])],
+      reset(productToFormValues(product));
+      setVariantMedia((prev) => {
+        revokeVariantMediaPreviews(prev);
+        return {};
       });
-      setVariantMedia({});
+      setPreviews((prev) => {
+        revokeBlobPreviewUrls(prev);
+        return [];
+      });
+      setFiles([]);
+      setKeptImages(product.images ?? []);
+      setFileInputKey(Date.now());
       setUnitMode(isCustomUnit(product.unit) ? "custom" : "select");
       setCategoryMode(isCustomCategory(product.category) ? "custom" : "select");
     }
   }, [product, reset]);
+
+  const revertUnsavedEdits = useCallback(() => {
+    setVariantMedia((prev) => {
+      revokeVariantMediaPreviews(prev);
+      return {};
+    });
+    setPreviews((prev) => {
+      revokeBlobPreviewUrls(prev);
+      return [];
+    });
+    setFiles([]);
+    setKeptImages(
+      product?.images ?? (isCreate && prefill?.images ? prefill.images : []),
+    );
+    setFileInputKey(Date.now());
+    const values = productToFormValues(product);
+    if (values) {
+      reset(values);
+      setUnitMode(isCustomUnit(product.unit) ? "custom" : "select");
+      setCategoryMode(
+        isCustomCategory(product.category) ? "custom" : "select",
+      );
+    }
+  }, [product, prefill, isCreate, reset]);
+
+  const handleCancel = useCallback(() => {
+    if (mode === "create") {
+      revertUnsavedEdits();
+      onCancel?.();
+      return;
+    }
+    revertUnsavedEdits();
+    onModeChange?.("view");
+  }, [mode, revertUnsavedEdits, onCancel, onModeChange]);
 
   const handleSubmit = async (data) => {
     if (!selectedShopId) {
@@ -2234,7 +2346,7 @@ export default function ProductForm({
 
   // ── Action buttons ─────────────────────────────────────────────────────────
   const ActionButtons = () => (
-    <div className="sticky bottom-0 z-40 -mx-4 mt-auto flex flex-col gap-2 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:mx-0 sm:flex-row sm:justify-end sm:px-6 sm:pb-4 sm:pt-3 [&_button]:w-full sm:[&_button]:w-auto">
+    <div className="-mx-4 flex flex-col gap-2 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:mx-0 sm:flex-row sm:justify-end sm:px-6 sm:pb-4 sm:pt-3 [&_button]:w-full sm:[&_button]:w-auto">
       {mode === "view" ? (
         <>
           <Button variant="outline" type="button" onClick={() => onCancel?.()}>
@@ -2262,13 +2374,7 @@ export default function ProductForm({
         </>
       ) : (
         <>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() =>
-              mode === "create" ? onCancel?.() : onModeChange?.("view")
-            }
-          >
+          <Button variant="outline" type="button" onClick={handleCancel}>
             {t("pages.products.form.cancel")}
           </Button>
           {((mode === "create" && canCreate) ||
@@ -2301,7 +2407,7 @@ export default function ProductForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleSubmit)}
-        className="flex min-h-full w-full flex-col gap-4 pb-2"
+        className="flex w-full flex-col gap-4"
       >
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_272px]">
           <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">

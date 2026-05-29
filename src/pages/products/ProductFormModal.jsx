@@ -26,6 +26,7 @@ const EMPTY_PREFILL_DEFAULTS = {};
  *
  * @param {Object} [prefillDefaults] - Gộp vào prefill form tạo mới (VD: { trackInventory: true });
  *                                   giá trị từ quét mã vạch ghi đè cùng key.
+ * @param {"view"|"edit"} [initialMode] - Chế độ form khi mở sản phẩm có sẵn (mặc định view).
  */
 export default function ProductFormModal({
   open,
@@ -35,6 +36,7 @@ export default function ProductFormModal({
   onSuccess,
   startStep, // "scan" | "form" — overrides default for create mode
   prefillDefaults,
+  initialMode = "view",
 }) {
   const { t } = useTranslation();
   const isEdit = !!product;
@@ -51,7 +53,10 @@ export default function ProductFormModal({
     () => startStep ?? (isEdit ? "form" : "scan"),
   );
   const [prefill, setPrefill] = useState({});
-  const [mode, setMode] = useState(() => (product ? "view" : "create"));
+  const [mode, setMode] = useState(() => {
+    if (!product) return "create";
+    return initialMode === "edit" ? "edit" : "view";
+  });
   const [loading, setLoading] = useState(false);
 
   // Camera state
@@ -76,7 +81,9 @@ export default function ProductFormModal({
   // Reset on open/product / create options change
   useEffect(() => {
     if (open) {
-      setMode(product ? "view" : "create");
+      setMode(
+        product ? (initialMode === "edit" ? "edit" : "view") : "create",
+      );
       setStep(startStep ?? (isEdit ? "form" : "scan"));
       setPrefill({});
       setScannedCode(null);
@@ -85,7 +92,7 @@ export default function ProductFormModal({
       stopCamera();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, product, startStep, prefillDefaults]);
+  }, [open, product, startStep, prefillDefaults, initialMode]);
 
   // Start/stop camera when step changes
   useEffect(() => {
@@ -353,7 +360,7 @@ export default function ProductFormModal({
         {step === "form" && (
           <div
             data-product-form-scroll
-            className="flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain bg-background px-4 pt-4 pb-0 sm:px-6 sm:pt-4"
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-background px-4 pt-4 pb-4 sm:px-6 sm:pt-4"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
             <ProductForm

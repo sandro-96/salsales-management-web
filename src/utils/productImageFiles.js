@@ -195,3 +195,15 @@ export function createImagePreviewUrls(files) {
   if (!Array.isArray(files) || files.length === 0) return Promise.resolve([]);
   return Promise.all(files.map((f) => createImagePreviewUrl(f)));
 }
+
+/** Preview nhẹ cho thumbnail biến thể (blob URL — thu hồi khi xóa / unmount). */
+export function createVariantThumbnailPreviewUrls(files) {
+  if (!Array.isArray(files) || files.length === 0) return [];
+  return files.map((f) => {
+    try {
+      return URL.createObjectURL(f);
+    } catch {
+      return "";
+    }
+  });
+}

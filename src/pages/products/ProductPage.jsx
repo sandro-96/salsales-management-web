@@ -154,6 +154,7 @@ const ProductPage = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [modalInitialMode, setModalInitialMode] = useState("view");
   const [modalPrefillDefaults, setModalPrefillDefaults] = useState(null);
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [toppingsSettingsOpen, setToppingsSettingsOpen] = useState(false);
@@ -369,9 +370,10 @@ const ProductPage = () => {
     setEditingProduct(null);
   };
 
-  const handleOpenEdit = (product) => {
+  const handleOpenProduct = (product, formMode = "view") => {
     setModalPrefillDefaults(null);
     setEditingProduct(product);
+    setModalInitialMode(formMode === "edit" ? "edit" : "view");
     setModalOpen(true);
   };
 
@@ -553,7 +555,10 @@ const ProductPage = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => {
-                    handleOpenEdit(product);
+                    handleOpenProduct(
+                      product,
+                      canUpdate ? "edit" : "view",
+                    );
                   }}
                 >
                   {canUpdate
@@ -799,7 +804,7 @@ const ProductPage = () => {
                             "cursor-pointer",
                             !product.active && "opacity-70",
                           )}
-                          onClick={() => handleOpenEdit(product)}
+                          onClick={() => handleOpenProduct(product, "view")}
                         >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell key={cell.id}>
@@ -817,7 +822,12 @@ const ProductPage = () => {
                         </ContextMenuLabel>
                         <ContextMenuSeparator />
                         <ContextMenuItem
-                          onSelect={() => handleOpenEdit(product)}
+                          onSelect={() =>
+                            handleOpenProduct(
+                              product,
+                              canUpdate ? "edit" : "view",
+                            )
+                          }
                         >
                           {canUpdate
                             ? t("pages.products.list.edit")
@@ -880,6 +890,7 @@ const ProductPage = () => {
             }}
             startStep={editingProduct ? undefined : createStep}
             prefillDefaults={modalPrefillDefaults ?? undefined}
+            initialMode={modalInitialMode}
           />
         ) : null}
 

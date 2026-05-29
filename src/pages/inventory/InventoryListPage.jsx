@@ -487,9 +487,10 @@ const InventoryListPage = () => {
   /** Mặc định thu gọn biến thể; `{ [rowId]: true }` hoặc `true` = mở tất cả. */
   const [stockExpanded, setStockExpanded] = useState({});
 
+  // Chỉ thu gọn khi đổi bộ lọc/trang/chi nhánh — không reset sau refresh tồn (giữ biến thể đang mở).
   useEffect(() => {
     setStockExpanded({});
-  }, [products, debouncedKeyword, stockFilter, pagination.pageIndex]);
+  }, [debouncedKeyword, stockFilter, pagination.pageIndex, selectedBranchId]);
 
   const toggleExpandAllVariants = useCallback(() => {
     setStockExpanded((prev) => (prev === true ? {} : true));
