@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Globe, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   listAdminCatalog,
   upsertAdminCatalog,
 } from "@/api/adminApi";
+import AdminCatalogOffModal from "./AdminCatalogOffModal";
 
 const fmt = (d) => {
   if (!d) return "—";
@@ -75,6 +76,7 @@ export default function AdminCatalogPage() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [offOpen, setOffOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!canManage) return;
@@ -197,9 +199,15 @@ export default function AdminCatalogPage() {
             Danh mục barcode dùng chung hệ thống.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-1" /> Thêm mới
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setOffOpen(true)}>
+            <Globe className="h-4 w-4 mr-1" />
+            Lấy từ Open Food Facts (VN)
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-1" /> Thêm mới
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 flex flex-col md:flex-row gap-3 md:items-end">
@@ -229,6 +237,7 @@ export default function AdminCatalogPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 text-center">#</TableHead>
               <TableHead>Tên</TableHead>
               <TableHead>Barcode</TableHead>
               <TableHead>Category</TableHead>
@@ -239,7 +248,7 @@ export default function AdminCatalogPage() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10">
+                <TableCell colSpan={6} className="text-center py-10">
                   <Loader2 className="h-5 w-5 animate-spin inline-block" />
                 </TableCell>
               </TableRow>
@@ -247,7 +256,7 @@ export default function AdminCatalogPage() {
             {!loading && data.content?.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center py-10 text-muted-foreground"
                 >
                   Không có catalog phù hợp.
@@ -255,15 +264,13 @@ export default function AdminCatalogPage() {
               </TableRow>
             )}
             {!loading &&
-              data.content?.map((row) => (
+              data.content?.map((row, idx) => (
                 <TableRow key={row.id}>
+                  <TableCell className="text-center text-muted-foreground tabular-nums">
+                    {page * size + idx + 1}
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">{row.name}</div>
-                    {row.description && (
-                      <div className="text-xs text-muted-foreground line-clamp-1">
-                        {row.description}
-                      </div>
-                    )}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
                     {row.barcode}
@@ -398,6 +405,12 @@ export default function AdminCatalogPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AdminCatalogOffModal
+        open={offOpen}
+        onOpenChange={setOffOpen}
+        onImported={load}
+      />
 
       {/* Delete confirm */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

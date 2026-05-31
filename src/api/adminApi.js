@@ -93,6 +93,14 @@ export const upsertAdminCatalog = (payload) =>
 export const deleteAdminCatalog = (id) =>
   axiosInstance.delete(`/admin/catalog/${id}`);
 
+export const browseAdminCatalogOpenFoodFactsVietnam = (params = {}) =>
+  axiosInstance.get("/admin/catalog/sources/open-food-facts/vietnam", {
+    params,
+  });
+
+export const bulkUpsertAdminCatalog = (items) =>
+  axiosInstance.post("/admin/catalog/bulk", { items });
+
 // === Broadcast ===
 export const listAdminBroadcasts = (params = {}) =>
   axiosInstance.get("/admin/broadcasts", { params });
